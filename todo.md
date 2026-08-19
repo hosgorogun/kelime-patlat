@@ -1,0 +1,120 @@
+# Project TODO
+
+- [x] Kelime Patlat marka dili ve Expo uygulama yapılandırması
+- [x] Ana sayfa ile 4×4 ve 8×8 oyun modu seçimi
+- [x] Komşu harflerden parmakla kelime birleştiren erişilebilir tahta bileşeni
+- [x] Türkçe kelime doğrulama ve sunucu tarafı kazanan belirleme kuralları
+- [x] Oda oluşturma, davet kodu ve iki oyunculu maç başlangıcı
+- [x] Gerçek zamanlı anlık maç senkronizasyonu yaklaşımını netleştirme
+- [x] Canlı skor, saklı kelime ve erken zafer geri bildirimi
+- [x] Maç sonucu ve rövanş akışı
+- [x] Birim testleri ve mobil davranış doğrulaması
+- [x] Uygulama ikonu oluşturma ve marka varlıklarını güncelleme
+- [x] Aynı tahtayı iki oyuncuya anlık ileten canlı maç odası
+- [x] İlk geçerli hedef kelimeyi tamamlayana tur zaferi veren sunucu otoritesi
+- [x] Canlı bağlantı kesilmesi, yeniden bağlanma ve oda temizliği davranışları
+- [x] Rakip bulunmadığında otomatik bot rakip oluşturma
+- [x] Botun aynı tahta üzerindeki saklı kelimeyi gecikmeli bulma davranışı
+- [x] Gerçek oyuncu ile bot maçının doğru ayrıştırılması ve test edilmesi
+- [x] Harf seçimi dokunma/sürükleme etkileşimini mobilde düzeltme
+- [x] Çapraz hücre geçişlerini engelleyip yalnız yatay-dikey komşuluğa izin verme
+- [x] 4×4 ve 8×8 tahtalara birden çok kelime yerleştirme
+- [x] Bulunan kelimeler, canlı puanlar ve tur sonucunu çoklu kelime kurallarına göre güncelleme
+- [x] Emülatörde fare basılıyken harfleri sürükleyerek seçme desteği
+- [x] Fare ve dokunma seçim akışının ortak Pointer Events davranışıyla doğrulanması
+- [x] Emülatör/web görünümünde tahta harflerinin metin olarak seçilmesini engelleme
+- [x] Fare sürüklemesini hücre bazlı oyun seçimine güvenilir biçimde yönlendirme
+- [x] Harf hücrelerine doğrudan fare basılı-sürükleme girişi ekleme
+- [x] Hücreden hücreye fare geçişiyle seçili kelime rotasını oluşturma
+- [x] Kelimeleri düz satırlar yerine karışık yatay-dikey rotalara yerleştirme
+- [x] Aynı tahtadaki kelime rotalarının çakışmadan ve okunabilir biçimde üretildiğini doğrulama
+- [x] Patlat esintili ana sayfa ve oyuncu ilerleme özeti
+- [x] Oyun modu seçimi ile bot düellosu ve canlı oda giriş ekranları
+- [x] Profil/istatistik görünümü ve alt navigasyon
+- [x] Canlı oyun odasını yeni çok ekranlı akışa bağlama
+- [x] Premium oyun ana sayfası ve zengin oyuncu durum kartları
+- [x] Profesyonel görsel hiyerarşi, kart katmanları ve rafine navigasyon
+- [x] Mod, oda ve profil ekranlarında tutarlı premium tasarım sistemi
+- [x] Kelime Patlat için yeni, ayırt edici renk yönü oluşturma
+- [x] Yeni uygulama ikonu ve oyun sembol varlıklarını üretme
+- [x] Arayüzü yeni renk ve logo kimliğiyle güncelleme
+- [x] Premium alt navigasyon çubuğu ve belirgin aktif durum tasarımı
+- [x] Ortada yükseltilmiş oyun eylemi ile ikonlu navigasyon davranışı
+- [x] Alt navigasyon ve ekranlar arasında stabil geçiş akışı
+- [x] Geçiş sırasında taşan veya çakışan merkez eylem düzenini düzeltme
+- [x] Alt navigasyonu ana ekranlarda ekran altına sabitleme
+- [x] Kaydırılabilir içerikte sabit alt bar için güvenli alt boşluk bırakma
+- [x] Harf seçiminde geri sürükleme, rota önizlemesi ve geçerli kelime geri bildirimi
+- [x] Karışık rota üretiminde çakışma, tekrar ve aşırı düz dizilim denetimi
+- [x] Gelişmiş tahta etkileşimini bot ve canlı oda akışında doğrulama
+- [x] Yanlış kelimede seçili rotayı kırmızı gösterip net hata geri bildirimi verme
+- [x] Seçim sırasında tekrarlı olayları ve erken gönderimi engelleme
+- [x] Seviye 1’den başlayan tek oyunculu kelime yolculuğu
+- [x] Seviye ilerledikçe tahta, kelime rotası, süre ve hedef zorluğunu artırma
+- [x] Tek oyunculu seviye tamamlanması, başarısızlık ve kilit açma akışı
+- [x] Açılan tek oyunculu seviyeleri cihazda saklayıp yeniden yükleme
+- [x] Doğru bulunan kelime rotalarını tur sonuna kadar yeşil tutma
+- [x] Tek oyunculu 4×4 seviyelerinde hedef kelime sayısını artırma
+- [x] Süre dolduğunda bulunmamış kelimelerin rotalarını ızgarada gösterme
+- [x] Süre sonunda her kelime rotasını ayrı renkle gösterme
+- [x] 4×4 tekli seviyelerde uzun ve kıvrımlı kelime setleri kullanma
+- [x] Tekrar denemesinde yeni ızgara ve kelime setini garanti etme
+- [x] Kolay, orta ve zor kategorilerinden oluşan geniş Türkçe kelime kataloğu
+- [x] Tekli ve canlı modlarda zorlukla dengeli, rastgele kelime seçimi
+- [x] Geliştirme sunucusunun yeniden başlatılması ve erişim doğrulaması
+- [x] Kategorili rastgele kelime dağılımı ile tahta çeşitliliğini test etme
+- [x] Süre sonu renkli çözüm rotası verisini test etme
+- [x] Yeni seviye ve tekrar denemesinde ızgara/kelime yenilenmesini test etme
+- [x] Canlı maçta rakibin bulduğu kelime metnini gizleme
+- [x] Canlı maçta rakibin rota hücrelerini oyuncu ekranından gizleme
+- [x] Canlı maçta her oyuncunun kendi kelime sayacını skor kartında gösterme
+- [x] Maç sonunda rakibin bulduğu kelimeleri sonuç ekranında açma
+- [x] Canlı savaş ekranı için öncelikli geliştirme önerileri hazırlama
+- [x] Canlı maçta tur geri sayımını gösterme
+- [x] Son 10 saniye baskısı için görsel geri bildirim ekleme
+- [x] Kelime uzunluğu çarpanı ve seri rozeti ekleme
+- [x] Botun kelime bulma temposunu yavaşlatma
+- [x] Canlı 4×4 modunda 2–5 harfli rastgele kelime karışımı üretme
+- [x] Canlı maçta iki harfli kelime seçimi ve gönderimini destekleme
+- [x] Tüm modlar için tek JSON kelime kataloğu oluşturma
+- [x] Tekli ve canlı modları ortak katalog seçicilerine bağlama
+- [x] Kelime, rota, süre ve karışım etkili kademeli zorluk motoru
+- [x] Canlı savaşta tempo ve performans istatistikleri ekleme
+- [x] Canlı 4×4 tahtadaki tüm hücreleri harfle doldurma
+- [x] İki harfli önizlemede erken yeşil geri bildirimi kaldırma
+- [x] Canlı savaş ekranında küçük ekran taşmalarını düzeltme
+- [x] 6×6 oyun modunun tahta ve kelime üretim kurallarını ekleme
+- [x] 6×6 modunu bot düellosu, canlı oda ve mod seçimine bağlama
+- [x] 6×6 akışını birim ve canlı oda duman testleriyle doğrulama
+- [x] Tüm oyun akışları için test kapsamını ve çalışma durumunu denetleme
+- [x] Tekli, botlu ve iki oyunculu senaryolarda kapsamlı regresyon testi çalıştırma
+- [x] Bulunan sorunları düzeltip doğrulanmış oyun geliştirme önerilerini hazırlama
+- [x] Günlük bulmaca ile yerel tamamlanma serisi ve ödül akışını ekleme
+- [x] Sezon görevleri, XP/ödül ilerlemesi ve temalı kelime paketi seçimini ekleme
+- [x] Yerel skor tablosu ve maç sonu performans analizini ekleme
+- [x] Ana ekran, modlar, oyun sonucu ve profil ekranlarını yenilikçi animasyonlu tasarımla yenileme
+- [x] Yeni oyun akışlarını otomatik testler ve duman senaryolarıyla doğrulama
+- [x] Kelime seçimi, kabul/red ve zafer anlarına ses ile titreşim geri bildirimi ekleme
+- [x] Avatar seçimi ve başarı rozetleri koleksiyonunu yerel ilerleme verisine ekleme
+- [x] Paylaşılabilir arkadaş davet bağlantısı ve oda koduyla katılım akışını ekleme
+- [x] Yeni ses, koleksiyon ve davet akışlarını testlerle doğrulama
+- [x] MongoDB bağlantı ayarını güvenli ortam değişkeniyle yapılandırma
+- [x] Node.js sunucusunda oyuncu profili, ilerleme, rozet ve liderlik koleksiyonlarını ekleme
+- [x] Socket.IO oyun sonuçlarını MongoDB kalıcı liderlik ve ilerleme kayıtlarına bağlama
+- [x] Mobil istemcinin kalıcı profil ve liderlik verilerini yüklemesini sağlama
+- [ ] MongoDB destekli veri akışını testler ve canlı oda duman senaryosuyla doğrulama
+- [ ] Yerel MongoDB varsayılan bağlantısını doğrulayıp kelime_patlat veritabanını oluşturma
+- [x] Yerel MongoDB ve Node.js için masaüstü ortam örneği oluşturma
+- [x] Kalıcı MongoDB oyuncu ve liderlik veri katmanını Node.js sunucusuna ekleme
+- [x] Masaüstü kurulum rehberi ve indirilebilir proje paketi hazırlama
+- [x] pnpm paket yöneticisi ayarını npm yapılandırmasına dönüştürme
+- [x] package-lock.json üretip pnpm kilit dosyasını kaldırma
+- [x] Masaüstü kurulum rehberi ve Windows başlatma dosyasını npm komutlarıyla güncelleme
+- [x] npm ile tür denetimi, test, lint ve üretim derlemesini doğrulama
+- [x] Ana ekran, modlar, sezon, profil ve oyun ekranlarında mobil arayüz denetimi yapma
+- [x] Tespit edilen taşma, hizalama ve okunabilirlik sorunlarını düzeltme
+- [x] Düzeltilen arayüzü mobil görünüm ve otomatik regresyon testleriyle doğrulama
+- [x] Geliştirme sunucusunu yeniden başlatıp önizleme erişimini doğrulama
+- [x] Expo önizleme ve Node.js oyun API süreçlerini yeniden başlatıp bağlantılarını doğrulama
+- [x] Yönetilen Expo önizlemesinin kalıcı erişim sorununu teşhis edip düzeltme
+- [ ] Güncel masaüstü proje arşivini oluşturup indirme dosyası olarak teslim etme

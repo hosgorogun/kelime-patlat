@@ -1,0 +1,4229 @@
+{
+  "version": 1,
+  "words": [
+    {
+      "word": "AD",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AY",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "EL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "EV",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "İP",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "İŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "OK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ON",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SU",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AH",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AL",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AS",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AT",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AZ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "EK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "EN",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ET",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "İL",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "İN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "OT",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÖN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "UÇ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "UY",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "UT",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ADA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ARI",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ATA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BAL",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DAL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DİL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GÖL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GÜL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KOL",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KUM",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ODA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SES",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TAŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YAZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YÜZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AŞK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KUŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SAÇ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GÖZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DİŞ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SAZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ŞEN",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ZOR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KAS",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TUZ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BUZ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TEK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÇOK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BOŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TOK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SON",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BAŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BİR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "İKİ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÜÇ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BEŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KIR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YAR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BUL",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "VER",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GEÇ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GİT",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KOŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "CAM",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "HAL",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "LAZ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "FAZ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ŞIK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TAY",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BAY",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YAŞ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DÜŞ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AŞI",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ANI",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÜYE",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "JEL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "NET",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KOT",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "PİL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "FİL",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "NEY",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KEF",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ŞEF",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ZİL",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TİK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "OYUN",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KAPI",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "MASA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ELMA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BABA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ANNE",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KENT",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KÖŞE",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "RENK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DOST",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "RİSK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÖLÇÜ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "İZİN",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YAZI",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SÜRE",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "HATA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SORU",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "NOTA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "PARA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KALE",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AYNA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "FİLM",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DERS",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "TEST",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AKIL",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "RÜYA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GENÇ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ESKİ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YENİ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "AÇIK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KOYU",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KARA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SARI",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "MAVİ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DOĞA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BANT",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KART",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KURS",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SAAT",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "OKUL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÖDEV",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÖDÜL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KUTU",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KOKU",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GRİP",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DERE",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "PLAN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "KRAL",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "FOTO",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "FLÜT",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BİRA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "ÜMİT",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BATI",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "DOĞU",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "GÜNÜ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SESİ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "EVİM",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "YOLU",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "BİLGİ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BEYİN",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "FİKİR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ÇÖZÜM",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DENGE",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GİZEM",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DÜNYA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GÜNEŞ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BULUT",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ORMAN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DENİZ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ÇİÇEK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BAHÇE",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SAHİL",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YAPRAK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YILDIZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "NEHİR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SEFER",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KALEM",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "UYUM",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "VATAN",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YALIN",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ZAMAN",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BİLİM",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YAZAR",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ŞAİR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 3
+    },
+    {
+      "word": "SANAT",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "MÜZİK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "TARİH",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YAŞAM",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SAYGI",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SEVGİ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "MUTLU",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GÜZEL",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BÜYÜK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KÜÇÜK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DERİN",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "TEMİZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SICAK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SOĞUK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ÇATIŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GİZLİ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ÖZGÜR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "LİDER",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "CESUR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "HAYAT",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "HUZUR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ŞEHİR",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YOLCU",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KİTAP",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DEFTER",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ÇANTA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SOKAK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BİTKİ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KÖPEK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ASLAN",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "TİLKİ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KAĞIT",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DEMİR",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ÇELİK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GÖLGE",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KIZIL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BEYAZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SİYAH",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "İLMEK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GÜNEY",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KUZEY",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "LİSTE",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YEŞİL",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SINIF",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DEVAM",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ÇARPI",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KOLAY",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GÜÇLÜ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KORKU",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "CEVAP",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KELİME",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "MACERA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "PUSULA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "HARİTA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "MEVSİM",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "RÜZGAR",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BİLGİN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ADALET",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "EĞİTİM",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "MANTIK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "TEMAŞA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KÜLTÜR",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KARDEŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "HARİKA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YÜKSEK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "PLANLA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "HAZİNE",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KESKİN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "DEPREM",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "VOLKAN",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ŞELALE",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KANYON",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KÖRFEZ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KAPLAN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ZÜRAFA",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "TAVŞAN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YALNIZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YAĞMUR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KONUŞM",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GÜRÜLT",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "PARLAK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "KIZGIN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "SESSİZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "ZENGİN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "YANLIŞ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "GÜMÜŞ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "BİLMECE",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "BULMACA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "GİZEMLİ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "ANLAMLI",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "HATIRLA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "ARKADAŞ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "BAŞARI",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 2
+    },
+    {
+      "word": "CESARET",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "DÜŞÜNCE",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "GELECEK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "HEYECAN",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "ÖĞRENME",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "GÖKYÜZÜ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "KARARLI",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "MERAKLI",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "PROGRAM",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "SEVİMLİ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "YETENEK",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "FIRTINA",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "BİLİNEN",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "SEVGİLİ",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "GÜZELLİK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "GÖKKUŞAĞI",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "KUTUPLAR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "BİLİNMEZ",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "BİLGİLER",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "YOLCULUK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "GÜVENLİK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "İLERLEME",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "İLETİŞİM",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "MUTLULUK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "PLANLAMA",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "VOLKANİK",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "GÖLGELER",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "BİLİMSEL",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "MANTIKLI",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "KIVRIMLI",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "YILDIZLAR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "ZAMANLAR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "ÖĞRETMEN",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "SOKAKLAR",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "city"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "YAPRAKLAR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "YAĞMURLAR",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "nature"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "KÜLTÜRLER",
+      "difficulty": "easy",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "KÜÇÜKLÜK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "BÜYÜKLÜK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "TEMİZLİK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "SESSİZLİK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general",
+        "mind"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "PARLAKLIK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "ŞAŞIRMIŞ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "HAZIRLIK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "KORKULUK",
+      "difficulty": "hard",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    },
+    {
+      "word": "KAHVERENGİ",
+      "difficulty": "medium",
+      "boards": [
+        4,
+        6,
+        8
+      ],
+      "tags": [
+        "general"
+      ],
+      "weight": 1
+    }
+  ]
+}
