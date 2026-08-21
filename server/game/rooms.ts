@@ -489,7 +489,7 @@ export function registerGameRooms(io: Server) {
       const profile = await savePlayerProfile(payload.playerId, payload.playerName, payload.progress);
       if (profile) socket.emit("profile:update", profile);
     });
-    socket.on("room:create", (payload: { playerId: string; playerName: string; size: BoardSize }) => {
+    socket.on("room:create", (payload: { playerId: string; playerName: string; size: BoardSize; immediateBot?: boolean }) => {
       if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
       const code = makeCode();
       const room: Room = {
@@ -504,7 +504,7 @@ export function registerGameRooms(io: Server) {
         guest: null,
         winnerId: null,
         startedAt: null,
-        message: "Oda kodunu rakibinle paylaş. Rakip gelmezse bot katılır.",
+        message: payload.immediateBot ? "Bot düellosu hazırlanıyor..." : "Oda kodunu rakibinle paylaş.",
         touchedAt: Date.now(),
         botFillToken: 0,
         roundToken: 0,
@@ -512,7 +512,9 @@ export function registerGameRooms(io: Server) {
       rooms.set(code, room);
       socket.join(`room:${code}`);
       emitRoom(io, room);
-      scheduleBotFill(io, room);
+      if (payload.immediateBot) {
+        scheduleBotFill(io, room);
+      }
     });
 
     socket.on("room:join", (payload: { code: string; playerId: string; playerName: string }) => {

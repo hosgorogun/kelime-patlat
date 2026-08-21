@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Ani
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { createSoloBoard, SOLUTION_ROUTE_COLORS, solutionColorByCell } from "@/shared/solo";
+import { getWordDefinition } from "../shared/dictionary";
 import {
   initAudio,
   playSelectionNote,
@@ -12,6 +13,38 @@ import {
   triggerHapticSuccess,
   triggerHapticError
 } from "@/shared/audio-haptics";
+
+function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx);
+  
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        left: x1,
+        top: y1 - 2.5,
+        width: length,
+        height: 5,
+        backgroundColor: color,
+        transform: [
+          { rotate: `${angle}rad` }
+        ],
+        transformOrigin: "0% 50%",
+        borderRadius: 2.5,
+        opacity: 0.75,
+        shadowColor: color,
+        shadowOpacity: 0.6,
+        shadowRadius: 6,
+        elevation: 3,
+        zIndex: 5,
+      }}
+    />
+  );
+}
 
 type Feedback = "idle" | "invalid" | "accepted";
 
@@ -32,6 +65,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
   const [status, setStatus] = useState<"playing" | "lost">("playing");
   const [isSelecting, setIsSelecting] = useState(false);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
+  const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
 
   // FX states
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]>([]);
@@ -95,6 +129,40 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       Animated.timing(shakeAnim, { toValue: 8, duration: 40, useNativeDriver: true }),
       Animated.timing(shakeAnim, { toValue: 0, duration: 40, useNativeDriver: true })
     ]).start();
+  };
+
+  const getCellCenter = (idx: number) => {
+    const BOARD_PAD = 4;
+    const innerSize = boardWidth - BOARD_PAD * 2;
+    const cellSize = innerSize / challenge.size;
+    const row = Math.floor(idx / challenge.size);
+    const col = idx % challenge.size;
+    return {
+      x: col * cellSize + cellSize / 2 + BOARD_PAD,
+      y: row * cellSize + cellSize / 2 + BOARD_PAD,
+    };
+  };
+
+  const explodeConfetti = () => {
+    const colors = ["#FFC24A", "#50E3C2", "#FF647C", "#A78BFA", "#FF9B62"];
+    const newConfetti: typeof particles = [];
+    for (let i = 0; i < 40; i++) {
+      const anim = new Animated.ValueXY({ x: 0, y: 0 });
+      const id = Math.random();
+      const startX = Math.random() * boardWidth;
+      const startY = -20;
+      newConfetti.push({ id, x: startX, y: startY, color: colors[Math.floor(Math.random() * colors.length)]!, anim });
+      
+      const targetX = (Math.random() - 0.5) * 150;
+      const targetY = boardWidth + 50 + Math.random() * 100;
+      
+      Animated.timing(anim, {
+        toValue: { x: targetX, y: targetY },
+        duration: 1500 + Math.random() * 1000,
+        useNativeDriver: true
+      }).start();
+    }
+    setParticles((prev) => [...prev, ...newConfetti]);
   };
 
   const explodeParticles = (cells: number[]) => {
@@ -178,6 +246,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
     // If entire board is cleared, generate a new board!
     if (nextFound.length === challenge.words.length) {
+      explodeConfetti();
       setTimeout(() => {
         setFound([]);
         setFoundPaths([]);
@@ -226,18 +295,32 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     }
   };
 
+  const getEventBoardCoords = (event: any) => {
+    const ne = event.nativeEvent ?? event;
+    const x = ne.locationX ?? ne.offsetX;
+    const y = ne.locationY ?? ne.offsetY;
+    if (x !== undefined && y !== undefined) {
+      return { x, y };
+    }
+    const { pageX, pageY } = getEventPageCoords(event);
+    return {
+      x: pageX - boardPageX.current,
+      y: pageY - boardPageY.current,
+    };
+  };
+
   const handleGestureStart = (event: any) => {
     event.preventDefault?.(); event.stopPropagation?.();
     setIsSelecting(true); measureBoard();
-    const { pageX, pageY } = getEventPageCoords(event);
-    handleGesture(pageX - boardPageX.current, pageY - boardPageY.current);
+    const { x, y } = getEventBoardCoords(event);
+    handleGesture(x, y);
   };
 
   const handleGestureMove = (event: any) => {
     event.preventDefault?.(); event.stopPropagation?.();
     if (!pointerActive.current) return;
-    const { pageX, pageY } = getEventPageCoords(event);
-    handleGesture(pageX - boardPageX.current, pageY - boardPageY.current);
+    const { x, y } = getEventBoardCoords(event);
+    handleGesture(x, y);
   };
 
   const handleGestureEnd = () => { finish(); };
@@ -269,18 +352,67 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         return <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}><View style={[styles.cell, isFound && styles.cellFound, isSelected && styles.cellSelected, isTail && styles.cellTail, feedback === "invalid" && isSelected && styles.cellInvalid, feedback === "accepted" && isSelected && styles.cellAccepted]}><Text selectable={false} style={[styles.letter, challenge.size === 6 && styles.letterMedium]}>{letter}</Text>{isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}{isFound && !isSelected && <Text selectable={false} style={styles.check}>✓</Text>}</View></View>;
       })}
       
+      {selected.slice(0, -1).map((cellIdx, i) => {
+        const nextCellIdx = selected[i + 1]!;
+        const start = getCellCenter(cellIdx);
+        const end = getCellCenter(nextCellIdx);
+        return (
+          <ConnectLine
+            key={`line-${i}`}
+            x1={start.x}
+            y1={start.y}
+            x2={end.x}
+            y2={end.y}
+            color="#FFC24A"
+          />
+        );
+      })}
+      
       {particles.map(p => (
         <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
       ))}
       <View onPointerDown={(e: any) => { if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId); handleGestureStart(e); }} onPointerMove={handleGestureMove} onPointerUp={handleGestureEnd} onPointerCancel={() => { pointerActive.current = false; setIsSelecting(false); }} onPointerLeave={finish} onTouchStart={handleGestureStart} onTouchMove={handleGestureMove} onTouchEnd={handleGestureEnd} style={StyleSheet.absoluteFill} />
     </Animated.View>
-    <View style={[styles.tray, feedback === "invalid" && styles.trayInvalid, feedback === "accepted" && styles.trayAccepted]}><Text style={styles.trayLabel}>{feedback === "invalid" ? "GEÇERSİZ ROTA" : feedback === "accepted" ? "KABUL EDİLDİ" : selected.length >= 3 ? "ROTA HAZIR" : "KELİMEYİ BAĞLA"}</Text><Text style={styles.word}>{activeWord || "—"}</Text></View>
-    <View style={styles.found}><Text style={styles.foundLabel}>BULDUKLARIN</Text><View style={styles.tags}>{found.length ? found.map((word) => <View key={word} style={styles.tag}><Text style={styles.tagText}>{word}</Text></View>) : <Text style={styles.empty}>İlk kelimeyi bul.</Text>}</View></View>
-    
+    <View style={[styles.wordTray, feedback === "invalid" && styles.trayInvalid, feedback === "accepted" && styles.trayAccepted]}><Text style={styles.trayLabel}>{feedback === "invalid" ? "GEÇERSİZ ROTA" : feedback === "accepted" ? "KABUL EDİLDİ" : selected.length >= 3 ? "ROTA HAZIR" : "KELİMEYİ BAĞLA"}</Text><Text style={styles.word}>{activeWord || "—"}</Text></View>
+    <View style={styles.found}>
+      <Text style={styles.foundLabel}>BULDUKLARIN (SÖZLÜK ANLAMI İÇİN TIKLA)</Text>
+      <View style={styles.tags}>
+        {found.length ? found.map((word) => (
+          <Pressable
+            key={word}
+            onPress={() => {
+              triggerHapticSelection();
+              setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+            }}
+            style={({ pressed }) => [styles.tag, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.tagText}>{word}</Text>
+          </Pressable>
+        )) : <Text style={styles.empty}>İlk kelimeyi bul.</Text>}
+      </View>
+    </View>
     {status === "lost" && <View style={styles.result}><Text style={styles.resultTitle}>SÜRE DOLDU!</Text><Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text><Text style={styles.finalScore}>{score}</Text><Pressable onPress={onExit} style={styles.action}><Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text><Text style={styles.actionArrow}>→</Text></Pressable></View>}
+    
+    {selectedWordInfo && (
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: "#30264D", borderColor: "#FFC24A" }]}>
+          <Text style={[styles.modalTitle, { color: "#FFC24A" }]}>{selectedWordInfo.word}</Text>
+          <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
+          <Pressable onPress={() => setSelectedWordInfo(null)} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: "#FFC24A" }, pressed && { opacity: 0.8 }]}>
+            <Text style={styles.modalCloseText}>KAPAT</Text>
+          </Pressable>
+        </View>
+      </View>
+    )}
   </ScrollView>;
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#0C091C" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900" }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900" }, bonusText: { position: "absolute", top: -18, right: 0, color: "#50E3C2", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { color: "#B8ADD1", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 3 }, cell: { flex: 1, borderRadius: 11, backgroundColor: "#30264D", borderWidth: 1, borderColor: "#594884", alignItems: "center", justifyContent: "center" }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#50E3C2", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#50E3C2" }, cellFound: { backgroundColor: "#287B70", borderColor: "#50E3C2" }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 23, fontWeight: "900" }, letterMedium: { fontSize: 19 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#50E3C2" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B" }, foundLabel: { color: "#B8ADD1", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878" }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#0C091C" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900" }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900" }, bonusText: { position: "absolute", top: -18, right: 0, color: "#50E3C2", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { color: "#B8ADD1", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, backgroundColor: "#30264D", borderWidth: 2, borderColor: "#594884", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#50E3C2", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#50E3C2" }, cellFound: { backgroundColor: "#287B70", borderColor: "#50E3C2" }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 23, fontWeight: "900" }, letterMedium: { fontSize: 19 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#50E3C2" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B" }, foundLabel: { color: "#B8ADD1", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878" }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", zIndex: 100 },
+  modalContent: { width: "86%", borderRadius: 20, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
+  modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },
+  modalBody: { color: "#FFFFFF", fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20, fontWeight: "600" },
+  modalCloseButton: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
+  modalCloseText: { color: "#000000", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 }
 });

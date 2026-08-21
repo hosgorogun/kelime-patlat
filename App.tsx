@@ -8,6 +8,7 @@ import {
   TextInput,
   useWindowDimensions,
   View,
+  ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
@@ -17,29 +18,58 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ScreenContainer } from "./components/screen-container";
 import { CommandCenter } from "./components/command-center";
 import { MatchInsight } from "./components/match-insight";
-import { PremiumModeCenter } from "./components/premium-mode-center";
 import { PremiumDock, type DockDestination } from "./components/premium-dock";
 import { PlayerCollection } from "./components/player-collection";
 import { SeasonHub } from "./components/season-hub";
 import { SoloChallenge } from "./components/solo-challenge";
 import { SoloLevels } from "./components/solo-levels";
+import { ArcadeChallenge } from "./components/arcade-challenge";
 import { getGameSocket } from "./lib/game-socket";
 import { haptics } from "./lib/haptics";
 import { gameSfx } from "./lib/game-sfx";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
-import { applyMatchProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, AVATARS, type DailyChallenge, type PlayerProgress } from "./shared/progression";
+import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, AVATARS, getPlayerLevel, type DailyChallenge, type PlayerProgress } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
 import { MAX_SOLO_LEVEL } from "./shared/solo";
 import { initManusRuntime } from "./lib/_core/manus-runtime";
+import { getWordDefinition } from "./shared/dictionary";
+import { AuthScreen } from "./components/auth-screen";
+import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 
-type Screen = "home" | "modes" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season";
+type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade";
 
-const PLAYER_ID = `player-${Math.random().toString(36).slice(2, 10)}`;
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
 
 function initials(name: string) {
   return name.trim().slice(0, 2).toUpperCase() || "KP";
+}
+
+function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx);
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        left: x1,
+        top: y1 - 2.5,
+        width: length,
+        height: 5,
+        backgroundColor: color,
+        transform: [
+          { rotate: `${angle}rad` }
+        ],
+        transformOrigin: "0% 50%",
+        zIndex: 10,
+        opacity: 0.85,
+        borderRadius: 2.5
+      }}
+    />
+  );
 }
 
 function HomeScreen() {
@@ -61,6 +91,17 @@ function HomeScreen() {
     });
   };
 
+  const getCellCenter = (cellIndex: number) => {
+    if (!room) return { x: 0, y: 0 };
+    const cellSize = boardWidth / room.size;
+    const row = Math.floor(cellIndex / room.size);
+    const col = cellIndex % room.size;
+    return {
+      x: col * cellSize + cellSize / 2,
+      y: row * cellSize + cellSize / 2,
+    };
+  };
+
   const getEventPageCoords = (event: any) => {
     const ne = event.nativeEvent ?? event;
     if (ne.touches && ne.touches.length > 0) {
@@ -70,6 +111,10 @@ function HomeScreen() {
   };
   const [screen, setScreen] = useState<Screen>("home");
   const [playerName, setPlayerName] = useState("OYUNCU");
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [playerId, setPlayerId] = useState<string>(() => `player-${Math.random().toString(36).slice(2, 10)}`);
+  const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [selectedSize, setSelectedSize] = useState<BoardSize>(4);
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
@@ -91,15 +136,15 @@ function HomeScreen() {
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
   const boardWidth = Math.min(width - (room?.size === 8 ? 28 : room?.size === 6 ? 34 : 40), room?.size === 8 ? 392 : room?.size === 6 ? 374 : 356);
-  const me = room?.players.find((player) => player.id === PLAYER_ID) ?? null;
-  const opponent = room?.players.find((player) => player.id !== PLAYER_ID) ?? null;
+  const me = room?.players.find((player) => player.id === playerId) ?? null;
+  const opponent = room?.players.find((player) => player.id !== playerId) ?? null;
   const activeWord = room ? wordFromSelection(room.board, selectedCells) : "";
-  const iWon = room?.winnerId === PLAYER_ID;
-  const myScore = room?.scores[PLAYER_ID] ?? 0;
+  const iWon = room?.winnerId === playerId;
+  const myScore = room?.scores[playerId] ?? 0;
   const opponentScore = opponent ? room?.scores[opponent.id] ?? 0 : 0;
-  const myWordCount = room?.foundWords.filter((entry) => entry.playerId === PLAYER_ID).length ?? 0;
-  const opponentWordCount = opponent ? room?.foundWords.filter((entry) => entry.playerId !== PLAYER_ID).length ?? 0 : 0;
-  const myLastFoundWord = room?.foundWords.filter((entry) => entry.playerId === PLAYER_ID).at(-1)?.word ?? "";
+  const myWordCount = room?.foundWords.filter((entry) => entry.playerId === playerId).length ?? 0;
+  const opponentWordCount = opponent ? room?.foundWords.filter((entry) => entry.playerId !== playerId).length ?? 0 : 0;
+  const myLastFoundWord = room?.foundWords.filter((entry) => entry.playerId === playerId).at(-1)?.word ?? "";
   const myMultiplier = wordScoreMultiplier(myLastFoundWord.length);
   const roundDuration = room ? getRoundDurationMs(room.size) : 0;
   const remainingMs = room?.status === "playing" && room.startedAt ? Math.max(0, room.startedAt + roundDuration - clockNow) : 0;
@@ -134,6 +179,53 @@ function HomeScreen() {
     return () => { active = false; };
   }, []);
 
+  // Load token and verify auth state
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(SESSION_TOKEN_KEY).then(async (token) => {
+      if (!active) return;
+      if (token) {
+        try {
+          const response = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const user = await response.json();
+          if (user && user.openId) {
+            setAuthToken(token);
+            setPlayerId(user.openId);
+            setPlayerName(user.name || user.username || "OYUNCU");
+            if (user.progress) {
+              setProgress(user.progress);
+            }
+          } else {
+            await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+          }
+        } catch (err) {
+          console.warn("[Auth] Failed to verify token on startup:", err);
+        }
+      }
+      setAuthLoading(false);
+    }).catch(() => { if (active) setAuthLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const syncProgressToCloud = useCallback(async (currentProgress: PlayerProgress) => {
+    try {
+      const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token) return;
+      await fetch(`${getApiBaseUrl()}/api/auth/sync-progress`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ progress: currentProgress })
+      });
+    } catch (err) {
+      console.warn("[Auth] Cloud sync failed:", err);
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(PROGRESS_KEY).then((stored) => {
@@ -152,12 +244,15 @@ function HomeScreen() {
   useEffect(() => {
     if (!progressReady) return;
     AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)).catch(() => undefined);
+    if (authToken) {
+      syncProgressToCloud(progress);
+    }
     if (remoteProfileRef.current) {
       remoteProfileRef.current = false;
       return;
     }
-    getGameSocket().emit("profile:save", { playerId: PLAYER_ID, playerName: safeName, progress });
-  }, [progress, progressReady, safeName]);
+    getGameSocket().emit("profile:save", { playerId, playerName: safeName, progress });
+  }, [progress, progressReady, safeName, playerId, authToken, syncProgressToCloud]);
 
   useEffect(() => {
     if (!incomingUrl) return;
@@ -174,20 +269,21 @@ function HomeScreen() {
     const roundId = `${room.code}:${room.startedAt ?? 0}`;
     if (recordedRoundRef.current === roundId) return;
     recordedRoundRef.current = roundId;
-    const foundLongWord = room.foundWords.some((entry) => entry.playerId === PLAYER_ID && !entry.hidden && entry.word.length >= 7);
-    setProgress((current) => applyMatchProgress(current, { score: myScore, tempo: myTempo, won: Boolean(iWon), longWord: foundLongWord }));
-  }, [iWon, myScore, myTempo, room]);
+    const foundLongWord = room.foundWords.some((entry) => entry.playerId === playerId && !entry.hidden && entry.word.length >= 7);
+    const isBotMatch = room.players.some((p) => p.isBot);
+    setProgress((current) => applyMatchProgress(current, { score: myScore, tempo: myTempo, won: Boolean(iWon), longWord: foundLongWord }, isBotMatch ? "bot" : "pvp"));
+  }, [iWon, myScore, myTempo, room, playerId]);
 
   useEffect(() => {
     if (!room) return;
     const roundId = `${room.code}:${room.startedAt ?? 0}`;
     if (room.status === "playing") victoryCueRef.current = null;
-    if (room.status === "finished" && room.winnerId === PLAYER_ID && victoryCueRef.current !== roundId) {
+    if (room.status === "finished" && room.winnerId === playerId && victoryCueRef.current !== roundId) {
       victoryCueRef.current = roundId;
       gameSfx.victory();
       haptics.victory();
     }
-  }, [room]);
+  }, [room, playerId]);
 
   const clearFeedbackLater = useCallback((delay = 620) => {
     if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
@@ -204,7 +300,7 @@ function HomeScreen() {
     else setScreen("room");
     setNotice(next.message);
     const pendingWord = pendingWordRef.current;
-    const accepted = Boolean(pendingWord && next.foundWords.some((entry) => entry.word === pendingWord && entry.playerId === PLAYER_ID));
+    const accepted = Boolean(pendingWord && next.foundWords.some((entry) => entry.word === pendingWord && entry.playerId === playerId));
     if (accepted) {
       pendingWordRef.current = null;
       setSelectionFeedback("accepted");
@@ -233,15 +329,15 @@ function HomeScreen() {
     };
     const onLeaderboardUpdate = (next: LeaderboardEntry[]) => setLeaderboard(next);
     const onProfileUpdate = (next: { playerId: string; name: string; progress: PlayerProgress }) => {
-      if (next.playerId !== PLAYER_ID) return;
+      if (next.playerId !== playerId) return;
       remoteProfileRef.current = true;
       setProgress({ ...DEFAULT_PROGRESS, ...next.progress, missions: { ...DEFAULT_PROGRESS.missions, ...next.progress.missions } });
       if (next.name) setPlayerName(next.name);
     };
     const onReconnect = () => {
-      socket.emit("profile:load", { playerId: PLAYER_ID });
+      socket.emit("profile:load", { playerId });
       if (activeRoomCodeRef.current) {
-        socket.emit("room:reconnect", { code: activeRoomCodeRef.current, playerId: PLAYER_ID });
+        socket.emit("room:reconnect", { code: activeRoomCodeRef.current, playerId });
       }
     };
 
@@ -252,7 +348,7 @@ function HomeScreen() {
     socket.on("leaderboard:update", onLeaderboardUpdate);
     socket.on("profile:update", onProfileUpdate);
     socket.emit("leaderboard:request");
-    socket.emit("profile:load", { playerId: PLAYER_ID });
+    socket.emit("profile:load", { playerId });
     return () => {
       socket.off("room:update", onRoomUpdate);
       socket.off("room:error", onRoomError);
@@ -261,7 +357,7 @@ function HomeScreen() {
       socket.off("leaderboard:update", onLeaderboardUpdate);
       socket.off("profile:update", onProfileUpdate);
     };
-  }, [clearFeedbackLater, setRoomFromServer]);
+  }, [clearFeedbackLater, setRoomFromServer, playerId]);
 
   const createRoom = (size = selectedSize) => {
     haptics.light();
@@ -271,7 +367,7 @@ function HomeScreen() {
       haptics.error();
       return;
     }
-    socket.emit("room:create", { playerId: PLAYER_ID, playerName: safeName, size });
+    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: false });
     setNotice("Odan hazırlanıyor…");
   };
 
@@ -285,7 +381,7 @@ function HomeScreen() {
       haptics.error();
       return;
     }
-    socket.emit("room:create", { playerId: PLAYER_ID, playerName: safeName, size });
+    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: true });
     setNotice("Bot düellosu hazırlanıyor…");
   };
 
@@ -308,12 +404,12 @@ function HomeScreen() {
       return;
     }
     haptics.light();
-    getGameSocket().emit("room:join", { code, playerId: PLAYER_ID, playerName: safeName });
+    getGameSocket().emit("room:join", { code, playerId, playerName: safeName });
     setNotice("Odaya katılıyorsun…");
   };
 
   const leaveRoom = () => {
-    if (room) getGameSocket().emit("room:leave", { code: room.code, playerId: PLAYER_ID });
+    if (room) getGameSocket().emit("room:leave", { code: room.code, playerId });
     activeRoomCodeRef.current = null;
     setRoom(null);
     clearSelection();
@@ -324,13 +420,13 @@ function HomeScreen() {
   const markReady = () => {
     if (!room) return;
     haptics.light();
-    getGameSocket().emit("room:ready", { code: room.code, playerId: PLAYER_ID });
+    getGameSocket().emit("room:ready", { code: room.code, playerId });
   };
 
   const requestRematch = () => {
     if (!room) return;
     haptics.light();
-    getGameSocket().emit("room:rematch", { code: room.code, playerId: PLAYER_ID });
+    getGameSocket().emit("room:rematch", { code: room.code, playerId });
   };
 
   const includeCell = useCallback((index: number | null) => {
@@ -361,8 +457,8 @@ function HomeScreen() {
     if (pendingWordRef.current) return;
     pendingWordRef.current = wordFromSelection(room.board, selected);
     setSelectionFeedback("idle");
-    getGameSocket().emit("word:submit", { code: room.code, playerId: PLAYER_ID, selection: selected });
-  }, [room]);
+    getGameSocket().emit("word:submit", { code: room.code, playerId, selection: selected });
+  }, [room, playerId]);
 
   const startPointerSelection = useCallback((index: number) => {
     if (room?.status !== "playing") return;
@@ -398,7 +494,7 @@ function HomeScreen() {
     const row = Math.floor(oy / cellSize);
     if (col >= 0 && col < room.size && row >= 0 && row < room.size) {
       const index = row * room.size + col;
-      const isFound = room.foundWords.some(entry => entry.playerId === PLAYER_ID && entry.path.includes(index));
+      const isFound = room.foundWords.some(entry => entry.playerId === playerId && entry.path.includes(index));
       if (isFound) return;
       if (!selectionActiveRef.current) {
         if (pendingWordRef.current) return;
@@ -414,14 +510,26 @@ function HomeScreen() {
     }
   };
 
+  const getEventBoardCoords = (event: any) => {
+    const ne = event.nativeEvent ?? event;
+    const x = ne.locationX ?? ne.offsetX;
+    const y = ne.locationY ?? ne.offsetY;
+    if (x !== undefined && y !== undefined) {
+      return { x, y };
+    }
+    const { pageX, pageY } = getEventPageCoords(event);
+    return {
+      x: pageX - boardPageX.current,
+      y: pageY - boardPageY.current,
+    };
+  };
+
   const handleGestureStart = (event: any) => {
     event.preventDefault?.();
     event.stopPropagation?.();
     setIsSelecting(true);
     measureBoard();
-    const { pageX, pageY } = getEventPageCoords(event);
-    const x = pageX - boardPageX.current;
-    const y = pageY - boardPageY.current;
+    const { x, y } = getEventBoardCoords(event);
     handleGesture(x, y);
   };
 
@@ -429,9 +537,7 @@ function HomeScreen() {
     event.preventDefault?.();
     event.stopPropagation?.();
     if (!selectionActiveRef.current) return;
-    const { pageX, pageY } = getEventPageCoords(event);
-    const x = pageX - boardPageX.current;
-    const y = pageY - boardPageY.current;
+    const { x, y } = getEventBoardCoords(event);
     handleGesture(x, y);
   };
 
@@ -454,7 +560,7 @@ function HomeScreen() {
       AsyncStorage.setItem(SOLO_UNLOCK_KEY, String(next)).catch(() => undefined);
       return next;
     });
-    setProgress((current) => applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }));
+    setProgress((current) => applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"));
   };
 
   const startDailyChallenge = () => {
@@ -472,34 +578,172 @@ function HomeScreen() {
     return (
       <MainShell active="home" onNavigate={(destination) => setScreen(destination)}>
         <StatusBar style="light" />
-        <CommandCenter playerName={safeName} progress={progress} daily={daily} leaderboard={leaderboard} onPlayDaily={startDailyChallenge} onPlayBot={startBotDuel} onNavigate={setScreen} onLeaderboard={() => setScreen("season")} />
+        <CommandCenter playerName={safeName} progress={progress} daily={daily} leaderboard={leaderboard} onPlayDaily={startDailyChallenge} onPlayBot={startBotDuel} onSolo={() => setScreen("levels")} onNavigate={setScreen} onLeaderboard={() => setScreen("season")} />
       </MainShell>
     );
   }
 
   if (screen === "season") {
-    return <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><SeasonHub playerId={PLAYER_ID} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} onSelectTheme={(selectedTheme) => setProgress((current) => ({ ...current, selectedTheme }))} /></MainShell>;
-  }
-
-  if (screen === "modes") {
-    return <MainShell active="modes" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><PremiumModeCenter onSolo={() => setScreen("levels")} onBot4={() => startBotDuel(4)} onBot6={() => startBotDuel(6)} onBot8={() => startBotDuel(8)} onOnline={() => setScreen("online")} onSeason={() => setScreen("season")} onNavigate={setScreen} /></MainShell>;
+    return <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><SeasonHub playerId={playerId} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} onSelectTheme={(selectedTheme) => setProgress((current) => ({ ...current, selectedTheme }))} /></MainShell>;
   }
 
   if (screen === "levels") {
-    return <MainShell active="modes" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><SoloLevels unlockedLevel={soloUnlockedLevel} onBack={() => setScreen("modes")} onSelect={openSoloLevel} /></MainShell>;
+    return <MainShell active="home" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><SoloLevels unlockedLevel={soloUnlockedLevel} onBack={() => setScreen("home")} onSelect={openSoloLevel} /></MainShell>;
   }
 
   if (screen === "solo") {
     return <ScreenContainer style={{ paddingBottom: 16 }}><StatusBar style="light" /><SoloChallenge level={soloLevel} theme={dailySession?.themeId ?? progress.selectedTheme} variationSeed={dailySession?.variation} daily={Boolean(dailySession)} excludeWords={progress.history || []} onExit={() => { const destination = dailySession ? "home" : "levels"; setDailySession(null); setScreen(destination); }} onComplete={dailySession ? completeDailyChallenge : completeSoloLevel} onNext={() => openSoloLevel(Math.min(MAX_SOLO_LEVEL, soloLevel + 1))} /></ScreenContainer>;
   }
 
+  if (screen === "arcade") {
+    return (
+      <ScreenContainer style={{ paddingBottom: 16 }}>
+        <StatusBar style="light" />
+        <ArcadeChallenge
+          onExit={() => setScreen("home")}
+          onComplete={(score) => {
+            setProgress((current) => applyArcadeProgress(current, score));
+          }}
+        />
+      </ScreenContainer>
+    );
+  }
+
   if (screen === "online") {
-    return <MainShell active="online" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}><View style={styles.subHeader}><Pressable onPress={() => setScreen("home")} style={styles.backButton}><Text style={styles.backText}>‹</Text></Pressable><View><Text style={styles.subHeaderKicker}>CANLI DÜELLO</Text><Text style={styles.subHeaderTitle}>ÖZEL ODA</Text></View></View><Text style={styles.modeIntro}>İsmini seç, tahtanı belirle ve davet kodunu rakibinle paylaş.</Text><View style={styles.nameCard}><Text style={styles.inputLabel}>OYUNCU ADIN</Text><TextInput value={playerName} onChangeText={setPlayerName} maxLength={16} autoCapitalize="characters" style={styles.nameInput} placeholder="OYUNCU" placeholderTextColor="#6F879A" /></View><Text style={styles.sectionLabel}>TAHTA BOYUTU</Text><View style={styles.sizeRow}>{([4, 6, 8] as BoardSize[]).map((size) => <Pressable key={size} onPress={() => { haptics.light(); setSelectedSize(size); }} style={({ pressed }) => [styles.sizeCard, selectedSize === size && styles.sizeCardSelected, pressed && styles.pressed]}><Text style={[styles.sizeValue, selectedSize === size && styles.sizeValueSelected]}>{size}×{size}</Text><Text style={styles.sizeCaption}>{size === 4 ? "Hızlı düello" : size === 6 ? "Dengeli av" : "Büyük av"}</Text><Text style={styles.sizeDetail}>{size === 4 ? "4 gizli rota" : size === 6 ? "6 gizli rota" : "8 gizli rota"}</Text></Pressable>)}</View><Pressable onPress={() => createRoom()} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}><Text style={styles.primaryButtonText}>ODA OLUŞTUR</Text><Text style={styles.primaryButtonArrow}>→</Text></Pressable><View style={styles.joinCard}><Text style={styles.joinTitle}>DAVET KODUN MU VAR?</Text><View style={styles.joinRow}><TextInput value={roomCodeInput} onChangeText={(value) => setRoomCodeInput(value.toUpperCase())} maxLength={5} autoCapitalize="characters" style={styles.codeInput} placeholder="ABCDE" placeholderTextColor="#6F879A" /><Pressable onPress={joinRoom} style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}><Text style={styles.joinButtonText}>KATIL</Text></Pressable></View></View><Text style={styles.notice}>{notice}</Text></ScrollView></MainShell>;
+    return (
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)}>
+        <StatusBar style="light" />
+        <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.subHeader}>
+            <Pressable onPress={() => setScreen("home")} style={styles.backButton}>
+              <Text style={styles.backText}>‹</Text>
+            </Pressable>
+            <View>
+              <Text style={styles.subHeaderKicker}>HIZLI ANTRENMAN</Text>
+              <Text style={styles.subHeaderTitle}>BOT DÜELLOSU</Text>
+            </View>
+          </View>
+          
+          <Text style={styles.modeIntro}>İsmini seç, oynamak istediğin tahta boyutunu belirle ve anında savaşa başla.</Text>
+          
+          <View style={styles.nameCard}>
+            <Text style={styles.inputLabel}>OYUNCU ADIN</Text>
+            <TextInput 
+              value={playerName} 
+              onChangeText={setPlayerName} 
+              maxLength={16} 
+              autoCapitalize="characters" 
+              style={styles.nameInput} 
+              placeholder="OYUNCU" 
+              placeholderTextColor="#6F879A" 
+            />
+          </View>
+          
+          <Text style={styles.sectionLabel}>TAHTA BOYUTU SEÇİN</Text>
+          <View style={styles.sizeRow}>
+            {([4, 6, 8] as BoardSize[]).map((size) => (
+              <Pressable 
+                key={size} 
+                onPress={() => { haptics.light(); setSelectedSize(size); }} 
+                style={({ pressed }) => [styles.sizeCard, selectedSize === size && styles.sizeCardSelected, pressed && styles.pressed]}
+              >
+                <Text style={[styles.sizeValue, selectedSize === size && styles.sizeValueSelected]}>{size}×{size}</Text>
+                <Text style={styles.sizeCaption}>{size === 4 ? "Nabız (Hızlı)" : size === 6 ? "Akış (Orta)" : "Derinlik (Zor)"}</Text>
+                <Text style={styles.sizeDetail}>{size === 4 ? "4 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : "8 rota · 90 sn"}</Text>
+              </Pressable>
+            ))}
+          </View>
+          
+          <Pressable onPress={() => startBotDuel(selectedSize)} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
+            <Text style={styles.primaryButtonText}>SAVAŞI BAŞLAT</Text>
+            <Text style={styles.primaryButtonArrow}>→</Text>
+          </Pressable>
+          
+          <Text style={styles.notice}>Bot rakipler anında hazır olur ve bekleme süresi yoktur.</Text>
+        </ScrollView>
+      </MainShell>
+    );
+  }
+
+  if (authLoading) {
+    return (
+      <ScreenContainer style={{ flex: 1, backgroundColor: "#121025", justifyContent: "center", alignItems: "center" }}>
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color="#00F5D4" />
+      </ScreenContainer>
+    );
+  }
+
+  if (!authToken) {
+    return (
+      <AuthScreen
+        onSuccess={(token, username, cloudProgress, openId) => {
+          setAuthToken(token);
+          setPlayerId(openId);
+          setPlayerName(username);
+          if (cloudProgress) {
+            setProgress(cloudProgress);
+          } else {
+            syncProgressToCloud(progress);
+          }
+          setScreen("home");
+        }}
+      />
+    );
   }
 
   if (screen === "profile") {
     const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
-    return <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}><View style={styles.subHeader}><View style={[styles.profileAvatarLarge, { backgroundColor: activeAvatar.surface, borderColor: activeAvatar.color, borderWidth: 1.5 }]}><Text style={[styles.profileAvatarLargeText, { color: activeAvatar.color, fontSize: 24 }]}>{activeAvatar.icon}</Text></View><View><Text style={styles.subHeaderKicker}>OYUNCU PROFİLİ</Text><Text style={styles.subHeaderTitle}>{safeName}</Text></View></View><View style={styles.profilePanel}><Text style={styles.profilePanelTitle}>{progress.xp} XP · {progress.wins} GALİBİYET</Text><Text style={styles.profilePanelCopy}>En iyi tur: {progress.bestScore} puan · En yüksek tempo: {progress.bestTempo || "—"} kelime/dk · {progress.streak} günlük seri.</Text><View style={styles.profileRule} /><Text style={styles.inputLabel}>GÖRÜNEN AD</Text><TextInput value={playerName} onChangeText={setPlayerName} maxLength={16} autoCapitalize="characters" style={styles.nameInput} placeholder="OYUNCU" placeholderTextColor="#6F879A" /></View><PlayerCollection progress={progress} onSelectAvatar={(selectedAvatar) => { haptics.light(); setProgress((current) => ({ ...current, selectedAvatar })); }} /><View style={styles.profileHint}><Text style={styles.profileHintTitle}>ETKİN KELİME PAKETİ</Text><Text style={styles.profileHintCopy}>Sezon merkezinden temalı kelime paketini seç ve tekli avların rotasını değiştir.</Text><Pressable onPress={() => setScreen("season")} style={styles.profileHintButton}><Text style={styles.profileHintButtonText}>SEZON MERKEZİ</Text></Pressable></View></ScrollView></MainShell>;
+    return (
+      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}>
+        <StatusBar style="light" />
+        <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.subHeader}>
+            <View style={[styles.profileAvatarLarge, { backgroundColor: activeAvatar.surface, borderColor: activeAvatar.color, borderWidth: 1.5 }]}>
+              <Text style={[styles.profileAvatarLargeText, { color: activeAvatar.color, fontSize: 24 }]}>{activeAvatar.icon}</Text>
+            </View>
+            <View>
+              <Text style={styles.subHeaderKicker}>OYUNCU PROFİLİ</Text>
+              <Text style={styles.subHeaderTitle}>{safeName} (SEVİYE {getPlayerLevel(progress.xp)})</Text>
+            </View>
+          </View>
+          
+          <View style={styles.profilePanel}>
+            <Text style={styles.profilePanelTitle}>SEVİYE {getPlayerLevel(progress.xp)} · {progress.xp} XP · {progress.wins} GALİBİYET</Text>
+            <Text style={styles.profilePanelCopy}>En iyi tur: {progress.bestScore} puan · En yüksek tempo: {progress.bestTempo || "—"} kelime/dk · {progress.streak} günlük seri.</Text>
+            <View style={styles.profileRule} />
+            <Text style={styles.inputLabel}>GÖRÜNEN AD</Text>
+            <TextInput value={playerName} onChangeText={setPlayerName} maxLength={16} autoCapitalize="characters" style={styles.nameInput} placeholder="OYUNCU" placeholderTextColor="#6F879A" />
+          </View>
+          
+          <PlayerCollection progress={progress} onSelectAvatar={(selectedAvatar) => { haptics.light(); setProgress((current) => ({ ...current, selectedAvatar })); }} />
+          
+          <View style={styles.profileHint}>
+            <Text style={styles.profileHintTitle}>ETKİN KELİME PAKETİ</Text>
+            <Text style={styles.profileHintCopy}>Sezon merkezinden temalı kelime paketini seç ve tekli avların rotasını değiştir.</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable onPress={() => setScreen("season")} style={styles.profileHintButton}>
+                <Text style={styles.profileHintButtonText}>SEZON MERKEZİ</Text>
+              </Pressable>
+              <Pressable 
+                onPress={async () => {
+                  haptics.error();
+                  await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+                  setAuthToken(null);
+                  setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
+                  setPlayerName("OYUNCU");
+                  setProgress(DEFAULT_PROGRESS);
+                  setScreen("home");
+                }} 
+                style={[styles.profileHintButton, { backgroundColor: "#EF4444" }]}
+              >
+                <Text style={[styles.profileHintButtonText, { color: "#FFFFFF" }]}>ÇIKIŞ YAP</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </MainShell>
+    );
   }
 
   if (screen === "room" && room) {
@@ -508,7 +752,7 @@ function HomeScreen() {
       <ScreenContainer style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.roomScroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.navRow}><Pressable onPress={leaveRoom} style={styles.backButton}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.navTitle}>ÖZEL ODA</Text><View style={styles.navSpacer} /></View>
+        <View style={styles.navRow}><Pressable onPress={leaveRoom} style={styles.backButton}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.navTitle}>BOT DÜELLOSU</Text><View style={styles.navSpacer} /></View>
         <View style={styles.roomHero}>
           <Text style={styles.eyebrow}>DAVET KODU</Text>
           <Text style={styles.roomCode}>{room.code}</Text>
@@ -516,7 +760,7 @@ function HomeScreen() {
           <Pressable onPress={shareRoomInvite} style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}><Text style={styles.inviteButtonText}>DAVET BAĞLANTISINI PAYLAŞ</Text><Text style={styles.inviteButtonIcon}>↗</Text></Pressable>
         </View>
         <View style={styles.playerList}>
-          {room.players.map((player, index) => <PlayerRow key={player.id} player={player} isMe={player.id === PLAYER_ID} accent={index === 0 ? "#2DD4BF" : "#FB7185"} />)}
+          {room.players.map((player, index) => <PlayerRow key={player.id} player={player} isMe={player.id === playerId} accent={index === 0 ? "#2DD4BF" : "#FB7185"} />)}
           {!bothPlayers && <View style={styles.waitPlayer}><View style={styles.waitAvatar}><Text style={styles.waitAvatarText}>?</Text></View><View><Text style={styles.waitTitle}>RAKİP BEKLENİYOR</Text><Text style={styles.waitSub}>Oda kodunu paylaş</Text></View></View>}
         </View>
         <View style={styles.ruleCard}><Text style={styles.ruleIcon}>✦</Text><View style={styles.ruleTextWrap}><Text style={styles.ruleTitle}>{room.size}×{room.size} TAHTA · {room.wordsTotal} KELİME</Text><Text style={styles.ruleCopy}>Aynı tahtadaki tüm kelimeleri bul. Sadece yatay ve dikey komşu harfleri bağla.</Text></View></View>
@@ -532,7 +776,7 @@ function HomeScreen() {
   if (!room) return null;
   const selectionSet = new Set(selectedCells);
   const foundCellOwners = new Map<number, string>();
-  room.foundWords.filter((entry) => entry.playerId === PLAYER_ID).forEach((entry) => entry.path.forEach((cell) => foundCellOwners.set(cell, entry.playerId)));
+  room.foundWords.filter((entry) => entry.playerId === playerId).forEach((entry) => entry.path.forEach((cell) => foundCellOwners.set(cell, entry.playerId)));
   return (
     <ScreenContainer style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20 }}>
       <StatusBar style="light" />
@@ -575,7 +819,7 @@ function HomeScreen() {
             isFound={isFound}
             size={room.size}
             selectionFeedback={selectionFeedback}
-            playerId={PLAYER_ID}
+            playerId={playerId}
             status={room.status}
             startPointerSelection={startPointerSelection}
             continuePointerSelection={continuePointerSelection}
@@ -583,12 +827,29 @@ function HomeScreen() {
             selectionActiveRef={selectionActiveRef}
           />;
         })}
+        
+        {selectedCells.slice(0, -1).map((cellIdx, i) => {
+          const nextCellIdx = selectedCells[i + 1]!;
+          const start = getCellCenter(cellIdx);
+          const end = getCellCenter(nextCellIdx);
+          return (
+            <ConnectLine
+              key={`line-${i}`}
+              x1={start.x}
+              y1={start.y}
+              x2={end.x}
+              y2={end.y}
+              color="#2DD4BF"
+            />
+          );
+        })}
+
         {/* Absolute touch/pointer overlay to intercept gestures relative to board cleanly */}
         <View
           onPointerDown={(e: any) => { if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId); handleGestureStart(e); }}
           onPointerMove={handleGestureMove}
           onPointerUp={handleGestureEnd}
-          onPointerCancel={() => { selectionActiveRef.current = false; clearSelection(); }}
+          onPointerCancel={() => { selectionActiveRef.current = false; clearSelection(); setIsSelecting(false); }}
           onPointerLeave={finishPointerSelection}
           onTouchStart={handleGestureStart}
           onTouchMove={handleGestureMove}
@@ -597,9 +858,21 @@ function HomeScreen() {
         />
       </View>
       <View style={[styles.wordTray, selectionFeedback === "invalid" && styles.wordTrayInvalid, selectionFeedback === "accepted" && styles.wordTrayAccepted]}><Text style={styles.wordLabel}>{selectionFeedback === "invalid" ? "GEÇERSİZ KELİME" : selectionFeedback === "accepted" ? "KELİME KABUL EDİLDİ" : selectedCells.length >= 2 ? "ROTA SEÇİLDİ · DOĞRULAMAK İÇİN GÖNDER" : "SEÇTİĞİN KELİME"}</Text><Text style={[styles.drawnWord, !activeWord && styles.drawnWordEmpty]}>{activeWord || "HARFLERİ BİRLEŞTİR"}</Text><Text style={styles.routeHint}>{selectionFeedback === "invalid" ? "Kırmızı rota birazdan temizlenecek." : selectedCells.length > 1 ? "Mavi önizleme · yeşil yalnız kabul edilince görünür." : "Yalnız yatay ve dikey ilerle"}</Text><View style={styles.wordActions}>{selectedCells.length > 0 && <Pressable onPress={clearSelection} style={styles.clearWord}><Text style={styles.clearWordText}>TEMİZLE</Text></Pressable>}<Pressable disabled={selectedCells.length < 2 || Boolean(pendingWordRef.current)} onPress={() => submitSelection()} style={[styles.submitWord, (selectedCells.length < 2 || Boolean(pendingWordRef.current)) && styles.disabledButton]}><Text style={styles.submitWordText}>GÖNDER</Text></Pressable></View></View>
-      <View style={styles.foundPanel}><Text style={styles.foundLabel}>{room.status === "finished" ? "TURDA BULUNAN KELİMELER" : "BULUNAN KELİMELER"}</Text><View style={styles.foundTags}>{room.foundWords.length ? room.foundWords.map((entry, index) => <View key={`${entry.playerId}-${index}`} style={[styles.foundTag, entry.playerId === PLAYER_ID && styles.foundTagMine]}><Text style={styles.foundTagText}>{entry.hidden ? "RAKİP KELİMESİ" : entry.word}</Text></View>) : <Text style={styles.foundEmpty}>Henüz kelime bulunmadı.</Text>}</View></View>
+      <View style={styles.foundPanel}><Text style={styles.foundLabel}>{room.status === "finished" ? "TURDA BULUNAN KELİMELER (SÖZLÜK ANLAMI İÇİN TIKLA)" : "BULUNAN KELİMELER (SÖZLÜK ANLAMI İÇİN TIKLA)"}</Text><View style={styles.foundTags}>{room.foundWords.length ? room.foundWords.map((entry, index) => <Pressable key={`${entry.playerId}-${index}`} onPress={() => { if (!entry.hidden) { haptics.light(); setSelectedWordInfo({ word: entry.word, definition: getWordDefinition(entry.word) }); } }} style={({ pressed }) => [styles.foundTag, entry.playerId === playerId && styles.foundTagMine, pressed && { opacity: 0.7 }]}><Text style={styles.foundTagText}>{entry.hidden ? "RAKİP KELİMESİ" : entry.word}</Text></Pressable>) : <Text style={styles.foundEmpty}>Henüz kelime bulunmadı.</Text>}</View></View>
       {room.status === "finished" ? <View style={styles.resultPanel}><Text style={styles.resultTitle}>{iWon ? "TUR SENİN!" : "TUR RAKİBİNİN"}</Text><Text style={styles.resultCopy}>{iWon ? "En yüksek puanı sen topladın." : "Rövanşta daha fazla kelime bul."}</Text><MatchInsight score={myScore} opponentScore={opponentScore} words={myWordCount} opponentWords={opponentWordCount} tempo={myTempo} opponentTempo={opponentTempo} bestScore={progress.bestScore} /><Pressable onPress={requestRematch} style={({ pressed }) => [styles.primaryButton, styles.rematchButton, pressed && styles.pressed]}><Text style={styles.primaryButtonText}>{me?.rematch ? "RAKİP BEKLENİYOR" : "RÖVANŞ İSTE"}</Text><Text style={styles.primaryButtonArrow}>↻</Text></Pressable></View> : <Text style={styles.notice}>{notice}</Text>}
       </ScrollView>
+
+      {selectedWordInfo && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: "#1A1530", borderColor: "#2DD4BF" }]}>
+            <Text style={[styles.modalTitle, { color: "#2DD4BF" }]}>{selectedWordInfo.word}</Text>
+            <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
+            <Pressable onPress={() => setSelectedWordInfo(null)} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: "#2DD4BF" }, pressed && { opacity: 0.8 }]}>
+              <Text style={styles.modalCloseText}>KAPAT</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </ScreenContainer>
   );
 }
@@ -706,13 +979,13 @@ const styles = StyleSheet.create({
   subHeaderKicker: { color: "#A1BACB", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
   subHeaderTitle: { color: "#FFFFFF", fontSize: 19, fontWeight: "900", marginTop: 2 },
   modeIntro: { color: "#BDD2E1", fontSize: 13, lineHeight: 19, marginTop: 23, marginBottom: 14 },
-  nameCard: { backgroundColor: "#102235", borderWidth: 1, borderColor: "#29465D", padding: 14, borderRadius: 18 },
+  nameCard: { backgroundColor: "rgba(16, 34, 53, 0.72)", borderWidth: 1, borderColor: "rgba(41, 70, 93, 0.4)", padding: 14, borderRadius: 18 },
   inputLabel: { color: "#A5C0D6", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   nameInput: { color: "#FFFFFF", fontSize: 17, fontWeight: "800", paddingVertical: 6, letterSpacing: 1.3 },
   sectionLabel: { color: "#A5C0D6", fontSize: 10, fontWeight: "800", letterSpacing: 1.1, marginTop: 22, marginBottom: 9 },
   sizeRow: { flexDirection: "row", gap: 10 },
-  sizeCard: { flex: 1, backgroundColor: "#102235", borderWidth: 1, borderColor: "#29465D", borderRadius: 18, padding: 16 },
-  sizeCardSelected: { borderColor: "#2DD4BF", backgroundColor: "#123844" },
+  sizeCard: { flex: 1, backgroundColor: "rgba(16, 34, 53, 0.72)", borderWidth: 1, borderColor: "rgba(41, 70, 93, 0.4)", borderRadius: 18, padding: 16 },
+  sizeCardSelected: { borderColor: "#2DD4BF", backgroundColor: "rgba(18, 56, 68, 0.75)" },
   sizeValue: { color: "#FFFFFF", fontSize: 25, fontWeight: "900" },
   sizeValueSelected: { color: "#2DD4BF" },
   sizeCaption: { color: "#F1F7FA", fontSize: 13, fontWeight: "800", marginTop: 4 },
@@ -722,7 +995,7 @@ const styles = StyleSheet.create({
   primaryButtonArrow: { color: "#07141E", fontSize: 24, fontWeight: "600" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   disabledButton: { opacity: 0.46 },
-  joinCard: { backgroundColor: "#0D1D2C", borderWidth: 1, borderColor: "#203A50", borderRadius: 18, padding: 14, marginTop: 14 },
+  joinCard: { backgroundColor: "rgba(13, 29, 44, 0.72)", borderWidth: 1, borderColor: "rgba(32, 58, 80, 0.4)", borderRadius: 18, padding: 14, marginTop: 14 },
   joinTitle: { color: "#A5C0D6", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
   joinRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 9 },
   codeInput: { color: "#FFFFFF", fontSize: 16, fontWeight: "900", letterSpacing: 3, flex: 1, paddingVertical: 7 },
@@ -730,7 +1003,7 @@ const styles = StyleSheet.create({
   joinButtonText: { color: "#FFFFFF", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
   notice: { color: "#A5BCCC", textAlign: "center", fontSize: 12, lineHeight: 18, marginTop: 15, paddingHorizontal: 15 },
   navRow: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  backButton: { width: 36, height: 36, justifyContent: "center", alignItems: "center", borderRadius: 12, backgroundColor: "#102235" },
+  backButton: { width: 36, height: 36, justifyContent: "center", alignItems: "center", borderRadius: 12, backgroundColor: "rgba(16, 34, 53, 0.72)" },
   backText: { color: "#FFFFFF", fontSize: 30, lineHeight: 32 },
   navTitle: { color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 1.2 },
   navSpacer: { width: 36 },
@@ -740,7 +1013,7 @@ const styles = StyleSheet.create({
   inviteButton: { marginTop: 15, borderRadius: 13, backgroundColor: "#493878", borderWidth: 1, borderColor: "#9A76ED", minHeight: 42, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 10 },
   inviteButtonText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
   inviteButtonIcon: { color: "#55E6B2", fontSize: 18, fontWeight: "900" },
-  playerList: { backgroundColor: "#102235", borderRadius: 20, padding: 8, borderWidth: 1, borderColor: "#29465D" },
+  playerList: { backgroundColor: "rgba(16, 34, 53, 0.72)", borderRadius: 20, padding: 8, borderWidth: 1, borderColor: "rgba(41, 70, 93, 0.4)" },
   playerRow: { flexDirection: "row", alignItems: "center", minHeight: 64, paddingHorizontal: 8, gap: 11 },
   playerAvatar: { width: 43, height: 43, borderRadius: 15, borderWidth: 2, backgroundColor: "#0B1928", alignItems: "center", justifyContent: "center" },
   playerAvatarText: { color: "#FFFFFF", fontWeight: "900", fontSize: 13 },
@@ -753,7 +1026,7 @@ const styles = StyleSheet.create({
   waitAvatarText: { color: "#8BA5BC", fontWeight: "700", fontSize: 19 },
   waitTitle: { color: "#DFE7ED", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
   waitSub: { color: "#8BA5BC", fontSize: 11, marginTop: 3 },
-  ruleCard: { marginTop: 18, backgroundColor: "#172A3C", flexDirection: "row", padding: 15, borderRadius: 17, gap: 11, borderLeftWidth: 3, borderLeftColor: "#A3E635" },
+  ruleCard: { marginTop: 18, backgroundColor: "rgba(23, 42, 60, 0.72)", flexDirection: "row", padding: 15, borderRadius: 17, gap: 11, borderLeftWidth: 3, borderLeftColor: "#A3E635" },
   ruleIcon: { color: "#A3E635", fontSize: 20 },
   ruleTextWrap: { flex: 1 },
   ruleTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
@@ -767,7 +1040,7 @@ const styles = StyleSheet.create({
   liveDot: { width: 6, height: 6, borderRadius: 5, backgroundColor: "#A3E635" },
   liveText: { color: "#BDF7DE", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   scoreRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 7 },
-  scoreBadge: { flex: 1, backgroundColor: "#102235", borderWidth: 1, borderColor: "#29465D", borderRadius: 16, alignItems: "center", paddingVertical: 9 },
+  scoreBadge: { flex: 1, backgroundColor: "rgba(16, 34, 53, 0.72)", borderWidth: 1, borderColor: "rgba(41, 70, 93, 0.4)", borderRadius: 16, alignItems: "center", paddingVertical: 9 },
   scoreName: { color: "#DFE8EE", maxWidth: 105, fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
   scoreValue: { color: "#FFFFFF", fontSize: 25, lineHeight: 29, fontWeight: "900", marginTop: 1 },
   scoreStatus: { color: "#A5BCCB", fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
@@ -778,8 +1051,8 @@ const styles = StyleSheet.create({
   targetWord: { color: "#A3E635", fontSize: 29, fontWeight: "900", letterSpacing: 2, marginTop: 2 },
   targetTip: { color: "#BDD2E1", fontSize: 11, lineHeight: 15, marginTop: 4, maxWidth: "100%", paddingHorizontal: 12, textAlign: "center" },
   board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#0A1927", borderRadius: 24, padding: 4, borderWidth: 1, borderColor: "#29465D", overflow: "hidden", userSelect: "none", touchAction: "none" } as any,
-  cellWrap: { padding: 3 },
-  cell: { flex: 1, borderRadius: 11, backgroundColor: "#173248", borderWidth: 1, borderColor: "#29465D", alignItems: "center", justifyContent: "center" },
+  cellWrap: { padding: 5 },
+  cell: { flex: 1, borderRadius: 99, backgroundColor: "#173248", borderWidth: 2, borderColor: "#29465D", alignItems: "center", justifyContent: "center", aspectRatio: 1 },
   cellFinished: { backgroundColor: "#7BAA24" },
   cellLetter: { color: "#FFFFFF", fontSize: 23, fontWeight: "900" },
   cellLetterMedium: { fontSize: 19 },
@@ -791,7 +1064,7 @@ const styles = StyleSheet.create({
   cellFound: { backgroundColor: "#216C65", borderColor: "#50E3C2" },
   cellFoundMine: { backgroundColor: "#27887B", borderColor: "#A3E635", shadowColor: "#50E3C2", shadowOpacity: 0.3, shadowRadius: 5, elevation: 3 },
   cellCheck: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" },
-  wordTray: { minHeight: 82, marginTop: 12, borderRadius: 17, backgroundColor: "#102235", borderWidth: 1, borderColor: "#29465D", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  wordTray: { minHeight: 82, marginTop: 12, borderRadius: 17, backgroundColor: "rgba(16, 34, 53, 0.72)", borderWidth: 1, borderColor: "rgba(41, 70, 93, 0.4)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
   wordTrayInvalid: { borderColor: "#FF647C", backgroundColor: "#5B2339" },
   wordTrayAccepted: { borderColor: "#50E3C2", backgroundColor: "#1F514D" },
   wordLabel: { color: "#A1B9CB", fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
@@ -803,7 +1076,7 @@ const styles = StyleSheet.create({
   clearWordText: { color: "#FB7185", fontSize: 9, fontWeight: "900" },
   submitWord: { backgroundColor: "#2DD4BF", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5 },
   submitWordText: { color: "#07141E", fontSize: 9, fontWeight: "900" },
-  foundPanel: { marginTop: 9, borderRadius: 14, backgroundColor: "#0D1D2C", borderWidth: 1, borderColor: "#203A50", padding: 10 },
+  foundPanel: { marginTop: 9, borderRadius: 14, backgroundColor: "rgba(13, 29, 44, 0.72)", borderWidth: 1, borderColor: "rgba(32, 58, 80, 0.4)", padding: 10 },
   foundLabel: { color: "#A1B8C8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
   foundTags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 },
   foundTag: { backgroundColor: "#2B3147", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
@@ -818,15 +1091,21 @@ const styles = StyleSheet.create({
   eyebrow: { color: "#2DD4BF", fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
   profileAvatarLarge: { width: 52, height: 52, borderRadius: 18, backgroundColor: "#A3E635", alignItems: "center", justifyContent: "center" },
   profileAvatarLargeText: { color: "#142516", fontSize: 15, fontWeight: "900" },
-  profilePanel: { backgroundColor: "#102235", borderRadius: 20, borderWidth: 1, borderColor: "#29465D", padding: 17, marginTop: 23 },
+  profilePanel: { backgroundColor: "rgba(16, 34, 53, 0.72)", borderRadius: 20, borderWidth: 1, borderColor: "rgba(41, 70, 93, 0.4)", padding: 17, marginTop: 23 },
   profilePanelTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
   profilePanelCopy: { color: "#BDD2E1", fontSize: 12, lineHeight: 18, marginTop: 7 },
   profileRule: { height: 1, backgroundColor: "#29465D", marginVertical: 16 },
-  profileHint: { backgroundColor: "#223544", borderRadius: 18, padding: 16, marginTop: 12, borderLeftWidth: 3, borderLeftColor: "#A3E635" },
+  profileHint: { backgroundColor: "rgba(34, 53, 68, 0.72)", borderRadius: 18, padding: 16, marginTop: 12, borderLeftWidth: 3, borderLeftColor: "#A3E635" },
   profileHintTitle: { color: "#EAF8FF", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
   profileHintCopy: { color: "#DCE6ED", fontSize: 12, lineHeight: 17, marginTop: 5 },
   profileHintButton: { alignSelf: "flex-start", marginTop: 12, backgroundColor: "#A3E635", borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8 },
   profileHintButtonText: { color: "#132116", fontSize: 10, fontWeight: "900" },
+  modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", zIndex: 100 },
+  modalContent: { width: "86%", borderRadius: 20, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
+  modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },
+  modalBody: { color: "#FFFFFF", fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20, fontWeight: "600" },
+  modalCloseButton: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
+  modalCloseText: { color: "#000000", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
 });
 
 export default function App() {

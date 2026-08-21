@@ -1,9 +1,12 @@
 import mongoose, { Schema } from "mongoose";
+import crypto from "crypto";
 import { ENV } from "./_core/env";
 
 export type User = {
   id: number;
   openId: string;
+  username?: string;
+  passwordHash?: string;
   name: string | null;
   email: string | null;
   loginMethod: string | null;
@@ -11,20 +14,37 @@ export type User = {
   createdAt: Date;
   updatedAt: Date;
   lastSignedIn: Date;
+  progress?: any;
 };
 
 export type InsertUser = Partial<User> & { openId: string };
 
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+  return `${salt}:${hash}`;
+}
+
+export function verifyPassword(password: string, stored: string): boolean {
+  const [salt, originalHash] = stored.split(":");
+  if (!salt || !originalHash) return false;
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+  return hash === originalHash;
+}
+
 const UserSchema = new Schema<User>({
   id: { type: Number, required: true },
   openId: { type: String, required: true, unique: true },
+  username: { type: String, unique: true, sparse: true, default: null },
+  passwordHash: { type: String, default: null },
   name: { type: String, default: null },
   email: { type: String, default: null },
   loginMethod: { type: String, default: null },
   role: { type: String, enum: ["user", "admin"], default: "user" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  lastSignedIn: { type: Date, default: Date.now }
+  lastSignedIn: { type: Date, default: Date.now },
+  progress: { type: Schema.Types.Mixed, default: null }
 });
 
 export const UserModel = mongoose.models.User || mongoose.model<User>("User", UserSchema);

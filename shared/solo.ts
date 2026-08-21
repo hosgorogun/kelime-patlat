@@ -12,7 +12,7 @@ export type SoloLevel = {
   subtitle: string;
 };
 
-export type SoloBoard = Pick<SoloLevel, "level" | "size" | "timeLimit" | "title" | "subtitle"> & {
+export type SoloBoard = Pick<SoloLevel, "level" | "size" | "wordCount" | "timeLimit" | "title" | "subtitle"> & {
   board: string[];
   words: string[];
   routes: Record<string, number[]>;
@@ -111,8 +111,8 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
   const themed = catalogWordsForTheme(config.size, theme, profile.maxWordLength).filter((entry) => entry.word.length >= profile.minWordLength);
   const general = catalogWordsForTheme(config.size, "general", profile.maxWordLength).filter((entry) => entry.word.length >= profile.minWordLength);
 
-  const minWords = config.size === 4 ? 3 : config.size === 6 ? 4 : 7;
-  const maxWords = config.size === 4 ? 3 : config.size === 6 ? 9 : 12;
+  const minWords = config.size === 4 ? 3 : config.size === 6 ? 4 : config.size === 8 ? 7 : 10;
+  const maxWords = config.size === 4 ? 3 : config.size === 6 ? 9 : config.size === 8 ? 12 : 14;
 
   const adjustedMinLen = Math.max(profile.minWordLength, Math.floor(targetSum / maxWords) - 1);
   const themedFiltered = themed.filter((entry) => entry.word.length >= adjustedMinLen && !excludeWords.includes(entry.word));
@@ -265,7 +265,15 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
     })) continue;
     const board = Array.from({ length: config.size * config.size }, () => "");
     words.forEach((word) => routes[word]!.forEach((cell, index) => { board[cell] = word[index]!; }));
-    return { ...config, board, words, routes, wordDifficulties: makeDifficultyMap(entries) };
+    return {
+      ...config,
+      board,
+      words,
+      routes,
+      wordDifficulties: makeDifficultyMap(entries),
+      wordCount: words.length,
+      subtitle: `${words.length} kelime · ${config.timeLimit} sn · en az ${config.minTurns} dönüş`
+    };
   }
   
   const random = seededRandom(config.level * 17_729 + variation * 257);
@@ -278,5 +286,13 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
   }));
   const board = Array.from({ length: config.size * config.size }, () => "");
   words.forEach((word) => routes[word]!.forEach((cell, index) => { board[cell] = word[index]!; }));
-  return { ...config, board, words, routes, wordDifficulties: makeDifficultyMap(entries) };
+  return {
+    ...config,
+    board,
+    words,
+    routes,
+    wordDifficulties: makeDifficultyMap(entries),
+    wordCount: words.length,
+    subtitle: `${words.length} kelime · ${config.timeLimit} sn · en az ${config.minTurns} dönüş`
+  };
 }

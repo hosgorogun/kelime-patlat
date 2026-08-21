@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 
@@ -35,12 +35,22 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(updated.missions.duels).toBe(1);
     expect(updated.missions.wordsmith).toBe(1);
     expect(updated.xp).toBeGreaterThan(DEFAULT_PROGRESS.xp);
+
+    const autoWordsmith = applyMatchProgress(DEFAULT_PROGRESS, { score: 50, tempo: 2, won: false, foundWords: ["DENEMELER"] });
+    expect(autoWordsmith.missions.wordsmith).toBe(1);
+  });
+
+  it("arcade raporu en yüksek skoru ve XP ilerlemesini günceller", () => {
+    const updated = applyArcadeProgress(DEFAULT_PROGRESS, 120);
+    expect(updated.bestArcadeScore).toBe(120);
+    expect(updated.xp).toBe(12); // 120 / 10 = 12 XP
+    expect(updated.matches).toBe(0); // matches should not increment
   });
 
   it("her tema paketi seçilebilir kelimeler ve geçerli tek oyunculu rota üretir", () => {
     THEME_PACKS.forEach((pack) => {
       expect(catalogWordsForTheme(6, pack.id).length).toBeGreaterThanOrEqual(3);
-      const challenge = createSoloBoard(4, 37, pack.id);
+      const challenge = createSoloBoard(16, 37, pack.id);
       expect(challenge.board).toHaveLength(36);
       expect(challenge.board.every(Boolean)).toBe(true);
       expect(challenge.words.length).toBeGreaterThanOrEqual(4);

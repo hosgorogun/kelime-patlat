@@ -100,7 +100,7 @@ export async function recordLeaderboardRounds(rounds: RoundEntry[]) {
       { id: round.id },
       {
         $set: { name: round.name, updatedAt: now },
-        $setOnInsert: { id: round.id, score: 0, wins: 0, matches: 0, bestRound: 0 },
+        $setOnInsert: { id: round.id },
         $inc: { score: round.score, wins: round.won ? 1 : 0, matches: 1 },
         $max: { bestRound: round.score },
       },

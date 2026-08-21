@@ -135,20 +135,45 @@ export function missionProgress(progress: PlayerProgress, mission: SeasonMission
   return Math.min(progress.missions[mission.id] ?? 0, mission.target);
 }
 
-export function applyMatchProgress(progress: PlayerProgress, result: { score: number; tempo: number; won: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number }) {
+export function applyMatchProgress(
+  progress: PlayerProgress,
+  result: { score: number; tempo: number; won: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number },
+  type: "pvp" | "bot" | "solo" = "pvp"
+) {
   const duelProgress = Math.min(2, (progress.missions.duels ?? 0) + 1);
-  const wordsmithProgress = Math.min(1, (progress.missions.wordsmith ?? 0) + (result.longWord ? 1 : 0));
+  const hasLongWord = result.longWord || (result.foundWords && result.foundWords.some((w) => w.length >= 7));
+  const wordsmithProgress = Math.min(1, (progress.missions.wordsmith ?? 0) + (hasLongWord ? 1 : 0));
   const newHistory = [...(progress.history || []), ...(result.foundWords || [])].slice(-150);
+
+  let xpGain = 0;
+  if (type === "pvp") {
+    xpGain = 40 + (result.won ? 25 : 0);
+  } else if (type === "bot") {
+    xpGain = 20 + (result.won ? 15 : 0);
+  } else if (type === "solo") {
+    xpGain = 30;
+  }
+
   return {
     ...progress,
-    xp: progress.xp + 35 + (result.won ? 25 : 0),
+    xp: progress.xp + xpGain,
     wins: progress.wins + (result.won ? 1 : 0),
-    matches: progress.matches + 1,
+    matches: progress.matches + (type !== "solo" ? 1 : 0),
     bestScore: Math.max(progress.bestScore, result.score),
     bestTempo: Math.max(progress.bestTempo, result.tempo),
     bestArcadeScore: Math.max(progress.bestArcadeScore || 0, result.arcadeScore || 0),
-    missions: { ...progress.missions, duels: duelProgress, wordsmith: wordsmithProgress },
+    missions: { ...progress.missions, duels: type !== "solo" ? duelProgress : progress.missions.duels, wordsmith: wordsmithProgress },
     history: newHistory,
+  };
+}
+
+export function applyArcadeProgress(progress: PlayerProgress, score: number) {
+  const newBest = Math.max(progress.bestArcadeScore || 0, score);
+  const xpGain = Math.max(5, Math.floor(score / 10));
+  return {
+    ...progress,
+    xp: progress.xp + xpGain,
+    bestArcadeScore: newBest,
   };
 }
 
@@ -161,4 +186,8 @@ export function completeDailyProgress(progress: PlayerProgress, daily: DailyChal
     streak: progress.streak + 1,
     missions: { ...progress.missions, daily: 1 },
   };
+}
+
+export function getPlayerLevel(xp: number): number {
+  return Math.floor(xp / 200) + 1;
 }

@@ -8,6 +8,8 @@ import { registerStorageProxy } from "./storageProxy";
 import { sdk } from "./sdk";
 import { registerGameRooms } from "../game/rooms";
 
+import { UserModel, hashPassword, verifyPassword } from "../db";
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer();
@@ -63,6 +65,98 @@ async function startServer() {
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });
+  });
+
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { username, password, email, fullName } = req.body;
+      if (!username || !password || username.length < 3 || password.length < 4) {
+        return res.status(400).json({ error: "Geçersiz kullanıcı adı veya şifre (Kullanıcı adı min 3, şifre min 4 karakter olmalıdır)." });
+      }
+      if (!email || !fullName) {
+        return res.status(400).json({ error: "E-posta ve ad soyad alanları zorunludur." });
+      }
+      const existingUser = await UserModel.findOne({ username: username.toLowerCase() });
+      if (existingUser) {
+        return res.status(400).json({ error: "Bu kullanıcı adı zaten alınmış." });
+      }
+      
+      const openId = `usr_${username.toLowerCase()}`;
+      const passwordHash = hashPassword(password);
+      const now = new Date();
+
+      const user = new UserModel({
+        id: Math.abs([...openId].reduce((value, char) => ((value * 31) ^ char.charCodeAt(0)) >>> 0, 7_431)),
+        openId,
+        username: username.toLowerCase(),
+        passwordHash,
+        name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        loginMethod: "credentials",
+        role: "user",
+        createdAt: now,
+        updatedAt: now,
+        lastSignedIn: now,
+        progress: null
+      });
+
+      await user.save();
+      const token = await sdk.createSessionToken(openId, { name: fullName.trim() });
+      res.json({ success: true, token, username: fullName.trim(), progress: null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Kayıt işlemi başarısız." });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ error: "Kullanıcı adı ve şifre gereklidir." });
+      }
+      const user = await UserModel.findOne({ username: username.toLowerCase() });
+      if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+        return res.status(401).json({ error: "Kullanıcı adı veya şifre hatalı." });
+      }
+
+      user.lastSignedIn = new Date();
+      await user.save();
+
+      const token = await sdk.createSessionToken(user.openId, { name: user.name || username.toUpperCase() });
+      res.json({ success: true, token, username: user.name || username.toUpperCase(), progress: user.progress });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Giriş işlemi başarısız." });
+    }
+  });
+
+  app.post("/api/auth/sync-progress", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
+      
+      const { progress } = req.body;
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (dbUser) {
+        dbUser.progress = progress;
+        dbUser.updatedAt = new Date();
+        await dbUser.save();
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Senkronizasyon başarısız." });
+    }
+  });
+
+  app.get("/api/auth/get-progress", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
+
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      res.json({ progress: dbUser?.progress || null });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "İlerleme verisi alınamadı." });
+    }
   });
 
   app.get("/api/auth/me", async (req, res) => {

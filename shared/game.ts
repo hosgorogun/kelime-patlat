@@ -2,15 +2,14 @@ import { WORD_BANK, WORD_CATALOG, type WordDifficulty, type WordEntry } from "./
 
 export { WORD_BANK, WORD_CATALOG, type WordDifficulty, type WordEntry } from "./word-catalog";
 
-export const BOARD_SIZES = [4, 6, 8] as const;
+export const BOARD_SIZES = [4, 6, 8, 10] as const;
 export type BoardSize = (typeof BOARD_SIZES)[number];
 
 export const LIVE_FOUR_WORD_LENGTH_PATTERNS = [
-  [2, 3, 4, 5],
-  [2, 4, 5, 5],
-  [2, 3, 5, 5],
   [3, 3, 4, 5],
+  [3, 3, 5, 5],
   [3, 4, 4, 5],
+  [3, 3, 4, 6],
 ] as const;
 
 export function pickLiveFourWordLengths(random = Math.random) {
@@ -18,7 +17,7 @@ export function pickLiveFourWordLengths(random = Math.random) {
 }
 
 export function getRoundDurationMs(size: BoardSize) {
-  return size === 4 ? 55_000 : size === 6 ? 75_000 : 90_000;
+  return size === 4 ? 55_000 : size === 6 ? 75_000 : size === 8 ? 90_000 : 110_000;
 }
 
 export function wordScoreMultiplier(length: number) {
@@ -26,8 +25,8 @@ export function wordScoreMultiplier(length: number) {
 }
 
 export function botThinkDelayMs(size: BoardSize, random = Math.random) {
-  const minimum = size === 4 ? 9_000 : size === 6 ? 11_000 : 12_000;
-  const spread = size === 4 ? 6_000 : size === 6 ? 7_000 : 8_000;
+  const minimum = size === 4 ? 9_000 : size === 6 ? 11_000 : size === 8 ? 12_000 : 14_000;
+  const spread = size === 4 ? 6_000 : size === 6 ? 7_000 : size === 8 ? 8_000 : 9_000;
   return minimum + Math.floor(random() * spread);
 }
 
@@ -78,7 +77,7 @@ export type LeaderboardEntry = {
 };
 
 export const TURKISH_LETTERS = [
-  "A", "B", "C", "Ç", "D", "E", "F", "G", "Ğ", "H", "I", "İ", "K", "L", "M", "N", "O", "Ö", "P", "R", "S", "Ş", "T", "U", "Ü", "V", "Y", "Z",
+  "A", "B", "C", "Ç", "D", "E", "F", "G", "Ğ", "H", "I", "İ", "J", "K", "L", "M", "N", "O", "Ö", "P", "R", "S", "Ş", "T", "U", "Ü", "V", "Y", "Z",
 ];
 
 export function fillBoardBlanks(board: string[], random = Math.random) {

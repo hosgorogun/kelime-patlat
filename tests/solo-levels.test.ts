@@ -48,29 +48,29 @@ describe("Tek oyunculu seviye yolculuğu", () => {
 
   it("seviyeler büyüdükçe daha büyük tahtaya ve daha kısa süreye geçer", () => {
     expect(getSoloLevel(1).size).toBe(4);
-    expect(getSoloLevel(4).size).toBe(6);
-    expect(getSoloLevel(8).size).toBe(8);
+    expect(getSoloLevel(16).size).toBe(6);
+    expect(getSoloLevel(46).size).toBe(8);
     expect(getSoloLevel(1).wordCount).toBe(3);
-    expect(getSoloLevel(3).wordCount).toBe(3);
-    expect(getSoloLevel(1).timeLimit).toBeGreaterThan(getSoloLevel(6).timeLimit);
+    expect(getSoloLevel(12).wordCount).toBe(3);
+    expect(getSoloLevel(1).timeLimit).toBeGreaterThan(getSoloLevel(16).timeLimit);
   });
 
   it("üretilen seviyedeki tüm kelimelerin yatay-dikey yolu bulunur", () => {
-    for (const level of [1, 3, 4, 7, 8, 12]) {
+    for (const level of [1, 10, 16, 25, 46, 60]) {
       const challenge = createSoloBoard(level, 2);
       expect(challenge.board).toHaveLength(challenge.size * challenge.size);
       expect(challenge.words.length).toBeGreaterThan(0);
       expect(Object.keys(challenge.routes)).toHaveLength(challenge.words.length);
       if (challenge.size === 4) {
         expect(challenge.words).toHaveLength(3);
-        expect(challenge.words.every((word) => word.length >= 4)).toBe(true);
+        expect(challenge.words.every((word) => word.length >= 3)).toBe(true);
         expect(challenge.words.reduce((total, word) => total + word.length, 0)).toBe(16);
         expect(new Set(Object.values(challenge.wordDifficulties)).size).toBeGreaterThanOrEqual(2);
       }
       if (challenge.size === 6) {
-        expect(challenge.words.length).toBeGreaterThanOrEqual(4);
+        expect(challenge.words.length).toBeGreaterThanOrEqual(5);
         expect(challenge.words.length).toBeLessThanOrEqual(9);
-        expect(challenge.words.every((word) => word.length >= 4 && word.length <= 6)).toBe(true);
+        expect(challenge.words.every((word) => word.length >= 3 && word.length <= 8)).toBe(true);
       }
       challenge.words.forEach((word) => {
         expect(hasPath(challenge.board, challenge.size, word)).toBe(true);
@@ -90,7 +90,7 @@ describe("Tek oyunculu seviye yolculuğu", () => {
       for (const variation of [0, 1, 2, 3, 4, 5]) {
         const challenge = createSoloBoard(level, variation);
         expect(challenge.words).toHaveLength(3);
-        expect(challenge.words.every((word) => word.length >= 4)).toBe(true);
+        expect(challenge.words.every((word) => word.length >= 3)).toBe(true);
         expect(new Set(Object.values(challenge.wordDifficulties)).size).toBeGreaterThanOrEqual(2);
         challenge.words.forEach((word) => {
           expect(hasPath(challenge.board, 4, word)).toBe(true);
@@ -101,13 +101,13 @@ describe("Tek oyunculu seviye yolculuğu", () => {
   });
 
   it("6×6 orta av seviyeleri dengeli kelime sayısı, rota dönüşü ve boşluksuz tahta üretir", () => {
-    for (const level of [4, 5, 6, 7]) {
+    for (const level of [16, 17, 18, 19]) {
       for (const variation of [0, 2, 5]) {
         const challenge = createSoloBoard(level, variation);
         expect(challenge.size).toBe(6);
         expect(challenge.board).toHaveLength(36);
         expect(challenge.board.every(Boolean)).toBe(true);
-        expect(challenge.words.length).toBeGreaterThanOrEqual(4);
+        expect(challenge.words.length).toBeGreaterThanOrEqual(5);
         challenge.words.forEach((word) => {
           expect(hasPath(challenge.board, 6, word)).toBe(true);
           expect(turnCount(challenge.routes[word]!)).toBeGreaterThanOrEqual(1);
@@ -137,7 +137,7 @@ describe("Tek oyunculu seviye yolculuğu", () => {
 
   it("rastgele oyunlar zorluk kategorilerinden dengeli kelime karışımları üretir", () => {
     const seenDifficulties = new Set<string>();
-    for (const level of [1, 4, 8, 12]) {
+    for (const level of [1, 16, 46, 60]) {
       for (const variation of [7, 19, 31, 43]) {
         const challenge = createSoloBoard(level, variation);
         const difficulties = new Set(Object.values(challenge.wordDifficulties));

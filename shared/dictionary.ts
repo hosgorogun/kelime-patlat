@@ -1,0 +1,72 @@
+const WORD_DEFINITIONS: Record<string, string> = {
+  // Doğa
+  "AY": "Dünya'nın tek doğal uydusu olan gök cismi.",
+  "ADA": "Dört tarafı tamamen suyla çevrili kara parçası.",
+  "ARI": "Bal yapan, iğneli ve kanatlı çalışkan böcek türü.",
+  "BAL": "Arıların çiçeklerden topladığı tatlı ve şifalı sıvı gıda.",
+  "DAL": "Ağaçların gövdesinden ayrılan ve yaprak taşıyan kısımları.",
+  "GÖL": "Karalar üzerindeki dört tarafı kapalı durgun su birikintisi.",
+  "GÜL": "Güzel kokulu, katmerli ve dikenli dalları olan çiçek.",
+  "KUM": "Kayaların dış etkenlerle ufalanmasıyla oluşan ince tanecikler.",
+  "TAŞ": "Doğada katı ve sert olarak bulunan mineral kütle.",
+  "YAZ": "Yılın en sıcak mevsimi, ilkbahar ile sonbahar arası.",
+  "ELMA": "Gülgillerden, sert ve sulu, kırmızı veya yeşil meyve.",
+  "DENİZ": "Yeryüzünün büyük kısmını kaplayan geniş tuzlu su kütlesi.",
+  "ÇİÇEK": "Bitkilerin üreme organlarını taşıyan renkli kısmı.",
+  "BAHÇE": "Çiçek, meyve veya sebze yetiştirilen çevrili toprak alanı.",
+  "ORMAN": "Ağaçlarla kaplı geniş doğal alan ve ekosistem.",
+  "SAHİL": "Deniz, göl veya nehir kıyısı boyunca uzanan kara şeridi.",
+  "YAPRAK": "Bitkilerin nefes almasını sağlayan yeşil renkli organı.",
+  "YILDIZ": "Gökyüzünde ışık saçan devasa plazma küresi.",
+  "YAĞMUR": "Bulutlardaki su damlacıklarının yere düşmesi olayı.",
+  "BULUT": "Havada asılı duran su buharı ve damlacıklar kümesi.",
+  "GÜNEŞ": "Gezegenimizi ısıtan ve aydınlatan en yakın yıldız.",
+  "TOPRAK": "Yeryüzünü kaplayan, bitkilerin yetiştiği gevşek örtü.",
+  "MEVSİM": "Yılın iklim şartlarına göre ayrılan dört bölümünden her biri.",
+  "NEHİR": "Genellikle denize dökülen büyük ve uzun akarsu.",
+  "RÜZGAR": "Havanın yüksek basınçtan alçak basınca yatay hareketi.",
+  "KUTUPLAR": "Dünya ekseninin kuzey ve güney uçlarındaki soğuk bölgeler.",
+
+  // Şehir
+  "KENT": "Nüfusu yoğun olan, sanayi ve ticaret merkezi yerleşim yeri.",
+  "ŞEHİR": "Büyük yerleşim birimi, kent.",
+  "EVİM": "İnsanın barındığı, huzur bulduğu kendi yuvası.",
+  "ODA": "Bir evin duvarlarla ayrılmış bölümlerinden her biri.",
+  "KAPI": "Bir odaya veya eve girip çıkmayı sağlayan açılır kapanır geçit.",
+  "YOLU": "Ulaşımı sağlayan şerit, takip edilen güzergah.",
+  "YOLCU": "Bir taşıtla bir yere seyahat eden kişi.",
+  "SEFER": "Yolculuk, bir yere gitmek amacıyla yapılan hareket.",
+  "HARİTA": "Yeryüzünün bir kısmının düzlem üzerindeki küçültülmüş çizimi.",
+  "PUSULA": "Yön bulmaya yarayan, üzerinde mıknatıslı ibre olan cihaz.",
+  "YOLCULUK": "Bir yerden başka bir yere gitme eylemi, seyahat.",
+  "MACERA": "Heyecan verici, sıra dışı ve riskli olaylar zinciri.",
+
+  // Zihin
+  "DİL": "İnsanların anlaşmasını sağlayan sesli ve yazılı iletişim sistemi.",
+  "SES": "Kulağın algılayabildiği titreşimler, seda.",
+  "OYUN": "Eğlenmek, vakit geçirmek veya zeka geliştirmek için yapılan etkinlik.",
+  "RİSK": "Zarara uğrama veya başarısız olma olasılığı, tehlike.",
+  "ÖLÇÜ": "Bir şeyin büyüklüğünü veya miktarını belirleme derececi.",
+  "İZİN": "Bir işi yapmak için verilen serbestlik, ruhsat.",
+  "KELİME": "Kendi başına anlamı olan en küçük söz birimi, sözcük.",
+  "BİLGİ": "Öğrenme, araştırma veya gözlem yoluyla edinilen gerçekler.",
+  "BİLMECE": "Bir şeyin adını anmadan özelliklerini sorarak buldurmayı amaçlayan oyun.",
+  "BULMACA": "Zihni çalıştırarak kelime veya sayılarla çözülen kare veya bulmaca.",
+  "ÇÖZÜM": "Bir problemin veya sorunun giderilme yolu, netice.",
+  "DENGE": "Bir nesnenin veya durumun devrilmeden dengede kalma hali.",
+  "GİZEM": "Sır, akıl erdirilemeyen bilinmez durum.",
+  "GİZEMLİ": "İçinde gizler veya sırlar barındıran, esrarengiz.",
+  "ANLAMLI": "Bir manası olan, düşündürücü ve değerli.",
+  "BİLİNMEZ": "Bilinmeyen, sırrı çözülememiş durum.",
+  "BİLGİLER": "Edinilmiş olan gerçeklerin bütünü.",
+  "HATIRLA": "Geçmişte yaşanmış bir şeyi veya bilgiyi zihne geri getirme eylemi.",
+
+  // Ortaklar
+  "JEL": "Yarı katı, elastik ve yapışkan madde kıvamı.",
+  "OYNA": "Bir oyuna katılma veya oyunu başlatma eylemi."
+};
+
+export function getWordDefinition(word: string): string {
+  const upper = word.trim().toUpperCase();
+  return WORD_DEFINITIONS[upper] || `${word} - Kelime Patlat ile kelime dağarcığını zenginleştir!`;
+}
