@@ -9,6 +9,9 @@ import {
   useWindowDimensions,
   View,
   ActivityIndicator,
+  Alert,
+  Switch,
+  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
@@ -25,8 +28,9 @@ import { SoloChallenge } from "./components/solo-challenge";
 import { SoloLevels } from "./components/solo-levels";
 import { ArcadeChallenge } from "./components/arcade-challenge";
 import { getGameSocket } from "./lib/game-socket";
-import { haptics } from "./lib/haptics";
-import { gameSfx } from "./lib/game-sfx";
+import { haptics, setHapticsEnabled } from "./lib/haptics";
+import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
+import { setHapticsEnabled as setSoloHapticsEnabled } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
 import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, AVATARS, getPlayerLevel, type DailyChallenge, type PlayerProgress } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
@@ -119,6 +123,65 @@ function HomeScreen() {
   const [selectedSize, setSelectedSize] = useState<BoardSize>(4);
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
   const [selectedCells, setSelectedCells] = useState<number[]>([]);
+  const [sfxOn, setSfxOn] = useState(true);
+  const [hapticsOn, setHapticsOn] = useState(true);
+
+  useEffect(() => {
+    AsyncStorage.getItem("kelime-patlat:sfx-enabled").then((val) => {
+      const enabled = val !== "false";
+      setSfxOn(enabled);
+      setSfxEnabled(enabled);
+    }).catch(() => undefined);
+    AsyncStorage.getItem("kelime-patlat:haptics-enabled").then((val) => {
+      const enabled = val !== "false";
+      setHapticsOn(enabled);
+      setHapticsEnabled(enabled);
+      setSoloHapticsEnabled(enabled);
+    }).catch(() => undefined);
+  }, []);
+
+  const toggleSfx = (val: boolean) => {
+    setSfxOn(val);
+    setSfxEnabled(val);
+    AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(val)).catch(() => undefined);
+  };
+  
+  const toggleHaptics = (val: boolean) => {
+    setHapticsOn(val);
+    setHapticsEnabled(val);
+    setSoloHapticsEnabled(val);
+    AsyncStorage.setItem("kelime-patlat:haptics-enabled", String(val)).catch(() => undefined);
+  };
+  const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]>([]);
+
+  const explodeParticles = (cells: number[]) => {
+    if (!room) return;
+    const newParticles: typeof particles = [];
+    
+    cells.forEach((cellIndex) => {
+      const { x, y } = getCellCenter(cellIndex);
+      for (let i = 0; i < 8; i++) {
+        const anim = new Animated.ValueXY({ x: 0, y: 0 });
+        const id = Math.random();
+        newParticles.push({ id, x, y, color: "#2DD4BF", anim });
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 15 + Math.random() * 35;
+        
+        Animated.timing(anim, {
+          toValue: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+          duration: 350,
+          useNativeDriver: true
+        }).start();
+      }
+    });
+
+    setParticles((prev) => [...prev, ...newParticles]);
+    setTimeout(() => {
+      setParticles((prev) => prev.filter(p => !newParticles.includes(p)));
+    }, 380);
+  };
+
   const [isSelecting, setIsSelecting] = useState(false);
   const [notice, setNotice] = useState("Bir oda kur ve rakibini davet et.");
   const [selectionFeedback, setSelectionFeedback] = useState<"idle" | "invalid" | "accepted">("idle");
@@ -135,7 +198,10 @@ function HomeScreen() {
   const victoryCueRef = useRef<string | null>(null);
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
-  const boardWidth = Math.min(width - (room?.size === 8 ? 28 : room?.size === 6 ? 34 : 40), room?.size === 8 ? 392 : room?.size === 6 ? 374 : 356);
+  const boardWidth = Math.min(
+    width - (room?.size === 10 ? 20 : room?.size === 8 ? 28 : room?.size === 6 ? 34 : 40),
+    room?.size === 10 ? 410 : room?.size === 8 ? 392 : room?.size === 6 ? 374 : 356
+  );
   const me = room?.players.find((player) => player.id === playerId) ?? null;
   const opponent = room?.players.find((player) => player.id !== playerId) ?? null;
   const activeWord = room ? wordFromSelection(room.board, selectedCells) : "";
@@ -189,7 +255,8 @@ function HomeScreen() {
           const response = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
-          const user = await response.json();
+          const data = await response.json();
+          const user = data?.user || data;
           if (user && user.openId) {
             setAuthToken(token);
             setPlayerId(user.openId);
@@ -304,6 +371,7 @@ function HomeScreen() {
     if (accepted) {
       pendingWordRef.current = null;
       setSelectionFeedback("accepted");
+      explodeParticles(selectedCells);
       haptics.success();
       gameSfx.accepted();
       clearFeedbackLater(360);
@@ -494,8 +562,6 @@ function HomeScreen() {
     const row = Math.floor(oy / cellSize);
     if (col >= 0 && col < room.size && row >= 0 && row < room.size) {
       const index = row * room.size + col;
-      const isFound = room.foundWords.some(entry => entry.playerId === playerId && entry.path.includes(index));
-      if (isFound) return;
       if (!selectionActiveRef.current) {
         if (pendingWordRef.current) return;
         if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
@@ -516,6 +582,15 @@ function HomeScreen() {
     const y = ne.locationY ?? ne.offsetY;
     if (x !== undefined && y !== undefined) {
       return { x, y };
+    }
+    if (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function") {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+      };
     }
     const { pageX, pageY } = getEventPageCoords(event);
     return {
@@ -592,7 +667,7 @@ function HomeScreen() {
   }
 
   if (screen === "solo") {
-    return <ScreenContainer style={{ paddingBottom: 16 }}><StatusBar style="light" /><SoloChallenge level={soloLevel} theme={dailySession?.themeId ?? progress.selectedTheme} variationSeed={dailySession?.variation} daily={Boolean(dailySession)} excludeWords={progress.history || []} onExit={() => { const destination = dailySession ? "home" : "levels"; setDailySession(null); setScreen(destination); }} onComplete={dailySession ? completeDailyChallenge : completeSoloLevel} onNext={() => openSoloLevel(Math.min(MAX_SOLO_LEVEL, soloLevel + 1))} /></ScreenContainer>;
+    return <ScreenContainer style={{ paddingBottom: 16 }}><StatusBar style="light" /><SoloChallenge level={soloLevel} theme={dailySession?.themeId ?? progress.selectedTheme} variationSeed={dailySession?.variation} daily={Boolean(dailySession)} excludeWords={progress.history || []} onExit={() => { const destination = dailySession ? "home" : "levels"; setDailySession(null); setScreen(destination); }} onComplete={dailySession ? completeDailyChallenge : completeSoloLevel} onNext={() => setSoloLevel((current) => Math.min(MAX_SOLO_LEVEL, current + 1))} /></ScreenContainer>;
   }
 
   if (screen === "arcade") {
@@ -641,17 +716,43 @@ function HomeScreen() {
           
           <Text style={styles.sectionLabel}>TAHTA BOYUTU SEÇİN</Text>
           <View style={styles.sizeRow}>
-            {([4, 6, 8] as BoardSize[]).map((size) => (
-              <Pressable 
-                key={size} 
-                onPress={() => { haptics.light(); setSelectedSize(size); }} 
-                style={({ pressed }) => [styles.sizeCard, selectedSize === size && styles.sizeCardSelected, pressed && styles.pressed]}
-              >
-                <Text style={[styles.sizeValue, selectedSize === size && styles.sizeValueSelected]}>{size}×{size}</Text>
-                <Text style={styles.sizeCaption}>{size === 4 ? "Nabız (Hızlı)" : size === 6 ? "Akış (Orta)" : "Derinlik (Zor)"}</Text>
-                <Text style={styles.sizeDetail}>{size === 4 ? "4 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : "8 rota · 90 sn"}</Text>
-              </Pressable>
-            ))}
+            {([4, 6, 8, 10] as BoardSize[]).map((size) => {
+              const currentLevel = getPlayerLevel(progress.xp);
+              const isLocked = size === 6 ? currentLevel < 5 : size === 8 ? currentLevel < 8 : size === 10 ? currentLevel < 10 : false;
+              return (
+                <Pressable 
+                  key={size} 
+                  onPress={() => {
+                    if (isLocked) {
+                      Alert.alert(
+                        `🔒 Seviye ${size === 6 ? 5 : size === 8 ? 8 : 10} Gerekli`,
+                        `${size}×${size} modu Seviye ${size === 6 ? 5 : size === 8 ? 8 : 10}'de açılır. Şu anki seviyeniz: ${currentLevel}.`
+                      );
+                      haptics.error();
+                    } else {
+                      haptics.light();
+                      setSelectedSize(size);
+                    }
+                  }} 
+                  style={({ pressed }) => [
+                    styles.sizeCard,
+                    selectedSize === size && styles.sizeCardSelected,
+                    isLocked && { opacity: 0.5 },
+                    pressed && styles.pressed
+                  ]}
+                >
+                  <Text style={[styles.sizeValue, selectedSize === size && styles.sizeValueSelected]}>
+                    {isLocked ? "🔒" : `${size}×${size}`}
+                  </Text>
+                  <Text style={styles.sizeCaption}>
+                    {size === 4 ? "Nabız (Hızlı)" : size === 6 ? "Akış (Orta)" : size === 8 ? "Derinlik (Zor)" : "Zirve (Usta)"}
+                  </Text>
+                  <Text style={styles.sizeDetail}>
+                    {size === 4 ? "4 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : size === 8 ? "8 rota · 90 sn" : "10 rota · 110 sn"}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
           
           <Pressable onPress={() => startBotDuel(selectedSize)} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
@@ -714,6 +815,16 @@ function HomeScreen() {
             <View style={styles.profileRule} />
             <Text style={styles.inputLabel}>GÖRÜNEN AD</Text>
             <TextInput value={playerName} onChangeText={setPlayerName} maxLength={16} autoCapitalize="characters" style={styles.nameInput} placeholder="OYUNCU" placeholderTextColor="#6F879A" />
+            <View style={styles.profileRule} />
+            <Text style={styles.inputLabel}>OYUN AYARLARI</Text>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>SES EFEKTLERİ</Text>
+              <Switch value={sfxOn} onValueChange={toggleSfx} trackColor={{ false: "#121025", true: "#2DD4BF" }} thumbColor={sfxOn ? "#FFFFFF" : "#4B5563"} />
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "700" }}>TİTREŞİM (HAPTICS)</Text>
+              <Switch value={hapticsOn} onValueChange={toggleHaptics} trackColor={{ false: "#121025", true: "#2DD4BF" }} thumbColor={hapticsOn ? "#FFFFFF" : "#4B5563"} />
+            </View>
           </View>
           
           <PlayerCollection progress={progress} onSelectAvatar={(selectedAvatar) => { haptics.light(); setProgress((current) => ({ ...current, selectedAvatar })); }} />
@@ -787,9 +898,9 @@ function HomeScreen() {
           <View style={battleStyles.battleBadges}>{myMultiplier > 1 && <View style={battleStyles.multiplierBadge}><Text style={battleStyles.multiplierText}>×{myMultiplier} UZUN KELİME</Text></View>}{myWordCount >= 2 && <View style={battleStyles.streakBadge}><Text style={battleStyles.streakText}>{myWordCount} SERİ</Text></View>}</View>
         </View>
         <View style={styles.scoreRow}>
-          <ScoreBadge name={me?.name ?? safeName} score={myScore} words={myWordCount} total={room.wordsTotal} active={!room.winnerId || iWon} won={iWon} accent="#2DD4BF" />
+          <ScoreBadge name={me?.name ?? safeName} score={myScore} words={myWordCount} total={room.wordsTotal} active={!room.winnerId || iWon} won={iWon} accent="#2DD4BF" combo={room.combos?.[playerId]} />
           <View style={styles.vsMark}><Text style={styles.vsText}>VS</Text></View>
-          <ScoreBadge name={opponent?.name ?? "RAKİP"} score={opponentScore} words={opponentWordCount} total={room.wordsTotal} active={!room.winnerId || !iWon} won={Boolean(room.winnerId && !iWon)} accent="#FB7185" />
+          <ScoreBadge name={opponent?.name ?? "RAKİP"} score={opponentScore} words={opponentWordCount} total={room.wordsTotal} active={!room.winnerId || !iWon} won={Boolean(room.winnerId && !iWon)} accent="#FB7185" combo={opponent ? room.combos?.[opponent.id] : undefined} />
         </View>
         <View style={battleStyles.statsRow}><View style={battleStyles.statCell}><Text style={battleStyles.statLabel}>PUAN FARKI</Text><Text style={[battleStyles.statValue, scoreDifference > 0 && battleStyles.statValuePositive, scoreDifference < 0 && battleStyles.statValueNegative]}>{scoreLeadLabel}</Text></View><View style={battleStyles.statDivider} /><View style={battleStyles.statCell}><Text style={battleStyles.statLabel}>TEMPO</Text><Text style={battleStyles.statValue}>{myTempo} · {opponentTempo} K/DK</Text></View></View>
         <View style={styles.targetCard}>
@@ -802,32 +913,6 @@ function HomeScreen() {
         onLayout={measureBoard}
         style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative" }]}
       >
-        {room.board.map((letter, index) => {
-          const order = selectedCells.indexOf(index);
-          const selected = selectionSet.has(index);
-          const isTail = selectedCells.at(-1) === index;
-          const foundBy = foundCellOwners.get(index);
-          const isFound = foundBy !== undefined;
-          return <BoardCell
-            key={`${letter}-${index}`}
-            letter={letter}
-            index={index}
-            order={order}
-            selected={selected}
-            isTail={isTail}
-            foundBy={foundBy}
-            isFound={isFound}
-            size={room.size}
-            selectionFeedback={selectionFeedback}
-            playerId={playerId}
-            status={room.status}
-            startPointerSelection={startPointerSelection}
-            continuePointerSelection={continuePointerSelection}
-            finishPointerSelection={finishPointerSelection}
-            selectionActiveRef={selectionActiveRef}
-          />;
-        })}
-        
         {selectedCells.slice(0, -1).map((cellIdx, i) => {
           const nextCellIdx = selectedCells[i + 1]!;
           const start = getCellCenter(cellIdx);
@@ -843,6 +928,36 @@ function HomeScreen() {
             />
           );
         })}
+
+        {room.board.map((letter, index) => {
+          const order = selectedCells.indexOf(index);
+          const selected = selectionSet.has(index);
+          const isTail = selectedCells.at(-1) === index;
+          const foundBy = foundCellOwners.get(index);
+          const isFound = foundBy !== undefined;
+
+          return <BoardCell
+            key={`${letter}-${index}`}
+            letter={letter}
+            index={index}
+            order={order}
+            selected={selected}
+            isTail={isTail}
+            foundBy={foundBy}
+            isFound={isFound}
+            size={room.size}
+            selectionFeedback={selectionFeedback}
+            playerId={playerId}
+            status={room.status}
+            isBotSelected={false}
+            botOrder={-1}
+            isBotTail={false}
+          />;
+        })}
+
+        {particles.map(p => (
+          <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
+        ))}
 
         {/* Absolute touch/pointer overlay to intercept gestures relative to board cleanly */}
         <View
@@ -889,10 +1004,9 @@ const BoardCell = React.memo(({
   selectionFeedback,
   playerId,
   status,
-  startPointerSelection,
-  continuePointerSelection,
-  finishPointerSelection,
-  selectionActiveRef
+  isBotSelected,
+  botOrder,
+  isBotTail,
 }: {
   letter: string;
   index: number;
@@ -905,10 +1019,9 @@ const BoardCell = React.memo(({
   selectionFeedback: string;
   playerId: string;
   status: string;
-  startPointerSelection: (index: number) => void;
-  continuePointerSelection: (index: number) => void;
-  finishPointerSelection: () => void;
-  selectionActiveRef: React.MutableRefObject<boolean>;
+  isBotSelected?: boolean;
+  botOrder?: number;
+  isBotTail?: boolean;
 }) => {
   return (
     <View
@@ -921,6 +1034,8 @@ const BoardCell = React.memo(({
         foundBy === playerId && styles.cellFoundMine,
         selected && battleStyles.previewCell,
         isTail && styles.cellTail,
+        isBotSelected && battleStyles.botPreviewCell,
+        isBotTail && battleStyles.cellTailBot,
         selectionFeedback === "invalid" && selected && styles.cellInvalid,
         selectionFeedback === "accepted" && selected && styles.cellAccepted,
         status === "finished" && selected && styles.cellFinished
@@ -928,9 +1043,11 @@ const BoardCell = React.memo(({
         <Text selectable={false} style={[
           styles.cellLetter,
           size === 6 && styles.cellLetterMedium,
-          size === 8 && styles.cellLetterSmall
+          size === 8 && styles.cellLetterSmall,
+          size === 10 && styles.cellLetterExtraSmall
         ]}>{letter}</Text>
         {selected && <Text selectable={false} style={styles.cellOrder}>{order + 1}</Text>}
+        {isBotSelected && !selected && <Text selectable={false} style={battleStyles.cellOrderBot}>{botOrder! + 1}</Text>}
         {isFound && !selected && <Text selectable={false} style={styles.cellCheck}>✓</Text>}
       </View>
     </View>
@@ -941,8 +1058,17 @@ function PlayerRow({ player, isMe, accent }: { player: { name: string; connected
   return <View style={styles.playerRow}><View style={[styles.playerAvatar, { borderColor: accent }]}><Text style={styles.playerAvatarText}>{player.isBot ? "BOT" : initials(player.name)}</Text></View><View style={styles.playerInfo}><Text style={styles.playerName}>{player.name}{isMe ? "  (SEN)" : ""}</Text><Text style={styles.playerState}>{player.isBot ? "YAPAY RAKİP HAZIR" : player.connected ? (player.ready ? "HAZIR" : "TAHTAYI İNCELİYOR") : "BAĞLANTI YENİLENİYOR"}</Text></View><View style={[styles.readyDot, { backgroundColor: player.ready ? "#A3E635" : "#466279" }]} /></View>;
 }
 
-function ScoreBadge({ name, score, words, total, active, won, accent }: { name: string; score: number; words: number; total: number; active: boolean; won: boolean; accent: string }) {
-  return <View style={[styles.scoreBadge, won && { borderColor: accent }]}><Text numberOfLines={1} style={styles.scoreName}>{name}</Text><Text style={[styles.scoreValue, active && { color: accent }]}>{score}</Text><Text style={[styles.scoreStatus, won && { color: accent }]}>{words} / {total} KELİME</Text></View>;
+function ScoreBadge({ name, score, words, total, active, won, accent, combo }: { name: string; score: number; words: number; total: number; active: boolean; won: boolean; accent: string; combo?: number }) {
+  return (
+    <View style={[styles.scoreBadge, won && { borderColor: accent }]}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Text numberOfLines={1} style={[styles.scoreName, { flexShrink: 1 }]}>{name}</Text>
+        {combo && combo >= 2 ? <Text style={{ fontSize: 9, fontWeight: "900", color: "#FF9B62" }}>🔥 x{combo}</Text> : null}
+      </View>
+      <Text style={[styles.scoreValue, active && { color: accent }]}>{score}</Text>
+      <Text style={[styles.scoreStatus, won && { color: accent }]}>{words} / {total} KELİME</Text>
+    </View>
+  );
 }
 
 function MainShell({ active, children, onNavigate }: { active: DockDestination; children: React.ReactNode; onNavigate: (destination: DockDestination) => void }) {
@@ -952,6 +1078,9 @@ function MainShell({ active, children, onNavigate }: { active: DockDestination; 
 const battleStyles = StyleSheet.create({
   gameScroll: { flexGrow: 1, paddingBottom: 28 },
   previewCell: { backgroundColor: "#1B4F74", borderColor: "#7DD3FC", shadowColor: "#38BDF8", shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
+  botPreviewCell: { backgroundColor: "#4D1F35", borderColor: "#FDA4AF", shadowColor: "#FB7185", shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
+  cellTailBot: { borderColor: "#F43F5E", borderWidth: 2, transform: [{ scale: 1.04 }] },
+  cellOrderBot: { position: "absolute", top: 3, right: 4, color: "#FFE4E6", fontSize: 8, fontWeight: "900" },
   statusRail: { marginTop: 7, minHeight: 48, backgroundColor: "#102235", borderWidth: 1, borderColor: "#29465D", borderRadius: 15, paddingHorizontal: 13, paddingVertical: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   statusRailFinal: { backgroundColor: "#4A2538", borderColor: "#FF647C" },
   railLabel: { color: "#A8BFD0", fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },
@@ -1057,6 +1186,7 @@ const styles = StyleSheet.create({
   cellLetter: { color: "#FFFFFF", fontSize: 23, fontWeight: "900" },
   cellLetterMedium: { fontSize: 19 },
   cellLetterSmall: { fontSize: 15 },
+  cellLetterExtraSmall: { fontSize: 11 },
   cellOrder: { position: "absolute", top: 3, right: 4, color: "#E7FFE7", fontSize: 8, fontWeight: "900" },
   cellTail: { borderColor: "#FFC24A", borderWidth: 2, transform: [{ scale: 1.04 }] },
   cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" },

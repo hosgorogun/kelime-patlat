@@ -13,9 +13,13 @@ export type WordEntry = {
 
 type CatalogPayload = { version: number; words: WordEntry[] };
 
+const WORD_BLACKLIST = new Set([
+  "NAM", "LAK", "PRUVA"
+]);
+
 export const WORD_CATALOG_DATA = {
   version: (catalog as CatalogPayload).version,
-  words: (catalog as CatalogPayload).words.filter((entry) => entry.word.length >= 3)
+  words: (catalog as CatalogPayload).words.filter((entry) => entry.word.length >= 3 && !WORD_BLACKLIST.has(entry.word))
 };
 
 export const WORD_CATALOG = {

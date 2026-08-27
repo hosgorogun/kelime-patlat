@@ -1,8 +1,18 @@
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
 
+let hapticsEnabled = true;
+
+export function setHapticsEnabled(enabled: boolean) {
+  hapticsEnabled = enabled;
+}
+
+export function getHapticsEnabled() {
+  return hapticsEnabled;
+}
+
 function nativeOnly(action: () => Promise<void>) {
-  if (Platform.OS !== "web") void action();
+  if (hapticsEnabled && Platform.OS !== "web") void action();
 }
 
 export const haptics = {

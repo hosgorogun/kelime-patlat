@@ -302,6 +302,15 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     if (x !== undefined && y !== undefined) {
       return { x, y };
     }
+    if (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function") {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+      };
+    }
     const { pageX, pageY } = getEventPageCoords(event);
     return {
       x: pageX - boardPageX.current,
@@ -343,15 +352,6 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={styles.progressMeta}>Her kelime ek süre kazandırır</Text></View>
     
     <Animated.View ref={boardRef} onLayout={measureBoard} style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative", transform: [{ translateX: shakeAnim }] }, isUrgent && styles.boardUrgent]}>
-      {challenge.board.map((letter, index) => {
-        const order = selected.indexOf(index);
-        const isSelected = selectedSet.has(index);
-        const isTail = selected.at(-1) === index;
-        const isFound = foundCells.has(index);
-        
-        return <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}><View style={[styles.cell, isFound && styles.cellFound, isSelected && styles.cellSelected, isTail && styles.cellTail, feedback === "invalid" && isSelected && styles.cellInvalid, feedback === "accepted" && isSelected && styles.cellAccepted]}><Text selectable={false} style={[styles.letter, challenge.size === 6 && styles.letterMedium]}>{letter}</Text>{isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}{isFound && !isSelected && <Text selectable={false} style={styles.check}>✓</Text>}</View></View>;
-      })}
-      
       {selected.slice(0, -1).map((cellIdx, i) => {
         const nextCellIdx = selected[i + 1]!;
         const start = getCellCenter(cellIdx);
@@ -366,6 +366,15 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
             color="#FFC24A"
           />
         );
+      })}
+
+      {challenge.board.map((letter, index) => {
+        const order = selected.indexOf(index);
+        const isSelected = selectedSet.has(index);
+        const isTail = selected.at(-1) === index;
+        const isFound = foundCells.has(index);
+        
+        return <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}><View style={[styles.cell, isFound && styles.cellFound, isSelected && styles.cellSelected, isTail && styles.cellTail, feedback === "invalid" && isSelected && styles.cellInvalid, feedback === "accepted" && isSelected && styles.cellAccepted]}><Text selectable={false} style={[styles.letter, challenge.size === 6 && styles.letterMedium]}>{letter}</Text>{isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}{isFound && !isSelected && <Text selectable={false} style={styles.check}>✓</Text>}</View></View>;
       })}
       
       {particles.map(p => (

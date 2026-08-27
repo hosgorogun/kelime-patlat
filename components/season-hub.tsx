@@ -11,7 +11,26 @@ export function SeasonHub({ playerId, progress, leaderboard, onBack, onSelectThe
     <View style={styles.hero}><Text style={styles.heroKicker}>SEZON KONUMUN</Text><Text style={styles.heroTitle}>{rank} AVCI</Text><Text style={styles.heroBody}>{progress.xp} XP · {progress.wins} galibiyet · {progress.bestScore || 0} en iyi tur puanı</Text><View style={styles.heroStats}><View><Text style={styles.statLabel}>LİDERLİK</Text><Text style={styles.statValue}>{playerRank > 0 ? `#${playerRank}` : "—"}</Text></View><View style={styles.statRule} /><View><Text style={styles.statLabel}>SERİ</Text><Text style={styles.statValue}>{progress.streak} GÜN</Text></View><View style={styles.statRule} /><View><Text style={styles.statLabel}>TEMPO</Text><Text style={styles.statValue}>{progress.bestTempo || "—"}</Text></View></View></View>
 
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>CANLI SIRALAMA</Text><Text style={styles.sectionMeta}>{leaderboard.length} AVCI</Text></View>
-    <View style={styles.board}>{leaderboard.length ? leaderboard.map((entry, index) => <View key={entry.id} style={[styles.row, index < 3 && styles.rowTop]}><View style={[styles.position, index === 0 && styles.positionFirst]}><Text style={styles.positionText}>{index + 1}</Text></View><View style={styles.playerMark}><Text style={styles.playerMarkText}>{entry.name.slice(0, 1).toUpperCase()}</Text></View><View style={styles.playerCopy}><Text numberOfLines={1} style={styles.playerName}>{entry.name}</Text><Text style={styles.playerMeta}>{entry.wins} G · EN İYİ {entry.bestRound}</Text></View><Text style={styles.score}>{entry.score}</Text></View>) : <View style={styles.emptyBoard}><Text style={styles.emptyTitle}>SIRALAMA AÇIK</Text><Text style={styles.emptyCopy}>İlk tamamlanan canlı düello burada sezona yazılır.</Text></View>}</View>
+    <View style={styles.board}>{leaderboard.length ? leaderboard.map((entry, index) => {
+      const winRate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
+      return (
+        <View key={entry.id} style={[styles.row, index < 3 && styles.rowTop]}>
+          <View style={[styles.position, index === 0 && styles.positionFirst]}>
+            <Text style={styles.positionText}>{index + 1}</Text>
+          </View>
+          <View style={styles.playerMark}>
+            <Text style={styles.playerMarkText}>{entry.name.slice(0, 1).toUpperCase()}</Text>
+          </View>
+          <View style={styles.playerCopy}>
+            <Text numberOfLines={1} style={styles.playerName}>{entry.name}</Text>
+            <Text style={styles.playerMeta}>
+              {entry.wins}/{entry.matches} Galibiyet (%{winRate}) · En İyi: {entry.bestRound} Puan
+            </Text>
+          </View>
+          <Text style={styles.score}>{entry.score}</Text>
+        </View>
+      );
+    }) : <View style={styles.emptyBoard}><Text style={styles.emptyTitle}>SIRALAMA AÇIK</Text><Text style={styles.emptyCopy}>İlk tamamlanan canlı düello burada sezona yazılır.</Text></View>}</View>
 
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>KELİME PAKETLERİ</Text><Text style={styles.sectionMeta}>AV TARZINI SEÇ</Text></View>
     <View style={styles.packStack}>{THEME_PACKS.map((pack) => {

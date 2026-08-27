@@ -11,7 +11,16 @@ const SOURCES = {
 
 type Player = ReturnType<typeof createAudioPlayer>;
 const players: Partial<Record<EffectName, Player>> = {};
+let sfxEnabled = true;
 let audioConfigured = false;
+
+export function setSfxEnabled(enabled: boolean) {
+  sfxEnabled = enabled;
+}
+
+export function getSfxEnabled() {
+  return sfxEnabled;
+}
 
 function playerFor(effect: EffectName) {
   if (!players[effect]) players[effect] = createAudioPlayer(SOURCES[effect]);
@@ -19,6 +28,7 @@ function playerFor(effect: EffectName) {
 }
 
 function play(effect: EffectName) {
+  if (!sfxEnabled) return;
   try {
     if (!audioConfigured) {
       audioConfigured = true;

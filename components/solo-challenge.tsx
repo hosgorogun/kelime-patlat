@@ -56,7 +56,13 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const { width } = useWindowDimensions();
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
   const [retryNonce, setRetryNonce] = useState(0);
-  const challenge = useMemo(() => createSoloBoard(level, variation, theme, excludeWords), [level, variation, theme, excludeWords]);
+  
+  const initialExcludeWords = useRef(excludeWords);
+  useEffect(() => {
+    initialExcludeWords.current = excludeWords;
+  }, [level]);
+
+  const challenge = useMemo(() => createSoloBoard(level, variation, theme, initialExcludeWords.current), [level, variation, theme]);
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
@@ -100,7 +106,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     }
     return { pageX: ne.pageX ?? 0, pageY: ne.pageY ?? 0 };
   };
-  const boardWidth = Math.min(width - (challenge.size === 8 ? 32 : challenge.size === 6 ? 32 : 36), challenge.size === 8 ? 392 : challenge.size === 6 ? 374 : 356);
+  const boardWidth = Math.min(
+    width - (challenge.size === 10 ? 20 : challenge.size === 8 ? 32 : challenge.size === 6 ? 32 : 36),
+    challenge.size === 10 ? 410 : challenge.size === 8 ? 392 : challenge.size === 6 ? 374 : 356
+  );
   const activeWord = wordFromSelection(challenge.board, selected);
 
   useEffect(() => {
@@ -117,6 +126,12 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   useEffect(() => {
     if (variationSeed !== undefined) setVariation(variationSeed);
   }, [variationSeed]);
+
+  useEffect(() => {
+    if (variationSeed === undefined) {
+      setVariation(Math.floor(Math.random() * 1_000_000));
+    }
+  }, [level, variationSeed]);
 
   useEffect(() => {
     if (status !== "playing") return;
@@ -296,6 +311,15 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     if (x !== undefined && y !== undefined) {
       return { x, y };
     }
+    if (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function") {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+      };
+    }
     const { pageX, pageY } = getEventPageCoords(event);
     return {
       x: pageX - boardPageX.current,
@@ -334,16 +358,6 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     </View>
     <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={[styles.progressMeta, { color: activeTheme.headerText }]}>{challenge.subtitle}</Text></View>
     <Animated.View ref={boardRef} onLayout={measureBoard} style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative", backgroundColor: activeTheme.background, borderColor: activeTheme.cellBorder, transform: [{ translateX: shakeAnim }] }, isUrgent && styles.boardUrgent]}>
-      {challenge.board.map((letter, index) => {
-        const order = selected.indexOf(index);
-        const isSelected = selectedSet.has(index);
-        const isTail = selected.at(-1) === index;
-        const isFound = foundCells.has(index);
-        const solutionColor = solutionColors.get(index);
-        const isSolution = solutionColor !== undefined;
-        const isRadar = radarHighlights.has(index);
-        return <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}><View style={[styles.cell, { backgroundColor: activeTheme.surface, borderColor: activeTheme.cellBorder }, isSolution && SOLUTION_ROUTE_COLORS[solutionColor % SOLUTION_ROUTE_COLORS.length], isFound && !isSolution && styles.cellFound, isSelected && [styles.cellSelected, { backgroundColor: activeTheme.surfaceSelected }], isTail && styles.cellTail, feedback === "invalid" && isSelected && styles.cellInvalid, feedback === "accepted" && isSelected && styles.cellAccepted, isRadar && styles.cellRadar]}><Text selectable={false} style={[styles.letter, challenge.size === 6 && styles.letterMedium, challenge.size === 8 && styles.letterSmall, isRadar && styles.letterRadar]}>{letter}</Text>{isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}{isFound && !isSelected && <Text selectable={false} style={styles.check}>✓</Text>}{isSolution && !isFound && <Text selectable={false} style={styles.solutionMark}>•</Text>}</View></View>;
-      })}
       {selected.slice(0, -1).map((cellIdx, i) => {
         const nextCellIdx = selected[i + 1]!;
         const start = getCellCenter(cellIdx);
@@ -358,6 +372,17 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
             color={activeTheme.accentColor}
           />
         );
+      })}
+
+      {challenge.board.map((letter, index) => {
+        const order = selected.indexOf(index);
+        const isSelected = selectedSet.has(index);
+        const isTail = selected.at(-1) === index;
+        const isFound = foundCells.has(index);
+        const solutionColor = solutionColors.get(index);
+        const isSolution = solutionColor !== undefined;
+        const isRadar = radarHighlights.has(index);
+        return <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}><View style={[styles.cell, { backgroundColor: activeTheme.surface, borderColor: activeTheme.cellBorder }, isSolution && SOLUTION_ROUTE_COLORS[solutionColor % SOLUTION_ROUTE_COLORS.length], isFound && !isSolution && styles.cellFound, isSelected && [styles.cellSelected, { backgroundColor: activeTheme.surfaceSelected }], isTail && styles.cellTail, feedback === "invalid" && isSelected && styles.cellInvalid, feedback === "accepted" && isSelected && styles.cellAccepted, isRadar && styles.cellRadar]}><Text selectable={false} style={[styles.letter, challenge.size === 6 && styles.letterMedium, challenge.size === 8 && styles.letterSmall, challenge.size === 10 && styles.letterExtraSmall, isRadar && styles.letterRadar]}>{letter}</Text>{isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}{isFound && !isSelected && <Text selectable={false} style={styles.check}>✓</Text>}{isSolution && !isFound && <Text selectable={false} style={styles.solutionMark}>•</Text>}</View></View>;
       })}
       {particles.map(p => (
         <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
@@ -400,7 +425,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900" }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#50E3C2", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#50E3C2", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#50E3C2" }, cellFound: { backgroundColor: "#287B70", borderColor: "#50E3C2" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 23, fontWeight: "900" }, letterMedium: { fontSize: 19 }, letterSmall: { fontSize: 15 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#50E3C2" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, hint: { color: "#B5A9CD", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900" }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#50E3C2", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#50E3C2", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#50E3C2" }, cellFound: { backgroundColor: "#287B70", borderColor: "#50E3C2" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 23, fontWeight: "900" }, letterMedium: { fontSize: 19 }, letterSmall: { fontSize: 15 }, letterExtraSmall: { fontSize: 11 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#50E3C2" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, hint: { color: "#B5A9CD", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", zIndex: 100 },
   modalContent: { width: "86%", borderRadius: 20, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },

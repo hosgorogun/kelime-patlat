@@ -157,7 +157,8 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
   // Absolute fallback: try to get exact sum using general pool with standard minWordLength to guarantee completion
   const fallbackList: WordEntry[] = [];
   let sum = 0;
-  for (const entry of general) {
+  const shuffledGeneral = shuffled(general, random);
+  for (const entry of shuffledGeneral) {
     if (sum + entry.word.length <= targetSum) {
       const remaining = targetSum - (sum + entry.word.length);
       if (remaining === 0 || remaining >= profile.minWordLength) {

@@ -9,6 +9,7 @@ import {
   TURKISH_LETTERS,
   WORD_BANK,
   WORD_CATALOG,
+  WORD_CATALOG_DATA,
   maskOpponentFoundWords,
   pickLiveFourWordLengths,
   wordScoreMultiplier,
@@ -40,6 +41,9 @@ type Room = {
   touchedAt: number;
   botFillToken: number;
   roundToken: number;
+  botSelection?: number[];
+  lastWordFoundTime?: Record<string, number>;
+  comboCount?: Record<string, number>;
 };
 
 const rooms = new Map<string, Room>();
@@ -263,6 +267,8 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
     message: room.status === "playing" && room.foundWords.at(-1)?.playerId !== viewerId
       ? `${roomForPlayer(room, room.foundWords.at(-1)?.playerId ?? "")?.name ?? "RAKİP"} bir kelime buldu! +${room.foundWords.at(-1)?.word.length ?? 0}`
       : room.message,
+    botSelection: room.botSelection,
+    combos: room.comboCount,
   };
 }
 
@@ -361,14 +367,39 @@ function finishRound(io: Server, room: Room) {
 }
 
 function claimWord(io: Server, room: Room, playerId: string, word: string, path: number[]) {
-  if (room.status !== "playing" || room.foundWords.some((entry) => entry.word === word)) return false;
+  if (room.status !== "playing" || room.foundWords.some((entry) => entry.word === word && entry.playerId === playerId)) return false;
+  room.botSelection = undefined;
+  
+  if (!room.lastWordFoundTime) room.lastWordFoundTime = {};
+  if (!room.comboCount) room.comboCount = {};
+  
+  const now = Date.now();
+  const lastTime = room.lastWordFoundTime[playerId] || 0;
+  let comboBonus = 0;
+  let combo = 0;
+  
+  if (now - lastTime < 8000) {
+    combo = (room.comboCount[playerId] || 0) + 1;
+    room.comboCount[playerId] = combo;
+    if (combo >= 2) {
+      comboBonus = Math.min(5, combo) * 2;
+    }
+  } else {
+    combo = 1;
+    room.comboCount[playerId] = combo;
+  }
+  room.lastWordFoundTime[playerId] = now;
+  
   room.foundWords.push({ word, playerId, path });
   const multiplier = wordScoreMultiplier(word.length);
-  const earnedPoints = word.length * multiplier;
+  const earnedPoints = word.length * multiplier + comboBonus;
   room.scores[playerId] = (room.scores[playerId] ?? 0) + earnedPoints;
   const player = roomForPlayer(room, playerId);
-  room.message = `${player?.name ?? "OYUNCU"} “${word}” buldu! +${earnedPoints}${multiplier > 1 ? ` · ×${multiplier} çarpan` : ""}`;
-  if (room.foundWords.length === room.words.length) {
+  room.message = `${player?.name ?? "OYUNCU"} “${word}” buldu! +${earnedPoints}${multiplier > 1 ? ` · ×${multiplier} çarpan` : ""}${combo >= 2 ? ` · 🔥 COMBO x${combo} (+${comboBonus})` : ""}`;
+  
+  const playerWords = room.foundWords.filter((entry) => entry.playerId === playerId).map((entry) => entry.word);
+  const hasFoundAll = room.words.every((w) => playerWords.includes(w));
+  if (hasFoundAll) {
     finishRound(io, room);
   } else {
     emitRoom(io, room);
@@ -380,15 +411,26 @@ function scheduleBotTurn(io: Server, room: Room, token: number) {
   const bot = room.guest;
   if (!bot?.isBot) return;
   const delay = botThinkDelayMs(room.size);
+  const selectTriggerDelay = Math.max(1000, delay - 1500);
   setTimeout(() => {
     const current = rooms.get(room.code);
     if (!current || current !== room || room.roundToken !== token || room.status !== "playing") return;
-    const word = room.words.find((candidate) => !room.foundWords.some((entry) => entry.word === candidate));
-    if (!word) return finishRound(io, room);
+    const word = room.words.find((candidate) => !room.foundWords.some((entry) => entry.word === candidate && entry.playerId === bot.id));
+    if (!word) return;
     const path = findWordPath(room.board, room.size, word);
-    if (path) claimWord(io, room, bot.id, word, path);
-    if (room.status === "playing") scheduleBotTurn(io, room, token);
-  }, delay);
+    if (path) {
+      room.botSelection = path;
+      emitRoom(io, room);
+      setTimeout(() => {
+        const finalCurrent = rooms.get(room.code);
+        if (!finalCurrent || finalCurrent !== room || room.roundToken !== token || room.status !== "playing") return;
+        claimWord(io, room, bot.id, word, path);
+        if (room.status === "playing") scheduleBotTurn(io, room, token);
+      }, 1500);
+    } else {
+      if (room.status === "playing") scheduleBotTurn(io, room, token);
+    }
+  }, selectTriggerDelay);
 }
 
 function scheduleRoundEnd(io: Server, room: Room, token: number) {
@@ -429,6 +471,8 @@ function startRound(io: Server, room: Room) {
   room.message = `${words.length} gizli kelime var. Yalnız yatay ve dikey bağla!`;
   room.host.rematch = false;
   if (room.guest) room.guest.rematch = false;
+  room.lastWordFoundTime = {};
+  room.comboCount = {};
   const token = ++room.roundToken;
   emitRoom(io, room);
   scheduleRoundEnd(io, room, token);
@@ -568,10 +612,19 @@ export function registerGameRooms(io: Server) {
         selection.every((index, indexInSelection) => indexInSelection === 0 || isAdjacent(selection[indexInSelection - 1]!, index, room.size));
       if (!validIndices) return socket.emit("word:rejected", { word: "" });
       const word = wordFromSelection(room.board, selection);
-      if (!room.words.includes(word) || room.foundWords.some((entry) => entry.word === word)) {
+      const isPreseeded = room.words.includes(word);
+      const isWordInCatalog = WORD_CATALOG_DATA.words.some((entry) => entry.word === word);
+      if (room.foundWords.some((entry) => entry.word === word && entry.playerId === player.id)) {
         return socket.emit("word:rejected", { word });
       }
-      claimWord(io, room, player.id, word, selection);
+      if (isPreseeded) {
+        claimWord(io, room, player.id, word, selection);
+      } else if (isWordInCatalog) {
+        room.words.push(word);
+        claimWord(io, room, player.id, word, selection);
+      } else {
+        return socket.emit("word:rejected", { word });
+      }
     });
 
     socket.on("room:rematch", (payload: { code: string; playerId: string }) => {
@@ -579,7 +632,19 @@ export function registerGameRooms(io: Server) {
       const player = room ? roomForPlayer(room, payload.playerId) : null;
       if (!room || !player || !room.guest || room.status !== "finished") return;
       player.rematch = true;
-      if (room.guest.isBot) room.guest.rematch = true;
+      if (room.guest.isBot) {
+        room.message = "Yapay rakip rövanş teklifini inceliyor...";
+        emitRoom(io, room);
+        setTimeout(() => {
+          const finalRoom = rooms.get(room.code);
+          if (!finalRoom || finalRoom !== room || room.status !== "finished" || !player.rematch) return;
+          room.guest!.rematch = true;
+          room.host.ready = true;
+          room.guest!.ready = true;
+          startRound(io, room);
+        }, 1500);
+        return;
+      }
       if (room.host.rematch && room.guest.rematch) {
         room.host.ready = true;
         room.guest.ready = true;
@@ -601,8 +666,13 @@ export function registerGameRooms(io: Server) {
         if (!player) continue;
         player.connected = false;
         player.socketId = null;
-        room.message = `${player.name} bağlantısını yeniliyor…`;
-        emitRoom(io, room);
+        
+        if (room.status === "lobby" || room.status === "waiting" || room.status === "finished") {
+          leaveRoom(io, socket, room, player.id);
+        } else {
+          room.message = `${player.name} bağlantısını yeniliyor…`;
+          emitRoom(io, room);
+        }
       }
     });
   });

@@ -1,6 +1,6 @@
-import { WORD_BANK, WORD_CATALOG, type WordDifficulty, type WordEntry } from "./word-catalog";
+import { WORD_BANK, WORD_CATALOG, WORD_CATALOG_DATA, type WordDifficulty, type WordEntry } from "./word-catalog";
 
-export { WORD_BANK, WORD_CATALOG, type WordDifficulty, type WordEntry } from "./word-catalog";
+export { WORD_BANK, WORD_CATALOG, WORD_CATALOG_DATA, type WordDifficulty, type WordEntry } from "./word-catalog";
 
 export const BOARD_SIZES = [4, 6, 8, 10] as const;
 export type BoardSize = (typeof BOARD_SIZES)[number];
@@ -25,8 +25,8 @@ export function wordScoreMultiplier(length: number) {
 }
 
 export function botThinkDelayMs(size: BoardSize, random = Math.random) {
-  const minimum = size === 4 ? 9_000 : size === 6 ? 11_000 : size === 8 ? 12_000 : 14_000;
-  const spread = size === 4 ? 6_000 : size === 6 ? 7_000 : size === 8 ? 8_000 : 9_000;
+  const minimum = size === 4 ? 11_000 : size === 6 ? 12_000 : size === 8 ? 10_000 : 9_000;
+  const spread = size === 4 ? 6_000 : size === 6 ? 6_000 : size === 8 ? 6_000 : 5_000;
   return minimum + Math.floor(random() * spread);
 }
 
@@ -65,6 +65,8 @@ export type RoomSnapshot = {
   winnerId: string | null;
   startedAt: number | null;
   message: string;
+  botSelection?: number[];
+  combos?: Record<string, number>;
 };
 
 export type LeaderboardEntry = {

@@ -40,6 +40,8 @@ export async function initAudio() {
   }
 }
 
+let hapticsEnabled = true;
+
 export function setSoundEnabled(enabled: boolean) {
   soundEnabled = enabled;
 }
@@ -48,20 +50,31 @@ export function getSoundEnabled() {
   return soundEnabled;
 }
 
+export function setHapticsEnabled(enabled: boolean) {
+  hapticsEnabled = enabled;
+}
+
+export function getHapticsEnabled() {
+  return hapticsEnabled;
+}
+
 // Haptics
 export function triggerHapticSelection() {
+  if (!hapticsEnabled) return;
   try {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   } catch (e) {}
 }
 
 export function triggerHapticSuccess() {
+  if (!hapticsEnabled) return;
   try {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   } catch (e) {}
 }
 
 export function triggerHapticError() {
+  if (!hapticsEnabled) return;
   try {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   } catch (e) {}

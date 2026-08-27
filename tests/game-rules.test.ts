@@ -49,10 +49,10 @@ describe("Kelime Patlat tahta kuralları", () => {
     expect(wordScoreMultiplier(4)).toBe(1);
     expect(wordScoreMultiplier(5)).toBe(2);
     expect(wordScoreMultiplier(7)).toBe(3);
-    expect(botThinkDelayMs(4, () => 0)).toBe(9_000);
-    expect(botThinkDelayMs(4, () => 0.99)).toBeGreaterThanOrEqual(14_900);
-    expect(botThinkDelayMs(6, () => 0)).toBe(11_000);
-    expect(botThinkDelayMs(8, () => 0)).toBe(12_000);
+    expect(botThinkDelayMs(4, () => 0)).toBe(11_000);
+    expect(botThinkDelayMs(4, () => 0.99)).toBeGreaterThanOrEqual(16_900);
+    expect(botThinkDelayMs(6, () => 0)).toBe(12_000);
+    expect(botThinkDelayMs(8, () => 0)).toBe(10_000);
     expect(BOARD_SIZES).toEqual([4, 6, 8, 10]);
     expect(getRoundDurationMs(4)).toBe(55_000);
     expect(getRoundDurationMs(6)).toBe(75_000);
