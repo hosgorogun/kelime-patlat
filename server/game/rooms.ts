@@ -31,6 +31,7 @@ type Room = {
   status: RoomStatus;
   board: string[];
   words: string[];
+  routes: Record<string, number[]>;
   foundWords: FoundWord[];
   scores: Record<string, number>;
   host: PlayerRecord;
@@ -140,23 +141,28 @@ function buildFourByFourBoard(words: string[]) {
     if (routes.some((route) => route.length < 2 || (route.length >= 3 && turnCount(route, 4) < 1))) continue;
     if (new Set(routes.map((route) => routeShape(route, 4))).size < 3) continue;
     const board = Array.from({ length: 16 }, () => "");
+    const routesMap: Record<string, number[]> = {};
     words.forEach((word, wordIndex) => {
+      routesMap[word] = routes[wordIndex]!;
       word.split("").forEach((letter, letterIndex) => {
         board[routes[wordIndex]![letterIndex]!] = letter;
       });
     });
-    return { board: fillBoardBlanks(board), words };
+    return { board: fillBoardBlanks(board), words, routes: routesMap };
   }
   const fallbackPath = fullBoardPath(4)!;
   const board = Array.from({ length: 16 }, () => "");
   let cursor = 0;
+  const routesMap: Record<string, number[]> = {};
   words.forEach((word) => {
+    const route = fallbackPath.slice(cursor, cursor + word.length);
+    routesMap[word] = route;
     word.split("").forEach((letter, letterIndex) => {
       board[fallbackPath[cursor + letterIndex]!] = letter;
     });
     cursor += word.length;
   });
-  return { board: fillBoardBlanks(board), words };
+  return { board: fillBoardBlanks(board), words, routes: routesMap };
 }
 
 function pickLiveFourWords() {
@@ -224,6 +230,7 @@ function buildBoard(size: BoardSize) {
     const occupied = new Set<number>();
     const placedWords: string[] = [];
     const usedShapes = new Set<string>();
+    const routesMap: Record<string, number[]> = {};
     for (const word of [...words].sort((left, right) => right.length - left.length)) {
       const route = findOpenRoute(occupied, size, word.length, usedShapes);
       if (!route) break;
@@ -233,11 +240,13 @@ function buildBoard(size: BoardSize) {
       });
       usedShapes.add(routeShape(route, size));
       placedWords.push(word);
+      routesMap[word] = route;
     }
     if (placedWords.length === targetWordCount) {
       return {
         board: board.map((letter) => letter || randomItem(TURKISH_LETTERS)),
         words: placedWords,
+        routes: routesMap,
       };
     }
   }
@@ -460,9 +469,10 @@ function scheduleBotFill(io: Server, room: Room) {
 }
 
 function startRound(io: Server, room: Room) {
-  const { board, words } = buildBoard(room.size);
+  const { board, words, routes } = buildBoard(room.size);
   room.board = board;
   room.words = words;
+  room.routes = routes;
   room.foundWords = [];
   room.scores = Object.fromEntries([room.host, room.guest].filter(Boolean).map((player) => [player!.id, 0]));
   room.status = "playing";
@@ -542,6 +552,7 @@ export function registerGameRooms(io: Server) {
         status: "waiting",
         board: [],
         words: [],
+        routes: {},
         foundWords: [],
         scores: {},
         host: { id: payload.playerId, name: payload.playerName.trim().slice(0, 16) || "OYUNCU 1", isBot: false, socketId: socket.id, connected: true, ready: false, rematch: false },
@@ -612,18 +623,19 @@ export function registerGameRooms(io: Server) {
         selection.every((index, indexInSelection) => indexInSelection === 0 || isAdjacent(selection[indexInSelection - 1]!, index, room.size));
       if (!validIndices) return socket.emit("word:rejected", { word: "" });
       const word = wordFromSelection(room.board, selection);
-      const isPreseeded = room.words.includes(word);
-      const isWordInCatalog = WORD_CATALOG_DATA.words.some((entry) => entry.word === word);
+      const expectedRoute = room.routes?.[word];
+      const matchesRoute = expectedRoute && (
+        (expectedRoute.length === selection.length && expectedRoute.every((val, i) => val === selection[i])) ||
+        (expectedRoute.length === selection.length && expectedRoute.every((val, i) => val === selection[selection.length - 1 - i]))
+      );
+
       if (room.foundWords.some((entry) => entry.word === word && entry.playerId === player.id)) {
-        return socket.emit("word:rejected", { word });
+        return socket.emit("word:rejected", { word, reason: "already_found" });
       }
-      if (isPreseeded) {
-        claimWord(io, room, player.id, word, selection);
-      } else if (isWordInCatalog) {
-        room.words.push(word);
+      if (matchesRoute) {
         claimWord(io, room, player.id, word, selection);
       } else {
-        return socket.emit("word:rejected", { word });
+        return socket.emit("word:rejected", { word, reason: "invalid" });
       }
     });
 

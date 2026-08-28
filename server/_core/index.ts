@@ -161,8 +161,19 @@ async function startServer() {
 
   app.get("/api/auth/me", async (req, res) => {
     try {
-      const user = await sdk.authenticateRequest(req);
-      res.json(user || null);
+      const authUser = await sdk.authenticateRequest(req);
+      if (authUser && authUser.openId) {
+        const dbUser = await UserModel.findOne({ openId: authUser.openId });
+        if (dbUser) {
+          res.json({
+            ...authUser,
+            progress: dbUser.progress || null,
+            name: dbUser.name || authUser.name
+          });
+          return;
+        }
+      }
+      res.json(authUser || null);
     } catch (err) {
       res.json(null);
     }

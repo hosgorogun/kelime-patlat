@@ -88,16 +88,17 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: 11 },
   back: { width: 36, height: 36, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 30, lineHeight: 32 },
-  overline: { color: "#B8ADD1", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  overline: { color: "#E9D5FF", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
   title: { color: "#FFF9FC", fontSize: 20, fontWeight: "900", marginTop: 2 },
   hero: { marginTop: 20, padding: 19, borderRadius: 23, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B" },
   heroKicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
   heroTitle: { color: "#FFF9FC", fontSize: 30, fontWeight: "900", marginTop: 7 },
+  heroTitleLocked: { color: "#8E889C" },
   heroCopy: { color: "#F0D6E2", fontSize: 12, lineHeight: 18, marginTop: 8 },
   continue: { height: 45, marginTop: 16, paddingHorizontal: 14, borderRadius: 14, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   continueText: { color: "#35152A", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
   continueArrow: { color: "#35152A", fontSize: 21, fontWeight: "800" },
-  section: { color: "#B8ADD1", fontSize: 9, fontWeight: "900", letterSpacing: 1.1, marginTop: 22, marginBottom: 9 },
+  section: { color: "#E9D5FF", fontSize: 9, fontWeight: "900", letterSpacing: 1.1, marginTop: 22, marginBottom: 9 },
   
   // Map layouts
   mapContainer: {
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
     marginLeft: -1,
     borderStyle: "dashed",
     borderWidth: 1.5,
-    borderColor: "#4F3C8A",
+    borderColor: "#7C3AED",
     opacity: 0.7,
   },
   row: {
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
   cardMeta: {
     fontSize: 9,
     fontWeight: "800",
-    color: "#B4A6D5",
+    color: "#E9D5FF",
   },
   doneBadge: {
     fontSize: 7,

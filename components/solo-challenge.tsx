@@ -52,7 +52,7 @@ type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
-export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], onExit, onComplete, onNext }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; onExit: () => void; onComplete: (level: number, foundWords: string[]) => void; onNext: () => void }) {
+export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], onExit, onComplete, onNext }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void }) {
   const { width } = useWindowDimensions();
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
   const [retryNonce, setRetryNonce] = useState(0);
@@ -70,10 +70,20 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [feedback, setFeedback] = useState<Feedback>("idle");
   const [status, setStatus] = useState<"playing" | "won" | "lost">("playing");
   const [isSelecting, setIsSelecting] = useState(false);
-  const [radarUsed, setRadarUsed] = useState(false);
+  const [radarCooldown, setRadarCooldown] = useState(0);
+  const [radarCharges, setRadarCharges] = useState(3);
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
+
+  // Radar cooldown timer
+  useEffect(() => {
+    if (radarCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setRadarCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [radarCooldown]);
   
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]>([]);
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -114,7 +124,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   useEffect(() => {
     setSelected([]); setFound([]); setFoundPaths([]); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
-    setRadarUsed(false); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null);
+    setRadarCooldown(0); setRadarCharges(3); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null);
   }, [challenge, retryNonce]);
 
   useEffect(() => {
@@ -136,11 +146,20 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   useEffect(() => {
     if (status !== "playing") return;
     const timer = setInterval(() => setSeconds((value) => {
-      if (value <= 1) { clearInterval(timer); setStatus("lost"); triggerHapticError(); playErrorSound(); return 0; }
+      if (value <= 1) {
+        clearInterval(timer);
+        setStatus("lost");
+        triggerHapticError();
+        playErrorSound();
+        if (daily) {
+          onComplete(level, found, false);
+        }
+        return 0;
+      }
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status]);
+  }, [status, found, level, daily, onComplete]);
 
   useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
 
@@ -238,13 +257,14 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     if (next.length >= previous.length) playSelectionNote(next.length - 1);
   };
   const useRadar = () => {
-    if (radarUsed || status !== "playing") return;
+    if (radarCooldown > 0 || radarCharges <= 0 || status !== "playing") return;
     const remaining = challenge.words.filter((w) => !found.includes(w));
     if (!remaining.length) return;
     const targetWord = remaining[0]!;
     const path = challenge.routes[targetWord];
     if (path && path.length > 0) {
-      setRadarUsed(true);
+      setRadarCooldown(10);
+      setRadarCharges((prev) => prev - 1);
       const highlights = new Set([path[0]!, path[path.length - 1]!]);
       setRadarHighlights(highlights);
       triggerHapticSelection(); playSelectionNote(0);
@@ -269,7 +289,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setTimeBonusText(`+${bonus}s`);
     setTimeout(() => setTimeBonusText(null), 1500);
 
-    if (nextFound.length === challenge.words.length) { playSuccessSound(); triggerHapticSuccess(); setStatus("won"); onComplete(level, nextFound); }
+    if (nextFound.length === challenge.words.length) { playSuccessSound(); triggerHapticSuccess(); setStatus("won"); onComplete(level, nextFound, true); }
     else { playSuccessSound(); triggerHapticSuccess(); setTimeout(() => setFeedback("idle"), 360); }
   };
   const start = (index: number) => { if (status !== "playing") return; submitted.current = false; pointerActive.current = true; setIsSelecting(true); if (resetTimer.current) clearTimeout(resetTimer.current); setFeedback("idle"); clearSelection(); triggerHapticSelection(); playSelectionNote(0); include(index); };
@@ -348,8 +368,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     <View style={styles.header}>
       <Pressable onPress={onExit} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>×</Text></Pressable>
       <View><Text style={[styles.kicker, { color: activeTheme.headerText }]}>{daily ? "GÜNLÜK ROTA · SABİT TAHTA" : `TEK OYUNCU · SEVİYE ${level}`}</Text><Text style={styles.title}>{daily ? "GÜNÜN ROTASI" : challenge.title}</Text></View>
-      <Pressable disabled={radarUsed || status !== "playing"} onPress={useRadar} style={[styles.radarButton, { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor }, radarUsed && styles.radarUsedBtn]}>
-        <Text style={styles.radarText}>{radarUsed ? "RADAR ✖" : "RADAR 👁"}</Text>
+      <Pressable disabled={radarCooldown > 0 || radarCharges <= 0 || status !== "playing"} onPress={useRadar} style={[styles.radarButton, { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor }, (radarCooldown > 0 || radarCharges <= 0) && styles.radarUsedBtn]}>
+        <Text style={styles.radarText}>{radarCooldown > 0 ? `RADAR (${radarCooldown}s)` : `RADAR 👁 [${radarCharges}]`}</Text>
       </Pressable>
       <View style={[styles.timer, { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor }, seconds <= 15 && styles.timerUrgent]}>
         <Text style={styles.timerText}>{seconds}s</Text>
@@ -408,7 +428,11 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       </View>
     </View>
     {status === "won" && <View style={styles.result}><Text style={styles.resultTitle}>{daily ? "GÜNLÜK ROTA TAMAMLANDI" : "SEVİYE TAMAMLANDI"}</Text><Text style={styles.resultCopy}>{daily ? "Bugünün XP ödülü sezon ilerlemene eklendi." : "Yeni rota yoğunluğu ve daha kısa süre seni bekliyor."}</Text><Pressable onPress={daily ? onExit : onNext} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : "SONRAKİ SEVİYE"}</Text><Text style={styles.actionArrow}>→</Text></Pressable></View>}
-    {status === "lost" && <View style={styles.result}><Text style={styles.resultTitle}>SÜRE DOLDU</Text><Text style={styles.resultCopy}>Her renk ayrı bir kelimenin yolunu gösterir.</Text><View style={styles.solutionLegend}>{challenge.words.map((word, index) => <View key={word} style={[styles.solutionTag, SOLUTION_ROUTE_COLORS[index % SOLUTION_ROUTE_COLORS.length]]}><Text style={styles.solutionTagText}>{word} · {DIFFICULTY_LABEL[challenge.wordDifficulties[word]!]}</Text></View>)}</View><Pressable onPress={() => daily ? setRetryNonce((value) => value + 1) : setVariation((value) => value + 1)} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>{daily ? "AYNI ROTA İLE TEKRAR DENE" : "YENİ IZGARA İLE TEKRAR DENE"}</Text><Text style={styles.actionArrow}>?</Text></Pressable></View>}
+    {status === "lost" && <View style={styles.result}><Text style={styles.resultTitle}>SÜRE DOLDU</Text><Text style={styles.resultCopy}>Her renk ayrı bir kelimenin yolunu gösterir.</Text><View style={styles.solutionLegend}>{challenge.words.map((word, index) => <View key={word} style={[styles.solutionTag, SOLUTION_ROUTE_COLORS[index % SOLUTION_ROUTE_COLORS.length]]}><Text style={styles.solutionTagText}>{word} · {DIFFICULTY_LABEL[challenge.wordDifficulties[word]!]}</Text></View>)}</View>{daily ? (
+      <Pressable onPress={onExit} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text><Text style={styles.actionArrow}>→</Text></Pressable>
+    ) : (
+      <Pressable onPress={() => setVariation((value) => value + 1)} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>YENİ IZGARA İLE TEKRAR DENE</Text><Text style={styles.actionArrow}>?</Text></Pressable>
+    )}</View>}
     
     {selectedWordInfo && (
       <View style={styles.modalOverlay}>
@@ -425,7 +449,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900" }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#50E3C2", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#50E3C2", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#50E3C2" }, cellFound: { backgroundColor: "#287B70", borderColor: "#50E3C2" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 23, fontWeight: "900" }, letterMedium: { fontSize: 19 }, letterSmall: { fontSize: 15 }, letterExtraSmall: { fontSize: 11 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#50E3C2" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, hint: { color: "#B5A9CD", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900" }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#50E3C2", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#50E3C2", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#50E3C2" }, cellFound: { backgroundColor: "#287B70", borderColor: "#50E3C2" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#50E3C2" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, hint: { color: "#B5A9CD", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", zIndex: 100 },
   modalContent: { width: "86%", borderRadius: 20, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },

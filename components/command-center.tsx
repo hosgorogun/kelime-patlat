@@ -107,7 +107,21 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
     {/* Split Row for Daily and Arcade Challenges */}
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>ETKİNLİK MERKEZİ</Text><Text style={styles.sectionMeta}>ÖZEL GÖREVLER</Text></View>
     <View style={styles.cardsRow}>
-      <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.columnCard, { borderColor: activeTheme.accent }, pressed && styles.pressed]}>
+      <Pressable
+        onPress={() => {
+          if (dailyDone) {
+            Alert.alert("🔒 Günlük Rota Kilitlendi", "Bugünkü sabit rotayı tamamladın! Yarın yeni bir kelime paketi ve farklı bir rota seni bekliyor olacak.");
+          } else {
+            onPlayDaily();
+          }
+        }}
+        style={({ pressed }) => [
+          styles.columnCard,
+          { borderColor: activeTheme.accent },
+          dailyDone && { opacity: 0.5 },
+          pressed && !dailyDone && styles.pressed
+        ]}
+      >
         <View style={[styles.cardIconCircle, { backgroundColor: activeTheme.glow, borderColor: activeTheme.accent }]}><Text style={[styles.cardIconText, { color: activeTheme.accent }]}>{activeTheme.icon}</Text></View>
         <Text style={[styles.cardKicker, { color: activeTheme.accent }]}>SABİT ROTA</Text>
         <Text style={styles.cardTitle}>{dailyDone ? "TAMAMLANDI" : daily.title}</Text>
@@ -201,10 +215,10 @@ const styles = StyleSheet.create({
   avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, backgroundColor: "#241B47", justifyContent: "center", alignItems: "center" }, 
   avatarText: { color: "#FFF9FC", fontWeight: "900" }, 
   name: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", letterSpacing: 0.5, textShadowColor: "rgba(255, 255, 255, 0.25)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }, 
-  rank: { color: "#BFB2D8", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginTop: 2 }, 
+  rank: { color: "#E9D5FF", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginTop: 2 }, 
   livePill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: "rgba(29, 24, 55, 0.7)", borderWidth: 1, borderColor: "rgba(76, 62, 115, 0.4)" }, 
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#00F5D4" }, 
-  liveText: { color: "#D7CEE8", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  liveText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   
   signalDeck: { minHeight: 280, marginTop: 16, padding: 22, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(43, 33, 88, 0.5)", borderWidth: 1, borderColor: "rgba(127, 103, 211, 0.35)", position: "relative" }, 
   radarRing: { position: "absolute", right: -35, top: -42, width: 190, height: 190, borderRadius: 100, borderWidth: 1.5, zIndex: 1 }, 
@@ -213,32 +227,32 @@ const styles = StyleSheet.create({
   glow: { position: "absolute", right: 25, bottom: -65, width: 180, height: 150, borderRadius: 100, backgroundColor: "#FF007F" }, 
   deckEyebrow: { color: "#FFD000", fontSize: 8, fontWeight: "900", letterSpacing: 1.2 }, 
   deckTitle: { color: "#FFFFFF", fontSize: 34, lineHeight: 38, fontWeight: "900", letterSpacing: -1, marginTop: 10, textShadowColor: "rgba(255, 255, 255, 0.35)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6 }, 
-  deckBody: { color: "#DFD6F0", fontSize: 11, lineHeight: 16, marginTop: 10, maxWidth: 225 }, 
+  deckBody: { color: "#F3E8FF", fontSize: 11, lineHeight: 16, marginTop: 10, maxWidth: 225 }, 
   xpPanel: { marginTop: 16, borderRadius: 16, backgroundColor: "rgba(12, 8, 37, 0.3)", borderWidth: 1, borderColor: "#5A4A93", padding: 12 }, 
   xpHead: { flexDirection: "row", justifyContent: "space-between" }, 
-  xpLabel: { color: "#C9BEE4", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, 
+  xpLabel: { color: "#E9D5FF", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, 
   xpValue: { color: "#FFF9FC", fontSize: 8, fontWeight: "900" }, 
   track: { height: 6, marginTop: 8, borderRadius: 3, overflow: "hidden", backgroundColor: "#4B3B7C" }, 
   trackFill: { height: "100%", borderRadius: 3, backgroundColor: "#FFD000" }, 
   signalFooter: { marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }, 
   footerCol: { flex: 1, alignItems: "center" },
-  signalLabel: { color: "#BDB0D7", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, 
+  signalLabel: { color: "#E9D5FF", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, 
   signalValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", marginTop: 2 }, 
-  signalUnit: { color: "#C7BAE0", fontSize: 8 }, 
+  signalUnit: { color: "#D8B4FE", fontSize: 8 }, 
   signalRule: { width: 1, height: 24, backgroundColor: "#64519B" },
   
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22, marginBottom: 8 }, 
   sectionTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }, 
-  sectionMeta: { color: "#9185AB", fontSize: 8, fontWeight: "900", letterSpacing: 0.65 }, 
+  sectionMeta: { color: "#D8B4FE", fontSize: 8, fontWeight: "900", letterSpacing: 0.65 }, 
   sectionLink: { color: "#FFD000", fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
   
   cardsRow: { flexDirection: "row", gap: 10, width: "100%" },
-  columnCard: { flex: 1, minHeight: 180, borderRadius: 20, borderWidth: 1.5, padding: 14, backgroundColor: "rgba(33, 26, 61, 0.4)" },
+  columnCard: { flex: 1, minHeight: 135, borderRadius: 20, borderWidth: 1.5, padding: 14, backgroundColor: "rgba(33, 26, 61, 0.4)" },
   cardIconCircle: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   cardIconText: { fontSize: 18, fontWeight: "900" },
   cardKicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.8, marginTop: 12 },
   cardTitle: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 4, textShadowColor: "rgba(255, 255, 255, 0.15)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, 
-  cardBody: { color: "#C9BEDD", fontSize: 9, lineHeight: 13, marginTop: 4 },
+  cardBody: { color: "#E9D5FF", fontSize: 9, lineHeight: 13, marginTop: 4 },
   
   modeGrid: { flexDirection: "row", gap: 10 }, 
   modeNode: { flex: 1, minHeight: 110, borderRadius: 20, padding: 12, backgroundColor: "rgba(32, 26, 57, 0.4)", borderWidth: 1.5, justifyContent: "space-between" }, 
@@ -246,7 +260,7 @@ const styles = StyleSheet.create({
   modeSize: { fontSize: 18, fontWeight: "900", textShadowColor: "rgba(255, 255, 255, 0.1)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, 
   modeMiniDot: { width: 8, height: 8, borderRadius: 4 },
   modeTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900", marginTop: 8 }, 
-  modeMeta: { color: "#AAA0BF", fontSize: 9, fontWeight: "800", marginTop: 2 },
+  modeMeta: { color: "#DDD6FE", fontSize: 9, fontWeight: "800", marginTop: 2 },
   
   missionStack: { gap: 8 }, 
   mission: { padding: 12, borderRadius: 17, backgroundColor: "rgba(29, 24, 53, 0.4)", borderWidth: 1, borderColor: "rgba(61, 49, 94, 0.35)", flexDirection: "row", gap: 10 }, 
@@ -256,28 +270,28 @@ const styles = StyleSheet.create({
   missionTop: { flexDirection: "row", justifyContent: "space-between", gap: 10 }, 
   missionTitle: { color: "#F6F1FF", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 }, 
   missionReward: { color: "#FFD000", fontSize: 8, fontWeight: "900" }, 
-  missionBody: { color: "#B9AECD", fontSize: 9, marginTop: 3 }, 
+  missionBody: { color: "#F1F5F9", fontSize: 9, marginTop: 3 }, 
   missionProgress: { marginTop: 8, flexDirection: "row", alignItems: "center", gap: 7 }, 
   missionTrack: { flex: 1, height: 5, borderRadius: 4, backgroundColor: "#413461", overflow: "hidden" }, 
   missionFill: { height: "100%", backgroundColor: "#00F5D4", borderRadius: 4 }, 
-  missionCount: { color: "#D7CEE8", fontSize: 8, fontWeight: "900" },
+  missionCount: { color: "#FFFFFF", fontSize: 8, fontWeight: "900" },
   
   leaderStrip: { padding: 16, borderRadius: 20, backgroundColor: "rgba(37, 29, 73, 0.4)", borderWidth: 1.5, borderColor: "rgba(87, 69, 141, 0.3)" }, 
   leaderTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }, 
   leaderTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900", letterSpacing: 0.7 }, 
   leaderArrow: { color: "#00F5D4", fontSize: 15, fontWeight: "900" }, 
   leaderRow: { height: 28, flexDirection: "row", alignItems: "center", gap: 9 }, 
-  leaderRank: { color: "#A79ABD", width: 19, fontSize: 8, fontWeight: "900" }, 
-  leaderName: { flex: 1, color: "#E9E1F7", fontSize: 11, fontWeight: "800" }, 
+  leaderRank: { color: "#D8B4FE", width: 19, fontSize: 8, fontWeight: "900" }, 
+  leaderName: { flex: 1, color: "#FFFFFF", fontSize: 11, fontWeight: "800" }, 
   leaderScore: { color: "#FFD000", fontSize: 11, fontWeight: "900" }, 
-  leaderEmpty: { color: "#B8ADD1", fontSize: 10 }, 
+  leaderEmpty: { color: "#F1F5F9", fontSize: 10 }, 
   soloCard: { flexDirection: "row", alignItems: "center", padding: 16, borderRadius: 22, backgroundColor: "rgba(30, 18, 70, 0.55)", borderWidth: 1.5, borderColor: "#7C3AED", shadowColor: "#7C3AED", shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
   soloLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 14 },
   soloIconWrap: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(124, 58, 237, 0.2)", borderWidth: 1.5, borderColor: "#8B5CF6", alignItems: "center", justifyContent: "center" },
   soloIcon: { fontSize: 26 },
   soloKicker: { color: "#A78BFA", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
   soloTitle: { color: "#FFFFFF", fontSize: 15, fontWeight: "900", letterSpacing: 0.3, marginTop: 2 },
-  soloBody: { color: "#C4B5FD", fontSize: 9, lineHeight: 13, marginTop: 4, marginRight: 8 },
+  soloBody: { color: "#E9D5FF", fontSize: 9, lineHeight: 13, marginTop: 4, marginRight: 8 },
   soloChevron: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(124, 58, 237, 0.25)", alignItems: "center", justifyContent: "center" },
   soloChevronText: { color: "#A78BFA", fontSize: 22, fontWeight: "900", lineHeight: 28 },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
