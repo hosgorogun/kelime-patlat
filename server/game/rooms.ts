@@ -48,6 +48,7 @@ type Room = {
 };
 
 const rooms = new Map<string, Room>();
+const matchmakingQueue = new Map<BoardSize, { playerId: string; playerName: string; socketId: string }[]>();
 const leaderboard = new Map<string, LeaderboardEntry>();
 const ROOM_TTL_MS = 15 * 60 * 1000;
 
@@ -83,16 +84,7 @@ function cardinalNeighbors(index: number, size: BoardSize) {
   ));
 }
 
-function hasTurn(path: number[], size: BoardSize) {
-  for (let index = 2; index < path.length; index += 1) {
-    const previousStep = path[index - 1]! - path[index - 2]!;
-    const nextStep = path[index]! - path[index - 1]!;
-    if (previousStep !== nextStep) return true;
-  }
-  return false;
-}
-
-function turnCount(path: number[], size: BoardSize) {
+function turnCount(path: number[], _size?: any) {
   let turns = 0;
   for (let index = 2; index < path.length; index += 1) {
     const previousStep = path[index - 1]! - path[index - 2]!;
@@ -543,6 +535,89 @@ export function registerGameRooms(io: Server) {
       const profile = await savePlayerProfile(payload.playerId, payload.playerName, payload.progress);
       if (profile) socket.emit("profile:update", profile);
     });
+    socket.on("matchmaking:join", (payload: { playerId: string; playerName: string; size: BoardSize }) => {
+      if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
+      let queue = matchmakingQueue.get(payload.size);
+      if (!queue) {
+        queue = [];
+        matchmakingQueue.set(payload.size, queue);
+      }
+      queue = queue.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id);
+      
+      if (queue.length > 0) {
+        const opponent = queue.shift()!;
+        matchmakingQueue.set(payload.size, queue);
+        const code = makeCode();
+        const room: Room = {
+          code,
+          size: payload.size,
+          status: "lobby",
+          board: [],
+          words: [],
+          routes: {},
+          foundWords: [],
+          scores: {},
+          host: { id: opponent.playerId, name: opponent.playerName.trim().slice(0, 16) || "OYUNCU 1", isBot: false, socketId: opponent.socketId, connected: true, ready: false, rematch: false },
+          guest: { id: payload.playerId, name: payload.playerName.trim().slice(0, 16) || "OYUNCU 2", isBot: false, socketId: socket.id, connected: true, ready: false, rematch: false },
+          winnerId: null,
+          startedAt: null,
+          message: "Rakip bulundu! Maç başlamak üzere...",
+          touchedAt: Date.now(),
+          botFillToken: 0,
+          roundToken: 0,
+        };
+        rooms.set(code, room);
+        const hostSocket = io.sockets.sockets.get(opponent.socketId || "");
+        if (hostSocket) hostSocket.join(`room:${code}`);
+        socket.join(`room:${code}`);
+        emitRoom(io, room);
+      } else {
+        queue.push({ playerId: payload.playerId, playerName: payload.playerName, socketId: socket.id });
+        matchmakingQueue.set(payload.size, queue);
+        socket.emit("matchmaking:status", { status: "searching" });
+        setTimeout(() => {
+          const currentQueue = matchmakingQueue.get(payload.size) || [];
+          const idx = currentQueue.findIndex(p => p.playerId === payload.playerId && p.socketId === socket.id);
+          if (idx !== -1) {
+            currentQueue.splice(idx, 1);
+            matchmakingQueue.set(payload.size, currentQueue);
+            const code = makeCode();
+            const room: Room = {
+              code,
+              size: payload.size,
+              status: "waiting",
+              board: [],
+              words: [],
+              routes: {},
+              foundWords: [],
+              scores: {},
+              host: { id: payload.playerId, name: payload.playerName.trim().slice(0, 16) || "OYUNCU 1", isBot: false, socketId: socket.id, connected: true, ready: false, rematch: false },
+              guest: null,
+              winnerId: null,
+              startedAt: null,
+              message: "Bot düellosu hazırlanıyor...",
+              touchedAt: Date.now(),
+              botFillToken: 0,
+              roundToken: 0,
+            };
+            rooms.set(code, room);
+            socket.join(`room:${code}`);
+            emitRoom(io, room);
+            scheduleBotFill(io, room);
+          }
+        }, 5000);
+      }
+    });
+
+    socket.on("matchmaking:leave", (payload: { playerId: string; size: BoardSize }) => {
+      let queue = matchmakingQueue.get(payload.size);
+      if (queue) {
+        queue = queue.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id);
+        matchmakingQueue.set(payload.size, queue);
+      }
+      socket.emit("matchmaking:status", { status: "idle" });
+    });
+
     socket.on("room:create", (payload: { playerId: string; playerName: string; size: BoardSize; immediateBot?: boolean }) => {
       if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
       const code = makeCode();
@@ -673,6 +748,10 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("disconnect", () => {
+      for (const [size, queue] of matchmakingQueue.entries()) {
+        const filtered = queue.filter(p => p.socketId !== socket.id);
+        matchmakingQueue.set(size, filtered);
+      }
       for (const room of rooms.values()) {
         const player = [room.host, room.guest].find((entry) => entry?.socketId === socket.id);
         if (!player) continue;

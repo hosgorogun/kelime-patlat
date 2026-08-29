@@ -16,13 +16,14 @@ type CommandCenterProps = {
   onSolo: () => void;
   onNavigate: (destination: NavKey) => void;
   onLeaderboard: () => void;
+  onShowGuide: () => void;
 };
 
 function percent(current: number, target: number): `${number}%` {
   return `${Math.min(100, Math.round(current / target * 100))}%`;
 }
 
-export function CommandCenter({ playerName, progress, daily, leaderboard, onPlayDaily, onPlayBot, onSolo, onNavigate, onLeaderboard }: CommandCenterProps) {
+export function CommandCenter({ playerName, progress, daily, leaderboard, onPlayDaily, onPlayBot, onSolo, onNavigate, onLeaderboard, onShowGuide }: CommandCenterProps) {
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
   const rank = getRank(progress);
@@ -71,7 +72,10 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
         <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}><Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text></View>
         <View style={{ marginLeft: 4 }}><Text style={styles.name}>{playerName}</Text><Text style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank} · {progress.xp} XP</Text></View>
       </Pressable>
-      <Pressable onPress={onLeaderboard} style={({ pressed }) => [styles.livePill, pressed && styles.pressed]}><View style={styles.liveDot} /><Text style={styles.liveText}>LİDERLİK</Text></Pressable>
+      <View style={{ flexDirection: "row", gap: 6 }}>
+        <Pressable onPress={onShowGuide} style={({ pressed }) => [styles.livePill, { borderColor: "#7C5CF6" }, pressed && styles.pressed]}><Text style={[styles.liveText, { color: "#9A76ED" }]}>❓ REHBER</Text></Pressable>
+        <Pressable onPress={onLeaderboard} style={({ pressed }) => [styles.livePill, pressed && styles.pressed]}><View style={styles.liveDot} /><Text style={styles.liveText}>LİDERLİK</Text></Pressable>
+      </View>
     </View>
 
     {/* Radar Signal Deck */}

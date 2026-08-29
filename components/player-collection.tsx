@@ -1,12 +1,42 @@
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { AVATARS, badgesFor, type AvatarId, type PlayerProgress } from "@/shared/progression";
+import { AVATARS, badgesFor, isAvatarUnlocked, type AvatarId, type PlayerProgress } from "@/shared/progression";
 
 export function PlayerCollection({ progress, onSelectAvatar }: { progress: PlayerProgress; onSelectAvatar: (avatar: AvatarId) => void }) {
   const badges = badgesFor(progress);
   return <View style={styles.root}>
     <View style={styles.sectionTop}><View><Text style={styles.kicker}>KİMLİK KASASI</Text><Text style={styles.title}>AVATARIN</Text></View><Text style={styles.count}>{badges.filter((badge) => badge.unlocked).length}/{badges.length} ROZET</Text></View>
-    <View style={styles.avatarGrid}>{AVATARS.map((avatar) => { const selected = avatar.id === progress.selectedAvatar; return <Pressable key={avatar.id} onPress={() => onSelectAvatar(avatar.id)} style={({ pressed }) => [styles.avatarCard, { backgroundColor: avatar.surface, borderColor: selected ? avatar.color : "#403664" }, selected && { shadowColor: avatar.color, shadowOpacity: 0.38, shadowRadius: 10, elevation: 5 }, pressed && styles.pressed]}><Text style={[styles.avatarGlyph, { color: avatar.color }]}>{avatar.icon}</Text><Text style={[styles.avatarLabel, selected && { color: avatar.color }]}>{avatar.label}</Text>{selected && <View style={[styles.check, { backgroundColor: avatar.color }]}><Text style={styles.checkText}>✓</Text></View>}</Pressable>; })}</View>
+    <View style={styles.avatarGrid}>{AVATARS.map((avatar) => {
+      const selected = avatar.id === progress.selectedAvatar;
+      const unlocked = isAvatarUnlocked(avatar.id, progress);
+      return (
+        <Pressable
+          key={avatar.id}
+          onPress={() => {
+            if (!unlocked) {
+              Alert.alert(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint);
+            } else {
+              onSelectAvatar(avatar.id);
+            }
+          }}
+          style={({ pressed }) => [
+            styles.avatarCard,
+            { backgroundColor: unlocked ? avatar.surface : "rgba(25, 21, 45, 0.4)", borderColor: selected ? avatar.color : unlocked ? "#403664" : "#2E264E" },
+            !unlocked && { opacity: 0.65 },
+            selected && { shadowColor: avatar.color, shadowOpacity: 0.38, shadowRadius: 10, elevation: 5 },
+            pressed && styles.pressed
+          ]}
+        >
+          <Text style={[styles.avatarGlyph, { color: unlocked ? avatar.color : "#665E77" }]}>
+            {unlocked ? avatar.icon : "🔒"}
+          </Text>
+          <Text style={[styles.avatarLabel, selected && { color: avatar.color }, !unlocked && { color: "#7B748C" }]}>
+            {avatar.label}
+          </Text>
+          {selected && <View style={[styles.check, { backgroundColor: avatar.color }]}><Text style={styles.checkText}>✓</Text></View>}
+        </Pressable>
+      );
+    })}</View>
     <Text style={[styles.kicker, { marginTop: 12 }]}>BAŞARI ROZETLERİ (DETAY İÇİN DOKUN)</Text>
     <View style={styles.badgeGrid}>
       {badges.map((badge) => {

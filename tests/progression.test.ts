@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
+import { getWordDefinition } from "../shared/dictionary";
 
 describe("Günlük rota ve sezon ilerlemesi", () => {
   it("aynı takvim günü için aynı günlük rota kimliğini ve sabit varyasyonu üretir", () => {
@@ -62,7 +63,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(AVATARS.some((avatar) => avatar.id === DEFAULT_PROGRESS.selectedAvatar)).toBe(true);
     const rookieBadges = badgesFor(DEFAULT_PROGRESS);
     expect(rookieBadges.every((badge) => !badge.unlocked)).toBe(true);
-    const seasoned = { ...DEFAULT_PROGRESS, xp: 600, bestArcadeScore: 500, matches: 6, wins: 1, streak: 3, missions: { daily: 1, duels: 2, wordsmith: 1 } };
+    const seasoned = { ...DEFAULT_PROGRESS, xp: 600, bestArcadeScore: 500, matches: 6, wins: 1, streak: 7, missions: { daily: 1, duels: 2, wordsmith: 1 } };
     expect(badgesFor(seasoned).every((badge) => badge.unlocked)).toBe(true);
   });
 
@@ -71,5 +72,42 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(normalizeRoomCode("abc")).toBeNull();
     expect(normalizeRoomCode(["ABCDE"])).toBeNull();
     expect(inviteMessage("AB12C", "kelime://room?code=AB12C")).toContain("AB12C");
+  });
+
+  it("avatar kilit açma milestones durumlarını doğru kontrol eder", () => {
+    // KIVILCIM (spark) her zaman açık olmalı
+    expect(isAvatarUnlocked("spark", DEFAULT_PROGRESS)).toBe(true);
+
+    // YÖRÜNGE (orbit) seviye 3 gerektirir (xp 0 = seviye 1, xp 400 = seviye 3)
+    expect(isAvatarUnlocked("orbit", DEFAULT_PROGRESS)).toBe(false);
+    expect(isAvatarUnlocked("orbit", { ...DEFAULT_PROGRESS, xp: 400 })).toBe(true);
+
+    // BİLGE (sage) seviye 6 gerektirir (xp 1000 = seviye 6)
+    expect(isAvatarUnlocked("sage", DEFAULT_PROGRESS)).toBe(false);
+    expect(isAvatarUnlocked("sage", { ...DEFAULT_PROGRESS, xp: 1000 })).toBe(true);
+
+    // KUYRUKLU (comet) arcade skoru 400 gerektirir
+    expect(isAvatarUnlocked("comet", DEFAULT_PROGRESS)).toBe(false);
+    expect(isAvatarUnlocked("comet", { ...DEFAULT_PROGRESS, bestArcadeScore: 400 })).toBe(true);
+
+    // TAÇ (crown) galibiyet 5 gerektirir
+    expect(isAvatarUnlocked("crown", DEFAULT_PROGRESS)).toBe(false);
+    expect(isAvatarUnlocked("crown", { ...DEFAULT_PROGRESS, wins: 5 })).toBe(true);
+
+    // KOR (ember) seri 5 gerektirir
+    expect(isAvatarUnlocked("ember", DEFAULT_PROGRESS)).toBe(false);
+    expect(isAvatarUnlocked("ember", { ...DEFAULT_PROGRESS, streak: 5 })).toBe(true);
+  });
+
+  it("kelime sözlük tanımlarını ve fallback yapısını doğru çözer", () => {
+    // Bilinen kelimelerin tanımlarını alabilmeli
+    expect(getWordDefinition("AY")).toBe("Dünya'nın tek doğal uydusu olan gök cismi.");
+    expect(getWordDefinition("ADA")).toBe("Dört tarafı tamamen suyla çevrili kara parçası.");
+
+    // Küçük harfle arandığında da doğru dönmeli (büyük harfe dönüştürülmeli)
+    expect(getWordDefinition("ay")).toBe("Dünya'nın tek doğal uydusu olan gök cismi.");
+
+    // Bilinmeyen kelimelerde siberpunk fallback metnini dönmeli
+    expect(getWordDefinition("BİLİNMEYEN")).toContain("Kelime Patlat ile kelime dağarcığını zenginleştir!");
   });
 });

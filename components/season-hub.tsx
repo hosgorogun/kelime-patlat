@@ -13,21 +13,39 @@ export function SeasonHub({ playerId, progress, leaderboard, onBack, onSelectThe
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>CANLI SIRALAMA</Text><Text style={styles.sectionMeta}>{leaderboard.length} AVCI</Text></View>
     <View style={styles.board}>{leaderboard.length ? leaderboard.map((entry, index) => {
       const winRate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
+      const isTop1 = index === 0;
+      const isTop2 = index === 1;
+      const isTop3 = index === 2;
       return (
-        <View key={entry.id} style={[styles.row, index < 3 && styles.rowTop]}>
-          <View style={[styles.position, index === 0 && styles.positionFirst]}>
-            <Text style={styles.positionText}>{index + 1}</Text>
+        <View
+          key={entry.id}
+          style={[
+            styles.row,
+            isTop1 && styles.rowTop1,
+            isTop2 && styles.rowTop2,
+            isTop3 && styles.rowTop3,
+          ]}
+        >
+          <View style={[
+            styles.position,
+            isTop1 && styles.positionFirst,
+            isTop2 && styles.positionSecond,
+            isTop3 && styles.positionThird,
+          ]}>
+            <Text style={[styles.positionText, (isTop1 || isTop2 || isTop3) && { color: "#000000" }]}>{index + 1}</Text>
           </View>
           <View style={styles.playerMark}>
-            <Text style={styles.playerMarkText}>{entry.name.slice(0, 1).toUpperCase()}</Text>
+            <Text style={[styles.playerMarkText, isTop1 && { color: "#FFD000" }]}>{entry.name.slice(0, 1).toUpperCase()}</Text>
           </View>
           <View style={styles.playerCopy}>
-            <Text numberOfLines={1} style={styles.playerName}>{entry.name}</Text>
+            <Text numberOfLines={1} style={styles.playerName}>
+              {entry.name} {isTop1 ? "👑" : isTop2 ? "🥈" : isTop3 ? "🥉" : ""}
+            </Text>
             <Text style={styles.playerMeta}>
               {entry.wins}/{entry.matches} Galibiyet (%{winRate}) · En İyi: {entry.bestRound} Puan
             </Text>
           </View>
-          <Text style={styles.score}>{entry.score}</Text>
+          <Text style={[styles.score, isTop1 && { color: "#FFD000" }]}>{entry.score}</Text>
         </View>
       );
     }) : <View style={styles.emptyBoard}><Text style={styles.emptyTitle}>SIRALAMA AÇIK</Text><Text style={styles.emptyCopy}>İlk tamamlanan canlı düello burada sezona yazılır.</Text></View>}</View>
@@ -43,6 +61,15 @@ export function SeasonHub({ playerId, progress, leaderboard, onBack, onSelectThe
 const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 128 }, header: { flexDirection: "row", alignItems: "center", gap: 11 }, back: { width: 38, height: 38, borderRadius: 13, backgroundColor: "#251E45", alignItems: "center", justifyContent: "center" }, backText: { color: "#FFF9FC", fontSize: 30, lineHeight: 30 }, overline: { color: "#B7AAD1", fontSize: 8, letterSpacing: 1, fontWeight: "900" }, title: { color: "#FFF9FC", fontSize: 20, fontWeight: "900", marginTop: 2 }, rankOrb: { width: 35, height: 35, borderRadius: 18, marginLeft: "auto", backgroundColor: "#493477", borderWidth: 1, borderColor: "#FFC24A", alignItems: "center", justifyContent: "center" }, rankOrbText: { color: "#FFC24A", fontWeight: "900" },
   hero: { marginTop: 20, padding: 18, borderRadius: 25, backgroundColor: "#34275E", borderWidth: 1, borderColor: "#7B63C9" }, heroKicker: { color: "#FFD37F", fontSize: 8, letterSpacing: 1, fontWeight: "900" }, heroTitle: { color: "#FFF9FC", fontSize: 27, fontWeight: "900", marginTop: 7 }, heroBody: { color: "#D8CDEB", fontSize: 11, marginTop: 5 }, heroStats: { marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#5B4B90", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, statLabel: { color: "#BEB1D7", fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, statValue: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 3 }, statRule: { width: 1, height: 27, backgroundColor: "#5C4D90" },
-  sectionHead: { marginTop: 22, marginBottom: 9, flexDirection: "row", justifyContent: "space-between" }, sectionTitle: { color: "#FFF9FC", fontSize: 10, fontWeight: "900", letterSpacing: 1 }, sectionMeta: { color: "#988CAC", fontSize: 8, fontWeight: "900", letterSpacing: 0.6 }, board: { borderRadius: 21, backgroundColor: "#1E1836", borderWidth: 1, borderColor: "#403360", overflow: "hidden" }, row: { minHeight: 55, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 9, borderBottomWidth: 1, borderBottomColor: "#30254C" }, rowTop: { backgroundColor: "#251D43" }, position: { width: 23, height: 23, borderRadius: 8, backgroundColor: "#392C5D", alignItems: "center", justifyContent: "center" }, positionFirst: { backgroundColor: "#644D21" }, positionText: { color: "#D9CDEB", fontSize: 9, fontWeight: "900" }, playerMark: { width: 29, height: 29, borderRadius: 10, backgroundColor: "#3C2D62", alignItems: "center", justifyContent: "center" }, playerMarkText: { color: "#FFC24A", fontSize: 11, fontWeight: "900" }, playerCopy: { flex: 1 }, playerName: { color: "#F9F5FF", fontSize: 11, fontWeight: "900" }, playerMeta: { color: "#9F93B6", fontSize: 7, marginTop: 3, fontWeight: "800" }, score: { color: "#55E6B2", fontSize: 13, fontWeight: "900" }, emptyBoard: { padding: 22, alignItems: "center" }, emptyTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900" }, emptyCopy: { color: "#B8ADCD", fontSize: 10, textAlign: "center", marginTop: 5 },
+  sectionHead: { marginTop: 22, marginBottom: 9, flexDirection: "row", justifyContent: "space-between" }, sectionTitle: { color: "#FFF9FC", fontSize: 10, fontWeight: "900", letterSpacing: 1 }, sectionMeta: { color: "#988CAC", fontSize: 8, fontWeight: "900", letterSpacing: 0.6 }, board: { borderRadius: 21, backgroundColor: "#1E1836", borderWidth: 1, borderColor: "#403360", overflow: "hidden" },
+  row: { minHeight: 55, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 9, borderBottomWidth: 1, borderBottomColor: "#30254C" },
+  rowTop1: { backgroundColor: "rgba(255, 208, 0, 0.08)", borderLeftWidth: 4, borderLeftColor: "#FFD000" },
+  rowTop2: { backgroundColor: "rgba(148, 163, 184, 0.06)", borderLeftWidth: 4, borderLeftColor: "#94A3B8" },
+  rowTop3: { backgroundColor: "rgba(251, 146, 96, 0.06)", borderLeftWidth: 4, borderLeftColor: "#FB923C" },
+  position: { width: 23, height: 23, borderRadius: 8, backgroundColor: "#392C5D", alignItems: "center", justifyContent: "center" },
+  positionFirst: { backgroundColor: "#FFD000" },
+  positionSecond: { backgroundColor: "#94A3B8" },
+  positionThird: { backgroundColor: "#FB923C" },
+  positionText: { color: "#D9CDEB", fontSize: 9, fontWeight: "900" }, playerMark: { width: 29, height: 29, borderRadius: 10, backgroundColor: "#3C2D62", alignItems: "center", justifyContent: "center" }, playerMarkText: { color: "#FFC24A", fontSize: 11, fontWeight: "900" }, playerCopy: { flex: 1 }, playerName: { color: "#F9F5FF", fontSize: 11, fontWeight: "900" }, playerMeta: { color: "#9F93B6", fontSize: 7, marginTop: 3, fontWeight: "800" }, score: { color: "#55E6B2", fontSize: 13, fontWeight: "900" }, emptyBoard: { padding: 22, alignItems: "center" }, emptyTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900" }, emptyCopy: { color: "#B8ADCD", fontSize: 10, textAlign: "center", marginTop: 5 },
   packStack: { gap: 9 }, pack: { minHeight: 91, padding: 12, borderRadius: 19, borderWidth: 1, borderColor: "#443663", backgroundColor: "#1D1835", flexDirection: "row", gap: 11, alignItems: "center" }, packGlyph: { width: 39, height: 39, borderRadius: 13, borderWidth: 1, alignItems: "center", justifyContent: "center" }, packGlyphText: { fontSize: 19, fontWeight: "900" }, packCopy: { flex: 1 }, packLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, packTitle: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 4 }, packBody: { color: "#BEB3CE", fontSize: 9, lineHeight: 13, marginTop: 3 }, packArrow: { fontSize: 17, fontWeight: "900" }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
 });

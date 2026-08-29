@@ -75,6 +75,63 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(3);
+  const [chestState, setChestState] = useState<"closed" | "decrypting" | "opened">("closed");
+  const [decryptProgress, setDecryptProgress] = useState(0);
+  const [decryptText, setDecryptText] = useState("");
+
+  const startDecryption = () => {
+    if (chestState !== "closed") return;
+    setChestState("decrypting");
+    let prog = 0;
+    const interval = setInterval(() => {
+      prog += 20;
+      setDecryptProgress(prog);
+      const hex = Array.from({ length: 6 }, () => Math.floor(Math.random() * 16).toString(16).toUpperCase()).join("");
+      setDecryptText(`DECRYPTING [0x${hex}]...`);
+      if (prog >= 100) {
+        clearInterval(interval);
+        setChestState("opened");
+        setRadarCharges((r) => r + 1);
+      }
+    }, 200);
+  };
+
+  const [revived, setRevived] = useState(false);
+  const [doubleXpEarned, setDoubleXpEarned] = useState(false);
+  const [adActive, setAdActive] = useState(false);
+  const [adTimer, setAdTimer] = useState(0);
+
+  const watchAd = (onReward: () => void) => {
+    setAdActive(true);
+    setAdTimer(3);
+    const interval = setInterval(() => {
+      setAdTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setAdActive(false);
+          onReward();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 500);
+  };
+
+  // Countdown timer logic
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      const timer = setTimeout(() => {
+        setCountdown(null);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => {
+      setCountdown((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   // Radar cooldown timer
   useEffect(() => {
@@ -95,6 +152,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const boardRef = useRef<any>(null);
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
+  const lastWordTimeRef = useRef<number>(0);
 
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
 
@@ -124,7 +182,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   useEffect(() => {
     setSelected([]); setFound([]); setFoundPaths([]); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
-    setRadarCooldown(0); setRadarCharges(3); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null);
+    setRadarCooldown(0); setRadarCharges(3); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
   }, [challenge, retryNonce]);
 
   useEffect(() => {
@@ -144,7 +202,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   }, [level, variationSeed]);
 
   useEffect(() => {
-    if (status !== "playing") return;
+    if (status !== "playing" || countdown !== null) return;
     const timer = setInterval(() => setSeconds((value) => {
       if (value <= 1) {
         clearInterval(timer);
@@ -159,7 +217,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, found, level, daily, onComplete]);
+  }, [status, found, level, daily, onComplete, countdown]);
 
   useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
 
@@ -284,9 +342,14 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setFound(nextFound); setFoundPaths((current) => [...current, path]); setFeedback("accepted"); clearSelection();
     explodeParticles(path);
     
-    const bonus = 4;
+    const now = Date.now();
+    const lastTime = lastWordTimeRef.current;
+    const isCombo = lastTime > 0 && (now - lastTime < 8000);
+    lastWordTimeRef.current = now;
+
+    const bonus = isCombo ? 8 : 4;
     setSeconds((s) => Math.min(challenge.timeLimit, s + bonus));
-    setTimeBonusText(`+${bonus}s`);
+    setTimeBonusText(isCombo ? `+${bonus}s 🔥 KOMBO!` : `+${bonus}s`);
     setTimeout(() => setTimeBonusText(null), 1500);
 
     if (nextFound.length === challenge.words.length) { playSuccessSound(); triggerHapticSuccess(); setStatus("won"); onComplete(level, nextFound, true); }
@@ -368,8 +431,27 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     <View style={styles.header}>
       <Pressable onPress={onExit} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>×</Text></Pressable>
       <View><Text style={[styles.kicker, { color: activeTheme.headerText }]}>{daily ? "GÜNLÜK ROTA · SABİT TAHTA" : `TEK OYUNCU · SEVİYE ${level}`}</Text><Text style={styles.title}>{daily ? "GÜNÜN ROTASI" : challenge.title}</Text></View>
-      <Pressable disabled={radarCooldown > 0 || radarCharges <= 0 || status !== "playing"} onPress={useRadar} style={[styles.radarButton, { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor }, (radarCooldown > 0 || radarCharges <= 0) && styles.radarUsedBtn]}>
-        <Text style={styles.radarText}>{radarCooldown > 0 ? `RADAR (${radarCooldown}s)` : `RADAR 👁 [${radarCharges}]`}</Text>
+      <Pressable
+        disabled={(radarCooldown > 0 && radarCharges > 0) || status !== "playing"}
+        onPress={() => {
+          if (radarCharges > 0) {
+            useRadar();
+          } else {
+            watchAd(() => setRadarCharges(1));
+          }
+        }}
+        style={[
+          styles.radarButton,
+          { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor },
+          (radarCooldown > 0 && radarCharges > 0) && styles.radarUsedBtn
+        ]}
+      >
+        <Text style={styles.radarText}>
+          {radarCharges > 0
+            ? (radarCooldown > 0 ? `RADAR (${radarCooldown}s)` : `RADAR 👁 [${radarCharges}]`)
+            : "👁 REKLAMLA +1 HAK"
+          }
+        </Text>
       </Pressable>
       <View style={[styles.timer, { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor }, seconds <= 15 && styles.timerUrgent]}>
         <Text style={styles.timerText}>{seconds}s</Text>
@@ -378,6 +460,16 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     </View>
     <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={[styles.progressMeta, { color: activeTheme.headerText }]}>{challenge.subtitle}</Text></View>
     <Animated.View ref={boardRef} onLayout={measureBoard} style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative", backgroundColor: activeTheme.background, borderColor: activeTheme.cellBorder, transform: [{ translateX: shakeAnim }] }, isUrgent && styles.boardUrgent]}>
+      {/* HUD Matrix Grid Backing */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={{ position: "absolute", top: 0, bottom: 0, left: "25%", width: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
+        <View style={{ position: "absolute", top: 0, bottom: 0, left: "50%", width: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
+        <View style={{ position: "absolute", top: 0, bottom: 0, left: "75%", width: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
+        <View style={{ position: "absolute", left: 0, right: 0, top: "25%", height: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
+        <View style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
+        <View style={{ position: "absolute", left: 0, right: 0, top: "75%", height: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
+      </View>
+
       {selected.slice(0, -1).map((cellIdx, i) => {
         const nextCellIdx = selected[i + 1]!;
         const start = getCellCenter(cellIdx);
@@ -409,7 +501,17 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       ))}
       <View onPointerDown={(e: any) => { if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId); handleGestureStart(e); }} onPointerMove={handleGestureMove} onPointerUp={handleGestureEnd} onPointerCancel={() => { pointerActive.current = false; setIsSelecting(false); }} onPointerLeave={finish} onTouchStart={handleGestureStart} onTouchMove={handleGestureMove} onTouchEnd={handleGestureEnd} style={StyleSheet.absoluteFill} />
     </Animated.View>
-    <View style={[styles.tray, { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder }, feedback === "invalid" && styles.trayInvalid, feedback === "accepted" && styles.trayAccepted]}><Text style={styles.trayLabel}>{feedback === "invalid" ? "GEÇERSİZ ROTA" : feedback === "accepted" ? "KELİME KABUL EDİLDİ" : selected.length >= 3 ? "ROTA HAZIR" : "KELİMEYİ BAĞLA"}</Text><Text style={styles.word}>{activeWord || "—"}</Text><Text style={styles.hint}>{feedback === "invalid" ? "Kırmızı rota birazdan temizlenecek." : "Yalnız yatay ve dikey ilerle; geri dönmek için önceki hücreye sürükle."}</Text></View>
+    <View style={[styles.tray, { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder }, feedback === "invalid" && styles.trayInvalid, feedback === "accepted" && styles.trayAccepted]}>
+      <Text style={styles.trayLabel}>
+        {feedback === "invalid" ? ">> BAĞLANTI HATASI" : feedback === "accepted" ? ">> ŞİFRE ÇÖZÜLDÜ" : selected.length >= 3 ? ">> BAĞLANTI SAĞLANDI" : ">> TERMİNAL TARANIYOR..."}
+      </Text>
+      <Text style={styles.word}>
+        {selected.length > 0 ? `[ ${activeWord.split("").join(" - ")} ]` : "—"}
+      </Text>
+      <Text style={styles.hint}>
+        {feedback === "invalid" ? "Kırmızı rota birazdan temizlenecek." : "Yalnız yatay ve dikey ilerle; geri dönmek için önceki hücreye sürükle."}
+      </Text>
+    </View>
     <View style={[styles.found, { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder }]}>
       <Text style={[styles.foundLabel, { color: activeTheme.headerText }]}>BULDUKLARIN (SÖZLÜK ANLAMI İÇİN TIKLA)</Text>
       <View style={styles.tags}>
@@ -427,12 +529,88 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         )) : <Text style={styles.empty}>İlk kelimeyi bul.</Text>}
       </View>
     </View>
-    {status === "won" && <View style={styles.result}><Text style={styles.resultTitle}>{daily ? "GÜNLÜK ROTA TAMAMLANDI" : "SEVİYE TAMAMLANDI"}</Text><Text style={styles.resultCopy}>{daily ? "Bugünün XP ödülü sezon ilerlemene eklendi." : "Yeni rota yoğunluğu ve daha kısa süre seni bekliyor."}</Text><Pressable onPress={daily ? onExit : onNext} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : "SONRAKİ SEVİYE"}</Text><Text style={styles.actionArrow}>→</Text></Pressable></View>}
-    {status === "lost" && <View style={styles.result}><Text style={styles.resultTitle}>SÜRE DOLDU</Text><Text style={styles.resultCopy}>Her renk ayrı bir kelimenin yolunu gösterir.</Text><View style={styles.solutionLegend}>{challenge.words.map((word, index) => <View key={word} style={[styles.solutionTag, SOLUTION_ROUTE_COLORS[index % SOLUTION_ROUTE_COLORS.length]]}><Text style={styles.solutionTagText}>{word} · {DIFFICULTY_LABEL[challenge.wordDifficulties[word]!]}</Text></View>)}</View>{daily ? (
-      <Pressable onPress={onExit} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text><Text style={styles.actionArrow}>→</Text></Pressable>
-    ) : (
-      <Pressable onPress={() => setVariation((value) => value + 1)} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>YENİ IZGARA İLE TEKRAR DENE</Text><Text style={styles.actionArrow}>?</Text></Pressable>
-    )}</View>}
+    {status === "won" && (
+      <View style={styles.result}>
+        <Text style={styles.resultTitle}>{daily ? "GÜNLÜK ROTA TAMAMLANDI" : "SEVİYE TAMAMLANDI"}</Text>
+        <Text style={styles.resultCopy}>{daily ? "Bugünün XP ödülü sezon ilerlemene eklendi." : "Yeni rota yoğunluğu ve daha kısa süre seni bekliyor."}</Text>
+        
+        {daily && (
+          <View style={[styles.chestCard, { borderColor: activeTheme.accentColor }]}>
+            {chestState === "closed" && (
+              <>
+                <Text style={styles.chestIcon}>💾</Text>
+                <Text style={styles.chestTitle}>SİBER DEŞİFRE KUTUSU</Text>
+                <Text style={styles.chestCopy}>Veri veri tabanı tespit edildi. Bağlantıyı kır ve içeriği sızdır.</Text>
+                <Pressable onPress={startDecryption} style={[styles.chestButton, { backgroundColor: activeTheme.accentColor }]}>
+                  <Text style={styles.chestButtonText}>BAĞLANTIYI AÇ (DEŞİFRE ET)</Text>
+                </Pressable>
+              </>
+            )}
+            {chestState === "decrypting" && (
+              <>
+                <Text style={styles.chestIcon}>🌀</Text>
+                <Text style={styles.chestTitle}>{decryptText}</Text>
+                <Text style={styles.chestProgress}>[{ "=".repeat(Math.floor(decryptProgress / 10)) + " ".repeat(10 - Math.floor(decryptProgress / 10)) }] {decryptProgress}%</Text>
+              </>
+            )}
+            {chestState === "opened" && (
+              <>
+                <Text style={styles.chestIcon}>🎁</Text>
+                <Text style={[styles.chestTitle, { color: "#50E3C2" }]}>DEŞİFRE BAŞARILI!</Text>
+                <Text style={styles.chestSuccessReward}>
+                  {doubleXpEarned
+                    ? "VERİ KATLANDI: +300 SEZON XP & +1 RADAR HAKKI!"
+                    : "VERİ ALINDI: +150 SEZON XP & +1 RADAR HAKKI!"
+                  }
+                </Text>
+                {!doubleXpEarned && (
+                  <Pressable
+                    onPress={() => watchAd(() => setDoubleXpEarned(true))}
+                    style={[styles.chestButton, { backgroundColor: "#FFD000", marginTop: 8 }]}
+                  >
+                    <Text style={styles.chestButtonText}>🎁 REKLAMLA ÖDÜLÜ 2X YAP</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+          </View>
+        )}
+
+        <Pressable onPress={daily ? onExit : onNext} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}>
+          <Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : "SONRAKİ SEVİYE"}</Text>
+          <Text style={styles.actionArrow}>→</Text>
+        </Pressable>
+      </View>
+    )}
+    {status === "lost" && (
+      <View style={styles.result}>
+        <Text style={styles.resultTitle}>SÜRE DOLDU</Text>
+        <Text style={styles.resultCopy}>Her renk ayrı bir kelimenin yolunu gösterir.</Text>
+        <View style={styles.solutionLegend}>
+          {challenge.words.map((word, index) => (
+            <View key={word} style={[styles.solutionTag, SOLUTION_ROUTE_COLORS[index % SOLUTION_ROUTE_COLORS.length]]}>
+              <Text style={styles.solutionTagText}>{word} · {DIFFICULTY_LABEL[challenge.wordDifficulties[word]!]}</Text>
+            </View>
+          ))}
+        </View>
+        
+        {!revived && (
+          <Pressable
+            onPress={() => watchAd(() => { setSeconds(20); setStatus("playing"); setRevived(true); })}
+            style={[styles.action, { backgroundColor: "#00F5D4", marginTop: 12 }]}
+          >
+            <Text style={[styles.actionText, { color: "#121025" }]}>💾 SÜREYİ KURTAR (+20sn REKLAM)</Text>
+            <Text style={[styles.actionArrow, { color: "#121025" }]}>⚡</Text>
+          </Pressable>
+        )}
+
+        {daily ? (
+          <Pressable onPress={onExit} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text><Text style={styles.actionArrow}>→</Text></Pressable>
+        ) : (
+          <Pressable onPress={() => { setVariation((value) => value + 1); setRevived(false); }} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>YENİ IZGARA İLE TEKRAR DENE</Text><Text style={styles.actionArrow}>?</Text></Pressable>
+        )}
+      </View>
+    )}
     
     {selectedWordInfo && (
       <View style={styles.modalOverlay}>
@@ -445,6 +623,20 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         </View>
       </View>
     )}
+    {countdown !== null && (
+      <View style={styles.countdownOverlay} pointerEvents="auto">
+        <Text style={styles.countdownText}>
+          {countdown === 0 ? "BAŞLA!" : countdown}
+        </Text>
+      </View>
+    )}
+    {adActive && (
+      <View style={styles.adOverlay} pointerEvents="auto">
+        <Text style={styles.adTitle}>SİBER SPONSOR REKLAMI YÜKLENİYOR</Text>
+        <Text style={styles.adSpinner}>⚡ [ DEŞİFRE İÇİN VERİ AKIŞI SAĞLANIYOR ] ⚡</Text>
+        <Text style={styles.adCountdown}>{adTimer}s</Text>
+      </View>
+    )}
   </ScrollView>;
 }
 
@@ -455,5 +647,19 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },
   modalBody: { color: "#FFFFFF", fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20, fontWeight: "600" },
   modalCloseButton: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
-  modalCloseText: { color: "#000000", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 }
+  modalCloseText: { color: "#000000", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
+  countdownOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18, 16, 37, 0.85)", justifyContent: "center", alignItems: "center", zIndex: 200 },
+  countdownText: { color: "#00F5D4", fontSize: 72, fontWeight: "900", textShadowColor: "rgba(0, 245, 212, 0.8)", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 15 },
+  chestCard: { width: "100%", marginTop: 12, padding: 16, borderRadius: 16, borderStyle: "dashed", borderWidth: 1.5, backgroundColor: "rgba(18, 14, 38, 0.45)", alignItems: "center" },
+  chestIcon: { fontSize: 36, marginBottom: 8 },
+  chestTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 1, textAlign: "center" },
+  chestCopy: { color: "#B5A9CD", fontSize: 8, textAlign: "center", marginTop: 4, lineHeight: 11, paddingHorizontal: 12 },
+  chestButton: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
+  chestButtonText: { color: "#121025", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  chestProgress: { color: "#FFC24A", fontSize: 10, fontWeight: "900", fontFamily: "monospace", marginTop: 8, letterSpacing: 0.8 },
+  chestSuccessReward: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4, textAlign: "center", marginTop: 6 },
+  adOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#0A0816", justifyContent: "center", alignItems: "center", zIndex: 300 },
+  adTitle: { color: "#7C5CF6", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 12 },
+  adSpinner: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", textAlign: "center", paddingHorizontal: 28, lineHeight: 18 },
+  adCountdown: { color: "#00F5D4", fontSize: 48, fontWeight: "900", marginTop: 24, textShadowColor: "rgba(0, 245, 212, 0.6)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }
 });

@@ -28,6 +28,7 @@ import { SoloChallenge } from "./components/solo-challenge";
 import { SoloLevels } from "./components/solo-levels";
 import { ArcadeChallenge } from "./components/arcade-challenge";
 import { getGameSocket } from "./lib/game-socket";
+import { OnboardingGuide } from "./components/onboarding-guide";
 import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
 import { setHapticsEnabled as setSoloHapticsEnabled } from "./shared/audio-haptics";
@@ -191,6 +192,7 @@ function HomeScreen() {
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [progress, setProgress] = useState<PlayerProgress>(DEFAULT_PROGRESS);
   const [progressReady, setProgressReady] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dailySession, setDailySession] = useState<DailyChallenge | null>(null);
   const daily = useMemo(() => getDailyChallenge(), []);
@@ -323,7 +325,17 @@ function HomeScreen() {
 
   useEffect(() => {
     if (!progressReady) return;
+    AsyncStorage.getItem("kelime-patlat:guide-seen").then((seen) => {
+      if (!seen && progress.xp === 0) {
+        setShowGuide(true);
+      }
+    });
+  }, [progressReady, progress.xp]);
+
+  useEffect(() => {
+    if (!progressReady) return;
     AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)).catch(() => undefined);
+    AsyncStorage.setItem("kelime-patlat:player-name", safeName).catch(() => undefined);
     if (authToken) {
       syncProgressToCloud(progress);
     }
@@ -465,8 +477,8 @@ function HomeScreen() {
       haptics.error();
       return;
     }
-    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: true });
-    setNotice("Bot düellosu hazırlanıyor…");
+    socket.emit("matchmaking:join", { playerId, playerName: safeName, size });
+    setNotice("Rakip aranıyor...");
   };
 
   const shareRoomInvite = async () => {
@@ -494,6 +506,7 @@ function HomeScreen() {
 
   const leaveRoom = () => {
     if (room) getGameSocket().emit("room:leave", { code: room.code, playerId });
+    getGameSocket().emit("matchmaking:leave", { playerId, size: selectedSize });
     activeRoomCodeRef.current = null;
     setRoom(null);
     clearSelection();
@@ -671,6 +684,11 @@ function HomeScreen() {
     setScreen("solo");
   };
 
+  const closeGuide = async () => {
+    setShowGuide(false);
+    await AsyncStorage.setItem("kelime-patlat:guide-seen", "true");
+  };
+
   const completeDailyChallenge = (level: number, foundWords: string[] = [], won = true) => {
     if (won) {
       completeSoloLevel(level, foundWords);
@@ -684,7 +702,7 @@ function HomeScreen() {
     return (
       <MainShell active="home" onNavigate={(destination) => setScreen(destination)}>
         <StatusBar style="light" />
-        <CommandCenter playerName={safeName} progress={progress} daily={daily} leaderboard={leaderboard} onPlayDaily={() => setScreen("daily-lobby")} onPlayBot={startBotDuel} onSolo={() => setScreen("levels")} onNavigate={setScreen} onLeaderboard={() => setScreen("season")} />
+        <CommandCenter playerName={safeName} progress={progress} daily={daily} leaderboard={leaderboard} onPlayDaily={() => setScreen("daily-lobby")} onPlayBot={startBotDuel} onSolo={() => setScreen("levels")} onNavigate={setScreen} onLeaderboard={() => setScreen("season")} onShowGuide={() => setShowGuide(true)} />
       </MainShell>
     );
   }
@@ -1146,6 +1164,7 @@ function HomeScreen() {
           </View>
         </View>
       )}
+      <OnboardingGuide visible={showGuide} onClose={closeGuide} />
     </ScreenContainer>
   );
 }

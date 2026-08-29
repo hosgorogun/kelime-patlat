@@ -44,16 +44,16 @@ export type PlayerProgress = {
   history: string[];
 };
 
-export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string };
+export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string; unlockHint: string };
 export type Badge = { id: string; title: string; description: string; icon: string; accent: string; unlocked: boolean };
 
 export const AVATARS: AvatarOption[] = [
-  { id: "spark", label: "KIVILCIM", icon: "✦", color: "#50E3C2", surface: "#153E3A" },
-  { id: "orbit", label: "YÖRÜNGE", icon: "◌", color: "#9A76ED", surface: "#332456" },
-  { id: "sage", label: "BİLGE", icon: "◇", color: "#FFC24A", surface: "#4E3A1D" },
-  { id: "comet", label: "KUYRUKLU", icon: "☄", color: "#79C8FF", surface: "#18375A" },
-  { id: "crown", label: "TAÇ", icon: "♕", color: "#FF83A4", surface: "#55233B" },
-  { id: "ember", label: "KOR", icon: "✺", color: "#FF9B62", surface: "#513024" },
+  { id: "spark", label: "KIVILCIM", icon: "✦", color: "#50E3C2", surface: "#153E3A", unlockHint: "Her zaman açık siber mod." },
+  { id: "orbit", label: "YÖRÜNGE", icon: "◌", color: "#9A76ED", surface: "#332456", unlockHint: "Seviye 3 olduğunda açılır." },
+  { id: "sage", label: "BİLGE", icon: "◇", color: "#FFC24A", surface: "#4E3A1D", unlockHint: "Seviye 6 olduğunda açılır." },
+  { id: "comet", label: "KUYRUKLU", icon: "☄", color: "#79C8FF", surface: "#18375A", unlockHint: "Arcade modda 400 puanı aş." },
+  { id: "crown", label: "TAÇ", icon: "♕", color: "#FF83A4", surface: "#55233B", unlockHint: "Canlı düellolarda 5 galibiyet al." },
+  { id: "ember", label: "KOR", icon: "✺", color: "#FF9B62", surface: "#513024", unlockHint: "Günlük serini 5 güne çıkar." },
 ];
 
 export const THEME_PACKS: ThemePack[] = [
@@ -100,6 +100,7 @@ export function badgesFor(progress: PlayerProgress): Badge[] {
     { id: "daily", title: "GÜNEŞ İZİ", description: "Günlük rotayı tamamla.", icon: "☀", accent: "#FF9B62", unlocked: progress.missions.daily >= 1 },
     { id: "wordsmith", title: "UZUN USTA", description: "Yedi harfli kelime bul.", icon: "◌", accent: "#9A76ED", unlocked: progress.missions.wordsmith >= 1 },
     { id: "streak", title: "AKIŞTA", description: "Üç günlük seri yap.", icon: "↗", accent: "#79C8FF", unlocked: progress.streak >= 3 },
+    { id: "streak-expert", title: "NEON HAKİMİ", description: "Yedi günlük seri yap.", icon: "🔥", accent: "#FF9B62", unlocked: progress.streak >= 7 },
     { id: "collector", title: "ROTA KOLEKSİYONCUSU", description: "Altı maç tamamla.", icon: "◇", accent: "#FF83A4", unlocked: progress.matches >= 6 },
     { id: "arcade-hero", title: "ARCADE USTA", description: "Zamana Karşı modda 500 puan yap.", icon: "⚡", accent: "#FFC24A", unlocked: (progress.bestArcadeScore || 0) >= 500 },
     { id: "speedy-fingers", title: "HIZLI PARMAK", description: "Toplam 600 XP biriktir.", icon: "🚀", accent: "#FF647C", unlocked: progress.xp >= 600 },
@@ -193,4 +194,15 @@ export function completeDailyProgress(progress: PlayerProgress, daily: DailyChal
 
 export function getPlayerLevel(xp: number): number {
   return Math.floor(xp / 200) + 1;
+}
+
+export function isAvatarUnlocked(avatarId: AvatarId, progress: PlayerProgress): boolean {
+  const currentLevel = getPlayerLevel(progress.xp);
+  if (avatarId === "spark") return true;
+  if (avatarId === "orbit") return currentLevel >= 3;
+  if (avatarId === "sage") return currentLevel >= 6;
+  if (avatarId === "comet") return (progress.bestArcadeScore || 0) >= 400;
+  if (avatarId === "crown") return progress.wins >= 5;
+  if (avatarId === "ember") return progress.streak >= 5;
+  return true;
 }
