@@ -698,16 +698,12 @@ export function registerGameRooms(io: Server) {
         selection.every((index, indexInSelection) => indexInSelection === 0 || isAdjacent(selection[indexInSelection - 1]!, index, room.size));
       if (!validIndices) return socket.emit("word:rejected", { word: "" });
       const word = wordFromSelection(room.board, selection);
-      const expectedRoute = room.routes?.[word];
-      const matchesRoute = expectedRoute && (
-        (expectedRoute.length === selection.length && expectedRoute.every((val, i) => val === selection[i])) ||
-        (expectedRoute.length === selection.length && expectedRoute.every((val, i) => val === selection[selection.length - 1 - i]))
-      );
+      const isTargetWord = room.words.includes(word);
 
       if (room.foundWords.some((entry) => entry.word === word && entry.playerId === player.id)) {
         return socket.emit("word:rejected", { word, reason: "already_found" });
       }
-      if (matchesRoute) {
+      if (isTargetWord) {
         claimWord(io, room, player.id, word, selection);
       } else {
         return socket.emit("word:rejected", { word, reason: "invalid" });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
@@ -46,6 +46,22 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(updated.bestArcadeScore).toBe(120);
     expect(updated.xp).toBe(12); // 120 / 10 = 12 XP
     expect(updated.matches).toBe(0); // matches should not increment
+  });
+
+  it("başarı rozetlerinin kilit açılma şartlarını doğru değerlendirir", () => {
+    const fresh = badgesFor(DEFAULT_PROGRESS);
+    expect(fresh.every((b) => !b.unlocked)).toBe(true);
+
+    const advanced = badgesFor({
+      ...DEFAULT_PROGRESS,
+      matches: 6,
+      wins: 1,
+      streak: 7,
+      bestArcadeScore: 550,
+      xp: 650,
+      missions: { daily: 1, duels: 2, wordsmith: 1 },
+    });
+    expect(advanced.every((b) => b.unlocked)).toBe(true);
   });
 
   it("her tema paketi seçilebilir kelimeler ve geçerli tek oyunculu rota üretir", () => {
@@ -106,8 +122,21 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
 
     // Küçük harfle arandığında da doğru dönmeli (büyük harfe dönüştürülmeli)
     expect(getWordDefinition("ay")).toBe("Dünya'nın tek doğal uydusu olan gök cismi.");
+    expect(getWordDefinition("deniz")).toBe("Yeryüzünün büyük kısmını kaplayan geniş tuzlu su kütlesi.");
 
     // Bilinmeyen kelimelerde siberpunk fallback metnini dönmeli
     expect(getWordDefinition("BİLİNMEYEN")).toContain("Kelime Patlat ile kelime dağarcığını zenginleştir!");
+  });
+
+  it("siber unvanları ve günün gizemli kelimesini doğru çözer", () => {
+    expect(getActiveCyberTitle(DEFAULT_PROGRESS)).toBe("[ÇAYLAK]");
+    expect(getActiveCyberTitle({ ...DEFAULT_PROGRESS, matches: 3 })).toBe("[İZCİ]");
+    expect(getActiveCyberTitle({ ...DEFAULT_PROGRESS, xp: 500 })).toBe("[MİMAR]");
+
+    const mystery = getDailyMysteryWord(new Date("2026-08-19"));
+    expect(mystery.word).toBeTruthy();
+    expect(mystery.definition).toBeTruthy();
+    expect(mystery.rewardXp).toBe(150);
+    expect(DEFAULT_PROGRESS.streakShields).toBe(1);
   });
 });

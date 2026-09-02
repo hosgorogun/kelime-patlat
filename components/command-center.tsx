@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Alert, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getRank, getPlayerLevel, missionProgress, SEASON_MISSIONS, THEME_PACKS, AVATARS, type DailyChallenge, type PlayerProgress } from "@/shared/progression";
+import { getRank, getPlayerLevel, getActiveCyberTitle, missionProgress, SEASON_MISSIONS, THEME_PACKS, AVATARS, type DailyChallenge, type PlayerProgress } from "@/shared/progression";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels";
 
@@ -70,7 +70,13 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
     <View style={styles.topbar}>
       <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
         <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}><Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text></View>
-        <View style={{ marginLeft: 4 }}><Text style={styles.name}>{playerName}</Text><Text style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank} · {progress.xp} XP</Text></View>
+        <View style={{ marginLeft: 4 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text style={styles.name}>{playerName}</Text>
+            <Text style={{ color: "#00F5D4", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 }}>{getActiveCyberTitle(progress)}</Text>
+          </View>
+          <Text style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank} · {progress.xp} XP</Text>
+        </View>
       </Pressable>
       <View style={{ flexDirection: "row", gap: 6 }}>
         <Pressable onPress={onShowGuide} style={({ pressed }) => [styles.livePill, { borderColor: "#7C5CF6" }, pressed && styles.pressed]}><Text style={[styles.liveText, { color: "#9A76ED" }]}>❓ REHBER</Text></Pressable>

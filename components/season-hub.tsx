@@ -1,14 +1,26 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { getRank, THEME_PACKS, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getRank, getDailyMysteryWord, THEME_PACKS, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { type LeaderboardEntry } from "@/shared/game";
 
 export function SeasonHub({ playerId, progress, leaderboard, onBack, onSelectTheme }: { playerId: string; progress: PlayerProgress; leaderboard: LeaderboardEntry[]; onBack: () => void; onSelectTheme: (theme: ThemePackId) => void }) {
   const rank = getRank(progress);
   const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
+  const mystery = getDailyMysteryWord();
+
   return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <View style={styles.header}><Pressable onPress={onBack} style={styles.back}><Text style={styles.backText}>‹</Text></Pressable><View><Text style={styles.overline}>SEZON 01 · MERKEZ</Text><Text style={styles.title}>NABIZ ODASI</Text></View><View style={styles.rankOrb}><Text style={styles.rankOrbText}>{rank.slice(0, 1)}</Text></View></View>
-    <View style={styles.hero}><Text style={styles.heroKicker}>SEZON KONUMUN</Text><Text style={styles.heroTitle}>{rank} AVCI</Text><Text style={styles.heroBody}>{progress.xp} XP · {progress.wins} galibiyet · {progress.bestScore || 0} en iyi tur puanı</Text><View style={styles.heroStats}><View><Text style={styles.statLabel}>LİDERLİK</Text><Text style={styles.statValue}>{playerRank > 0 ? `#${playerRank}` : "—"}</Text></View><View style={styles.statRule} /><View><Text style={styles.statLabel}>SERİ</Text><Text style={styles.statValue}>{progress.streak} GÜN</Text></View><View style={styles.statRule} /><View><Text style={styles.statLabel}>TEMPO</Text><Text style={styles.statValue}>{progress.bestTempo || "—"}</Text></View></View></View>
+    <View style={styles.hero}><Text style={styles.heroKicker}>SEZON KONUMUN</Text><Text style={styles.heroTitle}>{rank} AVCI</Text><Text style={styles.heroBody}>{progress.xp} XP · {progress.wins} galibiyet · {progress.bestScore || 0} en iyi tur puanı</Text><View style={styles.heroStats}><View><Text style={styles.statLabel}>LİDERLİK</Text><Text style={styles.statValue}>{playerRank > 0 ? `#${playerRank}` : "—"}</Text></View><View style={styles.statRule} /><View><Text style={styles.statLabel}>SERİ & KALKAN</Text><Text style={styles.statValue}>{progress.streak} GÜN 🛡️{progress.streakShields ?? 1}</Text></View><View style={styles.statRule} /><View><Text style={styles.statLabel}>TEMPO</Text><Text style={styles.statValue}>{progress.bestTempo || "—"}</Text></View></View></View>
+
+    {/* Daily Mystery Word Card */}
+    <View style={styles.mysteryCard}>
+      <View style={styles.mysteryHeader}>
+        <Text style={styles.mysteryKicker}>🔍 GÜNÜN GİZEMLİ KELİMESİ</Text>
+        <Text style={styles.mysteryReward}>+{mystery.rewardXp} XP BONUSU</Text>
+      </View>
+      <Text style={styles.mysteryDef}>"{mystery.definition}"</Text>
+      <Text style={styles.mysteryHint}>💡 İpucu: Bu tanıma uyan kelimeyi tahtada bul ve ekstra XP kazan!</Text>
+    </View>
 
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>CANLI SIRALAMA</Text><Text style={styles.sectionMeta}>{leaderboard.length} AVCI</Text></View>
     <View style={styles.board}>{leaderboard.length ? leaderboard.map((entry, index) => {
@@ -72,4 +84,10 @@ const styles = StyleSheet.create({
   positionThird: { backgroundColor: "#FB923C" },
   positionText: { color: "#D9CDEB", fontSize: 9, fontWeight: "900" }, playerMark: { width: 29, height: 29, borderRadius: 10, backgroundColor: "#3C2D62", alignItems: "center", justifyContent: "center" }, playerMarkText: { color: "#FFC24A", fontSize: 11, fontWeight: "900" }, playerCopy: { flex: 1 }, playerName: { color: "#F9F5FF", fontSize: 11, fontWeight: "900" }, playerMeta: { color: "#9F93B6", fontSize: 7, marginTop: 3, fontWeight: "800" }, score: { color: "#55E6B2", fontSize: 13, fontWeight: "900" }, emptyBoard: { padding: 22, alignItems: "center" }, emptyTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900" }, emptyCopy: { color: "#B8ADCD", fontSize: 10, textAlign: "center", marginTop: 5 },
   packStack: { gap: 9 }, pack: { minHeight: 91, padding: 12, borderRadius: 19, borderWidth: 1, borderColor: "#443663", backgroundColor: "#1D1835", flexDirection: "row", gap: 11, alignItems: "center" }, packGlyph: { width: 39, height: 39, borderRadius: 13, borderWidth: 1, alignItems: "center", justifyContent: "center" }, packGlyphText: { fontSize: 19, fontWeight: "900" }, packCopy: { flex: 1 }, packLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, packTitle: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 4 }, packBody: { color: "#BEB3CE", fontSize: 9, lineHeight: 13, marginTop: 3 }, packArrow: { fontSize: 17, fontWeight: "900" }, pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  mysteryCard: { marginTop: 14, padding: 14, borderRadius: 20, backgroundColor: "#261A46", borderWidth: 1, borderColor: "#8B5CF6" },
+  mysteryHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  mysteryKicker: { color: "#C4B5FD", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  mysteryReward: { color: "#00F5D4", fontSize: 9, fontWeight: "900" },
+  mysteryDef: { color: "#FFF9FC", fontSize: 12, fontWeight: "700", fontStyle: "italic", lineHeight: 17 },
+  mysteryHint: { color: "#A78BFA", fontSize: 8, fontWeight: "800", marginTop: 8 },
 });

@@ -5,7 +5,7 @@ import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
 
 export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel: number; onBack: () => void; onSelect: (level: number) => void }) {
   const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
-  const [selectedLevel, setSelectedLevel] = useState<number>(unlockedLevel);
+  const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
 
   // Group levels into rows of 3 to build a serpentine grid path
   const gridRows: number[][] = [];
@@ -66,7 +66,6 @@ export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel:
                   return (
                     <View key={level} style={styles.nodeWrapper}>
                       <Pressable
-                        disabled={locked}
                         onPress={() => setSelectedLevel(level)}
                         style={({ pressed }) => [
                           styles.nodeCircle,

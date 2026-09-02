@@ -14,7 +14,7 @@ export type WordEntry = {
 type CatalogPayload = { version: number; words: WordEntry[] };
 
 const WORD_BLACKLIST = new Set([
-  "NAM", "LAK", "PRUVA",
+  "NAM", "LAK", "PRUVA", "MEME",
   "BAV", "RUF", "DUN", "FEL", "SEM", "NOM", "POG", "ALG", "HAV", "CUP", "PIR", "DEH", "BED",
   "ZOM", "PÖÇ", "SÜMEK",
   "PİÇ", "KOV", "ARİ", "ŞUH", "ÇAV", "TÖS", "İDE", "ÖZE", "KAM", "HAF", "AKA", "KÖS", "KIĞ",
@@ -65,11 +65,13 @@ const THEME_WORDS: Record<Exclude<WordTheme, "general">, readonly string[]> = {
   ]
 };
 
-export function catalogWordsForBoard(size: 4 | 6 | 8 | 10, maximumLength: number = size) {
-  return WORD_CATALOG[size].filter((entry) => entry.word.length <= maximumLength);
+export function catalogWordsForBoard(size: 4 | 6 | 8 | 10, maximumLength: number = Math.max(size, 12)) {
+  const specific = WORD_CATALOG[size].filter((entry) => entry.word.length <= maximumLength);
+  if (specific.length >= 30) return specific;
+  return WORD_CATALOG_DATA.words.filter((entry) => entry.word.length <= maximumLength);
 }
 
-export function catalogWordsForTheme(size: 4 | 6 | 8 | 10, theme: WordTheme, maximumLength: number = size) {
+export function catalogWordsForTheme(size: 4 | 6 | 8 | 10, theme: WordTheme, maximumLength: number = Math.max(size, 12)) {
   const boardWords = catalogWordsForBoard(size, maximumLength);
   if (theme === "general") return boardWords;
   const themedWords = new Set(THEME_WORDS[theme]);

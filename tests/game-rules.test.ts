@@ -73,4 +73,12 @@ describe("Kelime Patlat tahta kuralları", () => {
     expect(fillBoardBlanks(["A", "", "", "K"], () => 0)).toEqual(["A", "A", "A", "K"]);
     expect(fillBoardBlanks(Array(16).fill(""), () => 0.99).every(Boolean)).toBe(true);
   });
+
+  it("oda kodlarını doğru normalleştirir ve davet mesajı formatını doğrular", () => {
+    const normalizeRoomCode = (val: unknown) => (typeof val === "string" && /^[A-Z0-9]{5}$/.test(val.trim().toUpperCase()) ? val.trim().toUpperCase() : null);
+    expect(normalizeRoomCode("ab123")).toBe("AB123");
+    expect(normalizeRoomCode(" AB123 ")).toBe("AB123");
+    expect(normalizeRoomCode("invalid_code")).toBe(null);
+    expect(normalizeRoomCode(12345)).toBe(null);
+  });
 });

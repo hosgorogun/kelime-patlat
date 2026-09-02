@@ -42,6 +42,7 @@ export type PlayerProgress = {
   selectedTheme: ThemePackId;
   selectedAvatar: AvatarId;
   history: string[];
+  streakShields?: number;
 };
 
 export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string; unlockHint: string };
@@ -91,6 +92,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   selectedTheme: "nature",
   selectedAvatar: "spark",
   history: [],
+  streakShields: 1,
 };
 
 export function badgesFor(progress: PlayerProgress): Badge[] {
@@ -205,4 +207,47 @@ export function isAvatarUnlocked(avatarId: AvatarId, progress: PlayerProgress): 
   if (avatarId === "crown") return progress.wins >= 5;
   if (avatarId === "ember") return progress.streak >= 5;
   return true;
+}
+
+export type CyberTitle = {
+  id: string;
+  name: string;
+  badge: string;
+  unlockHint: string;
+  unlocked: (p: PlayerProgress) => boolean;
+};
+
+export const CYBER_TITLES: CyberTitle[] = [
+  { id: "novice", name: "ÇAYLAK ROTA", badge: "[ÇAYLAK]", unlockHint: "Oyuna başlarken açık.", unlocked: () => true },
+  { id: "scout", name: "SİBER İZCİ", badge: "[İZCİ]", unlockHint: "3 maç tamamla.", unlocked: (p) => p.matches >= 3 },
+  { id: "architect", name: "ROTA MİMARI", badge: "[MİMAR]", unlockHint: "Seviye 3'e ulaş.", unlocked: (p) => getPlayerLevel(p.xp) >= 3 },
+  { id: "victor", name: "NEON HAKİMİ", badge: "[NEON HAKİMİ]", unlockHint: "5 düello kazan.", unlocked: (p) => p.wins >= 5 },
+  { id: "legend", name: "MATRİS EFSANESİ", badge: "[MATRİS EFSANESİ]", unlockHint: "Seviye 10'a ulaş veya 500 Arcade puanı yap.", unlocked: (p) => getPlayerLevel(p.xp) >= 10 || (p.bestArcadeScore || 0) >= 500 },
+];
+
+export function getActiveCyberTitle(progress: PlayerProgress): string {
+  const available = CYBER_TITLES.filter((t) => t.unlocked(progress));
+  return available.at(-1)?.badge || "[ÇAYLAK]";
+}
+
+export type DailyMystery = {
+  word: string;
+  definition: string;
+  rewardXp: number;
+};
+
+export function getDailyMysteryWord(date = new Date()): DailyMystery {
+  const dayId = getDayId(date);
+  const seed = seededNumber(dayId + "mystery");
+  const mysteryWords = [
+    { word: "DENİZ", definition: "Yeryüzünün büyük kısmını kaplayan geniş tuzlu su kütlesi." },
+    { word: "YILDIZ", definition: "Gökyüzünde ışık saçan devasa plazma küresi." },
+    { word: "ORMAN", definition: "Ağaçlarla kaplı geniş doğal alan ve ekosistem." },
+    { word: "GİZEM", definition: "Sır, akıl erdirilemeyen bilinmez durum." },
+    { word: "PUSULA", definition: "Yön bulmaya yarayan, üzerinde mıknatıslı ibre olan cihaz." },
+    { word: "MACERA", definition: "Heyecan verici, sıra dışı ve riskli olaylar zinciri." },
+    { word: "FORMÜL", definition: "Bir gerçeği veya kuralı sembollerle gösteren kısa anlatım." },
+  ];
+  const picked = mysteryWords[seed % mysteryWords.length]!;
+  return { ...picked, rewardXp: 150 };
 }

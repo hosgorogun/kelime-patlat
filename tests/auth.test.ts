@@ -16,4 +16,12 @@ describe("Custom Credentials Parola Güvenliği", () => {
     // Verification should fail with wrong password
     expect(verifyPassword("yanlis_sifre", storedHash)).toBe(false);
   });
+
+  it("Türkçe özel karakterler ve semboller içeren parolaları güvenle hash'ler", () => {
+    const rawPassword = "ŞifreÇözümleme!2026_🔑";
+    const storedHash = hashPassword(rawPassword);
+    
+    expect(verifyPassword(rawPassword, storedHash)).toBe(true);
+    expect(verifyPassword("SifreCozumleme!2026_🔑", storedHash)).toBe(false);
+  });
 });

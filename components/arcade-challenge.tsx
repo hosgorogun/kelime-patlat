@@ -116,6 +116,14 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
   const boardWidth = Math.min(width - (challenge.size === 6 ? 32 : 36), challenge.size === 6 ? 374 : 356);
   const activeWord = wordFromSelection(challenge.board, selected);
 
+  const scoreRef = useRef(score);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    scoreRef.current = score;
+    onCompleteRef.current = onComplete;
+  }, [score, onComplete]);
+
   // Time Countdown
   useEffect(() => {
     if (status !== "playing" || countdown !== null) return;
@@ -125,13 +133,13 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         setStatus("lost");
         triggerHapticError();
         playErrorSound();
-        onComplete(score);
+        onCompleteRef.current(scoreRef.current);
         return 0;
       }
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, score, countdown]);
+  }, [status, countdown]);
 
   useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
 

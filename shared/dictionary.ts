@@ -67,6 +67,6 @@ const WORD_DEFINITIONS: Record<string, string> = {
 };
 
 export function getWordDefinition(word: string): string {
-  const upper = word.trim().toUpperCase();
+  const upper = word.trim().toLocaleUpperCase("tr-TR");
   return WORD_DEFINITIONS[upper] || `${word} - Kelime Patlat ile kelime dağarcığını zenginleştir!`;
 }

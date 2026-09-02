@@ -1,6 +1,6 @@
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { AVATARS, badgesFor, isAvatarUnlocked, type AvatarId, type PlayerProgress } from "@/shared/progression";
+import { AVATARS, badgesFor, isAvatarUnlocked, CYBER_TITLES, type AvatarId, type PlayerProgress } from "@/shared/progression";
 
 export function PlayerCollection({ progress, onSelectAvatar }: { progress: PlayerProgress; onSelectAvatar: (avatar: AvatarId) => void }) {
   const badges = badgesFor(progress);
@@ -80,6 +80,35 @@ export function PlayerCollection({ progress, onSelectAvatar }: { progress: Playe
         );
       })}
     </View>
+    <Text style={[styles.kicker, { marginTop: 16 }]}>SİBER UNVANLAR (DÜELLODA VE PROFiLDE GÖRÜNÜR)</Text>
+    <View style={styles.titleList}>
+      {CYBER_TITLES.map((t) => {
+        const unlocked = t.unlocked(progress);
+        return (
+          <Pressable
+            key={t.id}
+            onPress={() => {
+              Alert.alert(
+                unlocked ? `🎖️ ${t.name} ${t.badge}` : `🔒 ${t.name} (KİLİTLİ)`,
+                unlocked ? `Kazanılan Unvan: ${t.badge}\n\nTebrikler! Bu unvan profilinde ve lobilerde aktif olarak görünür.` : `Kazanma Şartı:\n${t.unlockHint}`
+              );
+            }}
+            style={({ pressed }) => [
+              styles.titleRow,
+              unlocked ? { borderColor: "#8B5CF6", backgroundColor: "rgba(38, 26, 70, 0.5)" } : styles.titleRowLocked,
+              pressed && styles.pressed
+            ]}
+          >
+            <Text style={[styles.titleBadgeText, { color: unlocked ? "#00F5D4" : "#766D89" }]}>{t.badge}</Text>
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={[styles.titleNameText, !unlocked && { color: "#8E889C" }]}>{t.name}</Text>
+              <Text style={styles.titleHintText}>{t.unlockHint}</Text>
+            </View>
+            <Text style={{ color: unlocked ? "#00F5D4" : "#665E77", fontWeight: "900", fontSize: 10 }}>{unlocked ? "AÇILDI ✓" : "🔒"}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   </View>;
 }
 
@@ -102,4 +131,10 @@ const styles = StyleSheet.create({
   badgeIconText: { fontSize: 16, fontWeight: "900" }, 
   badgeCardTitle: { color: "#FFF9FC", fontSize: 8, fontWeight: "900", letterSpacing: 0.4, textAlign: "center", lineHeight: 11 },
   pressed: { opacity: 0.78, transform: [{ scale: 0.97 }] },
+  titleList: { gap: 8, marginTop: 9, marginBottom: 24 },
+  titleRow: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 14, borderWidth: 1 },
+  titleRowLocked: { backgroundColor: "rgba(25, 21, 45, 0.4)", borderColor: "#393151", opacity: 0.65 },
+  titleBadgeText: { fontSize: 10, fontWeight: "900", letterSpacing: 0.8 },
+  titleNameText: { color: "#FFF9FC", fontSize: 11, fontWeight: "900" },
+  titleHintText: { color: "#9589AE", fontSize: 8, marginTop: 2 },
 });

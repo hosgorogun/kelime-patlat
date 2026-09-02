@@ -161,13 +161,36 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
   for (const entry of shuffledGeneral) {
     if (sum + entry.word.length <= targetSum) {
       const remaining = targetSum - (sum + entry.word.length);
-      if (remaining === 0 || remaining >= profile.minWordLength) {
+      if (remaining === 0 || remaining >= 2) {
         fallbackList.push(entry);
         sum += entry.word.length;
       }
     }
     if (sum === targetSum) return fallbackList;
   }
+
+  // Deficit fill: if sum is still less than targetSum, pick exact length matching words to guarantee 100% cell coverage
+  if (sum < targetSum) {
+    const allWords = catalogWordsForTheme(config.size, "general", 12);
+    let rem = targetSum - sum;
+    while (rem > 0) {
+      const exact = allWords.find((e) => e.word.length === rem && !fallbackList.some((f) => f.word === e.word));
+      if (exact) {
+        fallbackList.push(exact);
+        rem -= exact.word.length;
+        break;
+      }
+      const smaller = allWords.filter((e) => e.word.length <= rem && e.word.length >= 2 && !fallbackList.some((f) => f.word === e.word));
+      if (smaller.length > 0) {
+        const picked = shuffled(smaller, random)[0]!;
+        fallbackList.push(picked);
+        rem -= picked.word.length;
+      } else {
+        break;
+      }
+    }
+  }
+
   return fallbackList;
 }
 
@@ -266,6 +289,9 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
     })) continue;
     const board = Array.from({ length: config.size * config.size }, () => "");
     words.forEach((word) => routes[word]!.forEach((cell, index) => { board[cell] = word[index]!; }));
+    for (let i = 0; i < board.length; i++) {
+      if (!board[i]) board[i] = TURKISH_LETTERS[Math.floor(random() * TURKISH_LETTERS.length)]!;
+    }
     return {
       ...config,
       board,
@@ -287,6 +313,9 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
   }));
   const board = Array.from({ length: config.size * config.size }, () => "");
   words.forEach((word) => routes[word]!.forEach((cell, index) => { board[cell] = word[index]!; }));
+  for (let i = 0; i < board.length; i++) {
+    if (!board[i]) board[i] = TURKISH_LETTERS[Math.floor(random() * TURKISH_LETTERS.length)]!;
+  }
   return {
     ...config,
     board,

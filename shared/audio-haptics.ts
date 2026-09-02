@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 
@@ -60,24 +61,18 @@ export function getHapticsEnabled() {
 
 // Haptics
 export function triggerHapticSelection() {
-  if (!hapticsEnabled) return;
-  try {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  } catch (e) {}
+  if (!hapticsEnabled || Platform.OS === "web") return;
+  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
 }
 
 export function triggerHapticSuccess() {
-  if (!hapticsEnabled) return;
-  try {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  } catch (e) {}
+  if (!hapticsEnabled || Platform.OS === "web") return;
+  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
 }
 
 export function triggerHapticError() {
-  if (!hapticsEnabled) return;
-  try {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  } catch (e) {}
+  if (!hapticsEnabled || Platform.OS === "web") return;
+  void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
 }
 
 // Sound effects

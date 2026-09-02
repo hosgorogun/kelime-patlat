@@ -1,12 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export type DockDestination = "home" | "profile";
+export type DockDestination = "home" | "missions" | "profile";
 
 export function PremiumDock({ active, onNavigate }: { active: DockDestination; onNavigate: (destination: DockDestination) => void }) {
   return <View style={styles.wrap}>
     <View style={[styles.glow, { left: "15%" }]} />
     <View style={[styles.glow, { right: "15%", left: "auto" as unknown as number }]} />
     <View style={styles.dock}>
+      <DockTab glyph="⚡" label="GÖREVLER" active={active === "missions"} onPress={() => onNavigate("missions")} />
       <Pressable onPress={() => onNavigate("home")} style={({ pressed }) => [styles.home, active === "home" && styles.homeActive, pressed && styles.pressed]}>
         <Text style={[styles.homeGlyph, active === "home" && styles.homeGlyphActive]}>⌂</Text>
         <Text style={[styles.homeLabel, active === "home" && styles.homeLabelActive]}>ANA</Text>

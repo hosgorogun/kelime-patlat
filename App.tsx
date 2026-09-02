@@ -39,9 +39,10 @@ import { MAX_SOLO_LEVEL } from "./shared/solo";
 import { initManusRuntime } from "./lib/_core/manus-runtime";
 import { getWordDefinition } from "./shared/dictionary";
 import { AuthScreen } from "./components/auth-screen";
+import { MissionsScreen } from "./components/missions-screen";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 
-type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade" | "daily-lobby";
+type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade" | "daily-lobby" | "missions";
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
@@ -691,7 +692,7 @@ function HomeScreen() {
 
   const completeDailyChallenge = (level: number, foundWords: string[] = [], won = true) => {
     if (won) {
-      completeSoloLevel(level, foundWords);
+      setProgress((current) => applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"));
       setProgress((current) => completeDailyProgress(current, daily));
     } else {
       setProgress((current) => ({ ...current, dailyCompletedId: daily.id }));
@@ -934,6 +935,15 @@ function HomeScreen() {
           setScreen("home");
         }}
       />
+    );
+  }
+
+  if (screen === "missions") {
+    return (
+      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)}>
+        <StatusBar style="light" />
+        <MissionsScreen progress={progress} onBack={() => setScreen("home")} onPlayDaily={() => setScreen("daily-lobby")} />
+      </MainShell>
     );
   }
 

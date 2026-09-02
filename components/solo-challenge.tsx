@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
-import { createSoloBoard, SOLUTION_ROUTE_COLORS, solutionColorByCell } from "@/shared/solo";
+import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell } from "@/shared/solo";
 import { type WordTheme } from "@/shared/word-catalog";
 import { getThemeForLevel } from "@/shared/themes";
 import { getWordDefinition } from "../shared/dictionary";
@@ -183,6 +183,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   useEffect(() => {
     setSelected([]); setFound([]); setFoundPaths([]); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
     setRadarCooldown(0); setRadarCharges(3); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
+    setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
   }, [challenge, retryNonce]);
 
   useEffect(() => {
@@ -201,6 +202,18 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     }
   }, [level, variationSeed]);
 
+  const onCompleteRef = useRef(onComplete);
+  const foundRef = useRef(found);
+  const levelRef = useRef(level);
+  const dailyRef = useRef(daily);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    foundRef.current = found;
+    levelRef.current = level;
+    dailyRef.current = daily;
+  }, [onComplete, found, level, daily]);
+
   useEffect(() => {
     if (status !== "playing" || countdown !== null) return;
     const timer = setInterval(() => setSeconds((value) => {
@@ -209,15 +222,15 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         setStatus("lost");
         triggerHapticError();
         playErrorSound();
-        if (daily) {
-          onComplete(level, found, false);
+        if (dailyRef.current) {
+          onCompleteRef.current(levelRef.current, foundRef.current, false);
         }
         return 0;
       }
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, found, level, daily, onComplete, countdown]);
+  }, [status, countdown]);
 
   useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
 
@@ -576,8 +589,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
           </View>
         )}
 
-        <Pressable onPress={daily ? onExit : onNext} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}>
-          <Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : "SONRAKİ SEVİYE"}</Text>
+        <Pressable onPress={daily ? onExit : (level >= MAX_SOLO_LEVEL ? onExit : onNext)} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}>
+          <Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : (level >= MAX_SOLO_LEVEL ? "HARİTAYA DÖN (TÜM SEVİYELER TAMAMLANDI)" : "SONRAKİ SEVİYE")}</Text>
           <Text style={styles.actionArrow}>→</Text>
         </Pressable>
       </View>
