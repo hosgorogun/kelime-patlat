@@ -355,14 +355,21 @@ function findWordPath(board: string[], size: BoardSize, word: string) {
 
 function finishRound(io: Server, room: Room) {
   if (room.status !== "playing") return;
-  const ordered = [room.host, room.guest].filter(Boolean).sort((a, b) => {
-    const scoreDifference = (room.scores[b!.id] ?? 0) - (room.scores[a!.id] ?? 0);
-    return scoreDifference !== 0 ? scoreDifference : a!.id.localeCompare(b!.id);
-  });
+  const players = [room.host, room.guest].filter(Boolean);
+  const hostScore = room.scores[room.host.id] ?? 0;
+  const guestScore = room.guest ? (room.scores[room.guest.id] ?? 0) : 0;
+  
   room.status = "finished";
-  room.winnerId = ordered[0]?.id ?? null;
-  const winner = room.winnerId ? roomForPlayer(room, room.winnerId) : null;
-  room.message = winner ? `${winner.name} ${room.scores[winner.id] ?? 0} puanla turu kazandı!` : "Tur tamamlandı.";
+  
+  if (room.guest && hostScore === guestScore) {
+    room.winnerId = null;
+    room.message = `Berabere! İki oyuncu da ${hostScore} puan topladı.`;
+  } else {
+    const winner = hostScore > guestScore ? room.host : (room.guest || room.host);
+    room.winnerId = winner.id;
+    room.message = `${winner.name} ${room.scores[winner.id] ?? 0} puanla turu kazandı!`;
+  }
+
   recordRoundForLeaderboard(io, room);
   emitRoom(io, room);
 }

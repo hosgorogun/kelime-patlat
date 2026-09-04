@@ -81,4 +81,14 @@ describe("Kelime Patlat tahta kuralları", () => {
     expect(normalizeRoomCode("invalid_code")).toBe(null);
     expect(normalizeRoomCode(12345)).toBe(null);
   });
+
+  it("kelime uzunluklarına göre puan çarpanlarını sınır değerlerde (boundary values) dener", () => {
+    expect(wordScoreMultiplier(1)).toBe(1);
+    expect(wordScoreMultiplier(3)).toBe(1);
+    expect(wordScoreMultiplier(4)).toBe(1);
+    expect(wordScoreMultiplier(5)).toBe(2);
+    expect(wordScoreMultiplier(6)).toBe(2);
+    expect(wordScoreMultiplier(7)).toBe(3);
+    expect(wordScoreMultiplier(12)).toBe(3);
+  });
 });

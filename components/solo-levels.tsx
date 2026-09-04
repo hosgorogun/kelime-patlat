@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
@@ -6,6 +6,10 @@ import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
 export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel: number; onBack: () => void; onSelect: (level: number) => void }) {
   const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
   const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
+
+  useEffect(() => {
+    setSelectedLevel(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
+  }, [unlockedLevel]);
 
   // Group levels into rows of 3 to build a serpentine grid path
   const gridRows: number[][] = [];
