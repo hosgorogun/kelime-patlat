@@ -12,6 +12,7 @@ import {
   Alert,
   Switch,
   Animated,
+  BackHandler,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
@@ -42,7 +43,7 @@ import { AuthScreen } from "./components/auth-screen";
 import { MissionsScreen } from "./components/missions-screen";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 
-type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade" | "daily-lobby" | "missions";
+type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade" | "daily-lobby" | "missions" | "auth";
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
@@ -248,6 +249,28 @@ function HomeScreen() {
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
+
+  // Hardware Back Button Support (Android)
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showGuide) {
+        setShowGuide(false);
+        return true;
+      }
+      if (selectedWordInfo) {
+        setSelectedWordInfo(null);
+        return true;
+      }
+      if (screen !== "home") {
+        setScreen("home");
+        return true;
+      }
+      return false; // Exit app if already on home screen
+    };
+
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => subscription.remove();
+  }, [screen, showGuide, selectedWordInfo]);
 
   // Load token and verify auth state
   useEffect(() => {
@@ -701,7 +724,7 @@ function HomeScreen() {
 
   if (screen === "home") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={closeGuide}>
         <StatusBar style="light" />
         <CommandCenter playerName={safeName} progress={progress} daily={daily} leaderboard={leaderboard} onPlayDaily={() => setScreen("daily-lobby")} onPlayBot={startBotDuel} onSolo={() => setScreen("levels")} onNavigate={setScreen} onLeaderboard={() => setScreen("season")} onShowGuide={() => setShowGuide(true)} />
       </MainShell>
@@ -918,20 +941,43 @@ function HomeScreen() {
     );
   }
 
-  if (!authToken) {
+  if (screen === "auth" || !authToken) {
     return (
       <AuthScreen
+        onCancel={() => {
+          if (!authToken) {
+            setAuthToken("guest");
+          }
+          setScreen("home");
+        }}
         onSuccess={async (token, username, cloudProgress, openId) => {
           setAuthToken(token);
           setPlayerId(openId);
           setPlayerName(username);
           await AsyncStorage.setItem("kelime-patlat:player-id", openId);
           await AsyncStorage.setItem("kelime-patlat:player-name", username);
-          if (cloudProgress) {
-            setProgress(cloudProgress);
-          } else {
-            syncProgressToCloud(progress);
-          }
+          
+          // Seamless guest to registered account progress merge (Keep higher XP, wins, unlocked levels, etc.)
+          const mergedProgress: PlayerProgress = {
+            ...DEFAULT_PROGRESS,
+            ...(cloudProgress || {}),
+            xp: Math.max(progress.xp, cloudProgress?.xp || 0),
+            wins: Math.max(progress.wins, cloudProgress?.wins || 0),
+            matches: Math.max(progress.matches, cloudProgress?.matches || 0),
+            bestScore: Math.max(progress.bestScore, cloudProgress?.bestScore || 0),
+            bestTempo: Math.max(progress.bestTempo, cloudProgress?.bestTempo || 0),
+            bestArcadeScore: Math.max(progress.bestArcadeScore || 0, cloudProgress?.bestArcadeScore || 0),
+            streak: Math.max(progress.streak, cloudProgress?.streak || 0),
+            missions: {
+              daily: Math.max(progress.missions.daily, cloudProgress?.missions?.daily || 0),
+              duels: Math.max(progress.missions.duels, cloudProgress?.missions?.duels || 0),
+              wordsmith: Math.max(progress.missions.wordsmith, cloudProgress?.missions?.wordsmith || 0),
+            },
+            history: Array.from(new Set([...(progress.history || []), ...(cloudProgress?.history || [])])).slice(-150),
+          };
+
+          setProgress(mergedProgress);
+          await syncProgressToCloud(mergedProgress);
           setScreen("home");
         }}
       />
@@ -954,6 +1000,9 @@ function HomeScreen() {
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
           <View style={styles.subHeader}>
+            <Pressable onPress={() => setScreen("home")} style={styles.backButton}>
+              <Text style={styles.backText}>‹</Text>
+            </Pressable>
             <View style={[styles.profileAvatarLarge, { backgroundColor: activeAvatar.surface, borderColor: activeAvatar.color, borderWidth: 1.5 }]}>
               <Text style={[styles.profileAvatarLargeText, { color: activeAvatar.color, fontSize: 24 }]}>{activeAvatar.icon}</Text>
             </View>
@@ -1174,7 +1223,6 @@ function HomeScreen() {
           </View>
         </View>
       )}
-      <OnboardingGuide visible={showGuide} onClose={closeGuide} />
     </ScreenContainer>
   );
 }
@@ -1258,8 +1306,20 @@ function ScoreBadge({ name, score, words, total, active, won, accent, combo }: {
   );
 }
 
-function MainShell({ active, children, onNavigate }: { active: DockDestination; children: React.ReactNode; onNavigate: (destination: DockDestination) => void }) {
-  return <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 20, paddingTop: 12 }}><View style={styles.shell}>{children}<View style={styles.fixedDock}><PremiumDock active={active} onNavigate={onNavigate} /></View></View></ScreenContainer>;
+function MainShell({ active, children, onNavigate, showGuide, onCloseGuide }: { active: DockDestination; children: React.ReactNode; onNavigate: (destination: DockDestination) => void; showGuide?: boolean; onCloseGuide?: () => void }) {
+  return (
+    <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+      <View style={styles.shell}>
+        {children}
+        <View style={styles.fixedDock}>
+          <PremiumDock active={active} onNavigate={onNavigate} />
+        </View>
+      </View>
+      {showGuide !== undefined && onCloseGuide && (
+        <OnboardingGuide visible={showGuide} onClose={onCloseGuide} />
+      )}
+    </ScreenContainer>
+  );
 }
 
 const battleStyles = StyleSheet.create({

@@ -133,7 +133,9 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         setStatus("lost");
         triggerHapticError();
         playErrorSound();
-        onCompleteRef.current(scoreRef.current);
+        setTimeout(() => {
+          onCompleteRef.current(scoreRef.current);
+        }, 0);
         return 0;
       }
       return value - 1;
@@ -364,7 +366,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
   return <ScrollView contentContainerStyle={styles.content} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
     <View style={styles.header}>
-      <Pressable onPress={onExit} style={styles.exit}><Text style={styles.exitText}>×</Text></Pressable>
+      <Pressable onPress={onExit} style={styles.exit}><Text style={styles.exitText}>‹</Text></Pressable>
       <View><Text style={styles.kicker}>ARCADE MODU</Text><Text style={styles.title}>ZAMANA KARŞI HÜCUM</Text></View>
       <View style={styles.scoreContainer}><Text style={styles.scoreLabel}>SKOR</Text><Text style={styles.scoreValue}>{score}</Text></View>
       <View style={[styles.timer, { borderColor: "#FF647C" }, isUrgent && styles.timerUrgent]}>
@@ -424,7 +426,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       </Text>
     </View>
     <View style={styles.found}>
-      <Text style={styles.foundLabel}>BULDUKLARIN (SÖZLÜK ANLAMI İÇİN TIKLA)</Text>
+      <Text style={styles.foundLabel}>BULDUĞUN KELİMELER (SÖZLÜK ANLAMI İÇİN TIKLA)</Text>
       <View style={styles.tags}>
         {found.length ? found.map((word) => (
           <Pressable
@@ -437,10 +439,45 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
           >
             <Text style={styles.tagText}>{word}</Text>
           </Pressable>
-        )) : <Text style={styles.empty}>İlk kelimeyi bul.</Text>}
+        )) : <Text style={styles.empty}>Henüz kelime bulunmadı.</Text>}
       </View>
+
+      {status === "lost" && (
+        <>
+          <Text style={[styles.foundLabel, { marginTop: 14, color: "#FF647C" }]}>KAÇIRILAN KELİMELER (ANLAMI İÇİN TIKLA)</Text>
+          <View style={styles.tags}>
+            {challenge.words.filter((w) => !found.includes(w)).length > 0 ? (
+              challenge.words.filter((w) => !found.includes(w)).map((word) => (
+                <Pressable
+                  key={word}
+                  onPress={() => {
+                    triggerHapticSelection();
+                    setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+                  }}
+                  style={({ pressed }) => [styles.tag, { backgroundColor: "rgba(255, 100, 124, 0.2)", borderWidth: 1, borderColor: "#FF647C" }, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={[styles.tagText, { color: "#FFD0D6" }]}>{word}</Text>
+                </Pressable>
+              ))
+            ) : (
+              <Text style={[styles.empty, { color: "#50E3C2" }]}>Harika! Tüm kelimeleri buldun!</Text>
+            )}
+          </View>
+        </>
+      )}
     </View>
-    {status === "lost" && <View style={styles.result}><Text style={styles.resultTitle}>SÜRE DOLDU!</Text><Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text><Text style={styles.finalScore}>{score}</Text><Pressable onPress={onExit} style={styles.action}><Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text><Text style={styles.actionArrow}>→</Text></Pressable></View>}
+    {status === "lost" && (
+      <View style={styles.result}>
+        <Text style={styles.resultTitle}>SÜRE DOLDU!</Text>
+        <Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text>
+        <Text style={styles.finalScore}>{score}</Text>
+
+        <Pressable onPress={onExit} style={styles.action}>
+          <Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text>
+          <Text style={styles.actionArrow}>→</Text>
+        </Pressable>
+      </View>
+    )}
     
     {selectedWordInfo && (
       <View style={styles.modalOverlay}>

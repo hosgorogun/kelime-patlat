@@ -334,8 +334,12 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     const targetWord = remaining[0]!;
     const path = challenge.routes[targetWord];
     if (path && path.length > 0) {
-      setRadarCooldown(10);
+      setRadarCooldown(12);
       setRadarCharges((prev) => prev - 1);
+      // Small 3-second penalty for using radar hint
+      setSeconds((prev) => Math.max(1, prev - 3));
+      setTimeBonusText("-3s 👁 IPUCU");
+      setTimeout(() => setTimeBonusText(null), 1500);
       const highlights = new Set([path[0]!, path[path.length - 1]!]);
       setRadarHighlights(highlights);
       triggerHapticSelection(); playSelectionNote(0);
@@ -442,7 +446,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   return <ScrollView contentContainerStyle={[styles.content, { backgroundColor: activeTheme.background }]} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
     <View style={styles.header}>
-      <Pressable onPress={onExit} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>×</Text></Pressable>
+      <Pressable onPress={onExit} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>‹</Text></Pressable>
       <View><Text style={[styles.kicker, { color: activeTheme.headerText }]}>{daily ? "GÜNLÜK ROTA · SABİT TAHTA" : `TEK OYUNCU · SEVİYE ${level}`}</Text><Text style={styles.title}>{daily ? "GÜNÜN ROTASI" : challenge.title}</Text></View>
       <Pressable
         disabled={(radarCooldown > 0 && radarCharges > 0) || status !== "playing"}

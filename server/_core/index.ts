@@ -102,7 +102,7 @@ async function startServer() {
 
       await user.save();
       const token = await sdk.createSessionToken(openId, { name: fullName.trim() });
-      res.json({ success: true, token, username: fullName.trim(), progress: null });
+      res.json({ success: true, token, user: { openId, name: fullName.trim(), username: username.toLowerCase(), progress: null } });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Kayıt işlemi başarısız." });
     }
@@ -123,7 +123,7 @@ async function startServer() {
       await user.save();
 
       const token = await sdk.createSessionToken(user.openId, { name: user.name || username.toUpperCase() });
-      res.json({ success: true, token, username: user.name || username.toUpperCase(), progress: user.progress });
+      res.json({ success: true, token, user: { openId: user.openId, name: user.name || username.toUpperCase(), username: user.username, progress: user.progress } });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Giriş işlemi başarısız." });
     }

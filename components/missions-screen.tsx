@@ -26,10 +26,10 @@ export function MissionsScreen({ progress, onBack, onPlayDaily }: { progress: Pl
       <View style={styles.summaryCard}>
         <View style={styles.summaryHead}>
           <Text style={styles.summaryKicker}>SEZON 01 İLERLEMESİ</Text>
-          <Text style={styles.summaryTitle}>{completedCount}/{SEASON_MISSIONS.length + 2} GÖREV TAMAMLANDI</Text>
+          <Text style={styles.summaryTitle}>{completedCount + (progress.wins >= 3 ? 1 : 0) + ((progress.bestArcadeScore || 0) >= 400 ? 1 : 0)}/{SEASON_MISSIONS.length + 2} GÖREV TAMAMLANDI</Text>
         </View>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.round((completedCount / (SEASON_MISSIONS.length + 2)) * 100)}%` }]} />
+          <View style={[styles.progressFill, { width: `${Math.round(((completedCount + (progress.wins >= 3 ? 1 : 0) + ((progress.bestArcadeScore || 0) >= 400 ? 1 : 0)) / (SEASON_MISSIONS.length + 2)) * 100)}%` }]} />
         </View>
         <Text style={styles.summaryHint}>💡 Görevleri tamamlayarak ekstra XP kazanın ve Siber Unvanların kilidini açın!</Text>
       </View>

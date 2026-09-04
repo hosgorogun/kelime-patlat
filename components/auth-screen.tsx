@@ -7,9 +7,10 @@ import { haptics } from "@/lib/haptics";
 
 type AuthScreenProps = {
   onSuccess: (token: string, username: string, cloudProgress: any, openId: string) => void;
+  onCancel?: () => void;
 };
 
-export function AuthScreen({ onSuccess }: AuthScreenProps) {
+export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,29 +50,29 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
       }
 
       await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
+      await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
+      await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || data.user.username);
       haptics.success();
-      onSuccess(data.token, data.username, data.progress, `usr_${username.trim().toLowerCase()}`);
+      onSuccess(data.token, data.user.name || data.user.username, data.user.progress, data.user.openId);
     } catch (err: any) {
-      setError(err.message || "Bağlantı hatası oluştu.");
       haptics.error();
+      setError(err.message || "Giriş yapılırken bir hata oluştu.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = (platform: "Google" | "Apple") => {
+  const handleThirdPartyPress = (provider: string) => {
     haptics.light();
-    // In production, we trigger the OAuth server. Since local configs require redirects,
-    // we alert the user or start startOAuthLogin() linking flow!
     Alert.alert(
-      `${platform} ile Giriş`,
-      `${platform} oturum açma akışı başlatılıyor...`,
+      `🌐 ${provider} Bağlantısı`,
+      `${provider} ile hızlı giriş altyapısı aktiftir. Oturum açmak istiyor musunuz?`,
       [
+        { text: "İptal", style: "cancel" },
         {
           text: "Tamam",
           onPress: async () => {
             try {
-              // Trigger oauth linking flow helper from SDK
               await startOAuthLogin();
             } catch (e) {
               console.warn(e);
@@ -85,6 +86,13 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
   return (
     <ScreenContainer style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {onCancel && (
+          <View style={styles.topHeader}>
+            <Pressable onPress={() => { haptics.light(); onCancel(); }} style={styles.backButton}>
+              <Text style={styles.backText}>‹</Text>
+            </Pressable>
+          </View>
+        )}
         <View style={styles.card}>
           <Text style={styles.glowTitle}>KELİME PATLAT</Text>
           <Text style={styles.subtitle}>BULUT BAĞLANTISI</Text>
@@ -169,7 +177,7 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
           {/* Social Login Buttons */}
           <View style={styles.socialContainer}>
             <Pressable
-              onPress={() => handleSocialLogin("Google")}
+              onPress={() => handleThirdPartyPress("Google")}
               style={({ pressed }) => [styles.socialButton, styles.googleButton, pressed && styles.pressed]}
             >
               <Text style={styles.socialIcon}>G</Text>
@@ -177,13 +185,19 @@ export function AuthScreen({ onSuccess }: AuthScreenProps) {
             </Pressable>
 
             <Pressable
-              onPress={() => handleSocialLogin("Apple")}
+              onPress={() => handleThirdPartyPress("Apple")}
               style={({ pressed }) => [styles.socialButton, styles.appleButton, pressed && styles.pressed]}
             >
               <Text style={[styles.socialIcon, { color: "#FFFFFF" }]}></Text>
               <Text style={[styles.socialText, { color: "#FFFFFF" }]}>Apple ile Giriş</Text>
             </Pressable>
           </View>
+
+          {onCancel && (
+            <Pressable onPress={() => { haptics.light(); onCancel(); }} style={styles.guestButton}>
+              <Text style={styles.guestText}>GİRİŞ YAPMADAN DEVAM ET →</Text>
+            </Pressable>
+          )}
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -194,6 +208,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#121025",
+  },
+  topHeader: {
+    width: "100%",
+    maxWidth: 380,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: "#1E1838",
+    borderWidth: 1,
+    borderColor: "rgba(124, 92, 246, 0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backText: {
+    color: "#FFF9FC",
+    fontSize: 26,
+    lineHeight: 28,
+  },
+  guestButton: {
+    marginTop: 18,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 212, 0.3)",
+    backgroundColor: "rgba(0, 245, 212, 0.05)",
+  },
+  guestText: {
+    color: "#00F5D4",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
   },
   scroll: {
     flexGrow: 1,

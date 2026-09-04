@@ -69,18 +69,36 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
     {/* Cockpit Profile Widget */}
     <View style={styles.topbar}>
       <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
-        <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}><Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text></View>
-        <View style={{ marginLeft: 4 }}>
+        <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
+          <Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Text style={styles.name}>{playerName}</Text>
-            <Text style={{ color: "#00F5D4", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 }}>{getActiveCyberTitle(progress)}</Text>
+            <Text numberOfLines={1} style={styles.name}>{playerName}</Text>
+            <Text style={styles.cyberBadge}>{getActiveCyberTitle(progress)}</Text>
           </View>
-          <Text style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank} · {progress.xp} XP</Text>
+          <Text numberOfLines={1} style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank} · {progress.xp} XP</Text>
         </View>
       </Pressable>
-      <View style={{ flexDirection: "row", gap: 6 }}>
-        <Pressable onPress={onShowGuide} style={({ pressed }) => [styles.livePill, { borderColor: "#7C5CF6" }, pressed && styles.pressed]}><Text style={[styles.liveText, { color: "#9A76ED" }]}>❓ REHBER</Text></Pressable>
-        <Pressable onPress={onLeaderboard} style={({ pressed }) => [styles.livePill, pressed && styles.pressed]}><View style={styles.liveDot} /><Text style={styles.liveText}>LİDERLİK</Text></Pressable>
+
+      <View style={styles.topActions}>
+        <Pressable 
+          onPress={() => {
+            onShowGuide();
+          }} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={({ pressed }) => [styles.guidePill, pressed && styles.pressed]}
+        >
+          <Text style={styles.guideText}>❓ REHBER</Text>
+        </Pressable>
+        <Pressable 
+          onPress={onLeaderboard} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={({ pressed }) => [styles.livePill, pressed && styles.pressed]}
+        >
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>LİDERLİK</Text>
+        </Pressable>
       </View>
     </View>
 
@@ -220,15 +238,19 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 136 }, 
-  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 }, 
-  identity: { flexDirection: "row", gap: 12, alignItems: "center" }, 
-  avatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, backgroundColor: "#241B47", justifyContent: "center", alignItems: "center" }, 
+  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 10, borderRadius: 22, backgroundColor: "rgba(22, 17, 44, 0.8)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.35)", marginBottom: 4 }, 
+  identity: { flexDirection: "row", gap: 10, alignItems: "center", flex: 1, marginRight: 8 }, 
+  avatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, backgroundColor: "#241B47", justifyContent: "center", alignItems: "center" }, 
   avatarText: { color: "#FFF9FC", fontWeight: "900" }, 
-  name: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", letterSpacing: 0.5, textShadowColor: "rgba(255, 255, 255, 0.25)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }, 
-  rank: { color: "#E9D5FF", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginTop: 2 }, 
-  livePill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: "rgba(29, 24, 55, 0.7)", borderWidth: 1, borderColor: "rgba(76, 62, 115, 0.4)" }, 
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#00F5D4" }, 
-  liveText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  name: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", letterSpacing: 0.4 }, 
+  cyberBadge: { color: "#00F5D4", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  rank: { color: "#E9D5FF", fontSize: 8, fontWeight: "800", letterSpacing: 0.6, marginTop: 2 }, 
+  topActions: { flexDirection: "row", gap: 6, alignItems: "center" },
+  guidePill: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 7, borderRadius: 16, backgroundColor: "rgba(139, 92, 246, 0.2)", borderWidth: 1, borderColor: "#8B5CF6" },
+  guideText: { color: "#C4B5FD", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  livePill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 16, backgroundColor: "rgba(29, 24, 55, 0.8)", borderWidth: 1, borderColor: "rgba(76, 62, 115, 0.5)" }, 
+  liveDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#00F5D4" }, 
+  liveText: { color: "#FFF9FC", fontSize: 8, fontWeight: "900", letterSpacing: 0.6 },
   
   signalDeck: { minHeight: 280, marginTop: 16, padding: 22, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(43, 33, 88, 0.5)", borderWidth: 1, borderColor: "rgba(127, 103, 211, 0.35)", position: "relative" }, 
   radarRing: { position: "absolute", right: -35, top: -42, width: 190, height: 190, borderRadius: 100, borderWidth: 1.5, zIndex: 1 }, 

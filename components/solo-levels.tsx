@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
@@ -6,9 +6,19 @@ import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
 export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel: number; onBack: () => void; onSelect: (level: number) => void }) {
   const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
   const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    setSelectedLevel(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
+    const current = Math.min(unlockedLevel, MAX_SOLO_LEVEL);
+    setSelectedLevel(current);
+
+    // Auto-scroll to unlocked level position in grid map
+    const targetRow = Math.floor((current - 1) / 3);
+    const targetY = Math.max(0, targetRow * 82 - 100);
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
+    }, 150);
+    return () => clearTimeout(timer);
   }, [unlockedLevel]);
 
   // Group levels into rows of 3 to build a serpentine grid path
@@ -27,7 +37,7 @@ export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel:
   const isSelectedLocked = selectedLevel > unlockedLevel;
 
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Top Header */}
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.back}>
@@ -70,7 +80,10 @@ export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel:
                   return (
                     <View key={level} style={styles.nodeWrapper}>
                       <Pressable
-                        onPress={() => setSelectedLevel(level)}
+                        onPress={() => {
+                          setSelectedLevel(level);
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }}
                         style={({ pressed }) => [
                           styles.nodeCircle,
                           completed && styles.nodeCompleted,
