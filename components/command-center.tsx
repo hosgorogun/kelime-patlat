@@ -4,7 +4,7 @@ import { Alert, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View 
 import { type LeaderboardEntry } from "@/shared/game";
 import { getRank, getPlayerLevel, getActiveCyberTitle, missionProgress, SEASON_MISSIONS, THEME_PACKS, AVATARS, type DailyChallenge, type PlayerProgress } from "@/shared/progression";
 
-type NavKey = "home" | "online" | "profile" | "arcade" | "levels";
+type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store";
 
 type CommandCenterProps = {
   playerName: string;
@@ -82,6 +82,13 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       </Pressable>
 
       <View style={styles.topActions}>
+        <Pressable 
+          onPress={() => onNavigate("store")} 
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={({ pressed }) => [styles.guidePill, { backgroundColor: "#2A1D4E", borderColor: "#FFC24A" }, pressed && styles.pressed]}
+        >
+          <Text style={[styles.guideText, { color: "#FFC24A" }]}>🛒 MAĞAZA</Text>
+        </Pressable>
         <Pressable 
           onPress={() => {
             onShowGuide();

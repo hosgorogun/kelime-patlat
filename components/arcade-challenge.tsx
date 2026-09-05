@@ -11,7 +11,8 @@ import {
   playErrorSound,
   triggerHapticSelection,
   triggerHapticSuccess,
-  triggerHapticError
+  triggerHapticError,
+  triggerHapticLongWord
 } from "@/shared/audio-haptics";
 
 function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
@@ -267,7 +268,11 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     setTimeout(() => setTimeBonusText(null), 1200);
 
     playSuccessSound();
-    triggerHapticSuccess();
+    if (word.length >= 6) {
+      triggerHapticLongWord();
+    } else {
+      triggerHapticSuccess();
+    }
 
     // If entire board is cleared, generate a new board!
     if (nextFound.length === challenge.words.length) {

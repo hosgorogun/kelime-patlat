@@ -34,16 +34,17 @@ import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
 import { setHapticsEnabled as setSoloHapticsEnabled } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
-import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, AVATARS, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS } from "./shared/progression";
+import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, checkDailyLoginReward, DAILY_LOGIN_REWARDS, DEFAULT_PROGRESS, getDailyChallenge, AVATARS, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
 import { MAX_SOLO_LEVEL } from "./shared/solo";
 import { initManusRuntime } from "./lib/_core/manus-runtime";
 import { getWordDefinition } from "./shared/dictionary";
 import { AuthScreen } from "./components/auth-screen";
 import { MissionsScreen } from "./components/missions-screen";
+import { CyberStore } from "./components/cyber-store";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 
-type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade" | "daily-lobby" | "missions" | "auth";
+type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade" | "daily-lobby" | "missions" | "auth" | "store";
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
@@ -199,6 +200,7 @@ function HomeScreen() {
   const [dailySession, setDailySession] = useState<DailyChallenge | null>(null);
   const daily = useMemo(() => getDailyChallenge(), []);
   const incomingUrl = Linking.useURL();
+  const [dailyRewardModal, setDailyRewardModal] = useState<{ day: number; label: string; amount: number; rewardType: string; icon: string } | null>(null);
   const recordedRoundRef = useRef<string | null>(null);
   const victoryCueRef = useRef<string | null>(null);
 
@@ -261,7 +263,10 @@ function HomeScreen() {
         setSelectedWordInfo(null);
         return true;
       }
-      if (screen !== "home") {
+      if (screen === "solo" || screen === "arcade" || screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store") {
+        if (screen === "solo" && dailySession) {
+          setDailySession(null);
+        }
         setScreen("home");
         return true;
       }
@@ -270,7 +275,7 @@ function HomeScreen() {
 
     const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => subscription.remove();
-  }, [screen, showGuide, selectedWordInfo]);
+  }, [screen, showGuide, selectedWordInfo, dailySession]);
 
   // Load token and verify auth state
   useEffect(() => {
@@ -354,7 +359,15 @@ function HomeScreen() {
         setShowGuide(true);
       }
     });
-  }, [progressReady, progress.xp]);
+
+    // Check and trigger 7-day login reward
+    const todayId = daily.id;
+    const loginResult = checkDailyLoginReward(progress, todayId);
+    if (loginResult) {
+      setProgress(loginResult.updatedProgress);
+      setDailyRewardModal(loginResult.reward);
+    }
+  }, [progressReady, progress.xp, daily.id]);
 
   useEffect(() => {
     if (!progressReady) return;
@@ -727,6 +740,32 @@ function HomeScreen() {
       <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={closeGuide}>
         <StatusBar style="light" />
         <CommandCenter playerName={safeName} progress={progress} daily={daily} leaderboard={leaderboard} onPlayDaily={() => setScreen("daily-lobby")} onPlayBot={startBotDuel} onSolo={() => setScreen("levels")} onNavigate={setScreen} onLeaderboard={() => setScreen("season")} onShowGuide={() => setShowGuide(true)} />
+        {dailyRewardModal && (
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(10, 8, 22, 0.85)", justifyContent: "center", alignItems: "center", zIndex: 150, padding: 20 }}>
+            <View style={{ width: "90%", backgroundColor: "#1B1533", borderRadius: 20, borderWidth: 1.5, borderColor: "#00F5D4", padding: 24, alignItems: "center" }}>
+              <Text style={{ fontSize: 44, marginBottom: 8 }}>{dailyRewardModal.icon}</Text>
+              <Text style={{ color: "#00F5D4", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 }}>GÜNLÜK GİRİŞ ÖDÜLÜ</Text>
+              <Text style={{ color: "#FFF", fontSize: 18, fontWeight: "900", marginTop: 4 }}>{dailyRewardModal.label} TAMAMLANDI!</Text>
+              <Text style={{ color: "#A49BBF", fontSize: 12, textAlign: "center", marginTop: 8, lineHeight: 18 }}>
+                Her gün giriş yaparak siber çipler, kalkanlar ve XP bonusları kazan.
+              </Text>
+              <View style={{ backgroundColor: "#261E44", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, marginTop: 16, borderWidth: 1, borderColor: "#FFC24A" }}>
+                <Text style={{ color: "#FFC24A", fontSize: 14, fontWeight: "900" }}>
+                  KAZANDIN: +{dailyRewardModal.amount} {dailyRewardModal.rewardType === "coins" ? "SİBER ÇİP" : dailyRewardModal.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP"}!
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  haptics.success();
+                  setDailyRewardModal(null);
+                }}
+                style={{ backgroundColor: "#00F5D4", paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12, marginTop: 20 }}
+              >
+                <Text style={{ color: "#121025", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 }}>ÖDÜLÜ AL</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </MainShell>
     );
   }
@@ -834,6 +873,24 @@ function HomeScreen() {
 
   if (screen === "solo") {
     return <ScreenContainer style={{ paddingBottom: 16 }}><StatusBar style="light" /><SoloChallenge level={soloLevel} theme={dailySession?.themeId ?? progress.selectedTheme} variationSeed={dailySession?.variation} daily={Boolean(dailySession)} excludeWords={progress.history || []} onExit={() => { const destination = dailySession ? "home" : "levels"; setDailySession(null); setScreen(destination); }} onComplete={dailySession ? completeDailyChallenge : completeSoloLevel} onNext={() => setSoloLevel((current) => Math.min(MAX_SOLO_LEVEL, current + 1))} /></ScreenContainer>;
+  }
+
+  if (screen === "store") {
+    return (
+      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}>
+        <StatusBar style="light" />
+        <CyberStore
+          coins={progress.wins * 25 + progress.bestArcadeScore}
+          onBuyCoins={(amount) => {
+            setProgress((current) => ({ ...current, wins: current.wins + Math.floor(amount / 25) }));
+          }}
+          onBuyRadar={() => {
+            setProgress((current) => ({ ...current, xp: current.xp + 200 }));
+          }}
+          onBack={() => setScreen("home")}
+        />
+      </MainShell>
+    );
   }
 
   if (screen === "arcade") {
@@ -1043,6 +1100,24 @@ function HomeScreen() {
               </View>
             </View>
 
+            {/* Word Intelligence & Vocabulary Insights */}
+            <View style={[styles.statsRow, { marginTop: 6, backgroundColor: "rgba(0, 245, 212, 0.05)", borderColor: "rgba(0, 245, 212, 0.2)" }]}>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniStatLabel}>📚 Çözülen Kelime:</Text>
+                <Text style={[styles.miniStatValue, { color: "#00F5D4" }]}>
+                  {progress.history ? progress.history.length : 0}
+                </Text>
+              </View>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniStatLabel}>⚡ En Uzun Rota:</Text>
+                <Text style={[styles.miniStatValue, { color: "#FFC24A" }]}>
+                  {progress.history && progress.history.length
+                    ? [...progress.history].sort((a, b) => b.length - a.length)[0]
+                    : "—"}
+                </Text>
+              </View>
+            </View>
+
             <Text style={styles.inputLabel}>GÖRÜNEN AD</Text>
             <View style={styles.inputContainer}>
               <TextInput value={playerName} onChangeText={setPlayerName} maxLength={16} autoCapitalize="characters" style={styles.profileInput} placeholder="OYUNCU" placeholderTextColor="#6F879A" />
@@ -1086,6 +1161,21 @@ function HomeScreen() {
                 <Text style={[styles.profileHintButtonText, { color: "#FFFFFF" }]}>ÇIKIŞ YAP</Text>
               </Pressable>
             </View>
+
+            <Pressable
+              onPress={() => {
+                Alert.alert(
+                  "🔒 GİZLİLİK POLİTİKASI",
+                  "Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.\n\nİletişim & Veri Talepleri: destek@kelimepatlat.app",
+                  [{ text: "TAMAM" }]
+                );
+              }}
+              style={{ marginTop: 14, alignItems: "center" }}
+            >
+              <Text style={{ color: "#7C5CF6", fontSize: 10, fontWeight: "900", letterSpacing: 0.8, textDecorationLine: "underline" }}>
+                🔒 GİZLİLİK POLİTİKASI (PRIVACY POLICY)
+              </Text>
+            </Pressable>
           </View>
         </ScrollView>
       </MainShell>

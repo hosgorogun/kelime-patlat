@@ -75,6 +75,11 @@ export function triggerHapticError() {
   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
 }
 
+export function triggerHapticLongWord() {
+  if (!hapticsEnabled || Platform.OS === "web") return;
+  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined);
+}
+
 // Sound effects
 export function playSelectionNote(index: number) {
   if (!soundEnabled || pianoPlayers.length === 0) return;

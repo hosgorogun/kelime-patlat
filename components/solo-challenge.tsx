@@ -13,7 +13,8 @@ import {
   playErrorSound,
   triggerHapticSelection,
   triggerHapticSuccess,
-  triggerHapticError
+  triggerHapticError,
+  triggerHapticLongWord
 } from "@/shared/audio-haptics";
 
 function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
@@ -369,8 +370,19 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setTimeBonusText(isCombo ? `+${bonus}s 🔥 KOMBO!` : `+${bonus}s`);
     setTimeout(() => setTimeBonusText(null), 1500);
 
-    if (nextFound.length === challenge.words.length) { playSuccessSound(); triggerHapticSuccess(); setStatus("won"); onComplete(level, nextFound, true); }
-    else { playSuccessSound(); triggerHapticSuccess(); setTimeout(() => setFeedback("idle"), 360); }
+    if (word.length >= 6) {
+      triggerHapticLongWord();
+    } else {
+      triggerHapticSuccess();
+    }
+    playSuccessSound();
+
+    if (nextFound.length === challenge.words.length) {
+      setStatus("won");
+      onComplete(level, nextFound, true);
+    } else {
+      setTimeout(() => setFeedback("idle"), 360);
+    }
   };
   const start = (index: number) => { if (status !== "playing") return; submitted.current = false; pointerActive.current = true; setIsSelecting(true); if (resetTimer.current) clearTimeout(resetTimer.current); setFeedback("idle"); clearSelection(); triggerHapticSelection(); playSelectionNote(0); include(index); };
   const finish = () => { if (!pointerActive.current) return; pointerActive.current = false; setIsSelecting(false); submit(); };
@@ -557,7 +569,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
               <>
                 <Text style={styles.chestIcon}>💾</Text>
                 <Text style={styles.chestTitle}>SİBER DEŞİFRE KUTUSU</Text>
-                <Text style={styles.chestCopy}>Veri veri tabanı tespit edildi. Bağlantıyı kır ve içeriği sızdır.</Text>
+                <Text style={styles.chestCopy}>Şifreli veri tabanı tespit edildi. Bağlantıyı kır ve içeriği sızdır.</Text>
                 <Pressable onPress={startDecryption} style={[styles.chestButton, { backgroundColor: activeTheme.accentColor }]}>
                   <Text style={styles.chestButtonText}>BAĞLANTIYI AÇ (DEŞİFRE ET)</Text>
                 </Pressable>

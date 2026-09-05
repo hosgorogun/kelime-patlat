@@ -43,6 +43,8 @@ export type PlayerProgress = {
   selectedAvatar: AvatarId;
   history: string[];
   streakShields?: number;
+  lastLoginDay?: string;
+  loginDaysCount?: number;
 };
 
 export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string; unlockHint: string };
@@ -251,4 +253,43 @@ export function getDailyMysteryWord(date = new Date()): DailyMystery {
   ];
   const picked = mysteryWords[seed % mysteryWords.length]!;
   return { ...picked, rewardXp: 150 };
+}
+
+export type DailyLoginReward = {
+  day: number;
+  label: string;
+  rewardType: "xp" | "coins" | "shield";
+  amount: number;
+  icon: string;
+};
+
+export const DAILY_LOGIN_REWARDS: DailyLoginReward[] = [
+  { day: 1, label: "1. GÜN", rewardType: "coins", amount: 25, icon: "🪙" },
+  { day: 2, label: "2. GÜN", rewardType: "xp", amount: 60, icon: "⚡" },
+  { day: 3, label: "3. GÜN", rewardType: "coins", amount: 50, icon: "🪙" },
+  { day: 4, label: "4. GÜN", rewardType: "xp", amount: 100, icon: "⚡" },
+  { day: 5, label: "5. GÜN", rewardType: "coins", amount: 75, icon: "🪙" },
+  { day: 6, label: "6. GÜN", rewardType: "xp", amount: 150, icon: "⚡" },
+  { day: 7, label: "7. GÜN", rewardType: "shield", amount: 1, icon: "🛡️" },
+];
+
+export function checkDailyLoginReward(progress: PlayerProgress, todayId: string): { reward: DailyLoginReward; updatedProgress: PlayerProgress } | null {
+  if (progress.lastLoginDay === todayId) return null;
+  const currentCount = (progress.loginDaysCount || 0) % 7;
+  const reward = DAILY_LOGIN_REWARDS[currentCount]!;
+  
+  let xpBonus = reward.rewardType === "xp" ? reward.amount : 0;
+  let shieldBonus = reward.rewardType === "shield" ? reward.amount : 0;
+  let winsBonus = reward.rewardType === "coins" ? Math.floor(reward.amount / 25) : 0;
+
+  const updatedProgress: PlayerProgress = {
+    ...progress,
+    xp: progress.xp + xpBonus,
+    wins: progress.wins + winsBonus,
+    streakShields: (progress.streakShields || 0) + shieldBonus,
+    lastLoginDay: todayId,
+    loginDaysCount: (progress.loginDaysCount || 0) + 1,
+  };
+
+  return { reward, updatedProgress };
 }
