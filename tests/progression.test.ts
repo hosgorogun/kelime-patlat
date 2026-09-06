@@ -13,8 +13,8 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const second = getDailyChallenge(date);
     expect(first).toEqual(second);
     expect(first.id).toBe(getDayId(date));
-    expect(first.level).toBeGreaterThanOrEqual(6);
-    expect(first.level).toBeLessThanOrEqual(8);
+    expect(first.level).toBeGreaterThanOrEqual(20);
+    expect(first.level).toBeLessThanOrEqual(24);
   });
 
   it("günlük ödülü aynı gün iki kez yazılmaz ve seri yalnız yeni günlükte artar", () => {
@@ -138,5 +138,27 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(mystery.definition).toBeTruthy();
     expect(mystery.rewardXp).toBe(150);
     expect(DEFAULT_PROGRESS.streakShields).toBe(1);
+  });
+
+  it("günün gizemli kelimesi ve görev tamamlamaları için ekstra XP ve çip ödülü verir", () => {
+    const mystery = getDailyMysteryWord();
+    // Finding the mystery word awards +150 XP bonus
+    const resultWithMystery = applyMatchProgress(DEFAULT_PROGRESS, {
+      score: 100,
+      tempo: 3,
+      won: true,
+      foundWords: [mystery.word],
+    }, "pvp");
+
+    expect(resultWithMystery.xp).toBeGreaterThanOrEqual(150 + 40 + 25);
+    expect(resultWithMystery.coins).toBe((DEFAULT_PROGRESS.coins ?? 50) + 25);
+    // Completing duels mission (2/2) gives +80 XP bonus
+    const duel2 = applyMatchProgress({ ...DEFAULT_PROGRESS, missions: { daily: 0, duels: 1, wordsmith: 0 } }, {
+      score: 50,
+      tempo: 2,
+      won: false,
+    }, "pvp");
+    expect(duel2.missions.duels).toBe(2);
+    expect(duel2.xp).toBe(40 + 80); // 40 pvp + 80 mission reward
   });
 });

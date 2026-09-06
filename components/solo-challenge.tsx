@@ -16,6 +16,7 @@ import {
   triggerHapticError,
   triggerHapticLongWord
 } from "@/shared/audio-haptics";
+import { gameSfx } from "@/lib/game-sfx";
 
 function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
   const dx = x2 - x1;
@@ -53,10 +54,9 @@ type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
-export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], onExit, onComplete, onNext }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void }) {
+export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, onExit, onComplete, onNext }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void }) {
   const { width } = useWindowDimensions();
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
-  const [retryNonce, setRetryNonce] = useState(0);
   
   const initialExcludeWords = useRef(excludeWords);
   useEffect(() => {
@@ -72,7 +72,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [status, setStatus] = useState<"playing" | "won" | "lost">("playing");
   const [isSelecting, setIsSelecting] = useState(false);
   const [radarCooldown, setRadarCooldown] = useState(0);
-  const [radarCharges, setRadarCharges] = useState(3);
+  const [radarCharges, setRadarCharges] = useState(3 + (radarChargesBonus || 0));
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
@@ -185,7 +185,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setSelected([]); setFound([]); setFoundPaths([]); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
     setRadarCooldown(0); setRadarCharges(3); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
     setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
-  }, [challenge, retryNonce]);
+  }, [challenge]);
 
   useEffect(() => {
     if (status === "won") {
@@ -378,8 +378,13 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     playSuccessSound();
 
     if (nextFound.length === challenge.words.length) {
-      setStatus("won");
-      onComplete(level, nextFound, true);
+      explodeConfetti();
+      gameSfx.victory();
+      triggerHapticLongWord();
+      setTimeout(() => {
+        setStatus("won");
+        onComplete(level, nextFound, true);
+      }, 700);
     } else {
       setTimeout(() => setFeedback("idle"), 360);
     }
@@ -636,7 +641,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         {daily ? (
           <Pressable onPress={onExit} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text><Text style={styles.actionArrow}>→</Text></Pressable>
         ) : (
-          <Pressable onPress={() => { setVariation((value) => value + 1); setRevived(false); }} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>YENİ IZGARA İLE TEKRAR DENE</Text><Text style={styles.actionArrow}>?</Text></Pressable>
+          <Pressable onPress={() => { setVariation((value) => value + 1); setRevived(false); }} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>YENİ IZGARA İLE TEKRAR DENE</Text><Text style={styles.actionArrow}>↺</Text></Pressable>
         )}
       </View>
     )}

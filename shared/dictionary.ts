@@ -61,6 +61,28 @@ const WORD_DEFINITIONS: Record<string, string> = {
   "BİLGİLER": "Edinilmiş olan gerçeklerin bütünü.",
   "HATIRLA": "Geçmişte yaşanmış bir şeyi veya bilgiyi zihne geri getirme eylemi.",
 
+  // Uzay
+  "UZAY": "Bütün gök cisimlerinin içinde bulunduğu sınırsız, sonsuz boşluk.",
+  "GEZEGEN": "Bir yıldızın çevresinde dolanan, ışığını ondan alan gök cismi.",
+  "ASTRONOT": "Uzay araştırmaları için uzaya gönderilen eğitimli uzman.",
+  "KARADELİK": "Çekim alanı hiçbir maddenin veya ışığın kaçamayacağı kadar güçlü kozmik bölge.",
+  "YÖRÜNGE": "Bir gök cisminin başka bir cisim etrafında izlediği kapalı yol.",
+  "GALAKSİ": "Milyarlarca yıldız, gaz ve toz bulutundan oluşan devasa gök ada.",
+  "METEOR": "Uzaydan Dünya atmosferine girerek yanan göktaşı, kayan yıldız.",
+  "ROKET": "Tepki prensibiyle çalışan, uzaya yük ve araç fırlatan taşıt.",
+  "UYDU": "Bir gezegenin veya başka bir gök cisminin etrafında dolanan nesne.",
+  "EVREN": "Bütün varlıkların, gök cisimlerinin ve enerjinin oluşturduğu sonsuz bütün.",
+  "KOZMOZ": "Düzenli ve uyumlu bir bütün olarak kabul edilen evren.",
+  "NEBULA": "Yıldızların doğum yeri olan devasa gaz ve toz bulutları.",
+  "SAMANYOLU": "Güneş Sistemimizin de içinde bulunduğu sarmal galaksi.",
+  "TELESKOP": "Uzaktaki gök cisimlerini büyüterek incelemeyi sağlayan optik cihaz.",
+  "SÜPERNOVA": "Büyük bir yıldızın ömrünün sonunda şiddetle patlaması olayı.",
+  "ASTEROİT": "Güneş çevresinde dönen, gezegenlerden küçük kayalık gök cismi.",
+  "PULSAR": "Hızla dönen ve düzenli radyo dalgaları yayan nötron yıldızı.",
+  "KUAZAR": "Genç galaksilerin merkezinde bulunan son derece parlak enerji kaynağı.",
+  "ATMOSFER": "Gök cisimlerini çevreleyen gaz tabakası.",
+  "IŞIKHIZI": "Işığın boşluktaki saniyede yaklaşık üç yüz bin kilometrelik hızı.",
+
   // Ortaklar
   "JEL": "Yarı katı, elastik ve yapışkan madde kıvamı.",
   "OYNA": "Bir oyuna katılma veya oyunu başlatma eylemi."

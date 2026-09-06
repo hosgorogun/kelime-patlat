@@ -1,38 +1,203 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export type DockDestination = "home" | "missions" | "profile";
+export type DockDestination = "store" | "missions" | "home" | "season" | "profile";
 
 export function PremiumDock({ active, onNavigate }: { active: DockDestination; onNavigate: (destination: DockDestination) => void }) {
-  return <View style={styles.wrap}>
-    <View style={[styles.glow, { left: "15%" }]} />
-    <View style={[styles.glow, { right: "15%", left: "auto" as unknown as number }]} />
+  return (
     <View style={styles.dock}>
-      <DockTab glyph="⚡" label="GÖREVLER" active={active === "missions"} onPress={() => onNavigate("missions")} />
-      <Pressable onPress={() => onNavigate("home")} style={({ pressed }) => [styles.home, active === "home" && styles.homeActive, pressed && styles.pressed]}>
-        <Text style={[styles.homeGlyph, active === "home" && styles.homeGlyphActive]}>⌂</Text>
-        <Text style={[styles.homeLabel, active === "home" && styles.homeLabelActive]}>ANA</Text>
+      {/* 1. Mağaza */}
+      <DockTab
+        icon="🛒"
+        label="MAĞAZA"
+        active={active === "store"}
+        onPress={() => onNavigate("store")}
+      />
+
+      {/* 2. Görevler */}
+      <DockTab
+        icon="⚡"
+        label="GÖREVLER"
+        active={active === "missions"}
+        onPress={() => onNavigate("missions")}
+      />
+
+      {/* 3. Ana Merkez: Oyna */}
+      <Pressable
+        onPress={() => onNavigate("home")}
+        style={({ pressed }) => [styles.centerTab, pressed && styles.pressed]}
+      >
+        <View style={[styles.centerPill, active === "home" && styles.centerPillActive]}>
+          <Text style={styles.centerIcon}>{active === "home" ? "🎮" : "⌂"}</Text>
+        </View>
+        <Text style={[styles.centerLabel, active === "home" && styles.centerLabelActive]}>
+          OYNA
+        </Text>
       </Pressable>
-      <DockTab glyph="◈" label="PROFİL" active={active === "profile"} onPress={() => onNavigate("profile")} />
+
+      {/* 4. Liderlik & Arkadaşlık */}
+      <DockTab
+        icon="🏆"
+        label="LİDER & ARKADAŞ"
+        active={active === "season"}
+        onPress={() => onNavigate("season")}
+      />
+
+      {/* 5. Profil */}
+      <DockTab
+        icon="👤"
+        label="PROFİL"
+        active={active === "profile"}
+        onPress={() => onNavigate("profile")}
+      />
     </View>
-  </View>;
+  );
 }
 
-function DockTab({ glyph, label, active, onPress }: { glyph: string; label: string; active: boolean; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={styles.tab}><Text style={[styles.glyph, active && styles.glyphActive]}>{glyph}</Text><Text style={[styles.label, active && styles.labelActive]}>{label}</Text>{active && <View style={styles.dot} />}</Pressable>;
+function DockTab({
+  icon,
+  label,
+  active,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tab,
+        active && styles.tabActive,
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={styles.iconBox}>
+        <Text style={[styles.icon, active && styles.iconActive]}>{icon}</Text>
+      </View>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+        style={[styles.label, active && styles.labelActive]}
+      >
+        {label}
+      </Text>
+      <View style={[styles.dot, active && styles.dotActive]} />
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
-  wrap: { height: 106, marginTop: 22, paddingHorizontal: 2, justifyContent: "flex-end" },
-  glow: { position: "absolute", width: 120, height: 55, bottom: 12, borderRadius: 40, backgroundColor: "#7C3AED", opacity: 0.18, shadowColor: "#7C3AED", shadowOpacity: 0.4, shadowRadius: 12, elevation: 10 },
-  dock: { height: 72, borderRadius: 26, paddingHorizontal: 28, backgroundColor: "rgba(24, 21, 43, 0.93)", borderWidth: 1, borderColor: "rgba(93, 74, 144, 0.4)", flexDirection: "row", alignItems: "center", justifyContent: "space-around", shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 10, elevation: 8 },
-  tab: { minWidth: 54, height: 58, alignItems: "center", justifyContent: "center" },
-  glyph: { color: "#CBD5E1", fontSize: 20, fontWeight: "700", lineHeight: 20 }, glyphActive: { color: "#2DD4BF", shadowColor: "#2DD4BF", shadowOpacity: 0.5, shadowRadius: 4 },
-  label: { color: "#CBD5E1", fontSize: 8, fontWeight: "900", letterSpacing: 0.6, marginTop: 4 }, labelActive: { color: "#2DD4BF" }, dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#2DD4BF", marginTop: 3 },
-  home: { width: 74, height: 74, marginTop: -32, borderRadius: 37, backgroundColor: "#7C3AED", borderWidth: 4, borderColor: "#121025", alignItems: "center", justifyContent: "center", shadowColor: "#7C3AED", shadowOpacity: 0.65, shadowRadius: 16, elevation: 12 },
-  homeActive: { backgroundColor: "#8B5CF6", shadowColor: "#8B5CF6", shadowOpacity: 0.85, shadowRadius: 20, elevation: 16 },
-  homeGlyph: { color: "#EDE9FE", fontSize: 25, lineHeight: 25, fontWeight: "900" },
-  homeGlyphActive: { color: "#FFFFFF" },
-  homeLabel: { color: "#C4B5FD", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginTop: 2 },
-  homeLabelActive: { color: "#FFFFFF" },
-  pressed: { opacity: 0.82, transform: [{ scale: 0.96 }] },
+  dock: {
+    height: 68,
+    borderRadius: 24,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    backgroundColor: "rgba(18, 14, 38, 0.96)",
+    borderWidth: 1.5,
+    borderColor: "rgba(124, 92, 246, 0.35)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 12,
+  },
+  tab: {
+    flex: 1,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    paddingVertical: 2,
+  },
+  tabActive: {
+    backgroundColor: "rgba(0, 245, 212, 0.09)",
+  },
+  iconBox: {
+    height: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  icon: {
+    fontSize: 17,
+    lineHeight: 20,
+    opacity: 0.7,
+  },
+  iconActive: {
+    opacity: 1,
+    transform: [{ scale: 1.1 }],
+  },
+  label: {
+    color: "#8E82A8",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.15,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  labelActive: {
+    color: "#00F5D4",
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "transparent",
+    marginTop: 2,
+  },
+  dotActive: {
+    backgroundColor: "#00F5D4",
+    shadowColor: "#00F5D4",
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  centerTab: {
+    flex: 1.15,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 2,
+  },
+  centerPill: {
+    width: 46,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(109, 40, 217, 0.4)",
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  centerPillActive: {
+    backgroundColor: "#7C3AED",
+    borderColor: "#00F5D4",
+    borderWidth: 1.5,
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.85,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  centerIcon: {
+    fontSize: 16,
+    lineHeight: 18,
+  },
+  centerLabel: {
+    color: "#C4B5FD",
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+    marginTop: 2,
+  },
+  centerLabelActive: {
+    color: "#FFFFFF",
+  },
+  pressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.96 }],
+  },
 });

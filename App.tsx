@@ -24,6 +24,7 @@ import { CommandCenter } from "./components/command-center";
 import { MatchInsight } from "./components/match-insight";
 import { PremiumDock, type DockDestination } from "./components/premium-dock";
 import { PlayerCollection } from "./components/player-collection";
+import { ProfileScreen } from "./components/profile-screen";
 import { SeasonHub } from "./components/season-hub";
 import { SoloChallenge } from "./components/solo-challenge";
 import { SoloLevels } from "./components/solo-levels";
@@ -263,6 +264,21 @@ function HomeScreen() {
         setSelectedWordInfo(null);
         return true;
       }
+      if (screen === "room" || screen === "game") {
+        Alert.alert(
+          "Düellodan Ayrıl",
+          "Mevcut odadan ve maçtan ayrılmak istediğinize emin misiniz?",
+          [
+            { text: "Vazgeç", style: "cancel" },
+            {
+              text: "Ayrıl",
+              style: "destructive",
+              onPress: () => leaveRoom(),
+            },
+          ]
+        );
+        return true;
+      }
       if (screen === "solo" || screen === "arcade" || screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store") {
         if (screen === "solo" && dailySession) {
           setDailySession(null);
@@ -275,7 +291,7 @@ function HomeScreen() {
 
     const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => subscription.remove();
-  }, [screen, showGuide, selectedWordInfo, dailySession]);
+  }, [screen, showGuide, selectedWordInfo, dailySession, room]);
 
   // Load token and verify auth state
   useEffect(() => {
@@ -283,6 +299,11 @@ function HomeScreen() {
     AsyncStorage.getItem(SESSION_TOKEN_KEY).then(async (token) => {
       if (!active) return;
       if (token) {
+        if (token === "guest") {
+          setAuthToken("guest");
+          setAuthLoading(false);
+          return;
+        }
         try {
           const response = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
             headers: { "Authorization": `Bearer ${token}` }
@@ -323,7 +344,7 @@ function HomeScreen() {
   const syncProgressToCloud = useCallback(async (currentProgress: PlayerProgress) => {
     try {
       const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
-      if (!token) return;
+      if (!token || token === "guest") return;
       await fetch(`${getApiBaseUrl()}/api/auth/sync-progress`, {
         method: "POST",
         headers: {
@@ -332,8 +353,8 @@ function HomeScreen() {
         },
         body: JSON.stringify({ progress: currentProgress })
       });
-    } catch (err) {
-      console.warn("[Auth] Cloud sync failed:", err);
+    } catch {
+      // Çevrimdışı veya sunucuya ulaşılamayan durumlarda ilerleme yerel AsyncStorage içinde güvenle korunur.
     }
   }, []);
 
@@ -739,7 +760,21 @@ function HomeScreen() {
     return (
       <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={closeGuide}>
         <StatusBar style="light" />
-        <CommandCenter playerName={safeName} progress={progress} daily={daily} leaderboard={leaderboard} onPlayDaily={() => setScreen("daily-lobby")} onPlayBot={startBotDuel} onSolo={() => setScreen("levels")} onNavigate={setScreen} onLeaderboard={() => setScreen("season")} onShowGuide={() => setShowGuide(true)} />
+        <CommandCenter
+          playerName={safeName}
+          progress={progress}
+          daily={daily}
+          leaderboard={leaderboard}
+          onPlayDaily={() => setScreen("daily-lobby")}
+          onPlayBot={startBotDuel}
+          onSolo={() => setScreen("levels")}
+          onNavigate={setScreen}
+          onLeaderboard={() => setScreen("season")}
+          onShowGuide={() => setShowGuide(true)}
+          onSelectTheme={(selectedTheme) => {
+            setProgress((current) => ({ ...current, selectedTheme }));
+          }}
+        />
         {dailyRewardModal && (
           <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(10, 8, 22, 0.85)", justifyContent: "center", alignItems: "center", zIndex: 150, padding: 20 }}>
             <View style={{ width: "90%", backgroundColor: "#1B1533", borderRadius: 20, borderWidth: 1.5, borderColor: "#00F5D4", padding: 24, alignItems: "center" }}>
@@ -864,28 +899,117 @@ function HomeScreen() {
   }
 
   if (screen === "season") {
-    return <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><SeasonHub playerId={playerId} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} onSelectTheme={(selectedTheme) => setProgress((current) => ({ ...current, selectedTheme }))} /></MainShell>;
+    return <MainShell active="season" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><SeasonHub playerId={playerId} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} /></MainShell>;
   }
 
   if (screen === "levels") {
-    return <MainShell active="home" onNavigate={(destination) => setScreen(destination)}><StatusBar style="light" /><SoloLevels unlockedLevel={soloUnlockedLevel} onBack={() => setScreen("home")} onSelect={openSoloLevel} /></MainShell>;
+    return (
+      <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 0, paddingTop: 0 }}>
+        <StatusBar style="light" />
+        <SoloLevels
+          unlockedLevel={soloUnlockedLevel}
+          claimedMilestones={progress.claimedMilestones ?? {}}
+          onBack={() => setScreen("home")}
+          onSelect={openSoloLevel}
+          onClaimMilestone={(milestone) => {
+            haptics.success();
+            setProgress((curr) => ({
+              ...curr,
+              coins: (curr.coins ?? 50) + milestone.coins,
+              streakShields: (curr.streakShields ?? 1) + milestone.shields,
+              xp: curr.xp + milestone.xp,
+              claimedMilestones: {
+                ...(curr.claimedMilestones ?? {}),
+                [milestone.level]: true,
+              },
+            }));
+            Alert.alert(
+              `🎁 ${milestone.title}`,
+              `Tebrikler! ${milestone.desc}\n\nKazanılan Ödüller:\n+${milestone.coins} Siber Çip\n+${milestone.shields} Seri Kalkanı\n+${milestone.xp} XP`
+            );
+          }}
+        />
+        <View style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}>
+          <PremiumDock active="home" onNavigate={(destination) => setScreen(destination)} />
+        </View>
+      </ScreenContainer>
+    );
   }
 
   if (screen === "solo") {
-    return <ScreenContainer style={{ paddingBottom: 16 }}><StatusBar style="light" /><SoloChallenge level={soloLevel} theme={dailySession?.themeId ?? progress.selectedTheme} variationSeed={dailySession?.variation} daily={Boolean(dailySession)} excludeWords={progress.history || []} onExit={() => { const destination = dailySession ? "home" : "levels"; setDailySession(null); setScreen(destination); }} onComplete={dailySession ? completeDailyChallenge : completeSoloLevel} onNext={() => setSoloLevel((current) => Math.min(MAX_SOLO_LEVEL, current + 1))} /></ScreenContainer>;
+    return (
+      <ScreenContainer style={{ paddingBottom: 16 }}>
+        <StatusBar style="light" />
+        <SoloChallenge
+          level={soloLevel}
+          theme={dailySession?.themeId ?? progress.selectedTheme}
+          variationSeed={dailySession?.variation}
+          daily={Boolean(dailySession)}
+          excludeWords={progress.history || []}
+          radarChargesBonus={progress.radarChargesBonus || 0}
+          onExit={() => {
+            const destination = dailySession ? "home" : "levels";
+            setDailySession(null);
+            setScreen(destination);
+          }}
+          onComplete={dailySession ? completeDailyChallenge : completeSoloLevel}
+          onNext={() => setSoloLevel((current) => Math.min(MAX_SOLO_LEVEL, current + 1))}
+        />
+      </ScreenContainer>
+    );
   }
 
   if (screen === "store") {
     return (
-      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}>
+      <MainShell active="store" onNavigate={(destination) => setScreen(destination)}>
         <StatusBar style="light" />
         <CyberStore
-          coins={progress.wins * 25 + progress.bestArcadeScore}
+          coins={progress.coins ?? 50}
           onBuyCoins={(amount) => {
-            setProgress((current) => ({ ...current, wins: current.wins + Math.floor(amount / 25) }));
+            setProgress((current) => ({ ...current, coins: (current.coins ?? 50) + amount }));
           }}
           onBuyRadar={() => {
-            setProgress((current) => ({ ...current, xp: current.xp + 200 }));
+            setProgress((current) => ({
+              ...current,
+              xp: current.xp + 200,
+              radarChargesBonus: (current.radarChargesBonus || 0) + 10,
+            }));
+          }}
+          onSpendCoins={(item) => {
+            setProgress((current) => {
+              const currentCoins = current.coins ?? 50;
+              if (currentCoins < item.cost) return current;
+              const nextCoins = currentCoins - item.cost;
+              if (item.rewardType === "radar") {
+                return {
+                  ...current,
+                  coins: nextCoins,
+                  radarChargesBonus: (current.radarChargesBonus || 0) + 5,
+                };
+              }
+              if (item.rewardType === "shield") {
+                return {
+                  ...current,
+                  coins: nextCoins,
+                  streakShields: (current.streakShields || 0) + 1,
+                };
+              }
+              if (item.rewardType === "xp") {
+                return {
+                  ...current,
+                  coins: nextCoins,
+                  xp: current.xp + 250,
+                };
+              }
+              if (item.rewardType === "avatar") {
+                return {
+                  ...current,
+                  coins: nextCoins,
+                  selectedAvatar: "crown",
+                };
+              }
+              return { ...current, coins: nextCoins };
+            });
           }}
           onBack={() => setScreen("home")}
         />
@@ -1001,9 +1125,10 @@ function HomeScreen() {
   if (screen === "auth" || !authToken) {
     return (
       <AuthScreen
-        onCancel={() => {
+        onCancel={async () => {
           if (!authToken) {
             setAuthToken("guest");
+            await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
           }
           setScreen("home");
         }}
@@ -1045,139 +1170,53 @@ function HomeScreen() {
     return (
       <MainShell active="missions" onNavigate={(destination) => setScreen(destination)}>
         <StatusBar style="light" />
-        <MissionsScreen progress={progress} onBack={() => setScreen("home")} onPlayDaily={() => setScreen("daily-lobby")} />
+        <MissionsScreen
+          progress={progress}
+          onBack={() => setScreen("home")}
+          onPlayDaily={() => setScreen("daily-lobby")}
+          onClaimWeekly={(missionId, xp, shield) => {
+            haptics.success();
+            setProgress((current) => ({
+              ...current,
+              xp: current.xp + xp,
+              streakShields: (current.streakShields || 0) + (shield || 0),
+              weeklyClaimed: { ...current.weeklyClaimed, [missionId]: true },
+            }));
+          }}
+        />
       </MainShell>
     );
   }
 
   if (screen === "profile") {
-    const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
     return (
       <MainShell active="profile" onNavigate={(destination) => setScreen(destination)}>
         <StatusBar style="light" />
-        <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.subHeader}>
-            <Pressable onPress={() => setScreen("home")} style={styles.backButton}>
-              <Text style={styles.backText}>‹</Text>
-            </Pressable>
-            <View style={[styles.profileAvatarLarge, { backgroundColor: activeAvatar.surface, borderColor: activeAvatar.color, borderWidth: 1.5 }]}>
-              <Text style={[styles.profileAvatarLargeText, { color: activeAvatar.color, fontSize: 24 }]}>{activeAvatar.icon}</Text>
-            </View>
-            <View>
-              <Text style={styles.subHeaderKicker}>OYUNCU PROFİLİ</Text>
-              <Text style={styles.subHeaderTitle}>{safeName} (SEVİYE {getPlayerLevel(progress.xp)})</Text>
-            </View>
-          </View>
-          
-          <View style={styles.profilePanel}>
-            <View style={styles.statsGrid}>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>SEVİYE</Text>
-                <Text style={styles.statValue}>{getPlayerLevel(progress.xp)}</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>XP PUANI</Text>
-                <Text style={styles.statValue}>{progress.xp}</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={styles.statLabel}>GALİBİYET</Text>
-                <Text style={styles.statValue}>{progress.wins}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.statsRow}>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>En İyi Skor:</Text>
-                <Text style={styles.miniStatValue}>{progress.bestScore} p</Text>
-              </View>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>En İyi Tempo:</Text>
-                <Text style={styles.miniStatValue}>{progress.bestTempo || "—"} K/D</Text>
-              </View>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>Seri:</Text>
-                <Text style={styles.miniStatValue}>{progress.streak} Gün</Text>
-              </View>
-            </View>
-
-            {/* Word Intelligence & Vocabulary Insights */}
-            <View style={[styles.statsRow, { marginTop: 6, backgroundColor: "rgba(0, 245, 212, 0.05)", borderColor: "rgba(0, 245, 212, 0.2)" }]}>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>📚 Çözülen Kelime:</Text>
-                <Text style={[styles.miniStatValue, { color: "#00F5D4" }]}>
-                  {progress.history ? progress.history.length : 0}
-                </Text>
-              </View>
-              <View style={styles.miniStat}>
-                <Text style={styles.miniStatLabel}>⚡ En Uzun Rota:</Text>
-                <Text style={[styles.miniStatValue, { color: "#FFC24A" }]}>
-                  {progress.history && progress.history.length
-                    ? [...progress.history].sort((a, b) => b.length - a.length)[0]
-                    : "—"}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.inputLabel}>GÖRÜNEN AD</Text>
-            <View style={styles.inputContainer}>
-              <TextInput value={playerName} onChangeText={setPlayerName} maxLength={16} autoCapitalize="characters" style={styles.profileInput} placeholder="OYUNCU" placeholderTextColor="#6F879A" />
-              <Text style={styles.inputIcon}>✏️</Text>
-            </View>
-
-            <Text style={[styles.inputLabel, { marginTop: 16 }]}>OYUN AYARLARI</Text>
-            <View style={styles.settingsBox}>
-              <View style={styles.settingRow}>
-                <Text style={styles.settingLabel}>SES EFEKTLERİ</Text>
-                <Switch value={sfxOn} onValueChange={toggleSfx} trackColor={{ false: "#121025", true: "#00F5D4" }} thumbColor={sfxOn ? "#FFFFFF" : "#6E5B9D"} />
-              </View>
-              <View style={[styles.settingRow, { borderBottomWidth: 0, paddingBottom: 0, marginTop: 12 }]}>
-                <Text style={styles.settingLabel}>TİTREŞİM (HAPTICS)</Text>
-                <Switch value={hapticsOn} onValueChange={toggleHaptics} trackColor={{ false: "#121025", true: "#00F5D4" }} thumbColor={hapticsOn ? "#FFFFFF" : "#6E5B9D"} />
-              </View>
-            </View>
-          </View>
-          
-          <PlayerCollection progress={progress} onSelectAvatar={(selectedAvatar) => { haptics.light(); setProgress((current) => ({ ...current, selectedAvatar })); }} />
-          
-          <View style={styles.profileHint}>
-            <Text style={styles.profileHintTitle}>ETKİN KELİME PAKETİ</Text>
-            <Text style={styles.profileHintCopy}>Sezon merkezinden temalı kelime paketini seç ve tekli avların rotasını değiştir.</Text>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable onPress={() => setScreen("season")} style={styles.profileHintButton}>
-                <Text style={styles.profileHintButtonText}>SEZON MERKEZİ</Text>
-              </Pressable>
-              <Pressable 
-                onPress={async () => {
-                  haptics.error();
-                  await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
-                  setAuthToken(null);
-                  setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
-                  setPlayerName("OYUNCU");
-                  setProgress(DEFAULT_PROGRESS);
-                  setScreen("home");
-                }} 
-                style={[styles.profileHintButton, { backgroundColor: "#EF4444" }]}
-              >
-                <Text style={[styles.profileHintButtonText, { color: "#FFFFFF" }]}>ÇIKIŞ YAP</Text>
-              </Pressable>
-            </View>
-
-            <Pressable
-              onPress={() => {
-                Alert.alert(
-                  "🔒 GİZLİLİK POLİTİKASI",
-                  "Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.\n\nİletişim & Veri Talepleri: destek@kelimepatlat.app",
-                  [{ text: "TAMAM" }]
-                );
-              }}
-              style={{ marginTop: 14, alignItems: "center" }}
-            >
-              <Text style={{ color: "#7C5CF6", fontSize: 10, fontWeight: "900", letterSpacing: 0.8, textDecorationLine: "underline" }}>
-                🔒 GİZLİLİK POLİTİKASI (PRIVACY POLICY)
-              </Text>
-            </Pressable>
-          </View>
-        </ScrollView>
+        <ProfileScreen
+          playerName={safeName}
+          onUpdatePlayerName={setPlayerName}
+          progress={progress}
+          onSelectAvatar={(selectedAvatar) => {
+            setProgress((current) => ({ ...current, selectedAvatar }));
+          }}
+          onSelectTheme={(selectedTheme) => {
+            setProgress((current) => ({ ...current, selectedTheme }));
+          }}
+          sfxOn={sfxOn}
+          toggleSfx={toggleSfx}
+          hapticsOn={hapticsOn}
+          toggleHaptics={toggleHaptics}
+          onBack={() => setScreen("home")}
+          onLogout={async () => {
+            haptics.error();
+            await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+            setAuthToken(null);
+            setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
+            setPlayerName("OYUNCU");
+            setProgress(DEFAULT_PROGRESS);
+            setScreen("home");
+          }}
+        />
       </MainShell>
     );
   }
@@ -1188,7 +1227,7 @@ function HomeScreen() {
       <ScreenContainer style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28 }}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.roomScroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.navRow}><Pressable onPress={leaveRoom} style={styles.backButton}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.navTitle}>BOT DÜELLOSU</Text><View style={styles.navSpacer} /></View>
+        <View style={styles.navRow}><Pressable onPress={leaveRoom} style={styles.backButton}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.navTitle}>{room.players.some((p) => p.isBot) ? "BOT DÜELLOSU" : "CANLI DÜELLO LOBİSİ"}</Text><View style={styles.navSpacer} /></View>
         <View style={styles.roomHero}>
           <Text style={styles.eyebrow}>DAVET KODU</Text>
           <Text style={styles.roomCode}>{room.code}</Text>
@@ -1398,7 +1437,7 @@ function ScoreBadge({ name, score, words, total, active, won, accent, combo }: {
 
 function MainShell({ active, children, onNavigate, showGuide, onCloseGuide }: { active: DockDestination; children: React.ReactNode; onNavigate: (destination: DockDestination) => void; showGuide?: boolean; onCloseGuide?: () => void }) {
   return (
-    <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+    <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 14, paddingTop: 6 }}>
       <View style={styles.shell}>
         {children}
         <View style={styles.fixedDock}>
@@ -1439,7 +1478,7 @@ const battleStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   shell: { flex: 1 },
-  fixedDock: { position: "absolute", left: 0, right: 0, bottom: 0 },
+  fixedDock: { position: "absolute", left: 0, right: 0, bottom: 8 },
   homeScroll: { paddingBottom: 132, flexGrow: 1 },
   subHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   subHeaderKicker: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },

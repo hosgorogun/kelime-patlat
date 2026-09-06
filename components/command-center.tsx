@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
-import { Alert, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getRank, getPlayerLevel, getActiveCyberTitle, missionProgress, SEASON_MISSIONS, THEME_PACKS, AVATARS, type DailyChallenge, type PlayerProgress } from "@/shared/progression";
+import { getRank, getPlayerLevel, getActiveCyberTitle, THEME_PACKS, AVATARS, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
-type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store";
+type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "missions";
 
 type CommandCenterProps = {
   playerName: string;
@@ -15,19 +16,17 @@ type CommandCenterProps = {
   onPlayBot: (size: 4 | 6 | 8 | 10) => void;
   onSolo: () => void;
   onNavigate: (destination: NavKey) => void;
-  onLeaderboard: () => void;
+  onLeaderboard?: () => void;
   onShowGuide: () => void;
+  onSelectTheme?: (themeId: ThemePackId) => void;
 };
 
-function percent(current: number, target: number): `${number}%` {
-  return `${Math.min(100, Math.round(current / target * 100))}%`;
-}
-
-export function CommandCenter({ playerName, progress, daily, leaderboard, onPlayDaily, onPlayBot, onSolo, onNavigate, onLeaderboard, onShowGuide }: CommandCenterProps) {
+export function CommandCenter({ playerName, progress, daily, leaderboard, onPlayDaily, onPlayBot, onSolo, onNavigate, onLeaderboard, onShowGuide, onSelectTheme }: CommandCenterProps) {
+  const [showThemeModal, setShowThemeModal] = useState(false);
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
   const rank = getRank(progress);
-  const activeTheme = THEME_PACKS.find((pack) => pack.id === daily.themeId) ?? THEME_PACKS[0]!;
+  const activeTheme = THEME_PACKS.find((pack) => pack.id === (progress.selectedTheme || daily.themeId)) ?? THEME_PACKS[0]!;
   const dailyDone = progress.dailyCompletedId === daily.id;
 
   useEffect(() => {
@@ -66,45 +65,58 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
 
   return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-    {/* Cockpit Profile Widget */}
+    {/* Cockpit Profile & Control Bar with Realtime Currencies */}
     <View style={styles.topbar}>
-      <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
-        <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
-          <Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Text numberOfLines={1} style={styles.name}>{playerName}</Text>
-            <Text style={styles.cyberBadge}>{getActiveCyberTitle(progress)}</Text>
+      <View style={styles.topbarRow}>
+        <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
+          <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
+            <Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text>
           </View>
-          <Text numberOfLines={1} style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank} · {progress.xp} XP</Text>
-        </View>
-      </Pressable>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text numberOfLines={1} style={styles.name}>{playerName}</Text>
+              <Text style={styles.cyberBadge}>{getActiveCyberTitle(progress)}</Text>
+            </View>
+            <Text numberOfLines={1} style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank}</Text>
+          </View>
+        </Pressable>
 
-      <View style={styles.topActions}>
+        <View style={styles.topActionsGroup}>
+          <Pressable 
+            onPress={onShowGuide} 
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
+          >
+            <Text style={styles.topIconText}>❓</Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => onNavigate("profile")} 
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
+          >
+            <Text style={styles.topIconText}>⚙️</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Persistent Resource Rail (Shields & Chips with Store Shortcut) */}
+      <View style={styles.resourceRow}>
+        <View style={styles.resourcePill}>
+          <Text style={styles.resourceIcon}>🛡️</Text>
+          <Text style={styles.resourceLabel}>KALKAN</Text>
+          <Text style={styles.resourceValue}>{progress.streakShields ?? 1}</Text>
+        </View>
+
         <Pressable 
           onPress={() => onNavigate("store")} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={({ pressed }) => [styles.guidePill, { backgroundColor: "#2A1D4E", borderColor: "#FFC24A" }, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.resourcePill, styles.coinPill, pressed && styles.pressed]}
         >
-          <Text style={[styles.guideText, { color: "#FFC24A" }]}>🛒 MAĞAZA</Text>
-        </Pressable>
-        <Pressable 
-          onPress={() => {
-            onShowGuide();
-          }} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={({ pressed }) => [styles.guidePill, pressed && styles.pressed]}
-        >
-          <Text style={styles.guideText}>❓ REHBER</Text>
-        </Pressable>
-        <Pressable 
-          onPress={onLeaderboard} 
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={({ pressed }) => [styles.livePill, pressed && styles.pressed]}
-        >
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LİDERLİK</Text>
+          <Text style={styles.resourceIcon}>🪙</Text>
+          <Text style={styles.resourceLabel}>ÇİP</Text>
+          <Text style={styles.coinValue}>{progress.coins ?? 50}</Text>
+          <View style={styles.plusBadge}>
+            <Text style={styles.plusText}>＋</Text>
+          </View>
         </Pressable>
       </View>
     </View>
@@ -133,85 +145,79 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       </View>
       
       <View style={styles.signalFooter}>
-        <View style={styles.footerCol}><Text style={styles.signalLabel}>ORT. TEMPO</Text><Text style={styles.signalValue}>{progress.bestTempo || "—"}<Text style={styles.signalUnit}> K/DK</Text></Text></View>
+        <View style={styles.footerCol}>
+          <Text style={styles.signalLabel}>ORT. TEMPO</Text>
+          <Text style={styles.signalValue}>{progress.bestTempo || 0} <Text style={styles.signalUnit}>K/DK</Text></Text>
+        </View>
         <View style={styles.signalRule} />
-        <View style={styles.footerCol}><Text style={styles.signalLabel}>GALİBİYET</Text><Text style={styles.signalValue}>{progress.wins}<Text style={styles.signalUnit}> MAÇ</Text></Text></View>
+        <View style={styles.footerCol}>
+          <Text style={styles.signalLabel}>GALİBİYET</Text>
+          <Text style={styles.signalValue}>{progress.wins} <Text style={styles.signalUnit}>MAÇ</Text></Text>
+        </View>
       </View>
     </View>
 
-    {/* Split Row for Daily and Arcade Challenges */}
+    {/* Event Hub (Daily Route & Arcade) */}
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>ETKİNLİK MERKEZİ</Text><Text style={styles.sectionMeta}>ÖZEL GÖREVLER</Text></View>
     <View style={styles.cardsRow}>
-      <Pressable
-        onPress={() => {
-          if (dailyDone) {
-            Alert.alert("🔒 Günlük Rota Kilitlendi", "Bugünkü sabit rotayı tamamladın! Yarın yeni bir kelime paketi ve farklı bir rota seni bekliyor olacak.");
-          } else {
-            onPlayDaily();
-          }
-        }}
-        style={({ pressed }) => [
-          styles.columnCard,
-          { borderColor: activeTheme.accent },
-          dailyDone && { opacity: 0.5 },
-          pressed && !dailyDone && styles.pressed
-        ]}
-      >
-        <View style={[styles.cardIconCircle, { backgroundColor: activeTheme.glow, borderColor: activeTheme.accent }]}><Text style={[styles.cardIconText, { color: activeTheme.accent }]}>{activeTheme.icon}</Text></View>
-        <Text style={[styles.cardKicker, { color: activeTheme.accent }]}>SABİT ROTA</Text>
-        <Text style={styles.cardTitle}>{dailyDone ? "TAMAMLANDI" : daily.title}</Text>
-        <Text numberOfLines={3} style={styles.cardBody}>{dailyDone ? `Yarın yeni günlük rota açılır.` : `${daily.level <= 7 ? "6×6" : "8×8"} sabit tahtada yarış.`}</Text>
+      <Pressable onPress={() => setShowThemeModal(true)} style={({ pressed }) => [styles.columnCard, { borderColor: dailyDone ? "#332653" : activeTheme.accent }, pressed && styles.pressed]}>
+        <View style={[styles.cardIconCircle, { borderColor: dailyDone ? "#524376" : activeTheme.accent, backgroundColor: dailyDone ? "#201838" : activeTheme.glow }]}>
+          <Text style={[styles.cardIconText, { color: dailyDone ? "#82759F" : activeTheme.accent }]}>{activeTheme.icon}</Text>
+        </View>
+        <Text style={[styles.cardKicker, { color: dailyDone ? "#82759F" : activeTheme.accent }]}>{dailyDone ? "SABİT ROTA" : "BUGÜNÜN ROTASI"}</Text>
+        <Text style={styles.cardTitle}>{dailyDone ? "TAMAMLANDI" : daily.title.toUpperCase()}</Text>
+        <Text style={styles.cardBody}>{dailyDone ? "Paketi değiştir veya tekrar oyna." : "Dokun ve kelime paketini seç, rotayı ateşle!"}</Text>
       </Pressable>
 
       <Pressable onPress={() => onNavigate("arcade")} style={({ pressed }) => [styles.columnCard, { borderColor: "#FFD000" }, pressed && styles.pressed]}>
-        <View style={[styles.cardIconCircle, { backgroundColor: "rgba(255, 208, 0, 0.15)", borderColor: "#FFD000" }]}><Text style={[styles.cardIconText, { color: "#FFD000" }]}>⚡</Text></View>
+        <View style={[styles.cardIconCircle, { borderColor: "#FFD000", backgroundColor: "rgba(255, 208, 0, 0.12)" }]}>
+          <Text style={[styles.cardIconText, { color: "#FFD000" }]}>⚡</Text>
+        </View>
         <Text style={[styles.cardKicker, { color: "#FFD000" }]}>ARCADE</Text>
         <Text style={styles.cardTitle}>SKOR YARIŞI</Text>
-        <Text numberOfLines={3} style={styles.cardBody}>Süre dolmadan en çok kelimeyi bağla ve rekor kır!</Text>
+        <Text style={styles.cardBody}>Süre dolmadan en çok kelimeyi bağla ve rekor kır!</Text>
       </Pressable>
     </View>
 
-    {/* Tek Oyuncu Banner */}
+    {/* Single Player Journey Card */}
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>TEK OYUNCU</Text><Text style={styles.sectionMeta}>SEVİYE YOLU</Text></View>
-    <Pressable onPress={onSolo} style={({ pressed }) => [styles.soloCard, pressed && styles.pressed]}>
-      <View style={styles.soloLeft}>
-        <View style={styles.soloIconWrap}><Text style={styles.soloIcon}>🏆</Text></View>
+    <Pressable onPress={onSolo} style={({ pressed }) => [styles.soloBanner, pressed && styles.pressed]}>
+      <View style={styles.soloSkin}>
+        <Text style={styles.soloTrophy}>🏆</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.soloKicker}>KLASİK MOD</Text>
-          <Text style={styles.soloTitle}>SEVİYE YOLCULUĞU</Text>
-          <Text style={styles.soloBody}>Seviye seviye zorlaşan kelime operasyonları. Ustalaş ve tüm seviyeleri aç.</Text>
+          <Text style={styles.soloEyebrow}>KLASİK MOD</Text>
+          <Text style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
+          <Text style={styles.soloDesc}>Seviye seviye zorlaşan kelime operasyonları. Ustalık kazan ve tüm seviyeleri aç.</Text>
         </View>
+        <Text style={styles.soloArrow}>›</Text>
       </View>
-      <View style={styles.soloChevron}><Text style={styles.soloChevronText}>›</Text></View>
     </Pressable>
 
-    {/* Bot Duel Grid */}
-    <View style={styles.sectionHead}><Text style={styles.sectionTitle}>HIZLI OYUN</Text><Text style={styles.sectionMeta}>IZGARA SEÇ</Text></View>
+    {/* Fast Bot Duels */}
+    <View style={styles.sectionHead}><Text style={styles.sectionTitle}>HIZLI ANTRENMAN</Text><Text style={styles.sectionMeta}>BOT DÜELLOSU</Text></View>
     <View style={styles.modeGrid}>
-      <Pressable onPress={() => onPlayBot(4)} style={({ pressed }) => [styles.modeNode, { borderColor: "#FF758C" }, pressed && styles.pressed]}>
+      <Pressable onPress={() => onPlayBot(4)} style={({ pressed }) => [styles.modeNode, { borderColor: "#00F5D4" }, pressed && styles.pressed]}>
         <View style={styles.modeNodeHeader}>
-          <Text style={[styles.modeSize, { color: "#FF758C" }]}>4×4</Text>
-          <View style={[styles.modeMiniDot, { backgroundColor: "#FF758C" }]} />
+          <Text style={[styles.modeSize, { color: "#00F5D4" }]}>4×4</Text>
+          <View style={[styles.modeMiniDot, { backgroundColor: "#00F5D4" }]} />
         </View>
-        <Text style={styles.modeTitle}>4x4</Text>
-        <Text style={styles.modeMeta}>55 SN</Text>
+        <Text style={styles.modeTitle}>4x4 Hızlı</Text>
+        <Text style={styles.modeMeta}>45 SN</Text>
       </Pressable>
 
-      <Pressable onPress={handlePlayBot6} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked6 ? "#4C4660" : "#38BDF8", opacity: isLocked6 ? 0.65 : 1 }, pressed && styles.pressed]}>
+      <Pressable onPress={handlePlayBot6} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked6 ? "#4C4660" : "#A78BFA", opacity: isLocked6 ? 0.65 : 1 }, pressed && styles.pressed]}>
         <View style={styles.modeNodeHeader}>
-          <Text style={[styles.modeSize, { color: isLocked6 ? "#6B7280" : "#38BDF8" }]}>{isLocked6 ? "🔒" : "6×6"}</Text>
-          <View style={[styles.modeMiniDot, { backgroundColor: isLocked6 ? "#6B7280" : "#38BDF8" }]} />
+          <Text style={[styles.modeSize, { color: isLocked6 ? "#6B7280" : "#A78BFA" }]}>{isLocked6 ? "🔒" : "6×6"}</Text>
+          <View style={[styles.modeMiniDot, { backgroundColor: isLocked6 ? "#6B7280" : "#A78BFA" }]} />
         </View>
-        <Text style={styles.modeTitle}>{isLocked6 ? "6x6 (Sev.5)" : "6x6"}</Text>
-        <Text style={styles.modeMeta}>75 SN</Text>
+        <Text style={styles.modeTitle}>{isLocked6 ? "6x6 (Sev.5)" : "6x6 Akış"}</Text>
+        <Text style={styles.modeMeta}>65 SN</Text>
       </Pressable>
-    </View>
 
-    <View style={[styles.modeGrid, { marginTop: 10 }]}>
-      <Pressable onPress={handlePlayBot8} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked8 ? "#4C4660" : "#A78BFA", opacity: isLocked8 ? 0.65 : 1 }, pressed && styles.pressed]}>
+      <Pressable onPress={handlePlayBot8} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked8 ? "#4C4660" : "#F59E0B", opacity: isLocked8 ? 0.65 : 1 }, pressed && styles.pressed]}>
         <View style={styles.modeNodeHeader}>
-          <Text style={[styles.modeSize, { color: isLocked8 ? "#6B7280" : "#A78BFA" }]}>{isLocked8 ? "🔒" : "8×8"}</Text>
-          <View style={[styles.modeMiniDot, { backgroundColor: isLocked8 ? "#6B7280" : "#A78BFA" }]} />
+          <Text style={[styles.modeSize, { color: isLocked8 ? "#6B7280" : "#F59E0B" }]}>{isLocked8 ? "🔒" : "8×8"}</Text>
+          <View style={[styles.modeMiniDot, { backgroundColor: isLocked8 ? "#6B7280" : "#F59E0B" }]} />
         </View>
         <Text style={styles.modeTitle}>{isLocked8 ? "8x8 (Sev.8)" : "8x8"}</Text>
         <Text style={styles.modeMeta}>90 SN</Text>
@@ -227,37 +233,146 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       </Pressable>
     </View>
 
-    {/* Season Missions */}
-    <View style={styles.sectionHead}><Text style={styles.sectionTitle}>SEZON GÖREVLERİ</Text><Text style={styles.sectionMeta}>ÖDÜLLER</Text></View>
-    <View style={styles.missionStack}>{SEASON_MISSIONS.map((mission) => {
-      const current = missionProgress(progress, mission);
-      return <View key={mission.id} style={styles.mission}><View style={styles.missionIcon}><Text style={styles.missionIconText}>{mission.icon}</Text></View><View style={styles.missionCopy}><View style={styles.missionTop}><Text style={styles.missionTitle}>{mission.title}</Text><Text style={styles.missionReward}>+{mission.rewardXp} XP</Text></View><Text style={styles.missionBody}>{mission.description}</Text><View style={styles.missionProgress}><View style={styles.missionTrack}><View style={[styles.missionFill, { width: percent(current, mission.target) }]} /></View><Text style={styles.missionCount}>{current}/{mission.target}</Text></View></View></View>;
-    })}</View>
+    {/* Quick Hub Jumpers: Görevler & Liderlik */}
+    <View style={styles.hubBannersRow}>
+      <Pressable 
+        onPress={() => onNavigate("missions")} 
+        style={({ pressed }) => [styles.hubBanner, styles.missionsBanner, pressed && styles.pressed]}
+      >
+        <Text style={styles.hubBannerGlyph}>⚡</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.hubBannerTitle}>GÖREVLER</Text>
+          <Text style={styles.hubBannerSub}>Haftalık hedefler ve XP</Text>
+        </View>
+        <Text style={styles.hubBannerArrow}>→</Text>
+      </Pressable>
 
-    {/* Season Pulse Leaderboard Strip */}
-    <View style={styles.sectionHead}><Text style={styles.sectionTitle}>SEZONUN EN İYİLERİ</Text><Pressable onPress={onLeaderboard}><Text style={styles.sectionLink}>TÜM LİSTE</Text></Pressable></View>
-    <Pressable onPress={onLeaderboard} style={({ pressed }) => [styles.leaderStrip, pressed && styles.pressed]}>
-      <View style={styles.leaderTop}><Text style={styles.leaderTitle}>CANLI LİDERLİK TABLOSU</Text><Text style={styles.leaderArrow}>↗</Text></View>
-      {leaderboard.length ? leaderboard.slice(0, 3).map((entry, index) => <View key={entry.id} style={styles.leaderRow}><Text style={styles.leaderRank}>0{index + 1}</Text><Text numberOfLines={1} style={styles.leaderName}>{entry.name}</Text><Text style={styles.leaderScore}>{entry.score}</Text></View>) : <Text style={styles.leaderEmpty}>Sezonun ilk puanını sen yaz.</Text>}
-    </Pressable>
+      <Pressable 
+        onPress={() => onNavigate("season")} 
+        style={({ pressed }) => [styles.hubBanner, styles.seasonBanner, pressed && styles.pressed]}
+      >
+        <Text style={styles.hubBannerGlyph}>🏆</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.hubBannerTitle}>LİDER & ARKADAŞ</Text>
+          <Text style={styles.hubBannerSub}>Sıralama ve topluluk</Text>
+        </View>
+        <Text style={styles.hubBannerArrow}>→</Text>
+      </Pressable>
+    </View>
+
+    {/* Kelime Paketleri Seçim Modalı */}
+    <Modal
+      visible={showThemeModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowThemeModal(false)}
+    >
+      <Pressable
+        style={styles.modalBackdrop}
+        onPress={() => setShowThemeModal(false)}
+      >
+        <Pressable style={styles.modalDialog} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.modalHeader}>
+            <View>
+              <Text style={styles.modalKicker}>GÜNÜN SABİT ROTASI</Text>
+              <Text style={styles.modalTitle}>KELİME PAKETİ SEÇ</Text>
+            </View>
+            <Pressable
+              onPress={() => setShowThemeModal(false)}
+              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+              style={styles.modalCloseBtn}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.modalSub}>
+            Oynamak istediğin kelime tarzını seç. Seçtiğin tema oyundaki kelime havuzunu belirler.
+          </Text>
+
+          <View style={styles.themeGrid}>
+            {THEME_PACKS.map((pack) => {
+              const isCurrent = (progress.selectedTheme || "nature") === pack.id;
+              return (
+                <Pressable
+                  key={pack.id}
+                  onPress={() => {
+                    triggerHapticSelection();
+                    onSelectTheme?.(pack.id);
+                  }}
+                  style={({ pressed }) => [
+                    styles.themeCard,
+                    isCurrent && { borderColor: pack.accent, backgroundColor: pack.glow },
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={styles.themeCardTop}>
+                    <View style={[styles.themeIconCircle, { borderColor: pack.accent }]}>
+                      <Text style={[styles.themeIconTxt, { color: pack.accent }]}>{pack.icon}</Text>
+                    </View>
+                    {isCurrent && (
+                      <View style={[styles.themeActivePill, { backgroundColor: pack.accent }]}>
+                        <Text style={styles.themeActivePillText}>✓ AKTİF</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text numberOfLines={1} style={[styles.themePackLabel, { color: pack.accent }]}>
+                    {pack.label}
+                  </Text>
+                  <Text numberOfLines={1} style={styles.themePackTitle}>
+                    {pack.title}
+                  </Text>
+                  <Text numberOfLines={2} style={styles.themePackDesc}>
+                    {pack.description}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Pressable
+            onPress={() => {
+              triggerHapticSuccess();
+              setShowThemeModal(false);
+              onPlayDaily();
+            }}
+            style={({ pressed }) => [styles.modalStartBtn, pressed && styles.pressed]}
+          >
+            <Text style={styles.modalStartBtnText}>
+              {dailyDone ? "TEKRAR OYNA" : "BU PAKETLE BAŞLAT"}
+            </Text>
+            <Text style={styles.modalStartBtnArrow}>🚀</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
   </ScrollView>;
 }
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 136 }, 
-  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 10, borderRadius: 22, backgroundColor: "rgba(22, 17, 44, 0.8)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.35)", marginBottom: 4 }, 
+  topbar: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: 22, backgroundColor: "rgba(22, 17, 44, 0.9)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.35)", marginBottom: 4 }, 
+  topbarRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   identity: { flexDirection: "row", gap: 10, alignItems: "center", flex: 1, marginRight: 8 }, 
   avatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, backgroundColor: "#241B47", justifyContent: "center", alignItems: "center" }, 
   avatarText: { color: "#FFF9FC", fontWeight: "900" }, 
   name: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", letterSpacing: 0.4 }, 
   cyberBadge: { color: "#00F5D4", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
   rank: { color: "#E9D5FF", fontSize: 8, fontWeight: "800", letterSpacing: 0.6, marginTop: 2 }, 
-  topActions: { flexDirection: "row", gap: 6, alignItems: "center" },
-  guidePill: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 7, borderRadius: 16, backgroundColor: "rgba(139, 92, 246, 0.2)", borderWidth: 1, borderColor: "#8B5CF6" },
-  guideText: { color: "#C4B5FD", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-  livePill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 16, backgroundColor: "rgba(29, 24, 55, 0.8)", borderWidth: 1, borderColor: "rgba(76, 62, 115, 0.5)" }, 
-  liveDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#00F5D4" }, 
-  liveText: { color: "#FFF9FC", fontSize: 8, fontWeight: "900", letterSpacing: 0.6 },
+  
+  topActionsGroup: { flexDirection: "row", gap: 6, alignItems: "center" },
+  topIconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(124, 92, 246, 0.15)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.3)", alignItems: "center", justifyContent: "center" },
+  topIconText: { fontSize: 14 },
+  
+  resourceRow: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(124, 92, 246, 0.15)" },
+  resourcePill: { flex: 1, flexDirection: "row", alignItems: "center", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: "rgba(23, 17, 43, 0.7)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)" },
+  coinPill: { backgroundColor: "rgba(255, 194, 74, 0.1)", borderColor: "rgba(255, 194, 74, 0.35)" },
+  resourceIcon: { fontSize: 14, marginRight: 6 },
+  resourceLabel: { color: "#A799C7", fontSize: 9, fontWeight: "900", letterSpacing: 0.5, flex: 1 },
+  resourceValue: { color: "#FFF", fontSize: 12, fontWeight: "900" },
+  coinValue: { color: "#FFD000", fontSize: 12, fontWeight: "900", marginRight: 6 },
+  plusBadge: { width: 18, height: 18, borderRadius: 9, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center" },
+  plusText: { color: "#1A102B", fontSize: 12, fontWeight: "900", lineHeight: 14 },
   
   signalDeck: { minHeight: 280, marginTop: 16, padding: 22, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(43, 33, 88, 0.5)", borderWidth: 1, borderColor: "rgba(127, 103, 211, 0.35)", position: "relative" }, 
   radarRing: { position: "absolute", right: -35, top: -42, width: 190, height: 190, borderRadius: 100, borderWidth: 1.5, zIndex: 1 }, 
@@ -283,7 +398,6 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22, marginBottom: 8 }, 
   sectionTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }, 
   sectionMeta: { color: "#D8B4FE", fontSize: 8, fontWeight: "900", letterSpacing: 0.65 }, 
-  sectionLink: { color: "#FFD000", fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
   
   cardsRow: { flexDirection: "row", gap: 10, width: "100%" },
   columnCard: { flex: 1, minHeight: 135, borderRadius: 20, borderWidth: 1.5, padding: 14, backgroundColor: "rgba(33, 26, 61, 0.4)" },
@@ -293,6 +407,14 @@ const styles = StyleSheet.create({
   cardTitle: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 4, textShadowColor: "rgba(255, 255, 255, 0.15)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, 
   cardBody: { color: "#E9D5FF", fontSize: 9, lineHeight: 13, marginTop: 4 },
   
+  soloBanner: { borderRadius: 20, borderWidth: 1.5, borderColor: "rgba(124, 92, 246, 0.45)", backgroundColor: "rgba(31, 23, 60, 0.5)", overflow: "hidden", marginTop: 2 },
+  soloSkin: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
+  soloTrophy: { fontSize: 26 },
+  soloEyebrow: { color: "#FFD000", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 },
+  soloHeading: { color: "#FFF", fontSize: 13, fontWeight: "900", marginTop: 2 },
+  soloDesc: { color: "#C4B5FD", fontSize: 9, lineHeight: 13, marginTop: 3 },
+  soloArrow: { color: "#A78BFA", fontSize: 22, fontWeight: "300" },
+  
   modeGrid: { flexDirection: "row", gap: 10 }, 
   modeNode: { flex: 1, minHeight: 110, borderRadius: 20, padding: 12, backgroundColor: "rgba(32, 26, 57, 0.4)", borderWidth: 1.5, justifyContent: "space-between" }, 
   modeNodeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -301,37 +423,157 @@ const styles = StyleSheet.create({
   modeTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900", marginTop: 8 }, 
   modeMeta: { color: "#DDD6FE", fontSize: 9, fontWeight: "800", marginTop: 2 },
   
-  missionStack: { gap: 8 }, 
-  mission: { padding: 12, borderRadius: 17, backgroundColor: "rgba(29, 24, 53, 0.4)", borderWidth: 1, borderColor: "rgba(61, 49, 94, 0.35)", flexDirection: "row", gap: 10 }, 
-  missionIcon: { width: 31, height: 31, borderRadius: 11, backgroundColor: "#332653", justifyContent: "center", alignItems: "center" }, 
-  missionIconText: { color: "#FFD000", fontSize: 15 }, 
-  missionCopy: { flex: 1 }, 
-  missionTop: { flexDirection: "row", justifyContent: "space-between", gap: 10 }, 
-  missionTitle: { color: "#F6F1FF", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 }, 
-  missionReward: { color: "#FFD000", fontSize: 8, fontWeight: "900" }, 
-  missionBody: { color: "#F1F5F9", fontSize: 9, marginTop: 3 }, 
-  missionProgress: { marginTop: 8, flexDirection: "row", alignItems: "center", gap: 7 }, 
-  missionTrack: { flex: 1, height: 5, borderRadius: 4, backgroundColor: "#413461", overflow: "hidden" }, 
-  missionFill: { height: "100%", backgroundColor: "#00F5D4", borderRadius: 4 }, 
-  missionCount: { color: "#FFFFFF", fontSize: 8, fontWeight: "900" },
-  
-  leaderStrip: { padding: 16, borderRadius: 20, backgroundColor: "rgba(37, 29, 73, 0.4)", borderWidth: 1.5, borderColor: "rgba(87, 69, 141, 0.3)" }, 
-  leaderTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }, 
-  leaderTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900", letterSpacing: 0.7 }, 
-  leaderArrow: { color: "#00F5D4", fontSize: 15, fontWeight: "900" }, 
-  leaderRow: { height: 28, flexDirection: "row", alignItems: "center", gap: 9 }, 
-  leaderRank: { color: "#D8B4FE", width: 19, fontSize: 8, fontWeight: "900" }, 
-  leaderName: { flex: 1, color: "#FFFFFF", fontSize: 11, fontWeight: "800" }, 
-  leaderScore: { color: "#FFD000", fontSize: 11, fontWeight: "900" }, 
-  leaderEmpty: { color: "#F1F5F9", fontSize: 10 }, 
-  soloCard: { flexDirection: "row", alignItems: "center", padding: 16, borderRadius: 22, backgroundColor: "rgba(30, 18, 70, 0.55)", borderWidth: 1.5, borderColor: "#7C3AED", shadowColor: "#7C3AED", shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
-  soloLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 14 },
-  soloIconWrap: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(124, 58, 237, 0.2)", borderWidth: 1.5, borderColor: "#8B5CF6", alignItems: "center", justifyContent: "center" },
-  soloIcon: { fontSize: 26 },
-  soloKicker: { color: "#A78BFA", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-  soloTitle: { color: "#FFFFFF", fontSize: 15, fontWeight: "900", letterSpacing: 0.3, marginTop: 2 },
-  soloBody: { color: "#E9D5FF", fontSize: 9, lineHeight: 13, marginTop: 4, marginRight: 8 },
-  soloChevron: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(124, 58, 237, 0.25)", alignItems: "center", justifyContent: "center" },
-  soloChevronText: { color: "#A78BFA", fontSize: 22, fontWeight: "900", lineHeight: 28 },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  hubBannersRow: { flexDirection: "row", gap: 10, marginTop: 22, width: "100%" },
+  hubBanner: { flex: 1, flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 18, borderWidth: 1, gap: 8 },
+  missionsBanner: { backgroundColor: "rgba(255, 208, 0, 0.08)", borderColor: "rgba(255, 208, 0, 0.3)" },
+  seasonBanner: { backgroundColor: "rgba(0, 245, 212, 0.08)", borderColor: "rgba(0, 245, 212, 0.3)" },
+  hubBannerGlyph: { fontSize: 20 },
+  hubBannerTitle: { color: "#FFF", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  hubBannerSub: { color: "#A799C7", fontSize: 8, marginTop: 2 },
+  hubBannerArrow: { color: "#A799C7", fontSize: 14, fontWeight: "900" },
+
+  /* Modal Styles */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(10, 7, 24, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  modalDialog: {
+    width: "100%",
+    maxHeight: "88%",
+    backgroundColor: "#17122C",
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(124, 92, 246, 0.4)",
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  modalKicker: {
+    color: "#FFD000",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  modalTitle: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  modalCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCloseText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  modalSub: {
+    color: "#C4B5FD",
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  themeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  themeCard: {
+    width: "48%",
+    backgroundColor: "rgba(26, 20, 48, 0.8)",
+    borderRadius: 16,
+    padding: 10,
+    borderWidth: 1.5,
+    borderColor: "#2F2353",
+  },
+  themeCardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  themeIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+  themeIconTxt: {
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  themeActivePill: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  themeActivePillText: {
+    color: "#0F172A",
+    fontSize: 7,
+    fontWeight: "900",
+  },
+  themePackLabel: {
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+  themePackTitle: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "900",
+    marginTop: 1,
+  },
+  themePackDesc: {
+    color: "#8E82A8",
+    fontSize: 7.5,
+    lineHeight: 10,
+    marginTop: 2,
+  },
+  modalStartBtn: {
+    marginTop: 14,
+    backgroundColor: "#00F5D4",
+    borderRadius: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#00F5D4",
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalStartBtnText: {
+    color: "#0F172A",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  modalStartBtnArrow: {
+    fontSize: 14,
+  },
+
+  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
 });

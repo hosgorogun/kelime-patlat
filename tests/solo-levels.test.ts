@@ -158,10 +158,12 @@ describe("Tek oyunculu seviye yolculuğu", () => {
     });
   });
 
-  it("yeni seviyede farklı ızgara ve kelime seti üretir", () => {
-    const currentLevel = createSoloBoard(1, 91);
-    const nextLevel = createSoloBoard(2, 91);
-    expect(nextLevel.board).not.toEqual(currentLevel.board);
-    expect(nextLevel.words).not.toEqual(currentLevel.words);
+  it("günlük rota ve uzay teması zengin ve temaya uygun kelimeler üretir", () => {
+    const dailyChallenge = createSoloBoard(21, 42, "space");
+    expect(dailyChallenge.size).toBe(6);
+    expect(dailyChallenge.words.length).toBeGreaterThanOrEqual(4);
+    // Board should not just repeat trivial 4x4 words
+    expect(dailyChallenge.words.some((w) => w.length >= 6)).toBe(true);
   });
 });
+

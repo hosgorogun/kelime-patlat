@@ -2,8 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
+import { MILESTONE_REWARDS, type MilestoneReward } from "@/shared/progression";
+import { gameSfx } from "@/lib/game-sfx";
 
-export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel: number; onBack: () => void; onSelect: (level: number) => void }) {
+export function SoloLevels({
+  unlockedLevel,
+  claimedMilestones = {},
+  onBack,
+  onSelect,
+  onClaimMilestone,
+}: {
+  unlockedLevel: number;
+  claimedMilestones?: Record<number, boolean>;
+  onBack: () => void;
+  onSelect: (level: number) => void;
+  onClaimMilestone?: (milestone: MilestoneReward) => void;
+}) {
   const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
   const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
   const scrollViewRef = useRef<ScrollView>(null);
@@ -112,6 +126,58 @@ export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel:
                   );
                 })}
               </View>
+
+              {/* Milestone Chest Banner if this row contains a milestone */}
+              {(() => {
+                const milestone = MILESTONE_REWARDS.find((m) => row.includes(m.level));
+                if (!milestone) return null;
+                const isClaimed = Boolean(claimedMilestones[milestone.level]);
+                const isUnlocked = unlockedLevel >= milestone.level;
+
+                return (
+                  <View style={styles.milestoneWrap}>
+                    <View
+                      style={[
+                        styles.milestoneBox,
+                        isUnlocked && !isClaimed && styles.milestoneBoxReady,
+                        isClaimed && styles.milestoneBoxClaimed,
+                      ]}
+                    >
+                      <View style={styles.milestoneIconWrap}>
+                        <Text style={styles.milestoneIcon}>{milestone.level === 100 ? "👑" : "🎁"}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text style={styles.milestoneTitle}>{milestone.title}</Text>
+                          {isClaimed && <Text style={styles.milestoneBadge}>AÇILDI ✓</Text>}
+                        </View>
+                        <Text style={styles.milestoneDesc}>{milestone.desc}</Text>
+                        <Text style={styles.milestoneRewardText}>
+                          +{milestone.coins} ÇİP · +{milestone.shields} KALKAN · +{milestone.xp} XP
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => {
+                          if (!isUnlocked || isClaimed) return;
+                          gameSfx.victory();
+                          onClaimMilestone?.(milestone);
+                        }}
+                        disabled={!isUnlocked || isClaimed}
+                        style={({ pressed }) => [
+                          styles.milestoneBtn,
+                          isUnlocked && !isClaimed && styles.milestoneBtnReady,
+                          isClaimed && styles.milestoneBtnClaimed,
+                          pressed && isUnlocked && !isClaimed && styles.pressed,
+                        ]}
+                      >
+                        <Text style={[styles.milestoneBtnText, isUnlocked && !isClaimed && { color: "#0B132B" }]}>
+                          {isClaimed ? "ALINDI" : isUnlocked ? "AÇ! 🎁" : "🔒 KİLİTLİ"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })()}
             </View>
           );
         })}
@@ -168,7 +234,7 @@ export function SoloLevels({ unlockedLevel, onBack, onSelect }: { unlockedLevel:
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 132, backgroundColor: "#0C091C", flexGrow: 1 },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 130, backgroundColor: "#0C091C", flexGrow: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
   back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1E1838", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
@@ -418,5 +484,95 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.86,
     transform: [{ scale: 0.98 }],
+  },
+  milestoneWrap: {
+    marginVertical: 10,
+    width: "100%",
+  },
+  milestoneBox: {
+    backgroundColor: "rgba(22, 16, 48, 0.7)",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(124, 92, 246, 0.3)",
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  milestoneBoxReady: {
+    borderColor: "#FFC24A",
+    backgroundColor: "rgba(255, 194, 74, 0.12)",
+    shadowColor: "#FFC24A",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  milestoneBoxClaimed: {
+    borderColor: "rgba(80, 227, 194, 0.4)",
+    backgroundColor: "rgba(80, 227, 194, 0.06)",
+  },
+  milestoneIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  milestoneIcon: {
+    fontSize: 22,
+  },
+  milestoneTitle: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  milestoneBadge: {
+    color: "#50E3C2",
+    fontSize: 9,
+    fontWeight: "900",
+    backgroundColor: "rgba(80, 227, 194, 0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  milestoneDesc: {
+    color: "#94A3B8",
+    fontSize: 10,
+    marginTop: 2,
+  },
+  milestoneRewardText: {
+    color: "#FFC24A",
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  milestoneBtn: {
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  milestoneBtnReady: {
+    backgroundColor: "#FFC24A",
+    borderColor: "#FFC24A",
+    shadowColor: "#FFC24A",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  milestoneBtnClaimed: {
+    backgroundColor: "rgba(80, 227, 194, 0.1)",
+    borderColor: "rgba(80, 227, 194, 0.3)",
+  },
+  milestoneBtnText: {
+    color: "#94A3B8",
+    fontSize: 10,
+    fontWeight: "900",
   },
 });

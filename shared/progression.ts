@@ -42,10 +42,32 @@ export type PlayerProgress = {
   selectedTheme: ThemePackId;
   selectedAvatar: AvatarId;
   history: string[];
+  coins?: number;
   streakShields?: number;
+  radarChargesBonus?: number;
   lastLoginDay?: string;
   loginDaysCount?: number;
+  weeklyClaimed?: Record<string, boolean>;
+  claimedMilestones?: Record<number, boolean>;
 };
+
+export type MilestoneReward = {
+  level: number;
+  title: string;
+  coins: number;
+  shields: number;
+  xp: number;
+  desc: string;
+};
+
+export const MILESTONE_REWARDS: MilestoneReward[] = [
+  { level: 15, title: "4×4 MEZUNİYETİ", coins: 50, shields: 1, xp: 150, desc: "Mini siber ağı tamamladın!" },
+  { level: 30, title: "SİBER ROTA SANDIĞI", coins: 75, shields: 1, xp: 200, desc: "Orta hat operasyon başarısı!" },
+  { level: 45, title: "6×6 USTALIK SANDIĞI", coins: 100, shields: 2, xp: 300, desc: "6×6 geniş ağı fethettin!" },
+  { level: 60, title: "DERİN SİBER KASASI", coins: 125, shields: 2, xp: 400, desc: "Büyük 8×8 operasyon ödülü!" },
+  { level: 75, title: "8×8 EFSANE SANDIĞI", coins: 150, shields: 2, xp: 500, desc: "Devasa ızgarayı aştın!" },
+  { level: 100, title: "KOZMİK ŞAMPİYON TACI", coins: 300, shields: 3, xp: 1000, desc: "100 seviyenin mutlak galibi!" },
+];
 
 export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string; unlockHint: string };
 export type Badge = { id: string; title: string; description: string; icon: string; accent: string; unlocked: boolean };
@@ -95,6 +117,9 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   selectedAvatar: "spark",
   history: [],
   streakShields: 1,
+  coins: 50,
+  radarChargesBonus: 0,
+  claimedMilestones: {},
 };
 
 export function badgesFor(progress: PlayerProgress): Badge[] {
@@ -127,7 +152,7 @@ export function getDailyChallenge(date = new Date()): DailyChallenge {
   return {
     id,
     variation: seed % 1_000_000,
-    level: 6 + (seed % 3),
+    level: 20 + (seed % 5),
     themeId,
     title: "GÜNÜN ROTASI",
     rewardXp: 120,
@@ -149,9 +174,12 @@ export function applyMatchProgress(
   result: { score: number; tempo: number; won: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number },
   type: "pvp" | "bot" | "solo" = "pvp"
 ) {
-  const duelProgress = Math.min(2, (progress.missions.duels ?? 0) + 1);
+  const previousDuels = progress.missions?.duels ?? 0;
+  const previousWordsmith = progress.missions?.wordsmith ?? 0;
+
+  const duelProgress = Math.min(2, previousDuels + (type !== "solo" ? 1 : 0));
   const hasLongWord = result.longWord || (result.foundWords && result.foundWords.some((w) => w.length >= 7));
-  const wordsmithProgress = Math.min(1, (progress.missions.wordsmith ?? 0) + (hasLongWord ? 1 : 0));
+  const wordsmithProgress = Math.min(1, previousWordsmith + (hasLongWord ? 1 : 0));
   const newHistory = [...(progress.history || []), ...(result.foundWords || [])].slice(-150);
 
   let xpGain = 0;
@@ -163,9 +191,30 @@ export function applyMatchProgress(
     xpGain = 30;
   }
 
+  // Mission completion XP rewards
+  if (previousDuels < 2 && duelProgress >= 2) {
+    xpGain += 80;
+  }
+  if (previousWordsmith < 1 && wordsmithProgress >= 1) {
+    xpGain += 70;
+  }
+
+  // Daily Mystery Word bonus (+150 XP)
+  const mystery = getDailyMysteryWord();
+  if (result.foundWords && result.foundWords.some((w) => w.toUpperCase() === mystery.word.toUpperCase())) {
+    xpGain += mystery.rewardXp;
+  }
+
+  // Coin earnings for victories
+  let coinsEarned = 0;
+  if (result.won) {
+    coinsEarned = type === "pvp" ? 25 : type === "bot" ? 15 : 10;
+  }
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
+    coins: (progress.coins ?? 50) + coinsEarned,
     wins: progress.wins + (result.won ? 1 : 0),
     matches: progress.matches + (type !== "solo" ? 1 : 0),
     bestScore: Math.max(progress.bestScore, result.score),
@@ -280,12 +329,12 @@ export function checkDailyLoginReward(progress: PlayerProgress, todayId: string)
   
   let xpBonus = reward.rewardType === "xp" ? reward.amount : 0;
   let shieldBonus = reward.rewardType === "shield" ? reward.amount : 0;
-  let winsBonus = reward.rewardType === "coins" ? Math.floor(reward.amount / 25) : 0;
+  let coinsBonus = reward.rewardType === "coins" ? reward.amount : 0;
 
   const updatedProgress: PlayerProgress = {
     ...progress,
     xp: progress.xp + xpBonus,
-    wins: progress.wins + winsBonus,
+    coins: (progress.coins ?? 50) + coinsBonus,
     streakShields: (progress.streakShields || 0) + shieldBonus,
     lastLoginDay: todayId,
     loginDaysCount: (progress.loginDaysCount || 0) + 1,

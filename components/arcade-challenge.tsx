@@ -14,6 +14,7 @@ import {
   triggerHapticError,
   triggerHapticLongWord
 } from "@/shared/audio-haptics";
+import { gameSfx } from "@/lib/game-sfx";
 
 function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
   const dx = x2 - x1;
@@ -277,17 +278,49 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     // If entire board is cleared, generate a new board!
     if (nextFound.length === challenge.words.length) {
       explodeConfetti();
+      gameSfx.victory();
+      triggerHapticLongWord();
+      const boardClearBonus = challenge.size === 4 ? 6 : 12;
+      setSeconds((s) => s + boardClearBonus);
+      setTimeBonusText(`TAHTA TEMİZLENDİ! +${boardClearBonus}s ⚡`);
+
       setTimeout(() => {
         setFound([]);
         setFoundPaths([]);
-        // Alternating board size or advancing level seed
-        setLevelSeed((l) => (l % 90) + 1);
+        // Smooth scaling: Keep 4x4 (levels 1-15) for fast tempo until score reaches 250, then graduate to 6x6!
+        setLevelSeed((current) => {
+          const nextScore = score + scoreGain;
+          if (nextScore < 250) {
+            return (current % 15) + 1;
+          }
+          return 16 + ((current + 1) % 10);
+        });
         setVariation((v) => v + 1);
         setFeedback("idle");
-      }, 400);
+      }, 700);
     } else {
       setTimeout(() => setFeedback("idle"), 360);
     }
+  };
+
+  const handleRestart = () => {
+    triggerHapticSelection();
+    setLevelSeed(() => Math.floor(Math.random() * 15) + 1);
+    setVariation((v) => v + 1);
+    setSelected([]);
+    setFound([]);
+    setFoundPaths([]);
+    setSeconds(30);
+    setScore(0);
+    setFeedback("idle");
+    setStatus("playing");
+    setIsSelecting(false);
+    selectionRef.current = [];
+    pointerActive.current = false;
+    submitted.current = false;
+    setTimeBonusText(null);
+    setSelectedWordInfo(null);
+    setCountdown(3);
   };
 
   const start = (index: number) => { if (status !== "playing") return; submitted.current = false; pointerActive.current = true; setIsSelecting(true); if (resetTimer.current) clearTimeout(resetTimer.current); setFeedback("idle"); clearSelection(); triggerHapticSelection(); playSelectionNote(0); include(index); };
@@ -477,9 +510,14 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         <Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text>
         <Text style={styles.finalScore}>{score}</Text>
 
-        <Pressable onPress={onExit} style={styles.action}>
-          <Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text>
-          <Text style={styles.actionArrow}>→</Text>
+        <Pressable onPress={handleRestart} style={[styles.action, { backgroundColor: "#00F5D4", marginBottom: 8 }]}>
+          <Text style={[styles.actionText, { color: "#121025" }]}>↺ YENİDEN DENE (REKOR KIR)</Text>
+          <Text style={[styles.actionArrow, { color: "#121025" }]}>⚡</Text>
+        </Pressable>
+
+        <Pressable onPress={onExit} style={[styles.action, { backgroundColor: "rgba(255, 100, 124, 0.2)", borderWidth: 1, borderColor: "#FF647C" }]}>
+          <Text style={[styles.actionText, { color: "#FFF" }]}>KOMUTA MERKEZİNE DÖN</Text>
+          <Text style={[styles.actionArrow, { color: "#FFF" }]}>→</Text>
         </Pressable>
       </View>
     )}
