@@ -21,6 +21,7 @@ import {
   type RoomSnapshot,
   type RoomStatus,
 } from "../../shared/game";
+import { createSoloBoard } from "../../shared/solo";
 import { loadLeaderboard, loadPlayerProfile, recordLeaderboardRounds, savePlayerProfile } from "./mongo-store";
 
 type PlayerRecord = GamePlayer & { socketId: string | null };
@@ -191,58 +192,17 @@ function findOpenRoute(occupied: Set<number>, size: BoardSize, length: number, u
 }
 
 function buildBoard(size: BoardSize) {
-  if (size === 4) return buildFourByFourBoard(pickLiveFourWords());
-  const candidates = WORD_CATALOG[size].filter((entry) => entry.word.length <= size);
-  const targetWordCount = size;
-  // Allow up to 85% of cells for words; remainder becomes random filler
-  const maximumLetters = Math.floor(size * size * 0.85);
-  for (let attempt = 0; attempt < 120; attempt += 1) {
-    const difficultyOrder = shuffled(["easy", "medium", "hard"] as const);
-    const words: string[] = [];
-    let lettersUsed = 0;
-    // Shuffle candidates so short & long words are picked in random order each attempt
-    const shuffledCandidates = shuffled(candidates);
-    for (let index = 0; index < targetWordCount; index += 1) {
-      const desired = difficultyOrder[index % difficultyOrder.length];
-      // Remaining budget per remaining slot guides max word length
-      const slotsLeft = targetWordCount - index;
-      const budgetLeft = maximumLetters - lettersUsed;
-      const maxLen = Math.min(size, Math.floor(budgetLeft / slotsLeft) + 1);
-      const available = shuffledCandidates.filter(
-        (entry) => !words.includes(entry.word) && entry.word.length <= maxLen && lettersUsed + entry.word.length <= maximumLetters,
-      );
-      const preferred = available.filter((entry) => entry.difficulty === desired);
-      const selected = randomItem(preferred.length ? preferred : available);
-      if (!selected) break;
-      words.push(selected.word);
-      lettersUsed += selected.word.length;
-    }
-    if (words.length !== targetWordCount) continue;
-    const board = Array.from({ length: size * size }, () => "");
-    const occupied = new Set<number>();
-    const placedWords: string[] = [];
-    const usedShapes = new Set<string>();
-    const routesMap: Record<string, number[]> = {};
-    for (const word of [...words].sort((left, right) => right.length - left.length)) {
-      const route = findOpenRoute(occupied, size, word.length, usedShapes);
-      if (!route) break;
-      route.forEach((index, letterIndex) => {
-        occupied.add(index);
-        board[index] = word[letterIndex]!;
-      });
-      usedShapes.add(routeShape(route, size));
-      placedWords.push(word);
-      routesMap[word] = route;
-    }
-    if (placedWords.length === targetWordCount) {
-      return {
-        board: board.map((letter) => letter || randomItem(TURKISH_LETTERS)),
-        words: placedWords,
-        routes: routesMap,
-      };
-    }
-  }
-  throw new Error(`${size}×${size} canlı tahta için yeterli sayıda kelime rotası üretilemedi.`);
+  // 100% Tam Hücre Dolumu Garantisi:
+  // Rastgele dolgu harf yok, boşta kalan kutucuk yok.
+  // 4x4 (16 hücre), 6x6 (36 hücre), 8x8 (64 hücre), 10x10 (100 hücre)
+  const representativeLevel = size === 4 ? 5 : size === 6 ? 25 : size === 8 ? 55 : 85;
+  const variation = Math.floor(Math.random() * 1_000_000);
+  const solo = createSoloBoard(representativeLevel, variation, "general");
+  return {
+    board: solo.board,
+    words: solo.words,
+    routes: solo.routes,
+  };
 }
 
 function snapshot(room: Room, viewerId: string): RoomSnapshot {
@@ -254,21 +214,34 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
     ready: player!.ready,
     rematch: player!.rematch,
   }));
+  const viewerFoundSet = new Set(room.foundWords.filter((e) => e.playerId === viewerId).map((e) => e.word));
+  // Oyuncuya kendi kelimeleri açık, rakip/bot kelimeleri ise sadece skor/sayaç hesabı için gizli/boş gönderilir
+  const foundWords = room.foundWords.map((entry) =>
+    entry.playerId === viewerId
+      ? { ...entry, hidden: false }
+      : { ...entry, word: "", path: [], hidden: true }
+  );
+  // Oyuncunun bulamadığı tüm gizli kelimeler (oyun bitince rotalarıyla birlikte)
+  const missedWords = room.status === "finished"
+    ? room.words
+        .filter((w) => !viewerFoundSet.has(w))
+        .map((w) => ({ word: w, path: room.routes[w] ?? [] }))
+    : undefined;
+
   return {
     code: room.code,
     size: room.size,
     status: room.status,
     board: room.board,
     wordsTotal: room.words.length,
-    foundWords: maskOpponentFoundWords(room.foundWords, viewerId, room.status === "finished"),
+    foundWords,
+    missedWords,
     scores: room.scores,
     players,
     winnerId: room.winnerId,
     startedAt: room.startedAt,
-    message: room.status === "playing" && room.foundWords.at(-1)?.playerId !== viewerId
-      ? `${roomForPlayer(room, room.foundWords.at(-1)?.playerId ?? "")?.name ?? "RAKİP"} bir kelime buldu! +${room.foundWords.at(-1)?.word.length ?? 0}`
-      : room.message,
-    botSelection: room.botSelection,
+    message: room.message,
+    botSelection: undefined, // Bot seçimi oyuncu ekranında gösterilmez
     combos: room.comboCount,
   };
 }
@@ -415,10 +388,10 @@ function claimWord(io: Server, room: Room, playerId: string, word: string, path:
   return true;
 }
 
-function scheduleBotTurn(io: Server, room: Room, token: number) {
+function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = false) {
   const bot = room.guest;
   if (!bot?.isBot) return;
-  const delay = botThinkDelayMs(room.size);
+  const delay = botThinkDelayMs(room.size) + (isFirstTurn ? 3000 : 0);
   const selectTriggerDelay = Math.max(1000, delay - 1500);
   setTimeout(() => {
     const current = rooms.get(room.code);
@@ -433,16 +406,16 @@ function scheduleBotTurn(io: Server, room: Room, token: number) {
         const finalCurrent = rooms.get(room.code);
         if (!finalCurrent || finalCurrent !== room || room.roundToken !== token || room.status !== "playing") return;
         claimWord(io, room, bot.id, word, path);
-        if (room.status === "playing") scheduleBotTurn(io, room, token);
+        if (room.status === "playing") scheduleBotTurn(io, room, token, false);
       }, 1500);
     } else {
-      if (room.status === "playing") scheduleBotTurn(io, room, token);
+      if (room.status === "playing") scheduleBotTurn(io, room, token, false);
     }
   }, selectTriggerDelay);
 }
 
 function scheduleRoundEnd(io: Server, room: Room, token: number) {
-  const duration = getRoundDurationMs(room.size);
+  const duration = getRoundDurationMs(room.size) + 3000;
   setTimeout(() => {
     if (rooms.get(room.code) === room && room.roundToken === token) finishRound(io, room);
   }, duration);
@@ -475,7 +448,7 @@ function startRound(io: Server, room: Room) {
   room.foundWords = [];
   room.scores = Object.fromEntries([room.host, room.guest].filter(Boolean).map((player) => [player!.id, 0]));
   room.status = "playing";
-  room.startedAt = Date.now();
+  room.startedAt = Date.now() + 3000;
   room.winnerId = null;
   room.message = `${words.length} gizli kelime var. Yalnız yatay ve dikey bağla!`;
   room.host.rematch = false;
@@ -485,7 +458,7 @@ function startRound(io: Server, room: Room) {
   const token = ++room.roundToken;
   emitRoom(io, room);
   scheduleRoundEnd(io, room, token);
-  scheduleBotTurn(io, room, token);
+  scheduleBotTurn(io, room, token, true);
 }
 
 function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
@@ -501,7 +474,7 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
     room.host.ready = false;
     room.guest = null;
     room.status = "waiting";
-    room.message = "Rakip ayrıldı. Yeni bir oyuncu veya bot bekleniyor.";
+    room.message = "Rakip ayrıldı. Yeni bir oyuncu bekleniyor.";
     emitRoom(io, room);
     scheduleBotFill(io, room);
     return;
@@ -510,7 +483,7 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
   room.host.ready = false;
   room.status = "waiting";
   room.winnerId = null;
-  room.message = "Rakip ayrıldı. Yeni bir oyuncu veya bot bekleniyor.";
+  room.message = "Rakip ayrıldı. Yeni bir oyuncu bekleniyor.";
   emitRoom(io, room);
   scheduleBotFill(io, room);
 }
@@ -649,9 +622,6 @@ export function registerGameRooms(io: Server) {
       rooms.set(code, room);
       socket.join(`room:${code}`);
       emitRoom(io, room);
-      if (payload.immediateBot) {
-        scheduleBotFill(io, room);
-      }
     });
 
     socket.on("room:join", (payload: { code: string; playerId: string; playerName: string }) => {
@@ -697,6 +667,7 @@ export function registerGameRooms(io: Server) {
       const room = rooms.get(payload.code.trim().toUpperCase());
       const player = room ? roomForPlayer(room, payload.playerId) : null;
       if (!room || !player || room.status !== "playing") return;
+      if (room.startedAt && Date.now() < room.startedAt) return socket.emit("word:rejected", { word: "", reason: "starting" });
       const selection = payload.selection;
       const validIndices =
         selection.length >= 2 &&

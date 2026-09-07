@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
-import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell } from "@/shared/solo";
+import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
 import { type WordTheme } from "@/shared/word-catalog";
-import { getThemeForLevel } from "@/shared/themes";
 import { getWordDefinition } from "../shared/dictionary";
+import { getThemeForLevel } from "../shared/themes";
 import {
   initAudio,
   playSelectionNote,
@@ -54,8 +54,9 @@ type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
-export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, onExit, onComplete, onNext }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void }) {
+export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, onExit, onComplete, onNext, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
   const { width } = useWindowDimensions();
+  const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
   
   const initialExcludeWords = useRef(excludeWords);
@@ -67,6 +68,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
+  const [inspectedPath, setInspectedPath] = useState<number[] | null>(null);
+  const [inspectedColor, setInspectedColor] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(challenge.timeLimit);
   const [feedback, setFeedback] = useState<Feedback>("idle");
   const [status, setStatus] = useState<"playing" | "won" | "lost">("playing");
@@ -94,6 +97,9 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         clearInterval(interval);
         setChestState("opened");
         setRadarCharges((r) => r + 1);
+        gameSfx.victory();
+        triggerHapticSuccess();
+        onBonusReward?.(150, 1);
       }
     }, 200);
   };
@@ -102,14 +108,17 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [doubleXpEarned, setDoubleXpEarned] = useState(false);
   const [adActive, setAdActive] = useState(false);
   const [adTimer, setAdTimer] = useState(0);
+  const adIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const watchAd = (onReward: () => void) => {
+    if (adIntervalRef.current) clearInterval(adIntervalRef.current);
     setAdActive(true);
     setAdTimer(3);
-    const interval = setInterval(() => {
+    adIntervalRef.current = setInterval(() => {
       setAdTimer((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          if (adIntervalRef.current) clearInterval(adIntervalRef.current);
+          adIntervalRef.current = null;
           setAdActive(false);
           onReward();
           return 0;
@@ -155,8 +164,6 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const boardPageY = useRef(0);
   const lastWordTimeRef = useRef<number>(0);
 
-  const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
-
   useEffect(() => {
     initAudio().catch(() => undefined);
   }, []);
@@ -182,8 +189,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const activeWord = wordFromSelection(challenge.board, selected);
 
   useEffect(() => {
-    setSelected([]); setFound([]); setFoundPaths([]); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
-    setRadarCooldown(0); setRadarCharges(3); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
+    setSelected([]); setFound([]); setFoundPaths([]); setInspectedPath(null); setInspectedColor(null); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
+    setRadarCooldown(0); setRadarCharges(3 + (radarChargesBonus || 0)); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
     setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
   }, [challenge]);
 
@@ -223,9 +230,6 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         setStatus("lost");
         triggerHapticError();
         playErrorSound();
-        if (dailyRef.current) {
-          onCompleteRef.current(levelRef.current, foundRef.current, false);
-        }
         return 0;
       }
       return value - 1;
@@ -233,7 +237,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     return () => clearInterval(timer);
   }, [status, countdown]);
 
-  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
+  useEffect(() => () => {
+    if (adIntervalRef.current) clearInterval(adIntervalRef.current);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+  }, []);
 
   const clearSelection = () => { selectionRef.current = []; setSelected([]); };
   
@@ -337,9 +344,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     if (path && path.length > 0) {
       setRadarCooldown(12);
       setRadarCharges((prev) => prev - 1);
-      // Small 3-second penalty for using radar hint
-      setSeconds((prev) => Math.max(1, prev - 3));
-      setTimeBonusText("-3s 👁 IPUCU");
+      setTimeBonusText("👁 İPUCU AKTİF");
       setTimeout(() => setTimeBonusText(null), 1500);
       const highlights = new Set([path[0]!, path[path.length - 1]!]);
       setRadarHighlights(highlights);
@@ -389,6 +394,60 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       setTimeout(() => setFeedback("idle"), 360);
     }
   };
+
+  const handleExitPress = () => {
+    if (status === "lost" && daily) {
+      onCompleteRef.current(levelRef.current, foundRef.current, false);
+      onExit();
+      return;
+    }
+    if (status === "playing" && (found.length > 0 || daily)) {
+      Alert.alert(
+        daily ? "Günün Rotasından Ayrıl" : "Seviyeden Ayrıl",
+        daily
+          ? "Günün rotasından çıkmak istediğinize emin misiniz? Günlük tek oynama hakkınızı korumak için oyunu tamamlamayı deneyin."
+          : "Mevcut seviyeden çıkmak istediğinize emin misiniz?",
+        [
+          { text: "Devam Et", style: "cancel" },
+          {
+            text: "Ayrıl",
+            style: "destructive",
+            onPress: () => {
+              if (daily) onCompleteRef.current(levelRef.current, foundRef.current, false);
+              onExit();
+            },
+          },
+        ]
+      );
+    } else {
+      onExit();
+    }
+  };
+
+  const handleRetry = () => {
+    triggerHapticSelection();
+    const nextVariation = variation + 1;
+    const nextBoard = createSoloBoard(level, nextVariation, theme, initialExcludeWords.current);
+    setVariation(nextVariation);
+    setRevived(false);
+    setSelected([]);
+    setFound([]);
+    setFoundPaths([]);
+    setInspectedPath(null);
+    setInspectedColor(null);
+    setSeconds(nextBoard.timeLimit);
+    setFeedback("idle");
+    setStatus("playing");
+    setIsSelecting(false);
+    selectionRef.current = [];
+    pointerActive.current = false;
+    submitted.current = false;
+    setTimeBonusText(null);
+    setSelectedWordInfo(null);
+    setCountdown(3);
+    setRadarCooldown(0);
+  };
+
   const start = (index: number) => { if (status !== "playing") return; submitted.current = false; pointerActive.current = true; setIsSelecting(true); if (resetTimer.current) clearTimeout(resetTimer.current); setFeedback("idle"); clearSelection(); triggerHapticSelection(); playSelectionNote(0); include(index); };
   const finish = () => { if (!pointerActive.current) return; pointerActive.current = false; setIsSelecting(false); submit(); };
   const handleGesture = (locationX: number, locationY: number) => {
@@ -457,14 +516,30 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   };
   const handleGestureEnd = () => { finish(); };
   const foundCells = new Set(foundPaths.flat());
+  const foundCellColors = new Map<number, { bg: string; border: string; letterText: string }>();
+  found.forEach((word, wordIndex) => {
+    const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
+    const path = foundPaths[wordIndex];
+    if (path) {
+      path.forEach((cell) => {
+        foundCellColors.set(cell, { bg: palette.bg, border: palette.border, letterText: palette.letterText });
+      });
+    }
+  });
+
   const solutionColors = status === "lost" ? solutionColorByCell(challenge) : new Map<number, number>();
   const selectedSet = new Set(selected);
   const isUrgent = seconds <= 15 && status === "playing";
 
-  return <ScrollView contentContainerStyle={[styles.content, { backgroundColor: activeTheme.background }]} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
-    <View style={styles.header}>
-      <Pressable onPress={onExit} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>‹</Text></Pressable>
-      <View><Text style={[styles.kicker, { color: activeTheme.headerText }]}>{daily ? "GÜNLÜK ROTA · SABİT TAHTA" : `TEK OYUNCU · SEVİYE ${level}`}</Text><Text style={styles.title}>{daily ? "GÜNÜN ROTASI" : challenge.title}</Text></View>
+  return (
+    <View style={{ flex: 1, backgroundColor: activeTheme.background }}>
+      <ScrollView contentContainerStyle={[styles.content, { backgroundColor: activeTheme.background }]} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+      <Pressable onPress={handleExitPress} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>‹</Text></Pressable>
+      <View style={{ flex: 1, marginHorizontal: 8, minWidth: 0 }}>
+        <Text numberOfLines={1} style={[styles.kicker, { color: activeTheme.headerText }]}>{daily ? "GÜNLÜK ROTA · SABİT TAHTA" : `TEK OYUNCU · SEVİYE ${level}`}</Text>
+        <Text numberOfLines={1} style={styles.title}>{daily ? "GÜNÜN ROTASI" : challenge.title}</Text>
+      </View>
       <Pressable
         disabled={(radarCooldown > 0 && radarCharges > 0) || status !== "playing"}
         onPress={() => {
@@ -520,15 +595,118 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         );
       })}
 
+      {inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
+        const nextCellIdx = inspectedPath[i + 1]!;
+        const start = getCellCenter(cellIdx);
+        const end = getCellCenter(nextCellIdx);
+        return (
+          <ConnectLine
+            key={`inspect-line-${i}`}
+            x1={start.x}
+            y1={start.y}
+            x2={end.x}
+            y2={end.y}
+            color={inspectedColor || activeTheme.accentColor}
+          />
+        );
+      })}
+
       {challenge.board.map((letter, index) => {
         const order = selected.indexOf(index);
         const isSelected = selectedSet.has(index);
         const isTail = selected.at(-1) === index;
         const isFound = foundCells.has(index);
+        const foundColor = foundCellColors.get(index);
         const solutionColor = solutionColors.get(index);
         const isSolution = solutionColor !== undefined;
         const isRadar = radarHighlights.has(index);
-        return <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}><View style={[styles.cell, { backgroundColor: activeTheme.surface, borderColor: activeTheme.cellBorder }, isSolution && SOLUTION_ROUTE_COLORS[solutionColor % SOLUTION_ROUTE_COLORS.length], isFound && !isSolution && styles.cellFound, isSelected && [styles.cellSelected, { backgroundColor: activeTheme.surfaceSelected }], isTail && styles.cellTail, feedback === "invalid" && isSelected && styles.cellInvalid, feedback === "accepted" && isSelected && styles.cellAccepted, isRadar && styles.cellRadar]}><Text selectable={false} style={[styles.letter, challenge.size === 6 && styles.letterMedium, challenge.size === 8 && styles.letterSmall, challenge.size === 10 && styles.letterExtraSmall, isRadar && styles.letterRadar]}>{letter}</Text>{isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}{isFound && !isSelected && <Text selectable={false} style={styles.check}>✓</Text>}{isSolution && !isFound && <Text selectable={false} style={styles.solutionMark}>•</Text>}</View></View>;
+        const isInspected = Boolean(inspectedPath?.includes(index));
+        return (
+          <View
+            key={`${letter}-${index}`}
+            pointerEvents="none"
+            style={[
+              styles.cellWrap,
+              {
+                width: `${100 / challenge.size}%`,
+                height: `${100 / challenge.size}%`,
+                padding: challenge.size === 10 ? 1.5 : challenge.size === 8 ? 2 : challenge.size === 6 ? 3 : 4,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.cell,
+                { backgroundColor: activeTheme.surface, borderColor: activeTheme.cellBorder },
+                isSolution && SOLUTION_ROUTE_COLORS[solutionColor % SOLUTION_ROUTE_COLORS.length],
+                isFound && !isSolution && (foundColor ? {
+                  backgroundColor: foundColor.bg,
+                  borderColor: foundColor.border,
+                  borderWidth: 2,
+                } : styles.cellFound),
+                isInspected && {
+                  borderColor: inspectedColor || activeTheme.accentColor,
+                  borderWidth: 2.5,
+                  backgroundColor: "rgba(245, 158, 11, 0.25)",
+                  transform: [{ scale: 1.06 }],
+                },
+                isSelected && [styles.cellSelected, { backgroundColor: activeTheme.surfaceSelected }],
+                isTail && styles.cellTail,
+                feedback === "invalid" && isSelected && styles.cellInvalid,
+                feedback === "accepted" && isSelected && styles.cellAccepted,
+                isRadar && styles.cellRadar,
+              ]}
+            >
+              <Text
+                selectable={false}
+                style={[
+                  styles.letter,
+                  challenge.size === 6 && styles.letterMedium,
+                  challenge.size === 8 && styles.letterSmall,
+                  challenge.size === 10 && styles.letterExtraSmall,
+                  foundColor && !isSolution && { color: foundColor.letterText },
+                  isRadar && styles.letterRadar,
+                ]}
+              >
+                {letter}
+              </Text>
+              {isSelected && (
+                <Text
+                  selectable={false}
+                  style={[
+                    styles.order,
+                    challenge.size >= 8 && { fontSize: 7, top: 1, right: 2 },
+                  ]}
+                >
+                  {order + 1}
+                </Text>
+              )}
+              {isFound && !isSelected && (
+                <Text
+                  selectable={false}
+                  style={[
+                    styles.check,
+                    foundColor && { color: foundColor.border },
+                    challenge.size >= 8 && { fontSize: 7, left: 2, bottom: 1 },
+                  ]}
+                >
+                  ✓
+                </Text>
+              )}
+              {isSolution && !isFound && (
+                <Text
+                  selectable={false}
+                  style={[
+                    styles.solutionMark,
+                    challenge.size >= 8 && { fontSize: 8, bottom: 1, left: 2 },
+                  ]}
+                >
+                  •
+                </Text>
+              )}
+            </View>
+          </View>
+        );
       })}
       {particles.map(p => (
         <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
@@ -547,20 +725,34 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       </Text>
     </View>
     <View style={[styles.found, { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder }]}>
-      <Text style={[styles.foundLabel, { color: activeTheme.headerText }]}>BULDUKLARIN (SÖZLÜK ANLAMI İÇİN TIKLA)</Text>
+      <Text style={[styles.foundLabel, { color: activeTheme.headerText }]}>BULDUKLARIN (ROTA VE SÖZLÜK İÇİN TIKLA)</Text>
       <View style={styles.tags}>
-        {found.length ? found.map((word) => (
-          <Pressable
-            key={word}
-            onPress={() => {
-              triggerHapticSelection();
-              setSelectedWordInfo({ word, definition: getWordDefinition(word) });
-            }}
-            style={({ pressed }) => [styles.tag, { backgroundColor: activeTheme.surface }, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={styles.tagText}>{word}</Text>
-          </Pressable>
-        )) : <Text style={styles.empty}>İlk kelimeyi bul.</Text>}
+        {found.length ? found.map((word, index) => {
+          const palette = APP_WORD_PALETTE[index % APP_WORD_PALETTE.length]!;
+          const path = foundPaths[index] ?? challenge.routes[word];
+          return (
+            <Pressable
+              key={word}
+              onPress={() => {
+                triggerHapticSelection();
+                setInspectedPath(path || null);
+                setInspectedColor(palette.border);
+                setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+              }}
+              style={({ pressed }) => [
+                styles.tag,
+                {
+                  backgroundColor: palette.tagBg,
+                  borderColor: palette.tagBorder,
+                  borderWidth: 1.5,
+                },
+                pressed && { opacity: 0.7 }
+              ]}
+            >
+              <Text style={[styles.tagText, { color: palette.tagText }]}>✓ {word}</Text>
+            </Pressable>
+          );
+        }) : <Text style={styles.empty}>İlk kelimeyi bul.</Text>}
       </View>
     </View>
     {status === "won" && (
@@ -599,7 +791,12 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                 </Text>
                 {!doubleXpEarned && (
                   <Pressable
-                    onPress={() => watchAd(() => setDoubleXpEarned(true))}
+                    onPress={() => watchAd(() => {
+                      setDoubleXpEarned(true);
+                      gameSfx.victory();
+                      triggerHapticSuccess();
+                      onBonusReward?.(150, 1);
+                    })}
                     style={[styles.chestButton, { backgroundColor: "#FFD000", marginTop: 8 }]}
                   >
                     <Text style={styles.chestButtonText}>🎁 REKLAMLA ÖDÜLÜ 2X YAP</Text>
@@ -621,11 +818,33 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         <Text style={styles.resultTitle}>SÜRE DOLDU</Text>
         <Text style={styles.resultCopy}>Her renk ayrı bir kelimenin yolunu gösterir.</Text>
         <View style={styles.solutionLegend}>
-          {challenge.words.map((word, index) => (
-            <View key={word} style={[styles.solutionTag, SOLUTION_ROUTE_COLORS[index % SOLUTION_ROUTE_COLORS.length]]}>
-              <Text style={styles.solutionTagText}>{word} · {DIFFICULTY_LABEL[challenge.wordDifficulties[word]!]}</Text>
-            </View>
-          ))}
+          {challenge.words.map((word, index) => {
+            const palette = APP_WORD_PALETTE[index % APP_WORD_PALETTE.length]!;
+            const path = challenge.routes[word];
+            return (
+              <Pressable
+                key={word}
+                onPress={() => {
+                  triggerHapticSelection();
+                  setInspectedPath(path || null);
+                  setInspectedColor(palette.border);
+                  setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+                }}
+                style={[
+                  styles.solutionTag,
+                  {
+                    backgroundColor: palette.tagBg,
+                    borderColor: palette.tagBorder,
+                    borderWidth: 1.5,
+                  },
+                ]}
+              >
+                <Text style={[styles.solutionTagText, { color: palette.tagText }]}>
+                  {word} · {DIFFICULTY_LABEL[challenge.wordDifficulties[word]!]}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
         
         {!revived && (
@@ -639,39 +858,57 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         )}
 
         {daily ? (
-          <Pressable onPress={onExit} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text><Text style={styles.actionArrow}>→</Text></Pressable>
-        ) : (
-          <Pressable onPress={() => { setVariation((value) => value + 1); setRevived(false); }} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}><Text style={styles.actionText}>YENİ IZGARA İLE TEKRAR DENE</Text><Text style={styles.actionArrow}>↺</Text></Pressable>
-        )}
-      </View>
-    )}
-    
-    {selectedWordInfo && (
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor }]}>
-          <Text style={[styles.modalTitle, { color: activeTheme.accentColor }]}>{selectedWordInfo.word}</Text>
-          <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
-          <Pressable onPress={() => setSelectedWordInfo(null)} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: activeTheme.accentColor }, pressed && { opacity: 0.8 }]}>
-            <Text style={styles.modalCloseText}>KAPAT</Text>
+          <Pressable
+            onPress={() => {
+              onCompleteRef.current(levelRef.current, foundRef.current, false);
+              onExit();
+            }}
+            style={[styles.action, { backgroundColor: activeTheme.accentColor }]}
+          >
+            <Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text>
+            <Text style={styles.actionArrow}>→</Text>
           </Pressable>
+        ) : (
+          <>
+            <Pressable onPress={handleRetry} style={[styles.action, { backgroundColor: activeTheme.accentColor, marginBottom: 8 }]}><Text style={styles.actionText}>↺ YENİ IZGARA İLE TEKRAR DENE</Text><Text style={styles.actionArrow}>↺</Text></Pressable>
+            <Pressable onPress={onExit} style={[styles.action, { backgroundColor: "rgba(255, 100, 124, 0.2)", borderWidth: 1, borderColor: "#FF647C" }]}><Text style={[styles.actionText, { color: "#FFF" }]}>HARİTAYA DÖN</Text><Text style={[styles.actionArrow, { color: "#FFF" }]}>→</Text></Pressable>
+          </>
+        )}
         </View>
-      </View>
-    )}
-    {countdown !== null && (
-      <View style={styles.countdownOverlay} pointerEvents="auto">
-        <Text style={styles.countdownText}>
-          {countdown === 0 ? "BAŞLA!" : countdown}
-        </Text>
-      </View>
-    )}
-    {adActive && (
-      <View style={styles.adOverlay} pointerEvents="auto">
-        <Text style={styles.adTitle}>SİBER SPONSOR REKLAMI YÜKLENİYOR</Text>
-        <Text style={styles.adSpinner}>⚡ [ DEŞİFRE İÇİN VERİ AKIŞI SAĞLANIYOR ] ⚡</Text>
-        <Text style={styles.adCountdown}>{adTimer}s</Text>
-      </View>
-    )}
-  </ScrollView>;
+      )}
+      </ScrollView>
+
+      {selectedWordInfo && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
+          <Pressable style={styles.modalOverlay} onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
+            <Pressable style={[styles.modalContent, { backgroundColor: activeTheme.surface, borderColor: inspectedColor || activeTheme.accentColor }]} onPress={(e) => e.stopPropagation()}>
+              <Text style={[styles.modalTitle, { color: inspectedColor || activeTheme.accentColor }]}>{selectedWordInfo.word}</Text>
+              <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
+              <Pressable onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: inspectedColor || activeTheme.accentColor }, pressed && { opacity: 0.8 }]}>
+                <Text style={styles.modalCloseText}>KAPAT</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+
+      {countdown !== null && (
+        <View style={styles.countdownOverlay} pointerEvents="auto">
+          <Text style={styles.countdownText}>
+            {countdown === 0 ? "BAŞLA!" : countdown}
+          </Text>
+        </View>
+      )}
+
+      {adActive && (
+        <View style={styles.adOverlay} pointerEvents="auto">
+          <Text style={styles.adTitle}>SİBER SPONSOR REKLAMI YÜKLENİYOR</Text>
+          <Text style={styles.adSpinner}>⚡ [ DEŞİFRE İÇİN VERİ AKIŞI SAĞLANIYOR ] ⚡</Text>
+          <Text style={styles.adCountdown}>{adTimer}s</Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

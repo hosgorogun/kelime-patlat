@@ -69,7 +69,7 @@ async function startServer() {
 
   app.post("/api/auth/signup", async (req, res) => {
     try {
-      const { username, password, email, fullName } = req.body;
+      const { username, password, email, fullName, gender } = req.body;
       if (!username || !password || username.length < 3 || password.length < 4) {
         return res.status(400).json({ error: "Geçersiz kullanıcı adı veya şifre (Kullanıcı adı min 3, şifre min 4 karakter olmalıdır)." });
       }
@@ -85,6 +85,9 @@ async function startServer() {
       const passwordHash = hashPassword(password);
       const now = new Date();
 
+      const validGender = gender === "male" || gender === "female" ? gender : "unspecified";
+      const initialProgress = { gender: validGender };
+
       const user = new UserModel({
         id: Math.abs([...openId].reduce((value, char) => ((value * 31) ^ char.charCodeAt(0)) >>> 0, 7_431)),
         openId,
@@ -97,12 +100,12 @@ async function startServer() {
         createdAt: now,
         updatedAt: now,
         lastSignedIn: now,
-        progress: null
+        progress: initialProgress
       });
 
       await user.save();
       const token = await sdk.createSessionToken(openId, { name: fullName.trim() });
-      res.json({ success: true, token, user: { openId, name: fullName.trim(), username: username.toLowerCase(), progress: null } });
+      res.json({ success: true, token, user: { openId, name: fullName.trim(), username: username.toLowerCase(), progress: initialProgress } });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Kayıt işlemi başarısız." });
     }

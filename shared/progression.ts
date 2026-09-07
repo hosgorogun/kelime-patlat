@@ -31,6 +31,7 @@ export type DailyChallenge = {
 
 export type PlayerProgress = {
   xp: number;
+  lp?: number;
   dailyCompletedId: string | null;
   streak: number;
   wins: number;
@@ -45,11 +46,27 @@ export type PlayerProgress = {
   coins?: number;
   streakShields?: number;
   radarChargesBonus?: number;
+  lastMatchReward?: {
+    xp: number;
+    lp: number;
+    coins: number;
+  };
   lastLoginDay?: string;
   loginDaysCount?: number;
+  lastStreakCheckDate?: string;
+  missionsDate?: string;
+  dailyClaimed?: Record<string, boolean>;
+  weeklyMissionsWeek?: string;
   weeklyClaimed?: Record<string, boolean>;
   claimedMilestones?: Record<number, boolean>;
+  purchasedAvatars?: Record<string, boolean>;
+  selectedTitle?: string;
+  gender?: GenderType;
+  avatarPhoto?: string;
 };
+
+export type GenderType = "male" | "female" | "unspecified";
+
 
 export type MilestoneReward = {
   level: number;
@@ -105,6 +122,7 @@ export const SEASON_LEADERBOARD = [
 
 export const DEFAULT_PROGRESS: PlayerProgress = {
   xp: 0,
+  lp: 0,
   dailyCompletedId: null,
   streak: 0,
   wins: 0,
@@ -120,6 +138,9 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   coins: 50,
   radarChargesBonus: 0,
   claimedMilestones: {},
+  dailyClaimed: {},
+  gender: "unspecified",
+  avatarPhoto: undefined,
 };
 
 export function badgesFor(progress: PlayerProgress): Badge[] {
@@ -159,19 +180,78 @@ export function getDailyChallenge(date = new Date()): DailyChallenge {
   };
 }
 
-export function getRank(progress: PlayerProgress) {
-  if (progress.xp >= 900) return "ALTIN";
-  if (progress.xp >= 350) return "GÜMÜŞ";
-  return "BRONZ";
+export type LeagueTierInfo = {
+  name: string;
+  tier: "BRONZ" | "GÜMÜŞ" | "ALTIN";
+  icon: string;
+  color: string;
+  badge: string;
+  minPoints: number;
+  maxPoints: number;
+  currentTierPoints: number;
+  targetTierPoints: number;
+  totalPoints: number;
+};
+
+export function getLeagueTier(progressOrPoints: PlayerProgress | number): LeagueTierInfo {
+  let points = 0;
+  if (typeof progressOrPoints === "number") {
+    points = progressOrPoints;
+  } else if (progressOrPoints) {
+    points = (progressOrPoints.lp !== undefined && progressOrPoints.lp > 0)
+      ? progressOrPoints.lp
+      : (progressOrPoints.xp ?? 0);
+  }
+
+  if (points >= 900) {
+    return {
+      name: "ALTIN LİGİ",
+      tier: "ALTIN",
+      icon: "👑",
+      color: "#FBBF24",
+      badge: "ALTIN",
+      minPoints: 900,
+      maxPoints: 9999,
+      currentTierPoints: points - 900,
+      targetTierPoints: 1000,
+      totalPoints: points,
+    };
+  }
+  if (points >= 350) {
+    return {
+      name: "GÜMÜŞ LİGİ",
+      tier: "GÜMÜŞ",
+      icon: "🛡️",
+      color: "#38BDF8",
+      badge: "GÜMÜŞ",
+      minPoints: 350,
+      maxPoints: 899,
+      currentTierPoints: points - 350,
+      targetTierPoints: 550, // 900 - 350
+      totalPoints: points,
+    };
+  }
+  return {
+    name: "BRONZ LİGİ",
+    tier: "BRONZ",
+    icon: "⚔️",
+    color: "#F97316",
+    badge: "BRONZ",
+    minPoints: 0,
+    maxPoints: 349,
+    currentTierPoints: points,
+    targetTierPoints: 350,
+    totalPoints: points,
+  };
 }
 
-export function missionProgress(progress: PlayerProgress, mission: SeasonMission) {
-  return Math.min(progress.missions[mission.id] ?? 0, mission.target);
+export function getRank(progress: PlayerProgress) {
+  return getLeagueTier(progress).tier;
 }
 
 export function applyMatchProgress(
   progress: PlayerProgress,
-  result: { score: number; tempo: number; won: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number },
+  result: { score: number; tempo: number; won: boolean; isDraw?: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number },
   type: "pvp" | "bot" | "solo" = "pvp"
 ) {
   const previousDuels = progress.missions?.duels ?? 0;
@@ -183,12 +263,32 @@ export function applyMatchProgress(
   const newHistory = [...(progress.history || []), ...(result.foundWords || [])].slice(-150);
 
   let xpGain = 0;
+  let lpGain = 0;
   if (type === "pvp") {
-    xpGain = 40 + (result.won ? 25 : 0);
+    if (result.won) {
+      xpGain = 65;
+      lpGain = 25;
+    } else if (result.isDraw) {
+      xpGain = 40;
+      lpGain = 5;
+    } else {
+      xpGain = 40;
+      lpGain = -15;
+    }
   } else if (type === "bot") {
-    xpGain = 20 + (result.won ? 15 : 0);
+    if (result.won) {
+      xpGain = 35;
+      lpGain = 15;
+    } else if (result.isDraw) {
+      xpGain = 20;
+      lpGain = 2;
+    } else {
+      xpGain = 20;
+      lpGain = -8;
+    }
   } else if (type === "solo") {
     xpGain = 30;
+    lpGain = 0;
   }
 
   // Mission completion XP rewards
@@ -201,19 +301,25 @@ export function applyMatchProgress(
 
   // Daily Mystery Word bonus (+150 XP)
   const mystery = getDailyMysteryWord();
-  if (result.foundWords && result.foundWords.some((w) => w.toUpperCase() === mystery.word.toUpperCase())) {
+  if (result.foundWords && result.foundWords.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
     xpGain += mystery.rewardXp;
   }
 
-  // Coin earnings for victories
+  // Coin earnings
   let coinsEarned = 0;
   if (result.won) {
     coinsEarned = type === "pvp" ? 25 : type === "bot" ? 15 : 10;
+  } else {
+    coinsEarned = 5;
   }
+
+  const currentLp = (progress.lp !== undefined && progress.lp > 0) ? progress.lp : (progress.xp ?? 0);
+  const nextLp = Math.max(0, currentLp + lpGain);
 
   return {
     ...progress,
     xp: progress.xp + xpGain,
+    lp: nextLp,
     coins: (progress.coins ?? 50) + coinsEarned,
     wins: progress.wins + (result.won ? 1 : 0),
     matches: progress.matches + (type !== "solo" ? 1 : 0),
@@ -222,25 +328,84 @@ export function applyMatchProgress(
     bestArcadeScore: Math.max(progress.bestArcadeScore || 0, result.arcadeScore || 0),
     missions: { ...progress.missions, duels: type !== "solo" ? duelProgress : progress.missions.duels, wordsmith: wordsmithProgress },
     history: newHistory,
+    lastMatchReward: {
+      xp: xpGain,
+      lp: lpGain,
+      coins: coinsEarned,
+    },
   };
 }
 
 export function applyArcadeProgress(progress: PlayerProgress, score: number) {
   const newBest = Math.max(progress.bestArcadeScore || 0, score);
   const xpGain = Math.max(5, Math.floor(score / 10));
+  const coinsGain = Math.floor(score / 40);
   return {
     ...progress,
     xp: progress.xp + xpGain,
+    coins: (progress.coins ?? 50) + coinsGain,
     bestArcadeScore: newBest,
   };
 }
 
+export function mergePlayerProgress(
+  local: PlayerProgress,
+  remote?: Partial<PlayerProgress> | null
+): PlayerProgress {
+  if (!remote) return local;
+  return {
+    ...DEFAULT_PROGRESS,
+    ...local,
+    ...remote,
+    xp: Math.max(local.xp, remote.xp ?? 0),
+    lp: Math.max(local.lp ?? 0, remote.lp ?? 0),
+    coins: Math.max(local.coins ?? 50, remote.coins ?? 50),
+    streakShields: Math.max(local.streakShields ?? 0, remote.streakShields ?? 0),
+    radarChargesBonus: Math.max(local.radarChargesBonus ?? 0, remote.radarChargesBonus ?? 0),
+    streak: Math.max(local.streak, remote.streak ?? 0),
+    wins: Math.max(local.wins, remote.wins ?? 0),
+    matches: Math.max(local.matches, remote.matches ?? 0),
+    bestScore: Math.max(local.bestScore, remote.bestScore ?? 0),
+    bestTempo: Math.max(local.bestTempo, remote.bestTempo ?? 0),
+    bestArcadeScore: Math.max(local.bestArcadeScore ?? 0, remote.bestArcadeScore ?? 0),
+    dailyCompletedId: local.dailyCompletedId || remote.dailyCompletedId || null,
+    missions: {
+      daily: Math.max(local.missions?.daily ?? 0, remote.missions?.daily ?? 0),
+      duels: Math.max(local.missions?.duels ?? 0, remote.missions?.duels ?? 0),
+      wordsmith: Math.max(local.missions?.wordsmith ?? 0, remote.missions?.wordsmith ?? 0),
+    },
+    claimedMilestones: {
+      ...(remote.claimedMilestones ?? {}),
+      ...(local.claimedMilestones ?? {}),
+    },
+    purchasedAvatars: {
+      ...(remote.purchasedAvatars ?? {}),
+      ...(local.purchasedAvatars ?? {}),
+    },
+    weeklyClaimed: {
+      ...(remote.weeklyClaimed ?? {}),
+      ...(local.weeklyClaimed ?? {}),
+    },
+    dailyClaimed: {
+      ...(remote.dailyClaimed ?? {}),
+      ...(local.dailyClaimed ?? {}),
+    },
+    history: Array.from(new Set([...(local.history ?? []), ...(remote.history ?? [])])).slice(-150),
+    selectedAvatar: local.selectedAvatar || remote.selectedAvatar || "spark",
+    selectedTheme: local.selectedTheme || remote.selectedTheme || "nature",
+    selectedTitle: local.selectedTitle || remote.selectedTitle,
+    gender: remote.gender || local.gender || "unspecified",
+    avatarPhoto: remote.avatarPhoto || local.avatarPhoto,
+  };
+}
+
 export function completeDailyProgress(progress: PlayerProgress, daily: DailyChallenge) {
-  if (progress.dailyCompletedId === daily.id) return progress;
+  if (progress.dailyCompletedId === daily.id && (progress.missions?.daily ?? 0) >= 1) return progress;
   return {
     ...progress,
     xp: progress.xp + daily.rewardXp,
     dailyCompletedId: daily.id,
+    lastStreakCheckDate: daily.id,
     streak: progress.streak + 1,
     missions: { ...progress.missions, daily: 1 },
   };
@@ -251,6 +416,8 @@ export function getPlayerLevel(xp: number): number {
 }
 
 export function isAvatarUnlocked(avatarId: AvatarId, progress: PlayerProgress): boolean {
+  if (progress.purchasedAvatars?.[avatarId]) return true;
+  if (progress.selectedAvatar === avatarId) return true;
   const currentLevel = getPlayerLevel(progress.xp);
   if (avatarId === "spark") return true;
   if (avatarId === "orbit") return currentLevel >= 3;
@@ -279,7 +446,23 @@ export const CYBER_TITLES: CyberTitle[] = [
 
 export function getActiveCyberTitle(progress: PlayerProgress): string {
   const available = CYBER_TITLES.filter((t) => t.unlocked(progress));
+  if (progress.selectedTitle && available.some((t) => t.badge === progress.selectedTitle)) {
+    return progress.selectedTitle;
+  }
   return available.at(-1)?.badge || "[ÇAYLAK]";
+}
+
+export function getUnclaimedMilestonesCount(progress: PlayerProgress, unlockedLevel = 1): number {
+  if (!progress) return 0;
+  let count = 0;
+  for (const milestone of MILESTONE_REWARDS) {
+    const isUnlocked = unlockedLevel > milestone.level;
+    const isClaimed = Boolean(progress.claimedMilestones?.[milestone.level]);
+    if (isUnlocked && !isClaimed) {
+      count++;
+    }
+  }
+  return count;
 }
 
 export type DailyMystery = {
@@ -341,4 +524,176 @@ export function checkDailyLoginReward(progress: PlayerProgress, todayId: string)
   };
 
   return { reward, updatedProgress };
+}
+
+export function getWeekId(date = new Date()): string {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+export type StreakReconciliationResult = {
+  updatedProgress: PlayerProgress;
+  shieldUsed: boolean;
+  shieldsConsumed: number;
+  streakReset: boolean;
+  previousStreak: number;
+};
+
+export function reconcileDailyStreak(progress: PlayerProgress, todayId: string): StreakReconciliationResult {
+  if (progress.lastStreakCheckDate === todayId) {
+    return { updatedProgress: progress, shieldUsed: false, shieldsConsumed: 0, streakReset: false, previousStreak: progress.streak };
+  }
+
+  if (!progress.dailyCompletedId || progress.streak === 0) {
+    return {
+      updatedProgress: { ...progress, lastStreakCheckDate: todayId },
+      shieldUsed: false,
+      shieldsConsumed: 0,
+      streakReset: false,
+      previousStreak: progress.streak,
+    };
+  }
+
+  if (progress.dailyCompletedId === todayId) {
+    return {
+      updatedProgress: { ...progress, lastStreakCheckDate: todayId },
+      shieldUsed: false,
+      shieldsConsumed: 0,
+      streakReset: false,
+      previousStreak: progress.streak,
+    };
+  }
+
+  const lastDate = new Date(progress.dailyCompletedId + "T00:00:00Z");
+  const today = new Date(todayId + "T00:00:00Z");
+  const diffTime = today.getTime() - lastDate.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 1) {
+    return {
+      updatedProgress: { ...progress, lastStreakCheckDate: todayId },
+      shieldUsed: false,
+      shieldsConsumed: 0,
+      streakReset: false,
+      previousStreak: progress.streak,
+    };
+  }
+
+  const missedDays = diffDays - 1;
+  const availableShields = progress.streakShields || 0;
+
+  if (availableShields >= missedDays) {
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayId = getDayId(yesterday);
+    return {
+      updatedProgress: {
+        ...progress,
+        streakShields: availableShields - missedDays,
+        dailyCompletedId: yesterdayId,
+        lastStreakCheckDate: todayId,
+      },
+      shieldUsed: true,
+      shieldsConsumed: missedDays,
+      streakReset: false,
+      previousStreak: progress.streak,
+    };
+  } else {
+    return {
+      updatedProgress: {
+        ...progress,
+        streak: 0,
+        dailyCompletedId: null,
+        lastStreakCheckDate: todayId,
+      },
+      shieldUsed: false,
+      shieldsConsumed: 0,
+      streakReset: true,
+      previousStreak: progress.streak,
+    };
+  }
+}
+
+export function reconcileMissions(progress: PlayerProgress, todayId: string, weekId: string): PlayerProgress {
+  let updated = { ...progress };
+
+  if (updated.missionsDate !== todayId) {
+    updated = {
+      ...updated,
+      missions: { daily: 0, duels: 0, wordsmith: 0 },
+      dailyClaimed: {},
+      missionsDate: todayId,
+    };
+  }
+
+  if (updated.weeklyMissionsWeek !== weekId) {
+    updated = {
+      ...updated,
+      weeklyClaimed: {},
+      weeklyMissionsWeek: weekId,
+    };
+  }
+
+  return updated;
+}
+
+export function getUnclaimedMissionsCount(progress: PlayerProgress): number {
+  if (!progress) return 0;
+  let count = 0;
+
+  // Daily missions
+  for (const mission of SEASON_MISSIONS) {
+    const current = progress.missions?.[mission.id] ?? 0;
+    const isDone = current >= mission.target;
+    const isClaimed = Boolean(progress.dailyClaimed?.[mission.id]);
+    if (isDone && !isClaimed) {
+      count++;
+    }
+  }
+
+  // Weekly missions
+  if (progress.wins >= 3 && !progress.weeklyClaimed?.victoryStreak) {
+    count++;
+  }
+  if ((progress.bestArcadeScore || 0) >= 400 && !progress.weeklyClaimed?.speedDemon) {
+    count++;
+  }
+
+  return count;
+}
+
+export type DailyReconciliation = {
+  progress: PlayerProgress;
+  shieldSaved: boolean;
+  shieldsConsumed: number;
+  streakReset: boolean;
+  previousStreak: number;
+  missionsReset: boolean;
+  loginReward: DailyLoginReward | null;
+};
+
+export function reconcilePlayerProgress(progress: PlayerProgress, date = new Date()): DailyReconciliation {
+  const todayId = getDayId(date);
+  const weekId = getWeekId(date);
+
+  const streakRes = reconcileDailyStreak(progress, todayId);
+  let currentProgress = streakRes.updatedProgress;
+
+  const missionsNeedReset = currentProgress.missionsDate !== todayId;
+  currentProgress = reconcileMissions(currentProgress, todayId, weekId);
+
+  // Login reward is claimed manually via the CommandCenter UI container
+
+  return {
+    progress: currentProgress,
+    shieldSaved: streakRes.shieldUsed,
+    shieldsConsumed: streakRes.shieldsConsumed,
+    streakReset: streakRes.streakReset,
+    previousStreak: streakRes.previousStreak,
+    missionsReset: missionsNeedReset,
+    loginReward: null,
+  };
 }

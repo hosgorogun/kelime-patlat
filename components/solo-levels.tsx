@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
 import { MILESTONE_REWARDS, type MilestoneReward } from "@/shared/progression";
 import { gameSfx } from "@/lib/game-sfx";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 
 export function SoloLevels({
   unlockedLevel,
@@ -51,7 +52,8 @@ export function SoloLevels({
   const isSelectedLocked = selectedLevel > unlockedLevel;
 
   return (
-    <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Top Header */}
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.back}>
@@ -74,29 +76,28 @@ export function SoloLevels({
               {/* Row connector line */}
               <View style={styles.rowConnector} />
 
-              {/* Vertical connector down from the end of this row to the next row */}
-              {rowIndex < gridRows.length - 1 && (
-                <View
-                  style={[
-                    styles.verticalConnector,
-                    isRowEven ? { right: 38 } : { left: 38 }
-                  ]}
-                />
-              )}
-
               <View style={styles.gridRow}>
-                {row.map((level) => {
+                {row.map((level, colIndex) => {
                   const locked = level > unlockedLevel;
                   const current = level === unlockedLevel;
                   const completed = level < unlockedLevel;
                   const isChosen = level === selectedLevel;
+                  const isTurnNode = isRowEven ? colIndex === row.length - 1 : colIndex === 0;
 
                   return (
                     <View key={level} style={styles.nodeWrapper}>
+                      {/* Pixel-perfect vertical connector from turning node down to next row */}
+                      {isTurnNode && rowIndex < gridRows.length - 1 && (
+                        <View style={styles.verticalConnector} pointerEvents="none" />
+                      )}
                       <Pressable
                         onPress={() => {
-                          setSelectedLevel(level);
-                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                          triggerHapticSelection();
+                          if (isChosen && !locked) {
+                            onSelect(level);
+                          } else {
+                            setSelectedLevel(level);
+                          }
                         }}
                         style={({ pressed }) => [
                           styles.nodeCircle,
@@ -132,7 +133,7 @@ export function SoloLevels({
                 const milestone = MILESTONE_REWARDS.find((m) => row.includes(m.level));
                 if (!milestone) return null;
                 const isClaimed = Boolean(claimedMilestones[milestone.level]);
-                const isUnlocked = unlockedLevel >= milestone.level;
+                const isUnlocked = unlockedLevel > milestone.level;
 
                 return (
                   <View style={styles.milestoneWrap}>
@@ -182,13 +183,14 @@ export function SoloLevels({
           );
         })}
       </View>
+      </ScrollView>
 
-      {/* Mission Control Deck (Selected Level Details Panel) */}
-      <View style={styles.missionDeck}>
+      {/* Docked Mission Control Deck (Selected Level Details Panel) */}
+      <View style={styles.dockedDeck}>
         <View style={styles.deckHead}>
-          <View>
+          <View style={{ flex: 1, marginRight: 8 }}>
             <Text style={styles.deckKicker}>SEÇİLİ DÜĞÜM DETAYLARI</Text>
-            <Text style={styles.deckTitle}>SEVİYE {selectedLevel}: {selectedData.title.toUpperCase()}</Text>
+            <Text numberOfLines={1} style={styles.deckTitle}>SEVİYE {selectedLevel}: {selectedData.title.toLocaleUpperCase("tr-TR")}</Text>
           </View>
           <View style={[styles.statusBadge, isSelectedLocked ? styles.badgeLocked : selectedLevel === unlockedLevel ? styles.badgeActive : styles.badgeCompleted]}>
             <Text style={styles.statusBadgeText}>
@@ -199,17 +201,17 @@ export function SoloLevels({
 
         <View style={styles.deckInfoRow}>
           <View style={styles.infoCol}>
-            <Text style={styles.infoLabel}>IZGARA BOYUTU</Text>
+            <Text style={styles.infoLabel}>IZGARA</Text>
             <Text style={styles.infoValue}>{selectedData.size}×{selectedData.size}</Text>
           </View>
           <View style={styles.infoDivider} />
           <View style={styles.infoCol}>
-            <Text style={styles.infoLabel}>HEDEF KELİME</Text>
+            <Text style={styles.infoLabel}>HEDEF</Text>
             <Text style={styles.infoValue}>{selectedData.wordCount}</Text>
           </View>
           <View style={styles.infoDivider} />
           <View style={styles.infoCol}>
-            <Text style={styles.infoLabel}>SÜRE SINIRI</Text>
+            <Text style={styles.infoLabel}>SÜRE</Text>
             <Text style={styles.infoValue}>{selectedData.timeLimit} sn</Text>
           </View>
         </View>
@@ -229,12 +231,13 @@ export function SoloLevels({
           {!isSelectedLocked && <Text style={styles.launchArrow}>→</Text>}
         </Pressable>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 130, backgroundColor: "#0C091C", flexGrow: 1 },
+  container: { flex: 1, backgroundColor: "#0C091C" },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 24, backgroundColor: "#0C091C", flexGrow: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
   back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1E1838", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
@@ -272,9 +275,11 @@ const styles = StyleSheet.create({
   },
   verticalConnector: {
     position: "absolute",
+    top: 25,
     bottom: -32,
     width: 2,
-    height: 32,
+    left: "50%",
+    marginLeft: -1,
     borderStyle: "dashed",
     borderWidth: 1,
     borderColor: "rgba(124, 92, 246, 0.45)",
@@ -357,18 +362,20 @@ const styles = StyleSheet.create({
     color: "#475569",
   },
 
-  // Mission Deck Details Card
-  missionDeck: {
-    backgroundColor: "rgba(30, 24, 56, 0.75)",
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.35)",
-    padding: 20,
-    marginTop: 8,
-    shadowColor: "#7C3AED",
-    shadowOpacity: 0.12,
-    shadowRadius: 15,
-    elevation: 6,
+  // Docked Mission Deck Details Card
+  dockedDeck: {
+    backgroundColor: "rgba(18, 14, 38, 0.98)",
+    borderTopWidth: 1.5,
+    borderTopColor: "rgba(124, 92, 246, 0.35)",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
   },
   deckHead: {
     flexDirection: "row",

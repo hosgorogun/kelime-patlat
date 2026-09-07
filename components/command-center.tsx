@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Animated, Easing, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getRank, getPlayerLevel, getActiveCyberTitle, THEME_PACKS, AVATARS, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getRank, getPlayerLevel, getActiveCyberTitle, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "missions";
@@ -19,15 +19,48 @@ type CommandCenterProps = {
   onLeaderboard?: () => void;
   onShowGuide: () => void;
   onSelectTheme?: (themeId: ThemePackId) => void;
+  unclaimedMissionsCount?: number;
+  unclaimedMilestonesCount?: number;
+  onClaimDailyReward?: () => void;
 };
 
-export function CommandCenter({ playerName, progress, daily, leaderboard, onPlayDaily, onPlayBot, onSolo, onNavigate, onLeaderboard, onShowGuide, onSelectTheme }: CommandCenterProps) {
-  const [showThemeModal, setShowThemeModal] = useState(false);
+export function CommandCenter({
+  playerName,
+  progress,
+  daily,
+  leaderboard,
+  onPlayDaily,
+  onPlayBot,
+  onSolo,
+  onNavigate,
+  onLeaderboard,
+  onShowGuide,
+  onSelectTheme,
+  unclaimedMissionsCount = 0,
+  unclaimedMilestonesCount = 0,
+  onClaimDailyReward,
+}: CommandCenterProps) {
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
   const rank = getRank(progress);
   const activeTheme = THEME_PACKS.find((pack) => pack.id === (progress.selectedTheme || daily.themeId)) ?? THEME_PACKS[0]!;
   const dailyDone = progress.dailyCompletedId === daily.id;
+
+  const todayId = getDayId();
+  const isClaimedToday = progress.lastLoginDay === todayId;
+  const currentCount = progress.loginDaysCount || 0;
+  const activeDayIndex = isClaimedToday ? (((currentCount || 1) - 1) % 7) : (currentCount % 7);
+  const displayDayNumber = activeDayIndex + 1;
+  const todayReward = DAILY_LOGIN_REWARDS[activeDayIndex]!;
+  const nextReward = DAILY_LOGIN_REWARDS[(activeDayIndex + 1) % 7]!;
+
+  const getRewardUnitName = (type: string) => {
+    switch (type) {
+      case "coins": return "SİBER ÇİP";
+      case "shield": return "SERİ KALKANI";
+      default: return "SEZON XP";
+    }
+  };
 
   useEffect(() => {
     const orbitLoop = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 7_500, easing: Easing.linear, useNativeDriver: true }));
@@ -41,7 +74,19 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
   }, [orbit, shimmer]);
 
   const orbitSpin = orbit.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  const xpProgress = `${Math.min(100, progress.xp % 350 / 3.5)}%` as `${number}%`;
+  const { xpCurrentTier, xpTierTarget, tierLabel, xpPercent } = useMemo(() => {
+    if (progress.xp < 350) {
+      const pct = Math.min(100, Math.round((progress.xp / 350) * 100));
+      return { xpCurrentTier: progress.xp, xpTierTarget: 350, tierLabel: "GÜMÜŞ KADEME", xpPercent: `${pct}%` as const };
+    }
+    if (progress.xp < 900) {
+      const tierProgress = progress.xp - 350;
+      const tierTarget = 550; // 900 - 350
+      const pct = Math.min(100, Math.round((tierProgress / tierTarget) * 100));
+      return { xpCurrentTier: tierProgress, xpTierTarget: tierTarget, tierLabel: "ALTIN KADEME", xpPercent: `${pct}%` as const };
+    }
+    return { xpCurrentTier: progress.xp, xpTierTarget: progress.xp, tierLabel: "ZİRVE (ŞAMPİYON)", xpPercent: "100%" as const };
+  }, [progress.xp]);
   const currentLevel = getPlayerLevel(progress.xp);
   const isLocked6 = currentLevel < 5;
   const isLocked8 = currentLevel < 8;
@@ -70,12 +115,16 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       <View style={styles.topbarRow}>
         <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
           <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
-            <Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text>
+            {progress.avatarPhoto ? (
+              <Image source={{ uri: progress.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 12 }} />
+            ) : (
+              <Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text>
+            )}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Text numberOfLines={1} style={styles.name}>{playerName}</Text>
-              <Text style={styles.cyberBadge}>{getActiveCyberTitle(progress)}</Text>
+              <Text numberOfLines={1} style={[styles.name, { flexShrink: 1 }]}>{playerName}</Text>
+              <Text numberOfLines={1} style={styles.cyberBadge}>{getActiveCyberTitle(progress)}</Text>
             </View>
             <Text numberOfLines={1} style={styles.rank}>SEVİYE {getPlayerLevel(progress.xp)} · {rank}</Text>
           </View>
@@ -119,6 +168,16 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
           </View>
         </Pressable>
       </View>
+
+      {progress.streak > 0 && !dailyDone && (
+        <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.streakWarningPill, pressed && styles.pressed]}>
+          <Text style={styles.streakWarningIcon}>🔥</Text>
+          <Text style={styles.streakWarningText}>
+            {progress.streak} GÜNLÜK SERİN TEHLİKEDE · BUGÜNÜN İZİNİ OYNA
+          </Text>
+          <Text style={styles.streakWarningArrow}>→</Text>
+        </Pressable>
+      )}
     </View>
 
     {/* Radar Signal Deck */}
@@ -140,8 +199,8 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       <Text style={styles.deckBody}>Hızlı bir düello seç, günün sabit tahtasını bitir veya liderlik hattına çık.</Text>
       
       <View style={styles.xpPanel}>
-        <View style={styles.xpHead}><Text style={styles.xpLabel}>SEZON İLERLEMESİ</Text><Text style={styles.xpValue}>{progress.xp % 350} / 350 XP</Text></View>
-        <View style={styles.track}><View style={[styles.trackFill, { width: xpProgress }]} /></View>
+        <View style={styles.xpHead}><Text style={styles.xpLabel}>SEZON İLERLEMESİ ({tierLabel})</Text><Text style={styles.xpValue}>{xpCurrentTier} / {xpTierTarget} XP</Text></View>
+        <View style={styles.track}><View style={[styles.trackFill, { width: xpPercent }]} /></View>
       </View>
       
       <View style={styles.signalFooter}>
@@ -157,16 +216,101 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       </View>
     </View>
 
+    {/* Günlük Giriş Ödülü (7 Günlük Döngü) */}
+    <View style={styles.dailyRewardSection}>
+      <View style={styles.dailyRewardHeader}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={styles.dailyRewardTitle}>🎁 GÜNLÜK GİRİŞ ÖDÜLÜ</Text>
+          <View style={styles.dailyRewardDayPill}>
+            <Text style={styles.dailyRewardDayPillText}>GÜN {displayDayNumber}/7</Text>
+          </View>
+        </View>
+        <View style={[styles.dailyStatusBadge, isClaimedToday ? styles.dailyStatusBadgeClaimed : styles.dailyStatusBadgeReady]}>
+          <Text style={[styles.dailyStatusBadgeText, isClaimedToday ? { color: "#50E3C2" } : { color: "#FFD000" }]}>
+            {isClaimedToday ? "✓ ALINDI" : "⚡ 1 ÖDÜL HAZIR"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.dailyDaysRow}>
+        {DAILY_LOGIN_REWARDS.map((item, index) => {
+          const isPast = isClaimedToday ? index <= activeDayIndex : index < activeDayIndex;
+          const isToday = index === activeDayIndex;
+          const isTodayClaimable = isToday && !isClaimedToday;
+          const isEpic = index === 6;
+
+          return (
+            <Pressable
+              key={item.day}
+              onPress={() => {
+                if (isTodayClaimable) {
+                  triggerHapticSelection();
+                  onClaimDailyReward?.();
+                }
+              }}
+              style={[
+                styles.dailyDayCard,
+                isPast && styles.dailyDayCardPast,
+                isTodayClaimable && styles.dailyDayCardActive,
+                isToday && isClaimedToday && styles.dailyDayCardClaimedToday,
+                isEpic && styles.dailyDayCardEpic,
+              ]}
+            >
+              {isEpic && (
+                <View style={styles.epicTag}>
+                  <Text style={styles.epicTagText}>EPİK</Text>
+                </View>
+              )}
+              <Text style={[styles.dailyDayLabel, isTodayClaimable && { color: "#00F5D4", fontWeight: "900" }]}>
+                {item.day}G
+              </Text>
+              <Text style={styles.dailyDayIcon}>{item.icon}</Text>
+              <Text style={[styles.dailyDayAmount, isEpic && { color: "#FFD000" }]}>
+                +{item.amount}
+              </Text>
+              {isPast && (
+                <View style={styles.dailyDayCheck}>
+                  <Text style={styles.dailyDayCheckText}>✓</Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {!isClaimedToday ? (
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            onClaimDailyReward?.();
+          }}
+          style={({ pressed }) => [styles.dailyClaimBtn, pressed && styles.pressed]}
+        >
+          <Text style={styles.dailyClaimBtnIcon}>🎁</Text>
+          <Text style={styles.dailyClaimBtnText}>
+            BUGÜNÜN ÖDÜLÜNÜ TOPLA (+{todayReward.amount} {getRewardUnitName(todayReward.rewardType)})
+          </Text>
+          <Text style={styles.dailyClaimBtnArrow}>⚡</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.dailyClaimedBar}>
+          <Text style={styles.dailyClaimedBarText}>
+            ✓ Bugünkü ödülünü aldın! Yarınki ödül: {nextReward.icon} +{nextReward.amount} {getRewardUnitName(nextReward.rewardType)}
+          </Text>
+        </View>
+      )}
+    </View>
+
     {/* Event Hub (Daily Route & Arcade) */}
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>ETKİNLİK MERKEZİ</Text><Text style={styles.sectionMeta}>ÖZEL GÖREVLER</Text></View>
     <View style={styles.cardsRow}>
-      <Pressable onPress={() => setShowThemeModal(true)} style={({ pressed }) => [styles.columnCard, { borderColor: dailyDone ? "#332653" : activeTheme.accent }, pressed && styles.pressed]}>
+      <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.columnCard, { borderColor: dailyDone ? "#332653" : activeTheme.accent }, pressed && styles.pressed]}>
         <View style={[styles.cardIconCircle, { borderColor: dailyDone ? "#524376" : activeTheme.accent, backgroundColor: dailyDone ? "#201838" : activeTheme.glow }]}>
           <Text style={[styles.cardIconText, { color: dailyDone ? "#82759F" : activeTheme.accent }]}>{activeTheme.icon}</Text>
         </View>
         <Text style={[styles.cardKicker, { color: dailyDone ? "#82759F" : activeTheme.accent }]}>{dailyDone ? "SABİT ROTA" : "BUGÜNÜN ROTASI"}</Text>
-        <Text style={styles.cardTitle}>{dailyDone ? "TAMAMLANDI" : daily.title.toUpperCase()}</Text>
-        <Text style={styles.cardBody}>{dailyDone ? "Paketi değiştir veya tekrar oyna." : "Dokun ve kelime paketini seç, rotayı ateşle!"}</Text>
+        <Text style={styles.cardTitle}>{dailyDone ? "TAMAMLANDI" : daily.title.toLocaleUpperCase("tr-TR")}</Text>
+        <Text style={styles.cardBody}>{dailyDone ? "Günün rotasını tekrar incele." : "Kelime paketini seç ve günün rotasını başlat!"}</Text>
       </Pressable>
 
       <Pressable onPress={() => onNavigate("arcade")} style={({ pressed }) => [styles.columnCard, { borderColor: "#FFD000" }, pressed && styles.pressed]}>
@@ -185,9 +329,20 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       <View style={styles.soloSkin}>
         <Text style={styles.soloTrophy}>🏆</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.soloEyebrow}>KLASİK MOD</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={styles.soloEyebrow}>KLASİK MOD</Text>
+            {unclaimedMilestonesCount > 0 && (
+              <View style={styles.milestoneBadgePill}>
+                <Text style={styles.milestoneBadgeText}>🎁 {unclaimedMilestonesCount} SANDIK HAZIR</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
-          <Text style={styles.soloDesc}>Seviye seviye zorlaşan kelime operasyonları. Ustalık kazan ve tüm seviyeleri aç.</Text>
+          <Text style={styles.soloDesc}>
+            {unclaimedMilestonesCount > 0
+              ? `${unclaimedMilestonesCount} adet açılmayı bekleyen ödül sandığı seni bekliyor!`
+              : "Seviye seviye zorlaşan kelime operasyonları. Ustalık kazan ve tüm seviyeleri aç."}
+          </Text>
         </View>
         <Text style={styles.soloArrow}>›</Text>
       </View>
@@ -202,7 +357,7 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
           <View style={[styles.modeMiniDot, { backgroundColor: "#00F5D4" }]} />
         </View>
         <Text style={styles.modeTitle}>4x4 Hızlı</Text>
-        <Text style={styles.modeMeta}>45 SN</Text>
+        <Text style={styles.modeMeta}>55 SN</Text>
       </Pressable>
 
       <Pressable onPress={handlePlayBot6} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked6 ? "#4C4660" : "#A78BFA", opacity: isLocked6 ? 0.65 : 1 }, pressed && styles.pressed]}>
@@ -211,7 +366,7 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
           <View style={[styles.modeMiniDot, { backgroundColor: isLocked6 ? "#6B7280" : "#A78BFA" }]} />
         </View>
         <Text style={styles.modeTitle}>{isLocked6 ? "6x6 (Sev.5)" : "6x6 Akış"}</Text>
-        <Text style={styles.modeMeta}>65 SN</Text>
+        <Text style={styles.modeMeta}>75 SN</Text>
       </Pressable>
 
       <Pressable onPress={handlePlayBot8} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked8 ? "#4C4660" : "#F59E0B", opacity: isLocked8 ? 0.65 : 1 }, pressed && styles.pressed]}>
@@ -241,8 +396,19 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
       >
         <Text style={styles.hubBannerGlyph}>⚡</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.hubBannerTitle}>GÖREVLER</Text>
-          <Text style={styles.hubBannerSub}>Haftalık hedefler ve XP</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={styles.hubBannerTitle}>GÖREVLER</Text>
+            {unclaimedMissionsCount > 0 && (
+              <View style={styles.hubBadgePill}>
+                <Text style={styles.hubBadgePillText}>{unclaimedMissionsCount}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.hubBannerSub}>
+            {unclaimedMissionsCount > 0
+              ? `${unclaimedMissionsCount} ödül hazır!`
+              : "Haftalık hedefler ve XP"}
+          </Text>
         </View>
         <Text style={styles.hubBannerArrow}>→</Text>
       </Pressable>
@@ -259,98 +425,11 @@ export function CommandCenter({ playerName, progress, daily, leaderboard, onPlay
         <Text style={styles.hubBannerArrow}>→</Text>
       </Pressable>
     </View>
-
-    {/* Kelime Paketleri Seçim Modalı */}
-    <Modal
-      visible={showThemeModal}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setShowThemeModal(false)}
-    >
-      <Pressable
-        style={styles.modalBackdrop}
-        onPress={() => setShowThemeModal(false)}
-      >
-        <Pressable style={styles.modalDialog} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.modalHeader}>
-            <View>
-              <Text style={styles.modalKicker}>GÜNÜN SABİT ROTASI</Text>
-              <Text style={styles.modalTitle}>KELİME PAKETİ SEÇ</Text>
-            </View>
-            <Pressable
-              onPress={() => setShowThemeModal(false)}
-              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-              style={styles.modalCloseBtn}
-            >
-              <Text style={styles.modalCloseText}>✕</Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.modalSub}>
-            Oynamak istediğin kelime tarzını seç. Seçtiğin tema oyundaki kelime havuzunu belirler.
-          </Text>
-
-          <View style={styles.themeGrid}>
-            {THEME_PACKS.map((pack) => {
-              const isCurrent = (progress.selectedTheme || "nature") === pack.id;
-              return (
-                <Pressable
-                  key={pack.id}
-                  onPress={() => {
-                    triggerHapticSelection();
-                    onSelectTheme?.(pack.id);
-                  }}
-                  style={({ pressed }) => [
-                    styles.themeCard,
-                    isCurrent && { borderColor: pack.accent, backgroundColor: pack.glow },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={styles.themeCardTop}>
-                    <View style={[styles.themeIconCircle, { borderColor: pack.accent }]}>
-                      <Text style={[styles.themeIconTxt, { color: pack.accent }]}>{pack.icon}</Text>
-                    </View>
-                    {isCurrent && (
-                      <View style={[styles.themeActivePill, { backgroundColor: pack.accent }]}>
-                        <Text style={styles.themeActivePillText}>✓ AKTİF</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text numberOfLines={1} style={[styles.themePackLabel, { color: pack.accent }]}>
-                    {pack.label}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.themePackTitle}>
-                    {pack.title}
-                  </Text>
-                  <Text numberOfLines={2} style={styles.themePackDesc}>
-                    {pack.description}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Pressable
-            onPress={() => {
-              triggerHapticSuccess();
-              setShowThemeModal(false);
-              onPlayDaily();
-            }}
-            style={({ pressed }) => [styles.modalStartBtn, pressed && styles.pressed]}
-          >
-            <Text style={styles.modalStartBtnText}>
-              {dailyDone ? "TEKRAR OYNA" : "BU PAKETLE BAŞLAT"}
-            </Text>
-            <Text style={styles.modalStartBtnArrow}>🚀</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
   </ScrollView>;
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingBottom: 136 }, 
+  content: { flexGrow: 1, paddingBottom: 148 }, 
   topbar: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: 22, backgroundColor: "rgba(22, 17, 44, 0.9)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.35)", marginBottom: 4 }, 
   topbarRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   identity: { flexDirection: "row", gap: 10, alignItems: "center", flex: 1, marginRight: 8 }, 
@@ -374,26 +453,55 @@ const styles = StyleSheet.create({
   plusBadge: { width: 18, height: 18, borderRadius: 9, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center" },
   plusText: { color: "#1A102B", fontSize: 12, fontWeight: "900", lineHeight: 14 },
   
-  signalDeck: { minHeight: 280, marginTop: 16, padding: 22, borderRadius: 24, overflow: "hidden", backgroundColor: "rgba(43, 33, 88, 0.5)", borderWidth: 1, borderColor: "rgba(127, 103, 211, 0.35)", position: "relative" }, 
-  radarRing: { position: "absolute", right: -35, top: -42, width: 190, height: 190, borderRadius: 100, borderWidth: 1.5, zIndex: 1 }, 
-  orbit: { position: "absolute", right: -35, top: -42, width: 190, height: 190, borderRadius: 100, borderWidth: 1, borderColor: "#8E79DF", justifyContent: "flex-start", alignItems: "center", zIndex: 2 }, 
-  orbitNode: { width: 16, height: 16, borderRadius: 9, marginTop: -8, backgroundColor: "#FFD000", shadowColor: "#FFD000", shadowOpacity: 0.9, shadowRadius: 12, elevation: 6 }, 
-  glow: { position: "absolute", right: 25, bottom: -65, width: 180, height: 150, borderRadius: 100, backgroundColor: "#FF007F" }, 
-  deckEyebrow: { color: "#FFD000", fontSize: 8, fontWeight: "900", letterSpacing: 1.2 }, 
-  deckTitle: { color: "#FFFFFF", fontSize: 34, lineHeight: 38, fontWeight: "900", letterSpacing: -1, marginTop: 10, textShadowColor: "rgba(255, 255, 255, 0.35)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6 }, 
-  deckBody: { color: "#F3E8FF", fontSize: 11, lineHeight: 16, marginTop: 10, maxWidth: 225 }, 
-  xpPanel: { marginTop: 16, borderRadius: 16, backgroundColor: "rgba(12, 8, 37, 0.3)", borderWidth: 1, borderColor: "#5A4A93", padding: 12 }, 
+  signalDeck: { minHeight: 185, marginTop: 12, padding: 16, borderRadius: 20, overflow: "hidden", backgroundColor: "rgba(43, 33, 88, 0.5)", borderWidth: 1, borderColor: "rgba(127, 103, 211, 0.35)", position: "relative" }, 
+  radarRing: { position: "absolute", right: -25, top: -28, width: 135, height: 135, borderRadius: 70, borderWidth: 1.5, zIndex: 1 }, 
+  orbit: { position: "absolute", right: -25, top: -28, width: 135, height: 135, borderRadius: 70, borderWidth: 1, borderColor: "#8E79DF", justifyContent: "flex-start", alignItems: "center", zIndex: 2 }, 
+  orbitNode: { width: 12, height: 12, borderRadius: 6, marginTop: -6, backgroundColor: "#FFD000", shadowColor: "#FFD000", shadowOpacity: 0.9, shadowRadius: 10, elevation: 5 }, 
+  glow: { position: "absolute", right: 20, bottom: -45, width: 140, height: 110, borderRadius: 80, backgroundColor: "rgba(255, 0, 127, 0.18)" }, 
+  deckEyebrow: { color: "#FFD000", fontSize: 7.5, fontWeight: "900", letterSpacing: 1.1 }, 
+  deckTitle: { color: "#FFFFFF", fontSize: 24, lineHeight: 27, fontWeight: "900", letterSpacing: -0.5, marginTop: 4, textShadowColor: "rgba(255, 255, 255, 0.35)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6 }, 
+  deckBody: { color: "#F3E8FF", fontSize: 9.5, lineHeight: 13.5, marginTop: 4, maxWidth: 215 }, 
+  xpPanel: { marginTop: 10, borderRadius: 12, backgroundColor: "rgba(12, 8, 37, 0.3)", borderWidth: 1, borderColor: "#5A4A93", padding: 9 }, 
   xpHead: { flexDirection: "row", justifyContent: "space-between" }, 
-  xpLabel: { color: "#E9D5FF", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, 
-  xpValue: { color: "#FFF9FC", fontSize: 8, fontWeight: "900" }, 
-  track: { height: 6, marginTop: 8, borderRadius: 3, overflow: "hidden", backgroundColor: "#4B3B7C" }, 
-  trackFill: { height: "100%", borderRadius: 3, backgroundColor: "#FFD000" }, 
-  signalFooter: { marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }, 
+  xpLabel: { color: "#E9D5FF", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.7 }, 
+  xpValue: { color: "#FFF9FC", fontSize: 7.5, fontWeight: "900" }, 
+  track: { height: 5, marginTop: 6, borderRadius: 2.5, overflow: "hidden", backgroundColor: "#4B3B7C" }, 
+  trackFill: { height: "100%", borderRadius: 2.5, backgroundColor: "#FFD000" }, 
+  signalFooter: { marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" }, 
   footerCol: { flex: 1, alignItems: "center" },
-  signalLabel: { color: "#E9D5FF", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 }, 
-  signalValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", marginTop: 2 }, 
-  signalUnit: { color: "#D8B4FE", fontSize: 8 }, 
-  signalRule: { width: 1, height: 24, backgroundColor: "#64519B" },
+  signalLabel: { color: "#E9D5FF", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.7 }, 
+  signalValue: { color: "#FFF9FC", fontSize: 13.5, fontWeight: "900", marginTop: 2 }, 
+  signalUnit: { color: "#D8B4FE", fontSize: 7.5 }, 
+  signalRule: { width: 1, height: 18, backgroundColor: "#64519B" },
+
+  dailyRewardSection: { marginTop: 12, borderRadius: 20, backgroundColor: "rgba(25, 20, 48, 0.65)", borderWidth: 1.5, borderColor: "rgba(124, 92, 246, 0.35)", padding: 14 },
+  dailyRewardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dailyRewardTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  dailyRewardDayPill: { backgroundColor: "rgba(124, 92, 246, 0.25)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  dailyRewardDayPillText: { color: "#C4B5FD", fontSize: 8.5, fontWeight: "900" },
+  dailyStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
+  dailyStatusBadgeReady: { backgroundColor: "rgba(255, 208, 0, 0.12)", borderColor: "rgba(255, 208, 0, 0.4)" },
+  dailyStatusBadgeClaimed: { backgroundColor: "rgba(80, 227, 194, 0.12)", borderColor: "rgba(80, 227, 194, 0.4)" },
+  dailyStatusBadgeText: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  dailyDaysRow: { flexDirection: "row", gap: 5, marginTop: 10, width: "100%" },
+  dailyDayCard: { flex: 1, minHeight: 64, borderRadius: 12, backgroundColor: "rgba(17, 13, 35, 0.6)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.2)", alignItems: "center", justifyContent: "center", paddingVertical: 5, position: "relative" },
+  dailyDayCardActive: { borderColor: "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1.5, shadowColor: "#00F5D4", shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
+  dailyDayCardPast: { opacity: 0.7, borderColor: "rgba(80, 227, 194, 0.3)" },
+  dailyDayCardClaimedToday: { borderColor: "rgba(80, 227, 194, 0.5)", backgroundColor: "rgba(80, 227, 194, 0.1)" },
+  dailyDayCardEpic: { borderColor: "#FFC24A" },
+  epicTag: { position: "absolute", top: -5, backgroundColor: "#FFC24A", paddingHorizontal: 3, borderRadius: 4 },
+  epicTagText: { color: "#121025", fontSize: 6.5, fontWeight: "900" },
+  dailyDayLabel: { color: "#A799C7", fontSize: 8, fontWeight: "800" },
+  dailyDayIcon: { fontSize: 14, marginVertical: 2 },
+  dailyDayAmount: { color: "#FFF9FC", fontSize: 8.5, fontWeight: "900" },
+  dailyDayCheck: { position: "absolute", bottom: 2, right: 3, backgroundColor: "#50E3C2", width: 12, height: 12, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  dailyDayCheckText: { color: "#121025", fontSize: 8, fontWeight: "900", lineHeight: 10 },
+  dailyClaimBtn: { marginTop: 10, backgroundColor: "#00F5D4", borderRadius: 12, paddingVertical: 9, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, shadowColor: "#00F5D4", shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
+  dailyClaimBtnIcon: { fontSize: 14 },
+  dailyClaimBtnText: { color: "#121025", fontSize: 10.5, fontWeight: "900", letterSpacing: 0.5 },
+  dailyClaimBtnArrow: { color: "#121025", fontSize: 12, fontWeight: "900" },
+  dailyClaimedBar: { marginTop: 9, backgroundColor: "rgba(80, 227, 194, 0.08)", borderWidth: 1, borderColor: "rgba(80, 227, 194, 0.25)", borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10, alignItems: "center" },
+  dailyClaimedBarText: { color: "#D1FAE5", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.3 },
   
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 22, marginBottom: 8 }, 
   sectionTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 }, 
@@ -431,149 +539,56 @@ const styles = StyleSheet.create({
   hubBannerTitle: { color: "#FFF", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
   hubBannerSub: { color: "#A799C7", fontSize: 8, marginTop: 2 },
   hubBannerArrow: { color: "#A799C7", fontSize: 14, fontWeight: "900" },
-
-  /* Modal Styles */
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(10, 7, 24, 0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  modalDialog: {
-    width: "100%",
-    maxHeight: "88%",
-    backgroundColor: "#17122C",
-    borderRadius: 24,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.4)",
-    shadowColor: "#7C3AED",
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  modalKicker: {
-    color: "#FFD000",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  modalTitle: {
-    color: "#FFF",
-    fontSize: 18,
-    fontWeight: "900",
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
-  modalCloseBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalCloseText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  modalSub: {
-    color: "#C4B5FD",
-    fontSize: 10,
-    lineHeight: 14,
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  themeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  themeCard: {
-    width: "48%",
-    backgroundColor: "rgba(26, 20, 48, 0.8)",
-    borderRadius: 16,
-    padding: 10,
-    borderWidth: 1.5,
-    borderColor: "#2F2353",
-  },
-  themeCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  themeIconCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+  hubBadgePill: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 9,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.25)",
-  },
-  themeIconTxt: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  themeActivePill: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 5,
-  },
-  themeActivePillText: {
-    color: "#0F172A",
-    fontSize: 7,
-    fontWeight: "900",
-  },
-  themePackLabel: {
-    fontSize: 7.5,
-    fontWeight: "900",
-    letterSpacing: 0.6,
-  },
-  themePackTitle: {
-    color: "#FFF",
-    fontSize: 10,
-    fontWeight: "900",
-    marginTop: 1,
-  },
-  themePackDesc: {
-    color: "#8E82A8",
-    fontSize: 7.5,
-    lineHeight: 10,
-    marginTop: 2,
-  },
-  modalStartBtn: {
-    marginTop: 14,
-    backgroundColor: "#00F5D4",
-    borderRadius: 16,
-    paddingVertical: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    shadowColor: "#00F5D4",
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    borderColor: "#FFFFFF",
+    shadowColor: "#EF4444",
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
     elevation: 4,
   },
-  modalStartBtnText: {
-    color: "#0F172A",
-    fontSize: 12,
+  hubBadgePillText: {
+    color: "#FFFFFF",
+    fontSize: 9.5,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.2,
   },
-  modalStartBtnArrow: {
-    fontSize: 14,
+
+  streakWarningPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    borderWidth: 1.5,
+    borderColor: "#EF4444",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+    gap: 8,
+    shadowColor: "#EF4444",
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 3,
   },
+  streakWarningIcon: { fontSize: 14 },
+  streakWarningText: { flex: 1, color: "#FECACA", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.3 },
+  streakWarningArrow: { color: "#EF4444", fontSize: 13, fontWeight: "900" },
+
+  milestoneBadgePill: {
+    backgroundColor: "#FFC24A",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    shadowColor: "#FFC24A",
+    shadowOpacity: 0.6,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  milestoneBadgeText: { color: "#121025", fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
 
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
 });

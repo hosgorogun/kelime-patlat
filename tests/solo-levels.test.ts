@@ -165,5 +165,14 @@ describe("Tek oyunculu seviye yolculuğu", () => {
     // Board should not just repeat trivial 4x4 words
     expect(dailyChallenge.words.some((w) => w.length >= 6)).toBe(true);
   });
+
+  it("solo seviyeler genel zengin Türkçe sözlükten doğal kelimeler seçer", () => {
+    const level4 = createSoloBoard(4, 0, "general");
+    expect(level4.words.length).toBe(3);
+    // 4. seviye tümüyle tek bir temaya (uzay vb.) sıkışmamalı, genel havuzdan seçmeli
+    const spaceOnly = ["METEOR", "KOZMOZ", "UZAY"];
+    const isOnlySpace = level4.words.every((w) => spaceOnly.includes(w));
+    expect(isOnlySpace).toBe(false);
+  });
 });
 

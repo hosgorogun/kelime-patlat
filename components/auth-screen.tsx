@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApiBaseUrl, SESSION_TOKEN_KEY, startOAuthLogin } from "@/constants/oauth";
 import { ScreenContainer } from "./screen-container";
 import { haptics } from "@/lib/haptics";
+import { type GenderType } from "@/shared/progression";
 
 type AuthScreenProps = {
   onSuccess: (token: string, username: string, cloudProgress: any, openId: string) => void;
@@ -16,6 +17,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [gender, setGender] = useState<GenderType>("unspecified");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -28,14 +30,18 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
       setError("Ad soyad ve e-posta alanları kayıt için zorunludur.");
       return;
     }
+    if (isSignUp && gender === "unspecified") {
+      setError("Lütfen cinsiyet seçimini yapınız.");
+      return;
+    }
     setError("");
     setLoading(true);
     haptics.light();
 
     try {
       const endpoint = isSignUp ? "/api/auth/signup" : "/api/auth/login";
-      const bodyPayload = isSignUp 
-        ? { username: username.trim(), password: password.trim(), email: email.trim(), fullName: fullName.trim() }
+      const bodyPayload = isSignUp
+        ? { username: username.trim(), password: password.trim(), email: email.trim(), fullName: fullName.trim(), gender }
         : { username: username.trim(), password: password.trim() };
 
       const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
@@ -85,7 +91,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 
   return (
     <ScreenContainer style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {onCancel && (
           <View style={styles.topHeader}>
             <Pressable onPress={() => { haptics.light(); onCancel(); }} style={styles.backButton}>
@@ -121,6 +127,26 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                 placeholder="E-posta adresinizi girin"
                 placeholderTextColor="#6F879A"
               />
+
+              <Text style={styles.label}>CİNSİYET</Text>
+              <View style={styles.genderRow}>
+                <Pressable
+                  onPress={() => { haptics.light(); setGender("male"); }}
+                  style={[styles.genderBtn, gender === "male" && styles.genderBtnActiveMale]}
+                >
+                  <Text style={styles.genderBtnIcon}>👨</Text>
+                  <Text style={[styles.genderBtnLabel, gender === "male" && { color: "#38BDF8", fontWeight: "900" }]}>ERKEK</Text>
+                  {gender === "male" && <View style={[styles.genderDot, { backgroundColor: "#38BDF8" }]}><Text style={styles.genderDotText}>✓</Text></View>}
+                </Pressable>
+                <Pressable
+                  onPress={() => { haptics.light(); setGender("female"); }}
+                  style={[styles.genderBtn, gender === "female" && styles.genderBtnActiveFemale]}
+                >
+                  <Text style={styles.genderBtnIcon}>👩</Text>
+                  <Text style={[styles.genderBtnLabel, gender === "female" && { color: "#F472B6", fontWeight: "900" }]}>KADIN</Text>
+                  {gender === "female" && <View style={[styles.genderDot, { backgroundColor: "#F472B6" }]}><Text style={styles.genderDotText}>✓</Text></View>}
+                </Pressable>
+              </View>
             </>
           ) : null}
 
@@ -207,7 +233,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121025",
+    backgroundColor: "#0C091C",
   },
   topHeader: {
     width: "100%",
@@ -394,5 +420,56 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.6,
+  },
+
+  /* Gender selection */
+  genderRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 2,
+  },
+  genderBtn: {
+    flex: 1,
+    backgroundColor: "#1A1535",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "rgba(122, 98, 195, 0.4)",
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  genderBtnActiveMale: {
+    borderColor: "#38BDF8",
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+  },
+  genderBtnActiveFemale: {
+    borderColor: "#F472B6",
+    backgroundColor: "rgba(244, 114, 182, 0.12)",
+  },
+  genderBtnIcon: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  genderBtnLabel: {
+    color: "#8E82A8",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  genderDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  genderDotText: {
+    color: "#0F0B1E",
+    fontSize: 10,
+    fontWeight: "900",
   },
 });

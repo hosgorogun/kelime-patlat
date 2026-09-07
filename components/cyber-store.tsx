@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { DIGITAL_STORE_PRODUCTS, monetizationManager, type ProductItem } from "@/shared/monetization";
 import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { type PlayerProgress } from "@/shared/progression";
 
 export type ChipEquipmentItem = {
   id: string;
@@ -49,12 +50,14 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
 
 export function CyberStore({
   coins,
+  progress,
   onBuyCoins,
   onBuyRadar,
   onSpendCoins,
   onBack,
 }: {
   coins: number;
+  progress?: PlayerProgress;
   onBuyCoins: (amount: number) => void;
   onBuyRadar: () => void;
   onSpendCoins?: (item: ChipEquipmentItem) => void;
@@ -167,7 +170,9 @@ export function CyberStore({
         </View>
 
         {CHIP_EQUIPMENT_ITEMS.map((item) => {
+          const isOwned = item.rewardType === "avatar" && Boolean(progress?.purchasedAvatars?.crown || (progress?.wins && progress.wins >= 5) || progress?.selectedAvatar === "crown");
           const canAfford = coins >= item.cost;
+          const isDisabled = isOwned || !canAfford;
           return (
             <View key={item.id} style={styles.productCard}>
               <View style={styles.productIconWrap}>
@@ -178,15 +183,17 @@ export function CyberStore({
                 <Text style={styles.productDesc}>{item.description}</Text>
               </View>
               <Pressable
+                disabled={isDisabled}
                 onPress={() => handleSpendChips(item)}
                 style={({ pressed }) => [
                   styles.chipBuyButton,
-                  !canAfford && styles.chipBuyButtonDisabled,
-                  pressed && { opacity: 0.8 }
+                  isOwned && styles.chipBuyButtonOwned,
+                  !isOwned && !canAfford && styles.chipBuyButtonDisabled,
+                  pressed && !isDisabled && { opacity: 0.8 }
                 ]}
               >
-                <Text style={[styles.chipBuyButtonText, !canAfford && { color: "#8E82A8" }]}>
-                  🪙 {item.cost}
+                <Text style={[styles.chipBuyButtonText, isOwned && { color: "#00F5D4" }, !isOwned && !canAfford && { color: "#8E82A8" }]}>
+                  {isOwned ? "✓ AÇIK" : `🪙 ${item.cost}`}
                 </Text>
               </Pressable>
             </View>
@@ -266,6 +273,7 @@ const styles = StyleSheet.create({
 
   chipBuyButton: { backgroundColor: "#FFC24A", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72 },
   chipBuyButtonDisabled: { backgroundColor: "#261E3E", borderWidth: 1, borderColor: "#3D3360" },
+  chipBuyButtonOwned: { backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1, borderColor: "#00F5D4" },
   chipBuyButtonText: { color: "#120B24", fontSize: 11.5, fontWeight: "900" },
 
   buyButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72 },

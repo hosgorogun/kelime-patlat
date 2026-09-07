@@ -2,7 +2,15 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export type DockDestination = "store" | "missions" | "home" | "season" | "profile";
 
-export function PremiumDock({ active, onNavigate }: { active: DockDestination; onNavigate: (destination: DockDestination) => void }) {
+export function PremiumDock({
+  active,
+  onNavigate,
+  missionsBadgeCount,
+}: {
+  active: DockDestination;
+  onNavigate: (destination: DockDestination) => void;
+  missionsBadgeCount?: number;
+}) {
   return (
     <View style={styles.dock}>
       {/* 1. Mağaza */}
@@ -18,6 +26,7 @@ export function PremiumDock({ active, onNavigate }: { active: DockDestination; o
         icon="⚡"
         label="GÖREVLER"
         active={active === "missions"}
+        badgeCount={missionsBadgeCount}
         onPress={() => onNavigate("missions")}
       />
 
@@ -58,11 +67,13 @@ function DockTab({
   label,
   active,
   onPress,
+  badgeCount,
 }: {
   icon: string;
   label: string;
   active: boolean;
   onPress: () => void;
+  badgeCount?: number;
 }) {
   return (
     <Pressable
@@ -75,6 +86,11 @@ function DockTab({
     >
       <View style={styles.iconBox}>
         <Text style={[styles.icon, active && styles.iconActive]}>{icon}</Text>
+        {badgeCount !== undefined && badgeCount > 0 && (
+          <View style={styles.tabBadge}>
+            <Text style={styles.tabBadgeText}>{badgeCount > 9 ? "9+" : badgeCount}</Text>
+          </View>
+        )}
       </View>
       <Text
         numberOfLines={1}
@@ -121,6 +137,32 @@ const styles = StyleSheet.create({
     height: 22,
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
+  },
+  tabBadge: {
+    position: "absolute",
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#EF4444",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    shadowColor: "#EF4444",
+    shadowOpacity: 0.85,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  tabBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "900",
+    lineHeight: 11,
+    textAlign: "center",
   },
   icon: {
     fontSize: 17,

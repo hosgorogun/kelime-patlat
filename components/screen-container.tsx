@@ -24,7 +24,7 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121025",
+    backgroundColor: "#0C091C",
   },
   safeArea: {
     flex: 1,

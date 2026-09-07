@@ -44,6 +44,7 @@ function play(effect: EffectName) {
 
 export const gameSfx = {
   select: () => play("select"),
+  tap: () => play("select"),
   accepted: () => play("accepted"),
   rejected: () => play("rejected"),
   victory: () => play("victory"),

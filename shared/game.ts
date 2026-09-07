@@ -6,10 +6,10 @@ export const BOARD_SIZES = [4, 6, 8, 10] as const;
 export type BoardSize = (typeof BOARD_SIZES)[number];
 
 export const LIVE_FOUR_WORD_LENGTH_PATTERNS = [
-  [3, 3, 4, 5],
+  [4, 4, 4, 4],
   [3, 3, 5, 5],
   [3, 4, 4, 5],
-  [3, 3, 4, 6],
+  [4, 4, 4, 4],
 ] as const;
 
 export function pickLiveFourWordLengths(random = Math.random) {
@@ -17,7 +17,7 @@ export function pickLiveFourWordLengths(random = Math.random) {
 }
 
 export function getRoundDurationMs(size: BoardSize) {
-  return size === 4 ? 55_000 : size === 6 ? 75_000 : size === 8 ? 90_000 : 110_000;
+  return size === 4 ? 55_000 : size === 6 ? 75_000 : size === 8 ? 95_000 : 125_000;
 }
 
 export function wordScoreMultiplier(length: number) {
@@ -60,6 +60,7 @@ export type RoomSnapshot = {
   board: string[];
   wordsTotal: number;
   foundWords: FoundWord[];
+  missedWords?: { word: string; path: number[] }[];
   scores: Record<string, number>;
   players: GamePlayer[];
   winnerId: string | null;

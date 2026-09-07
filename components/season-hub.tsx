@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { getRank, getDailyMysteryWord, type PlayerProgress } from "@/shared/progression";
 import { type LeaderboardEntry } from "@/shared/game";
@@ -13,16 +13,24 @@ export function SeasonHub({
   progress,
   leaderboard,
   onBack,
+  onChallengeFriend,
 }: {
   playerId: string;
   progress: PlayerProgress;
   leaderboard: LeaderboardEntry[];
   onBack: () => void;
+  onChallengeFriend?: (friendName: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<SeasonTab>("leaderboard");
   const [friendInput, setFriendInput] = useState("");
   const [friendsList, setFriendsList] = useState<FriendUser[]>(() => socialManager.getFriends());
   const [socialMessage, setSocialMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    socialManager.init().then((list) => {
+      setFriendsList([...list]);
+    });
+  }, []);
 
   const rank = getRank(progress);
   const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
@@ -42,8 +50,27 @@ export function SeasonHub({
     setTimeout(() => setSocialMessage(null), 3500);
   };
 
+  const handleRemoveFriend = (friend: FriendUser) => {
+    Alert.alert(
+      "Arkadaşı Çıkar",
+      `${friend.name} (@${friend.username}) arkadaş listenizden çıkarılsın mı?`,
+      [
+        { text: "Vazgeç", style: "cancel" },
+        {
+          text: "Çıkar",
+          style: "destructive",
+          onPress: () => {
+            triggerHapticSelection();
+            socialManager.removeFriend(friend.id);
+            setFriendsList([...socialManager.getFriends()]);
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.back}>
@@ -178,7 +205,7 @@ export function SeasonHub({
                     </View>
                     <View style={styles.playerMark}>
                       <Text style={[styles.playerMarkText, isTop1 && { color: "#FFD000" }]}>
-                        {entry.name.slice(0, 1).toUpperCase()}
+                        {entry.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
                       </Text>
                     </View>
                     <View style={styles.playerCopy}>
@@ -248,22 +275,49 @@ export function SeasonHub({
             {friendsList.map((f) => (
               <View key={f.id} style={styles.friendRow}>
                 <Text style={styles.friendAvatarText}>{f.avatar}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.friendNameText}>{f.name}</Text>
-                  <Text style={styles.friendXpText}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
+                  <Text numberOfLines={1} style={styles.friendXpText}>
                     @{f.username} · {f.xp} XP
                   </Text>
                 </View>
-                <View style={styles.statusWrap}>
-                  <View
-                    style={[
-                      styles.onlineDot,
-                      f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline,
-                    ]}
-                  />
-                  <Text style={styles.onlineStatusText}>
-                    {f.isOnline ? "ÇEVRİM İÇİ" : "ÇEVRİM DIŞI"}
-                  </Text>
+
+                {/* Actions & Status */}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {onChallengeFriend && (
+                    <Pressable
+                      onPress={() => {
+                        triggerHapticSuccess();
+                        onChallengeFriend(f.name);
+                      }}
+                      style={({ pressed }) => [
+                        styles.challengeBtn,
+                        pressed && { opacity: 0.8 },
+                      ]}
+                    >
+                      <Text style={styles.challengeBtnText}>DÜELLO ⚡</Text>
+                    </Pressable>
+                  )}
+
+                  <View style={styles.statusWrap}>
+                    <View
+                      style={[
+                        styles.onlineDot,
+                        f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline,
+                      ]}
+                    />
+                    <Text style={styles.onlineStatusText}>
+                      {f.isOnline ? "ÇEVRİM İÇİ" : "ÇEVRİM DIŞI"}
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    onPress={() => handleRemoveFriend(f)}
+                    style={({ pressed }) => [styles.removeFriendBtn, pressed && { opacity: 0.6 }]}
+                  >
+                    <Text style={styles.removeFriendText}>✕</Text>
+                  </Pressable>
                 </View>
               </View>
             ))}
@@ -550,5 +604,32 @@ const styles = StyleSheet.create({
     fontSize: 7.5,
     fontWeight: "900",
     letterSpacing: 0.5,
+  },
+  challengeBtn: {
+    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    borderWidth: 1,
+    borderColor: "#00F5D4",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  challengeBtnText: {
+    color: "#00F5D4",
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  removeFriendBtn: {
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+  },
+  removeFriendText: {
+    color: "#8E82A8",
+    fontSize: 12,
+    fontWeight: "900",
   },
 });

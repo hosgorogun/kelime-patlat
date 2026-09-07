@@ -1,17 +1,207 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export function MatchInsight({ score, opponentScore, words, opponentWords, tempo, opponentTempo, bestScore }: { score: number; opponentScore: number; words: number; opponentWords: number; tempo: number; opponentTempo: number; bestScore: number }) {
+export function MatchInsight({
+  score,
+  opponentScore,
+  words,
+  opponentWords,
+  tempo,
+  opponentTempo,
+  bestScore,
+}: {
+  score: number;
+  opponentScore: number;
+  words: number;
+  opponentWords: number;
+  tempo: number;
+  opponentTempo: number;
+  bestScore: number;
+}) {
   const totalWords = Math.max(1, words + opponentWords);
-  const yourShare = `${Math.max(8, Math.round(words / totalWords * 100))}%` as `${number}%`;
-  const opponentShare = `${Math.max(8, Math.round(opponentWords / totalWords * 100))}%` as `${number}%`;
+  const yourPercent = Math.round((words / totalWords) * 100);
+  const opponentPercent = 100 - yourPercent;
+  const yourShare = words === 0 ? "0%" : (`${Math.max(10, yourPercent)}%` as `${number}%`);
+  const opponentShare = opponentWords === 0 ? "0%" : (`${Math.max(10, opponentPercent)}%` as `${number}%`);
   const isRecord = score >= bestScore && score > 0;
-  return <View style={styles.card}><View style={styles.head}><View><Text style={styles.kicker}>TUR ANALİZİ</Text><Text style={styles.title}>{isRecord ? "YENİ KİŞİSEL REKOR" : "ROTA RAPORU"}</Text></View><Text style={styles.pulse}>◌</Text></View><View style={styles.bars}><View style={styles.barLine}><Text style={styles.name}>SEN</Text><View style={styles.track}><View style={[styles.youFill, { width: yourShare }]} /></View><Text style={styles.value}>{words}</Text></View><View style={styles.barLine}><Text style={styles.name}>RAKİP</Text><View style={styles.track}><View style={[styles.opponentFill, { width: opponentShare }]} /></View><Text style={styles.value}>{opponentWords}</Text></View></View><View style={styles.metrics}><Metric label="PUAN" value={`${score} · ${opponentScore}`} /><Metric label="TEMPO" value={`${tempo} · ${opponentTempo}`} suffix="K/DK" /><Metric label="FARK" value={`${score - opponentScore >= 0 ? "+" : ""}${score - opponentScore}`} /></View></View>;
-}
+  const scoreDiff = score - opponentScore;
 
-function Metric({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
-  return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}<Text style={styles.metricSuffix}>{suffix ? ` ${suffix}` : ""}</Text></Text></View>;
+  return (
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <Text style={styles.kicker}>PERFORMANS</Text>
+        <Text style={styles.title}>
+          {isRecord ? "🏆 YENİ KİŞİSEL REKOR" : "📊 ROTA VE TEMPO ANALİZİ"}
+        </Text>
+      </View>
+
+      {/* Kelime Dağılım Çubukları */}
+      <View style={styles.barsContainer}>
+        <View style={styles.barRow}>
+          <Text style={styles.barNameYou}>SEN</Text>
+          <View style={styles.track}>
+            <View style={[styles.youFill, { width: yourShare }]} />
+          </View>
+          <Text style={styles.barValYou}>{words} kelime (%{yourPercent})</Text>
+        </View>
+
+        <View style={styles.barRow}>
+          <Text style={styles.barNameOpp}>RAKİP</Text>
+          <View style={styles.track}>
+            <View style={[styles.opponentFill, { width: opponentShare }]} />
+          </View>
+          <Text style={styles.barValOpp}>{opponentWords} kelime (%{opponentPercent})</Text>
+        </View>
+      </View>
+
+      {/* Metrikler */}
+      <View style={styles.metricsRow}>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricLabel}>PUAN</Text>
+          <Text style={styles.metricValue}>{score} · {opponentScore}</Text>
+        </View>
+
+        <View style={styles.metricBox}>
+          <Text style={styles.metricLabel}>TEMPO</Text>
+          <Text style={styles.metricValue}>
+            {tempo} · {opponentTempo} <Text style={styles.metricUnit}>K/DK</Text>
+          </Text>
+        </View>
+
+        <View style={styles.metricBox}>
+          <Text style={styles.metricLabel}>FARK</Text>
+          <Text
+            style={[
+              styles.metricValue,
+              scoreDiff > 0 ? styles.textGreen : scoreDiff < 0 ? styles.textRed : null,
+            ]}
+          >
+            {scoreDiff > 0 ? `+${scoreDiff}` : scoreDiff}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: 10, padding: 13, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#514073" }, head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, kicker: { color: "#B9ADD2", fontSize: 8, fontWeight: "900", letterSpacing: 1 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 3 }, pulse: { color: "#55E6B2", fontSize: 22 }, bars: { marginTop: 12, gap: 8 }, barLine: { flexDirection: "row", alignItems: "center", gap: 8 }, name: { width: 32, color: "#C7BDDA", fontSize: 8, fontWeight: "900" }, track: { flex: 1, height: 7, borderRadius: 7, backgroundColor: "#423462", overflow: "hidden" }, youFill: { height: "100%", borderRadius: 7, backgroundColor: "#55E6B2" }, opponentFill: { height: "100%", borderRadius: 7, backgroundColor: "#FF758C" }, value: { width: 16, color: "#FFF9FC", fontSize: 9, fontWeight: "900", textAlign: "right" }, metrics: { marginTop: 14, paddingTop: 11, borderTopWidth: 1, borderTopColor: "#3C305D", flexDirection: "row", justifyContent: "space-between" }, metric: { flex: 1, alignItems: "center" }, metricLabel: { color: "#9589AE", fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, metricValue: { color: "#FFF9FC", fontSize: 10, fontWeight: "900", marginTop: 3 }, metricSuffix: { color: "#B7ABCA", fontSize: 7 },
+  card: {
+    width: "100%",
+    alignSelf: "stretch",
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 18,
+    backgroundColor: "rgba(22, 17, 44, 0.9)",
+    borderWidth: 1.5,
+    borderColor: "rgba(139, 92, 246, 0.25)",
+  },
+  header: {
+    marginBottom: 8,
+  },
+  kicker: {
+    color: "#A78BFA",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 1,
+    letterSpacing: 0.3,
+  },
+  barsContainer: {
+    marginBottom: 10,
+    gap: 6,
+  },
+  barRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  barNameYou: {
+    width: 38,
+    color: "#2DD4BF",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  barNameOpp: {
+    width: 38,
+    color: "#FB7185",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  track: {
+    flex: 1,
+    height: 8,
+    borderRadius: 5,
+    backgroundColor: "#2E2450",
+    overflow: "hidden",
+  },
+  youFill: {
+    height: "100%",
+    borderRadius: 5,
+    backgroundColor: "#2DD4BF",
+  },
+  opponentFill: {
+    height: "100%",
+    borderRadius: 5,
+    backgroundColor: "#FB7185",
+  },
+  barValYou: {
+    width: 88,
+    color: "#2DD4BF",
+    fontSize: 9,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  barValOpp: {
+    width: 88,
+    color: "#FB7185",
+    fontSize: 9,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  metricsRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(139, 92, 246, 0.2)",
+  },
+  metricBox: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: "rgba(30, 24, 60, 0.6)",
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.15)",
+  },
+  metricLabel: {
+    color: "#94A3B8",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  metricValue: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  metricUnit: {
+    color: "#CBD5E1",
+    fontSize: 8,
+    fontWeight: "700",
+  },
+  textGreen: {
+    color: "#34D399",
+  },
+  textRed: {
+    color: "#FB7185",
+  },
 });

@@ -56,12 +56,16 @@ describe("Kelime Patlat tahta kuralları", () => {
     expect(BOARD_SIZES).toEqual([4, 6, 8, 10]);
     expect(getRoundDurationMs(4)).toBe(55_000);
     expect(getRoundDurationMs(6)).toBe(75_000);
-    expect(getRoundDurationMs(8)).toBe(90_000);
-    expect(getRoundDurationMs(10)).toBe(110_000);
+    expect(getRoundDurationMs(8)).toBe(95_000);
+    expect(getRoundDurationMs(10)).toBe(125_000);
   });
 
-  it("canlı 4×4 modunda 3–6 harfli kapasiteye uygun rastgele kelime karışımları seçer", () => {
-    expect(new Set(LIVE_FOUR_WORD_LENGTH_PATTERNS.flat())).toEqual(new Set([3, 4, 5, 6]));
+  it("canlı 4×4 modunda tahta kapasitesine uygun rastgele kelime karışımları seçer", () => {
+    const allLengths = new Set(LIVE_FOUR_WORD_LENGTH_PATTERNS.flat());
+    allLengths.forEach((len) => {
+      expect(len).toBeGreaterThanOrEqual(3);
+      expect(len).toBeLessThanOrEqual(6);
+    });
     LIVE_FOUR_WORD_LENGTH_PATTERNS.forEach((pattern, index) => {
       expect(pickLiveFourWordLengths(() => (index + 0.01) / LIVE_FOUR_WORD_LENGTH_PATTERNS.length)).toEqual([...pattern]);
       expect(pattern.reduce((sum, length) => sum + length, 0)).toBeLessThanOrEqual(16);

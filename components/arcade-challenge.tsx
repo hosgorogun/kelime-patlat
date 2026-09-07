@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
-import { createSoloBoard } from "@/shared/solo";
+import { createSoloBoard, APP_WORD_PALETTE } from "@/shared/solo";
 import { getWordDefinition } from "../shared/dictionary";
 import {
   initAudio,
@@ -60,6 +60,8 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
+  const [inspectedPath, setInspectedPath] = useState<number[] | null>(null);
+  const [inspectedColor, setInspectedColor] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(30); // Start with 30s
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<Feedback>("idle");
@@ -79,7 +81,20 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       return () => clearTimeout(timer);
     }
     const timer = setTimeout(() => {
-      setCountdown((prev) => (prev !== null ? prev - 1 : null));
+      setCountdown((prev) => {
+        if (prev === null) return null;
+        if (prev === 1) {
+          gameSfx.accepted();
+          triggerHapticSuccess();
+          return 0;
+        }
+        if (prev > 1) {
+          gameSfx.tap();
+          triggerHapticSelection();
+          return prev - 1;
+        }
+        return null;
+      });
     }, 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
@@ -120,6 +135,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
   const scoreRef = useRef(score);
   const onCompleteRef = useRef(onComplete);
+  const savedRef = useRef(false);
 
   useEffect(() => {
     scoreRef.current = score;
@@ -135,6 +151,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         setStatus("lost");
         triggerHapticError();
         playErrorSound();
+        savedRef.current = true;
         setTimeout(() => {
           onCompleteRef.current(scoreRef.current);
         }, 0);
@@ -145,7 +162,13 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     return () => clearInterval(timer);
   }, [status, countdown]);
 
-  useEffect(() => () => { if (resetTimer.current) clearTimeout(resetTimer.current); }, []);
+  useEffect(() => () => {
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    if (!savedRef.current && scoreRef.current > 0) {
+      savedRef.current = true;
+      onCompleteRef.current(scoreRef.current);
+    }
+  }, []);
 
   const clearSelection = () => { selectionRef.current = []; setSelected([]); };
 
@@ -305,6 +328,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
   const handleRestart = () => {
     triggerHapticSelection();
+    savedRef.current = false;
     setLevelSeed(() => Math.floor(Math.random() * 15) + 1);
     setVariation((v) => v + 1);
     setSelected([]);
@@ -323,6 +347,29 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     setCountdown(3);
   };
 
+  const handleExitPress = () => {
+    if (status === "playing" && score > 0) {
+      Alert.alert(
+        "Oyundan Ayrıl",
+        "Zamana karşı hücum devam ediyor. Çıkmak istediğinize emin misiniz? (Şu ana kadar kazandığın skor kaydedilecektir)",
+        [
+          { text: "Devam Et", style: "cancel" },
+          {
+            text: "Ayrıl",
+            style: "destructive",
+            onPress: () => {
+              savedRef.current = true;
+              onCompleteRef.current(scoreRef.current);
+              onExit();
+            },
+          },
+        ]
+      );
+    } else {
+      onExit();
+    }
+  };
+
   const start = (index: number) => { if (status !== "playing") return; submitted.current = false; pointerActive.current = true; setIsSelecting(true); if (resetTimer.current) clearTimeout(resetTimer.current); setFeedback("idle"); clearSelection(); triggerHapticSelection(); playSelectionNote(0); include(index); };
   const finish = () => { if (!pointerActive.current) return; pointerActive.current = false; setIsSelecting(false); submit(); };
   
@@ -338,10 +385,8 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     const row = Math.floor(oy / cellSize);
     if (col >= 0 && col < challenge.size && row >= 0 && row < challenge.size) {
       const index = row * challenge.size + col;
-      const isFound = foundCells.has(index);
-      const solutionColor = solutionColors.get(index);
-      const isSolution = solutionColor !== undefined;
-      if (isFound || isSolution) return;
+      const isFound = foundPaths.some((p) => p.includes(index));
+      if (isFound) return;
       if (!pointerActive.current) {
         submitted.current = false;
         pointerActive.current = true;
@@ -397,15 +442,43 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
   const handleGestureEnd = () => { finish(); };
 
+  const foundCellColors = new Map<number, { bg: string; border: string; text: string }>();
+  found.forEach((word, wordIndex) => {
+    const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
+    const path = foundPaths[wordIndex];
+    if (path) {
+      path.forEach((cell) => {
+        foundCellColors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
+      });
+    }
+  });
+
+  const missedWords = status === "lost" ? challenge.words.filter((w) => !found.includes(w)) : [];
+  const missedCellColors = new Map<number, { bg: string; border: string; text: string }>();
+  if (status === "lost") {
+    missedWords.forEach((word, index) => {
+      const colorIndex = (found.length + index) % APP_WORD_PALETTE.length;
+      const palette = APP_WORD_PALETTE[colorIndex]!;
+      const path = challenge.routes[word] ?? [];
+      path.forEach((cell) => {
+        missedCellColors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
+      });
+    });
+  }
+
   const foundCells = new Set(foundPaths.flat());
-  const solutionColors = new Map<number, number>();
   const selectedSet = new Set(selected);
   const isUrgent = seconds <= 8;
 
-  return <ScrollView contentContainerStyle={styles.content} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
-    <View style={styles.header}>
-      <Pressable onPress={onExit} style={styles.exit}><Text style={styles.exitText}>‹</Text></Pressable>
-      <View><Text style={styles.kicker}>ARCADE MODU</Text><Text style={styles.title}>ZAMANA KARŞI HÜCUM</Text></View>
+  return (
+    <View style={{ flex: 1, backgroundColor: "#0C091C" }}>
+      <ScrollView contentContainerStyle={styles.content} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+      <Pressable onPress={handleExitPress} style={styles.exit}><Text style={styles.exitText}>‹</Text></Pressable>
+      <View style={{ flex: 1, marginHorizontal: 8, minWidth: 0 }}>
+        <Text numberOfLines={1} style={styles.kicker}>ARCADE MODU</Text>
+        <Text numberOfLines={1} style={styles.title}>ZAMANA KARŞI HÜCUM</Text>
+      </View>
       <View style={styles.scoreContainer}><Text style={styles.scoreLabel}>SKOR</Text><Text style={styles.scoreValue}>{score}</Text></View>
       <View style={[styles.timer, { borderColor: "#FF647C" }, isUrgent && styles.timerUrgent]}>
         <Text style={styles.timerText}>{seconds}s</Text>
@@ -441,13 +514,70 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         );
       })}
 
+      {inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
+        const nextCellIdx = inspectedPath[i + 1]!;
+        const start = getCellCenter(cellIdx);
+        const end = getCellCenter(nextCellIdx);
+        return (
+          <ConnectLine
+            key={`inspect-line-${i}`}
+            x1={start.x}
+            y1={start.y}
+            x2={end.x}
+            y2={end.y}
+            color={inspectedColor || "#FFC24A"}
+          />
+        );
+      })}
+
       {challenge.board.map((letter, index) => {
         const order = selected.indexOf(index);
         const isSelected = selectedSet.has(index);
         const isTail = selected.at(-1) === index;
         const isFound = foundCells.has(index);
+        const foundColor = foundCellColors.get(index);
+        const missedColor = missedCellColors.get(index);
+        const isInspected = Boolean(inspectedPath?.includes(index));
         
-        return <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}><View style={[styles.cell, isFound && styles.cellFound, isSelected && styles.cellSelected, isTail && styles.cellTail, feedback === "invalid" && isSelected && styles.cellInvalid, feedback === "accepted" && isSelected && styles.cellAccepted]}><Text selectable={false} style={[styles.letter, challenge.size === 6 && styles.letterMedium]}>{letter}</Text>{isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}{isFound && !isSelected && <Text selectable={false} style={styles.check}>✓</Text>}</View></View>;
+        return (
+          <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}>
+            <View style={[
+              styles.cell,
+              isFound && styles.cellFound,
+              foundColor && {
+                backgroundColor: foundColor.bg,
+                borderColor: foundColor.border,
+                borderWidth: 2,
+              },
+              missedColor && {
+                backgroundColor: missedColor.bg,
+                borderColor: missedColor.border,
+                borderWidth: 1.5,
+                borderStyle: "dashed",
+              },
+              isInspected && {
+                borderColor: inspectedColor || "#FFC24A",
+                borderWidth: 2.5,
+                backgroundColor: "rgba(255, 194, 74, 0.25)",
+                transform: [{ scale: 1.06 }],
+              },
+              isSelected && styles.cellSelected,
+              isTail && styles.cellTail,
+              feedback === "invalid" && isSelected && styles.cellInvalid,
+              feedback === "accepted" && isSelected && styles.cellAccepted
+            ]}>
+              <Text selectable={false} style={[
+                styles.letter,
+                challenge.size === 6 && styles.letterMedium,
+                foundColor && { color: foundColor.text },
+                missedColor && { color: missedColor.text },
+              ]}>{letter}</Text>
+              {isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}
+              {isFound && !isSelected && <Text selectable={false} style={[styles.check, foundColor && { color: foundColor.border }]}>✓</Text>}
+              {missedColor && !isSelected && !isFound && <Text selectable={false} style={[styles.check, { color: missedColor.border }]}>✗</Text>}
+            </View>
+          </View>
+        );
       })}
       
       {particles.map(p => (
@@ -464,39 +594,69 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       </Text>
     </View>
     <View style={styles.found}>
-      <Text style={styles.foundLabel}>BULDUĞUN KELİMELER (SÖZLÜK ANLAMI İÇİN TIKLA)</Text>
+      <Text style={styles.foundLabel}>BULDUĞUN KELİMELER (ROTA VE SÖZLÜK İÇİN TIKLA)</Text>
       <View style={styles.tags}>
-        {found.length ? found.map((word) => (
-          <Pressable
-            key={word}
-            onPress={() => {
-              triggerHapticSelection();
-              setSelectedWordInfo({ word, definition: getWordDefinition(word) });
-            }}
-            style={({ pressed }) => [styles.tag, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={styles.tagText}>{word}</Text>
-          </Pressable>
-        )) : <Text style={styles.empty}>Henüz kelime bulunmadı.</Text>}
+        {found.length ? found.map((word, index) => {
+          const palette = APP_WORD_PALETTE[index % APP_WORD_PALETTE.length]!;
+          const path = foundPaths[index] ?? challenge.routes[word];
+          return (
+            <Pressable
+              key={word}
+              onPress={() => {
+                triggerHapticSelection();
+                setInspectedPath(path || null);
+                setInspectedColor(palette.border);
+                setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+              }}
+              style={({ pressed }) => [
+                styles.tag,
+                {
+                  backgroundColor: palette.tagBg,
+                  borderColor: palette.tagBorder,
+                  borderWidth: 1.5,
+                },
+                pressed && { opacity: 0.7 }
+              ]}
+            >
+              <Text style={[styles.tagText, { color: palette.tagText }]}>✓ {word}</Text>
+            </Pressable>
+          );
+        }) : <Text style={styles.empty}>Henüz kelime bulunmadı.</Text>}
       </View>
 
       {status === "lost" && (
         <>
-          <Text style={[styles.foundLabel, { marginTop: 14, color: "#FF647C" }]}>KAÇIRILAN KELİMELER (ANLAMI İÇİN TIKLA)</Text>
+          <Text style={[styles.foundLabel, { marginTop: 14, color: "#FF647C" }]}>KAÇIRILAN KELİMELER (ROTA VE SÖZLÜK İÇİN TIKLA)</Text>
           <View style={styles.tags}>
-            {challenge.words.filter((w) => !found.includes(w)).length > 0 ? (
-              challenge.words.filter((w) => !found.includes(w)).map((word) => (
-                <Pressable
-                  key={word}
-                  onPress={() => {
-                    triggerHapticSelection();
-                    setSelectedWordInfo({ word, definition: getWordDefinition(word) });
-                  }}
-                  style={({ pressed }) => [styles.tag, { backgroundColor: "rgba(255, 100, 124, 0.2)", borderWidth: 1, borderColor: "#FF647C" }, pressed && { opacity: 0.7 }]}
-                >
-                  <Text style={[styles.tagText, { color: "#FFD0D6" }]}>{word}</Text>
-                </Pressable>
-              ))
+            {missedWords.length > 0 ? (
+              missedWords.map((word, index) => {
+                const colorIndex = (found.length + index) % APP_WORD_PALETTE.length;
+                const palette = APP_WORD_PALETTE[colorIndex]!;
+                const path = challenge.routes[word];
+                return (
+                  <Pressable
+                    key={word}
+                    onPress={() => {
+                      triggerHapticSelection();
+                      setInspectedPath(path || null);
+                      setInspectedColor(palette.border);
+                      setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+                    }}
+                    style={({ pressed }) => [
+                      styles.tag,
+                      {
+                        backgroundColor: palette.tagBg,
+                        borderWidth: 1.5,
+                        borderColor: palette.tagBorder,
+                        borderStyle: "dashed",
+                      },
+                      pressed && { opacity: 0.7 }
+                    ]}
+                  >
+                    <Text style={[styles.tagText, { color: palette.tagText }]}>✗ {word}</Text>
+                  </Pressable>
+                );
+              })
             ) : (
               <Text style={[styles.empty, { color: "#50E3C2" }]}>Harika! Tüm kelimeleri buldun!</Text>
             )}
@@ -510,6 +670,18 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         <Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text>
         <Text style={styles.finalScore}>{score}</Text>
 
+        {/* Rewards Breakdown Strip */}
+        <View style={styles.arcadeRewardsRow}>
+          <View style={styles.arcadeRewardPill}>
+            <Text style={styles.arcadeRewardIcon}>⚡</Text>
+            <Text style={styles.arcadeRewardText}>+{Math.max(5, Math.floor(score / 10))} XP</Text>
+          </View>
+          <View style={[styles.arcadeRewardPill, { borderColor: "#FFC24A" }]}>
+            <Text style={styles.arcadeRewardIcon}>🪙</Text>
+            <Text style={[styles.arcadeRewardText, { color: "#FFC24A" }]}>+{Math.floor(score / 40)} ÇİP</Text>
+          </View>
+        </View>
+
         <Pressable onPress={handleRestart} style={[styles.action, { backgroundColor: "#00F5D4", marginBottom: 8 }]}>
           <Text style={[styles.actionText, { color: "#121025" }]}>↺ YENİDEN DENE (REKOR KIR)</Text>
           <Text style={[styles.actionArrow, { color: "#121025" }]}>⚡</Text>
@@ -521,26 +693,31 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         </Pressable>
       </View>
     )}
-    
-    {selectedWordInfo && (
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: "#30264D", borderColor: "#FFC24A" }]}>
-          <Text style={[styles.modalTitle, { color: "#FFC24A" }]}>{selectedWordInfo.word}</Text>
-          <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
-          <Pressable onPress={() => setSelectedWordInfo(null)} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: "#FFC24A" }, pressed && { opacity: 0.8 }]}>
-            <Text style={styles.modalCloseText}>KAPAT</Text>
+      </ScrollView>
+
+      {selectedWordInfo && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
+          <Pressable style={styles.modalOverlay} onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
+            <Pressable style={[styles.modalContent, { backgroundColor: "#30264D", borderColor: inspectedColor || "#FFC24A" }]} onPress={(e) => e.stopPropagation()}>
+              <Text style={[styles.modalTitle, { color: inspectedColor || "#FFC24A" }]}>{selectedWordInfo.word}</Text>
+              <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
+              <Pressable onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: inspectedColor || "#FFC24A" }, pressed && { opacity: 0.8 }]}>
+                <Text style={styles.modalCloseText}>KAPAT</Text>
+              </Pressable>
+            </Pressable>
           </Pressable>
+        </Modal>
+      )}
+
+      {countdown !== null && (
+        <View style={styles.countdownOverlay} pointerEvents="auto">
+          <Text style={styles.countdownText}>
+            {countdown === 0 ? "BAŞLA!" : countdown}
+          </Text>
         </View>
-      </View>
-    )}
-    {countdown !== null && (
-      <View style={styles.countdownOverlay} pointerEvents="auto">
-        <Text style={styles.countdownText}>
-          {countdown === 0 ? "BAŞLA!" : countdown}
-        </Text>
-      </View>
-    )}
-  </ScrollView>;
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -552,5 +729,9 @@ const styles = StyleSheet.create({
   modalCloseButton: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
   modalCloseText: { color: "#000000", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
   countdownOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18, 16, 37, 0.85)", justifyContent: "center", alignItems: "center", zIndex: 200 },
-  countdownText: { color: "#00F5D4", fontSize: 72, fontWeight: "900", textShadowColor: "rgba(0, 245, 212, 0.8)", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 15 }
+  countdownText: { color: "#00F5D4", fontSize: 72, fontWeight: "900", textShadowColor: "rgba(0, 245, 212, 0.8)", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 15 },
+  arcadeRewardsRow: { flexDirection: "row", gap: 10, marginBottom: 8, marginTop: 4 },
+  arcadeRewardPill: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(33, 26, 61, 0.9)", borderWidth: 1.5, borderColor: "#00F5D4", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
+  arcadeRewardIcon: { fontSize: 13 },
+  arcadeRewardText: { color: "#00F5D4", fontSize: 11, fontWeight: "900" },
 });
