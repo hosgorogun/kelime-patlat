@@ -23,28 +23,21 @@ class MonetizationManager {
   private isAdMobInitialized = false;
 
   async initAdMob(): Promise<boolean> {
-    // In production, initialize Google Mobile Ads SDK here
-    this.isAdMobInitialized = true;
-    return true;
+    // Do not advertise or grant rewards until a real provider is configured.
+    this.isAdMobInitialized = false;
+    return false;
   }
 
   async showRewardedAd(type: AdRewardType, onReward: () => void, onError?: (err: string) => void) {
-    // Mock simulation for development and fallback for seamless gameplay
-    try {
-      setTimeout(() => {
-        onReward();
-      }, 1500);
-    } catch (error) {
-      if (onError) onError("Reklam yüklenirken bir hata oluştu.");
-    }
+    void type;
+    if (onError) onError("Ödüllü reklam şu anda kullanılamıyor.");
   }
 
   async purchaseProduct(productId: string): Promise<{ success: boolean; product?: ProductItem; error?: string }> {
     const product = DIGITAL_STORE_PRODUCTS.find((p) => p.id === productId);
     if (!product) return { success: false, error: "Ürün bulunamadı." };
 
-    // In production, trigger Expo IAP / Google Play Billing here
-    return { success: true, product };
+    return { success: false, product, error: "Satın alma altyapısı henüz etkin değil." };
   }
 }
 

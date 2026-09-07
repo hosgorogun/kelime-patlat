@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { haptics } from "../lib/haptics";
 import { gameSfx } from "../lib/game-sfx";
@@ -21,6 +21,23 @@ export function GlobalGameToast({ toast, onDismiss }: GlobalGameToastProps) {
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.92)).current;
+
+  const dismiss = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: -90,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onDismiss();
+    });
+  }, [onDismiss, opacity, translateY]);
 
   useEffect(() => {
     if (!toast) return;
@@ -59,24 +76,7 @@ export function GlobalGameToast({ toast, onDismiss }: GlobalGameToastProps) {
     }, 4500);
 
     return () => clearTimeout(timer);
-  }, [toast?.id]);
-
-  const dismiss = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: -90,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onDismiss();
-    });
-  };
+  }, [dismiss, opacity, scale, toast, toast?.id, translateY]);
 
   if (!toast) return null;
 

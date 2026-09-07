@@ -33,7 +33,6 @@ export function SeasonHub({
   }, []);
 
   const rank = getRank(progress);
-  const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
   const mystery = getDailyMysteryWord();
   const onlineFriendsCount = friendsList.filter((f) => f.isOnline).length;
 
@@ -123,40 +122,13 @@ export function SeasonHub({
       {/* TAB 1: 🏆 LİDERLİK TABLOSU */}
       {activeTab === "leaderboard" && (
         <View>
-          {/* Sezon Konumu */}
-          <View style={styles.hero}>
-            <Text style={styles.heroKicker}>SEZON KONUMUN</Text>
-            <Text style={styles.heroTitle}>{rank} AVCI</Text>
-            <Text style={styles.heroBody}>
-              {progress.xp} XP · {progress.wins} galibiyet · {progress.bestScore || 0} en iyi tur puanı
-            </Text>
-            <View style={styles.heroStats}>
-              <View>
-                <Text style={styles.statLabel}>LİDERLİK</Text>
-                <Text style={styles.statValue}>{playerRank > 0 ? `#${playerRank}` : "—"}</Text>
-              </View>
-              <View style={styles.statRule} />
-              <View>
-                <Text style={styles.statLabel}>SERİ & KALKAN</Text>
-                <Text style={styles.statValue}>
-                  {progress.streak} GÜN 🛡️{progress.streakShields ?? 1}
-                </Text>
-              </View>
-              <View style={styles.statRule} />
-              <View>
-                <Text style={styles.statLabel}>TEMPO</Text>
-                <Text style={styles.statValue}>{progress.bestTempo || "—"}</Text>
-              </View>
-            </View>
-          </View>
-
           {/* Daily Mystery Word Card */}
           <View style={styles.mysteryCard}>
             <View style={styles.mysteryHeader}>
               <Text style={styles.mysteryKicker}>🔍 GÜNÜN GİZEMLİ KELİMESİ</Text>
               <Text style={styles.mysteryReward}>+{mystery.rewardXp} XP BONUSU</Text>
             </View>
-            <Text style={styles.mysteryDef}>"{mystery.definition}"</Text>
+            <Text style={styles.mysteryDef}>&quot;{mystery.definition}&quot;</Text>
             <Text style={styles.mysteryHint}>
               💡 İpucu: Bu tanıma uyan kelimeyi tahtada bul ve ekstra XP kazan!
             </Text>

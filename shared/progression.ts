@@ -63,6 +63,12 @@ export type PlayerProgress = {
   selectedTitle?: string;
   gender?: GenderType;
   avatarPhoto?: string;
+  selectedFrame?: string;
+  selectedVictoryEffect?: string;
+  ownedFrames?: Record<string, boolean>;
+  ownedVictoryEffects?: Record<string, boolean>;
+  selectedBoardSkin?: string;
+  ownedBoardSkins?: Record<string, boolean>;
 };
 
 export type GenderType = "male" | "female" | "unspecified";
@@ -141,6 +147,12 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   dailyClaimed: {},
   gender: "unspecified",
   avatarPhoto: undefined,
+  selectedFrame: "signal",
+  selectedVictoryEffect: "pulse",
+  ownedFrames: { signal: true },
+  ownedVictoryEffects: { pulse: true },
+  selectedBoardSkin: "grid",
+  ownedBoardSkins: { grid: true },
 };
 
 export function badgesFor(progress: PlayerProgress): Badge[] {
@@ -182,7 +194,7 @@ export function getDailyChallenge(date = new Date()): DailyChallenge {
 
 export type LeagueTierInfo = {
   name: string;
-  tier: "BRONZ" | "GÜMÜŞ" | "ALTIN";
+  tier: "DEMİR" | "BRONZ" | "GÜMÜŞ" | "ALTIN" | "PLATİN" | "ELMAS" | "YÜCELİK" | "ÖLÜMSÜZLÜK" | "RADIAN";
   icon: string;
   color: string;
   badge: string;
@@ -198,49 +210,32 @@ export function getLeagueTier(progressOrPoints: PlayerProgress | number): League
   if (typeof progressOrPoints === "number") {
     points = progressOrPoints;
   } else if (progressOrPoints) {
-    points = (progressOrPoints.lp !== undefined && progressOrPoints.lp > 0)
-      ? progressOrPoints.lp
-      : (progressOrPoints.xp ?? 0);
+    points = Math.max(0, progressOrPoints.lp ?? 0);
   }
 
-  if (points >= 900) {
-    return {
-      name: "ALTIN LİGİ",
-      tier: "ALTIN",
-      icon: "👑",
-      color: "#FBBF24",
-      badge: "ALTIN",
-      minPoints: 900,
-      maxPoints: 9999,
-      currentTierPoints: points - 900,
-      targetTierPoints: 1000,
-      totalPoints: points,
-    };
-  }
-  if (points >= 350) {
-    return {
-      name: "GÜMÜŞ LİGİ",
-      tier: "GÜMÜŞ",
-      icon: "🛡️",
-      color: "#38BDF8",
-      badge: "GÜMÜŞ",
-      minPoints: 350,
-      maxPoints: 899,
-      currentTierPoints: points - 350,
-      targetTierPoints: 550, // 900 - 350
-      totalPoints: points,
-    };
-  }
+  const tiers = [
+    { tier: "DEMİR", icon: "D", color: "#94A3B8", minPoints: 0, maxPoints: 349 },
+    { tier: "BRONZ", icon: "B", color: "#F97316", minPoints: 350, maxPoints: 899 },
+    { tier: "GÜMÜŞ", icon: "G", color: "#38BDF8", minPoints: 900, maxPoints: 1599 },
+    { tier: "ALTIN", icon: "A", color: "#FBBF24", minPoints: 1600, maxPoints: 2499 },
+    { tier: "PLATİN", icon: "P", color: "#67E8F9", minPoints: 2500, maxPoints: 3599 },
+    { tier: "ELMAS", icon: "◇", color: "#60A5FA", minPoints: 3600, maxPoints: 4999 },
+    { tier: "YÜCELİK", icon: "Y", color: "#C084FC", minPoints: 5000, maxPoints: 6999 },
+    { tier: "ÖLÜMSÜZLÜK", icon: "Ö", color: "#FB7185", minPoints: 7000, maxPoints: 9999 },
+    { tier: "RADIAN", icon: "R", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
+  ] as const;
+  const current = [...tiers].reverse().find((tier) => points >= tier.minPoints) ?? tiers[0];
+  const next = tiers[tiers.indexOf(current) + 1];
   return {
-    name: "BRONZ LİGİ",
-    tier: "BRONZ",
-    icon: "⚔️",
-    color: "#F97316",
-    badge: "BRONZ",
-    minPoints: 0,
-    maxPoints: 349,
-    currentTierPoints: points,
-    targetTierPoints: 350,
+    name: `${current.tier} LİGİ`,
+    tier: current.tier,
+    icon: current.icon,
+    color: current.color,
+    badge: current.tier,
+    minPoints: current.minPoints,
+    maxPoints: current.maxPoints,
+    currentTierPoints: Math.max(0, points - current.minPoints),
+    targetTierPoints: next ? next.minPoints - current.minPoints : 1000,
     totalPoints: points,
   };
 }
@@ -266,14 +261,14 @@ export function applyMatchProgress(
   let lpGain = 0;
   if (type === "pvp") {
     if (result.won) {
-      xpGain = 65;
+      xpGain = 60;
       lpGain = 25;
     } else if (result.isDraw) {
       xpGain = 40;
-      lpGain = 5;
+      lpGain = 0;
     } else {
-      xpGain = 40;
-      lpGain = -15;
+      xpGain = 35;
+      lpGain = -20;
     }
   } else if (type === "bot") {
     if (result.won) {
@@ -281,10 +276,10 @@ export function applyMatchProgress(
       lpGain = 15;
     } else if (result.isDraw) {
       xpGain = 20;
-      lpGain = 2;
+      lpGain = 0;
     } else {
       xpGain = 20;
-      lpGain = -8;
+      lpGain = -10;
     }
   } else if (type === "solo") {
     xpGain = 30;
@@ -313,7 +308,7 @@ export function applyMatchProgress(
     coinsEarned = 5;
   }
 
-  const currentLp = (progress.lp !== undefined && progress.lp > 0) ? progress.lp : (progress.xp ?? 0);
+  const currentLp = Math.max(0, progress.lp ?? 0);
   const nextLp = Math.max(0, currentLp + lpGain);
 
   return {
@@ -396,6 +391,12 @@ export function mergePlayerProgress(
     selectedTitle: local.selectedTitle || remote.selectedTitle,
     gender: remote.gender || local.gender || "unspecified",
     avatarPhoto: remote.avatarPhoto || local.avatarPhoto,
+    selectedFrame: local.selectedFrame || remote.selectedFrame || "signal",
+    selectedVictoryEffect: local.selectedVictoryEffect || remote.selectedVictoryEffect || "pulse",
+    ownedFrames: { ...(remote.ownedFrames ?? {}), ...(local.ownedFrames ?? {}) },
+    ownedVictoryEffects: { ...(remote.ownedVictoryEffects ?? {}), ...(local.ownedVictoryEffects ?? {}) },
+    selectedBoardSkin: local.selectedBoardSkin || remote.selectedBoardSkin || "grid",
+    ownedBoardSkins: { ...(remote.ownedBoardSkins ?? {}), ...(local.ownedBoardSkins ?? {}) },
   };
 }
 

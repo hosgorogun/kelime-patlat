@@ -140,7 +140,8 @@ export function registerOAuthRoutes(app: Express) {
   app.get("/api/auth/me", async (req: Request, res: Response) => {
     try {
       const user = await sdk.authenticateRequest(req);
-      res.json({ user: buildUserResponse(user) });
+      const savedUser = user?.openId ? await getUserByOpenId(user.openId) : undefined;
+      res.json({ user: buildUserResponse(savedUser ?? user) });
     } catch (error) {
       console.error("[Auth] /api/auth/me failed:", error);
       res.status(401).json({ error: "Not authenticated", user: null });

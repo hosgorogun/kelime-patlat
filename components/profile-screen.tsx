@@ -231,7 +231,7 @@ export function ProfileScreen({
             <View style={[styles.xpFill, { width: `${progressRatio * 100}%` }]} />
           </View>
           <Text style={styles.xpNextHint}>
-            Seviye {currentLevel + 1}'e {nextLevelXp - currentLevelXp} XP kaldı
+            Seviye {currentLevel + 1}&apos;e {nextLevelXp - currentLevelXp} XP kaldı
           </Text>
         </View>
       </View>

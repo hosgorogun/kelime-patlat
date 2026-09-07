@@ -59,12 +59,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
   
-  const initialExcludeWords = useRef(excludeWords);
-  useEffect(() => {
-    initialExcludeWords.current = excludeWords;
-  }, [level]);
-
-  const challenge = useMemo(() => createSoloBoard(level, variation, theme, initialExcludeWords.current), [level, variation, theme]);
+  const challenge = useMemo(() => createSoloBoard(level, variation, theme, excludeWords), [level, variation, theme, excludeWords]);
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
@@ -106,26 +101,9 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   const [revived, setRevived] = useState(false);
   const [doubleXpEarned, setDoubleXpEarned] = useState(false);
-  const [adActive, setAdActive] = useState(false);
-  const [adTimer, setAdTimer] = useState(0);
-  const adIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const watchAd = (onReward: () => void) => {
-    if (adIntervalRef.current) clearInterval(adIntervalRef.current);
-    setAdActive(true);
-    setAdTimer(3);
-    adIntervalRef.current = setInterval(() => {
-      setAdTimer((prev) => {
-        if (prev <= 1) {
-          if (adIntervalRef.current) clearInterval(adIntervalRef.current);
-          adIntervalRef.current = null;
-          setAdActive(false);
-          onReward();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 500);
+  const watchAd = (_onReward: () => void) => {
+    Alert.alert("Reklam yakında", "Ödüllü reklam sistemi mağaza entegrasyonu tamamlandığında açılacak.");
   };
 
   // Countdown timer logic
@@ -192,13 +170,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setSelected([]); setFound([]); setFoundPaths([]); setInspectedPath(null); setInspectedColor(null); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
     setRadarCooldown(0); setRadarCharges(3 + (radarChargesBonus || 0)); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
     setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
-  }, [challenge]);
-
-  useEffect(() => {
-    if (status === "won") {
-      explodeConfetti();
-    }
-  }, [status]);
+  }, [challenge, radarChargesBonus]);
 
   useEffect(() => {
     if (variationSeed !== undefined) setVariation(variationSeed);
@@ -230,15 +202,15 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         setStatus("lost");
         triggerHapticError();
         playErrorSound();
+        if (daily) onCompleteRef.current(levelRef.current, foundRef.current, false);
         return 0;
       }
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, countdown]);
+  }, [status, countdown, daily]);
 
   useEffect(() => () => {
-    if (adIntervalRef.current) clearInterval(adIntervalRef.current);
     if (resetTimer.current) clearTimeout(resetTimer.current);
   }, []);
 
@@ -335,7 +307,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     triggerHapticSelection();
     if (next.length >= previous.length) playSelectionNote(next.length - 1);
   };
-  const useRadar = () => {
+  const revealRadar = () => {
     if (radarCooldown > 0 || radarCharges <= 0 || status !== "playing") return;
     const remaining = challenge.words.filter((w) => !found.includes(w));
     if (!remaining.length) return;
@@ -427,7 +399,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const handleRetry = () => {
     triggerHapticSelection();
     const nextVariation = variation + 1;
-    const nextBoard = createSoloBoard(level, nextVariation, theme, initialExcludeWords.current);
+    const nextBoard = createSoloBoard(level, nextVariation, theme, excludeWords);
     setVariation(nextVariation);
     setRevived(false);
     setSelected([]);
@@ -448,7 +420,6 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setRadarCooldown(0);
   };
 
-  const start = (index: number) => { if (status !== "playing") return; submitted.current = false; pointerActive.current = true; setIsSelecting(true); if (resetTimer.current) clearTimeout(resetTimer.current); setFeedback("idle"); clearSelection(); triggerHapticSelection(); playSelectionNote(0); include(index); };
   const finish = () => { if (!pointerActive.current) return; pointerActive.current = false; setIsSelecting(false); submit(); };
   const handleGesture = (locationX: number, locationY: number) => {
     if (status !== "playing") return;
@@ -544,7 +515,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         disabled={(radarCooldown > 0 && radarCharges > 0) || status !== "playing"}
         onPress={() => {
           if (radarCharges > 0) {
-            useRadar();
+              revealRadar();
           } else {
             watchAd(() => setRadarCharges(1));
           }
@@ -900,13 +871,6 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         </View>
       )}
 
-      {adActive && (
-        <View style={styles.adOverlay} pointerEvents="auto">
-          <Text style={styles.adTitle}>SİBER SPONSOR REKLAMI YÜKLENİYOR</Text>
-          <Text style={styles.adSpinner}>⚡ [ DEŞİFRE İÇİN VERİ AKIŞI SAĞLANIYOR ] ⚡</Text>
-          <Text style={styles.adCountdown}>{adTimer}s</Text>
-        </View>
-      )}
     </View>
   );
 }

@@ -135,6 +135,23 @@ describe("Tek oyunculu seviye yolculuğu", () => {
     }
   });
 
+  it("tahta boyutu değişimlerinin tüm sınırlarında rotaları korur", () => {
+    for (const level of [1, 15, 16, 30, 31, 45, 46, 60, 61, 75, 76, 90, 100]) {
+      for (const variation of [0, 17, 999]) {
+        const challenge = createSoloBoard(level, variation);
+        const routeCells = challenge.words.flatMap((word) => challenge.routes[word] ?? []);
+        expect(challenge.board).toHaveLength(challenge.size * challenge.size);
+        expect(challenge.board.every(Boolean)).toBe(true);
+        expect(new Set(routeCells).size).toBe(routeCells.length);
+        challenge.words.forEach((word) => {
+          const route = challenge.routes[word]!;
+          expect(route).toHaveLength(word.length);
+          expect(route.map((cell) => challenge.board[cell]).join("")).toBe(word);
+        });
+      }
+    }
+  });
+
   it("rastgele oyunlar zorluk kategorilerinden dengeli kelime karışımları üretir", () => {
     const seenDifficulties = new Set<string>();
     for (const level of [1, 16, 46, 60]) {

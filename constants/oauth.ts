@@ -35,6 +35,10 @@ export function getApiBaseUrl(): string {
     return API_BASE_URL.replace(/\/$/, "");
   }
 
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("EXPO_PUBLIC_API_BASE_URL must be configured for production builds.");
+  }
+
   // On web, derive from current hostname by replacing port 8081 with 3000
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
     const { protocol, hostname } = window.location;

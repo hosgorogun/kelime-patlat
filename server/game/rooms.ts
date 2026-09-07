@@ -1,4 +1,6 @@
 import type { Server, Socket } from "socket.io";
+import { z } from "zod";
+import { sdk } from "../_core/sdk";
 
 import {
   BOARD_SIZES,
@@ -22,7 +24,7 @@ import {
   type RoomStatus,
 } from "../../shared/game";
 import { createSoloBoard } from "../../shared/solo";
-import { loadLeaderboard, loadPlayerProfile, recordLeaderboardRounds, savePlayerProfile } from "./mongo-store";
+import { loadLeaderboard, recordLeaderboardRounds } from "./mongo-store";
 
 type PlayerRecord = GamePlayer & { socketId: string | null };
 
@@ -52,6 +54,20 @@ const rooms = new Map<string, Room>();
 const matchmakingQueue = new Map<BoardSize, { playerId: string; playerName: string; socketId: string }[]>();
 const leaderboard = new Map<string, LeaderboardEntry>();
 const ROOM_TTL_MS = 15 * 60 * 1000;
+const playerIdSchema = z.string().trim().min(1).max(128);
+const playerNameSchema = z.string().max(100);
+const codeSchema = z.string().trim().min(1).max(16);
+const sizeSchema = z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]);
+const matchmakingJoinSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema });
+const matchmakingLeaveSchema = z.object({ playerId: playerIdSchema, size: sizeSchema });
+const roomCreateSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema, immediateBot: z.boolean().optional() });
+const roomJoinSchema = z.object({ code: codeSchema, playerId: playerIdSchema, playerName: playerNameSchema });
+const roomPlayerActionSchema = z.object({ code: codeSchema, playerId: playerIdSchema });
+const wordSubmitSchema = z.object({ code: codeSchema, playerId: playerIdSchema, selection: z.array(z.number().int()).max(100) });
+
+function isValidPayload<T>(schema: z.ZodType<T>, payload: unknown): payload is T {
+  return schema.safeParse(payload).success;
+}
 
 function randomItem<T>(items: readonly T[]) {
   return items[Math.floor(Math.random() * items.length)]!;
@@ -297,6 +313,11 @@ function roomForPlayer(room: Room, playerId: string) {
   return null;
 }
 
+function playerForSocket(room: Room, socket: Socket, playerId: string) {
+  const player = roomForPlayer(room, playerId);
+  return player?.socketId === socket.id ? player : null;
+}
+
 function findWordPath(board: string[], size: BoardSize, word: string) {
   const visit = (index: number, offset: number, used: number[]): number[] | null => {
     if (board[index] !== word[offset]) return null;
@@ -489,6 +510,23 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
 }
 
 export function registerGameRooms(io: Server) {
+  io.use(async (socket, next) => {
+    const token = typeof socket.handshake.auth?.token === "string" ? socket.handshake.auth.token : undefined;
+    if (!token) {
+      socket.data.userId = null;
+      next();
+      return;
+    }
+    try {
+      const session = await sdk.verifySession(token);
+      if (!session) return next(new Error("Invalid session"));
+      socket.data.userId = session.openId;
+      next();
+    } catch {
+      next(new Error("Invalid session"));
+    }
+  });
+
   setInterval(() => {
     const now = Date.now();
     for (const [code, room] of rooms) {
@@ -497,6 +535,7 @@ export function registerGameRooms(io: Server) {
   }, 60_000);
 
   io.on("connection", (socket) => {
+    const ownsPlayerId = (playerId: string) => !socket.data.userId || socket.data.userId === playerId;
     socket.emit("leaderboard:update", leaderboardSnapshot());
     void loadLeaderboard().then((persisted) => {
       if (persisted) socket.emit("leaderboard:update", persisted);
@@ -507,15 +546,9 @@ export function registerGameRooms(io: Server) {
         if (persisted) socket.emit("leaderboard:update", persisted);
       });
     });
-    socket.on("profile:load", async (payload: { playerId: string }) => {
-      const profile = await loadPlayerProfile(payload.playerId);
-      if (profile) socket.emit("profile:update", { playerId: profile.playerId, name: profile.name, progress: profile.progress });
-    });
-    socket.on("profile:save", async (payload: { playerId: string; playerName: string; progress: import("../../shared/progression").PlayerProgress }) => {
-      const profile = await savePlayerProfile(payload.playerId, payload.playerName, payload.progress);
-      if (profile) socket.emit("profile:update", profile);
-    });
     socket.on("matchmaking:join", (payload: { playerId: string; playerName: string; size: BoardSize }) => {
+      if (!isValidPayload(matchmakingJoinSchema, payload)) return fail(socket, "Geçersiz eşleştirme isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
       let queue = matchmakingQueue.get(payload.size);
       if (!queue) {
@@ -590,6 +623,8 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("matchmaking:leave", (payload: { playerId: string; size: BoardSize }) => {
+      if (!isValidPayload(matchmakingLeaveSchema, payload)) return fail(socket, "Geçersiz eşleştirme isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       let queue = matchmakingQueue.get(payload.size);
       if (queue) {
         queue = queue.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id);
@@ -599,6 +634,8 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("room:create", (payload: { playerId: string; playerName: string; size: BoardSize; immediateBot?: boolean }) => {
+      if (!isValidPayload(roomCreateSchema, payload)) return fail(socket, "Geçersiz oda isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
       const code = makeCode();
       const room: Room = {
@@ -625,6 +662,8 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("room:join", (payload: { code: string; playerId: string; playerName: string }) => {
+      if (!isValidPayload(roomJoinSchema, payload)) return fail(socket, "Geçersiz oda katılımı.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
       if (!room) return fail(socket, "Bu oda bulunamadı veya süresi doldu.");
       if (room.status === "playing" || room.status === "finished") return fail(socket, "Bu odada maç başladı; yeni oda kurun.");
@@ -643,9 +682,11 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("room:reconnect", (payload: { code: string; playerId: string }) => {
+      if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz yeniden bağlanma isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
       const player = room ? roomForPlayer(room, payload.playerId) : null;
-      if (!room || !player) return;
+      if (!room || !player || (player.socketId && player.socketId !== socket.id)) return;
       player.socketId = socket.id;
       player.connected = true;
       socket.join(`room:${room.code}`);
@@ -653,8 +694,10 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("room:ready", (payload: { code: string; playerId: string }) => {
+      if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz hazır olma isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
-      const player = room ? roomForPlayer(room, payload.playerId) : null;
+      const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || !room.guest) return fail(socket, "Önce iki oyuncunun da odaya katılması gerekiyor.");
       if (room.status !== "lobby") return;
       player.ready = true;
@@ -664,8 +707,10 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("word:submit", (payload: { code: string; playerId: string; selection: number[] }) => {
+      if (!isValidPayload(wordSubmitSchema, payload)) return fail(socket, "Geçersiz kelime seçimi.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
-      const player = room ? roomForPlayer(room, payload.playerId) : null;
+      const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || room.status !== "playing") return;
       if (room.startedAt && Date.now() < room.startedAt) return socket.emit("word:rejected", { word: "", reason: "starting" });
       const selection = payload.selection;
@@ -689,8 +734,10 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("room:rematch", (payload: { code: string; playerId: string }) => {
+      if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz rövanş isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
-      const player = room ? roomForPlayer(room, payload.playerId) : null;
+      const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || !room.guest || room.status !== "finished") return;
       player.rematch = true;
       if (room.guest.isBot) {
@@ -717,8 +764,10 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("room:leave", (payload: { code: string; playerId: string }) => {
+      if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz ayrılma isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
-      if (room) leaveRoom(io, socket, room, payload.playerId);
+      if (room && playerForSocket(room, socket, payload.playerId)) leaveRoom(io, socket, room, payload.playerId);
     });
 
     socket.on("disconnect", () => {

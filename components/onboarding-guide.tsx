@@ -289,9 +289,7 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
   const [activeTab, setActiveTab] = useState<GuideTabKey>("basics");
 
   useEffect(() => {
-    if (visible) {
-      setActiveTab("basics");
-    }
+    if (visible) setActiveTab("basics");
   }, [visible]);
 
   const currentIndex = GUIDE_SECTIONS.findIndex((s) => s.key === activeTab);

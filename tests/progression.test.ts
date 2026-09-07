@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
 import { socialManager } from "../shared/social";
+import { CHIP_EQUIPMENT_ITEMS } from "../components/cyber-store";
 
 describe("Günlük rota ve sezon ilerlemesi", () => {
   it("aynı takvim günü için aynı günlük rota kimliğini ve sabit varyasyonu üretir", () => {
@@ -42,11 +43,50 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(autoWordsmith.missions.wordsmith).toBe(1);
   });
 
+  it("XP ve LP'yi ayrı tutar ve dengeli maç oranlarını uygular", () => {
+    const base = { ...DEFAULT_PROGRESS, xp: 600, lp: 0 };
+    const win = applyMatchProgress(base, { score: 100, tempo: 3, won: true }, "pvp");
+    const loss = applyMatchProgress(base, { score: 40, tempo: 1, won: false }, "pvp");
+    const draw = applyMatchProgress(base, { score: 70, tempo: 2, won: false, isDraw: true }, "pvp");
+
+    expect(win.xp).toBe(660);
+    expect(win.lp).toBe(25);
+    expect(loss.xp).toBe(635);
+    expect(loss.lp).toBe(0);
+    expect(draw.xp).toBe(640);
+    expect(draw.lp).toBe(0);
+    expect(getLeagueTier({ ...base, xp: 900, lp: 0 }).tier).toBe("DEMİR");
+  });
+
   it("arcade raporu en yüksek skoru ve XP ilerlemesini günceller", () => {
     const updated = applyArcadeProgress(DEFAULT_PROGRESS, 120);
     expect(updated.bestArcadeScore).toBe(120);
     expect(updated.xp).toBe(12); // 120 / 10 = 12 XP
     expect(updated.matches).toBe(0); // matches should not increment
+  });
+
+  it("mağaza ekipman fiyatları ödül değerine göre dengeli kalır", () => {
+    expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "radar_5")?.cost).toBe(75);
+    expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "shield_1")?.cost).toBe(120);
+    expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "xp_250")?.cost).toBe(150);
+    expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "avatar_crown")?.cost).toBe(300);
+  });
+
+  it("dokuz lig kademesini LP eşiklerine göre seçer", () => {
+    const expected = [
+      [0, "DEMİR"],
+      [350, "BRONZ"],
+      [900, "GÜMÜŞ"],
+      [1600, "ALTIN"],
+      [2500, "PLATİN"],
+      [3600, "ELMAS"],
+      [5000, "YÜCELİK"],
+      [7000, "ÖLÜMSÜZLÜK"],
+      [10000, "RADIAN"],
+    ] as const;
+    expected.forEach(([points, tier]) => expect(getLeagueTier(points).tier).toBe(tier));
+    expect(getLeagueTier(349).tier).toBe("DEMİR");
+    expect(getLeagueTier(899).tier).toBe("BRONZ");
   });
 
   it("başarı rozetlerinin kilit açılma şartlarını doğru değerlendirir", () => {
@@ -153,7 +193,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
       foundWords: [mystery.word],
     }, "pvp");
 
-    expect(resultWithMystery.xp).toBeGreaterThanOrEqual(150 + 40 + 25);
+    expect(resultWithMystery.xp).toBeGreaterThanOrEqual(150 + 60);
     expect(resultWithMystery.coins).toBe((DEFAULT_PROGRESS.coins ?? 50) + 25);
     // Completing duels mission (2/2) gives +80 XP bonus
     const duel2 = applyMatchProgress({ ...DEFAULT_PROGRESS, missions: { daily: 0, duels: 1, wordsmith: 0 } }, {
@@ -162,7 +202,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
       won: false,
     }, "pvp");
     expect(duel2.missions.duels).toBe(2);
-    expect(duel2.xp).toBe(40 + 80); // 40 pvp + 80 mission reward
+    expect(duel2.xp).toBe(35 + 80); // 35 pvp + 80 mission reward
   });
 
   it("gün kaçırıldığında seri kalkanı varsa seriyi korur ve kalkanı eksiltir", () => {

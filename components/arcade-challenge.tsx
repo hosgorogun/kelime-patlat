@@ -370,7 +370,6 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     }
   };
 
-  const start = (index: number) => { if (status !== "playing") return; submitted.current = false; pointerActive.current = true; setIsSelecting(true); if (resetTimer.current) clearTimeout(resetTimer.current); setFeedback("idle"); clearSelection(); triggerHapticSelection(); playSelectionNote(0); include(index); };
   const finish = () => { if (!pointerActive.current) return; pointerActive.current = false; setIsSelecting(false); submit(); };
   
   const handleGesture = (locationX: number, locationY: number) => {

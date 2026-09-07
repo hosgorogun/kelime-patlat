@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Animated, Easing, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Alert, Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getRank, getPlayerLevel, getActiveCyberTitle, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
-import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 
-type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "missions";
+type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions";
 
 type CommandCenterProps = {
   playerName: string;
@@ -43,6 +43,10 @@ export function CommandCenter({
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
   const rank = getRank(progress);
+  const league = getLeagueTier(progress);
+  const leagueProgressPercent = league.tier === "RADIAN"
+    ? 100
+    : Math.min(100, Math.round((league.currentTierPoints / league.targetTierPoints) * 100));
   const activeTheme = THEME_PACKS.find((pack) => pack.id === (progress.selectedTheme || daily.themeId)) ?? THEME_PACKS[0]!;
   const dailyDone = progress.dailyCompletedId === daily.id;
 
@@ -74,19 +78,6 @@ export function CommandCenter({
   }, [orbit, shimmer]);
 
   const orbitSpin = orbit.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  const { xpCurrentTier, xpTierTarget, tierLabel, xpPercent } = useMemo(() => {
-    if (progress.xp < 350) {
-      const pct = Math.min(100, Math.round((progress.xp / 350) * 100));
-      return { xpCurrentTier: progress.xp, xpTierTarget: 350, tierLabel: "GÜMÜŞ KADEME", xpPercent: `${pct}%` as const };
-    }
-    if (progress.xp < 900) {
-      const tierProgress = progress.xp - 350;
-      const tierTarget = 550; // 900 - 350
-      const pct = Math.min(100, Math.round((tierProgress / tierTarget) * 100));
-      return { xpCurrentTier: tierProgress, xpTierTarget: tierTarget, tierLabel: "ALTIN KADEME", xpPercent: `${pct}%` as const };
-    }
-    return { xpCurrentTier: progress.xp, xpTierTarget: progress.xp, tierLabel: "ZİRVE (ŞAMPİYON)", xpPercent: "100%" as const };
-  }, [progress.xp]);
   const currentLevel = getPlayerLevel(progress.xp);
   const isLocked6 = currentLevel < 5;
   const isLocked8 = currentLevel < 8;
@@ -181,7 +172,7 @@ export function CommandCenter({
     </View>
 
     {/* Radar Signal Deck */}
-    <View style={styles.signalDeck}>
+    <Pressable onPress={() => onNavigate("league")} style={({ pressed }) => [styles.signalDeck, pressed && styles.pressed]}>
       <Animated.View style={[styles.orbit, { transform: [{ rotate: orbitSpin }] }]}><View style={styles.orbitNode} /></Animated.View>
       <Animated.View style={[
         styles.radarRing,
@@ -199,8 +190,8 @@ export function CommandCenter({
       <Text style={styles.deckBody}>Hızlı bir düello seç, günün sabit tahtasını bitir veya liderlik hattına çık.</Text>
       
       <View style={styles.xpPanel}>
-        <View style={styles.xpHead}><Text style={styles.xpLabel}>SEZON İLERLEMESİ ({tierLabel})</Text><Text style={styles.xpValue}>{xpCurrentTier} / {xpTierTarget} XP</Text></View>
-        <View style={styles.track}><View style={[styles.trackFill, { width: xpPercent }]} /></View>
+        <View style={styles.xpHead}><Text style={styles.xpLabel}>LİG İLERLEMESİ · {league.name}</Text><Text style={styles.xpValue}>{league.currentTierPoints} / {league.targetTierPoints} LP</Text></View>
+        <View style={styles.track}><View style={[styles.trackFill, { width: `${Math.max(4, leagueProgressPercent)}%`, backgroundColor: league.color }]} /></View>
       </View>
       
       <View style={styles.signalFooter}>
@@ -214,7 +205,7 @@ export function CommandCenter({
           <Text style={styles.signalValue}>{progress.wins} <Text style={styles.signalUnit}>MAÇ</Text></Text>
         </View>
       </View>
-    </View>
+    </Pressable>
 
     {/* Günlük Giriş Ödülü (7 Günlük Döngü) */}
     <View style={styles.dailyRewardSection}>

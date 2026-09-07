@@ -8,7 +8,7 @@ import { type GenderType } from "@/shared/progression";
 
 type AuthScreenProps = {
   onSuccess: (token: string, username: string, cloudProgress: any, openId: string) => void;
-  onCancel?: () => void;
+  onCancel?: () => void | Promise<void>;
 };
 
 export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {

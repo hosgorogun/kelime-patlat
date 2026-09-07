@@ -4,6 +4,8 @@ import { DIGITAL_STORE_PRODUCTS, monetizationManager, type ProductItem } from "@
 import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { type PlayerProgress } from "@/shared/progression";
 
+type StoreTab = "equipment" | "cosmetics" | "chips";
+
 export type ChipEquipmentItem = {
   id: string;
   name: string;
@@ -13,12 +15,27 @@ export type ChipEquipmentItem = {
   rewardType: "radar" | "shield" | "xp" | "avatar";
 };
 
+const PROFILE_FRAMES = [
+  ["signal", "SİNYAL", "#00F5D4", 0],
+  ["neon", "NEON", "#A78BFA", 140],
+  ["chrome", "KROM", "#CBD5E1", 220],
+] as const;
+const VICTORY_EFFECTS = [
+  ["pulse", "PULSE", "✦", 0],
+  ["glitch", "GLITCH", "▦", 160],
+  ["flare", "FLARE", "✹", 240],
+] as const;
+const BOARD_SKINS = [
+  ["grid", "MATRİS", "#00F5D4", 0],
+  ["night", "GECE SİNYALİ", "#818CF8", 120],
+  ["ember", "KOR HATTI", "#FB7185", 180],
+] as const;
 export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
   {
     id: "radar_5",
     name: "5x Radar Şifre Çözücü",
     description: "Tüm solo ve günlük oyunlarda kelimelerin baş/son harflerini aydınlatır.",
-    cost: 30,
+    cost: 75,
     icon: "👁",
     rewardType: "radar",
   },
@@ -26,7 +43,7 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
     id: "shield_1",
     name: "Seri Kalkanı",
     description: "Bir gün oyuna giremesen bile günlük serini (streak) korur.",
-    cost: 50,
+    cost: 120,
     icon: "🛡️",
     rewardType: "shield",
   },
@@ -34,17 +51,9 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
     id: "xp_250",
     name: "Kozmik XP Kapsülü (+250 XP)",
     description: "Sezon sıralamasında anında yükselmeni sağlayan saf XP paketi.",
-    cost: 40,
+    cost: 150,
     icon: "⚡",
     rewardType: "xp",
-  },
-  {
-    id: "avatar_crown",
-    name: "Özel Taç Avatarı",
-    description: "Profilinde ve canlı düellolarda parlayan siber taç unvanı.",
-    cost: 100,
-    icon: "♕",
-    rewardType: "avatar",
   },
 ];
 
@@ -54,6 +63,10 @@ export function CyberStore({
   onBuyCoins,
   onBuyRadar,
   onSpendCoins,
+  onSelectFrame,
+  onSelectVictoryEffect,
+  onBuyCosmetic,
+  onSelectBoardSkin,
   onBack,
 }: {
   coins: number;
@@ -61,11 +74,16 @@ export function CyberStore({
   onBuyCoins: (amount: number) => void;
   onBuyRadar: () => void;
   onSpendCoins?: (item: ChipEquipmentItem) => void;
+  onSelectFrame?: (frameId: string) => void;
+  onSelectVictoryEffect?: (effectId: string) => void;
+  onBuyCosmetic?: (kind: "avatar" | "frame" | "effect" | "board", id: string, cost: number) => boolean;
+  onSelectBoardSkin?: (skinId: string) => void;
   onBack: () => void;
 }) {
   const [storeMessage, setStoreMessage] = useState<string | null>(null);
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [adLoading, setAdLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<StoreTab>("equipment");
 
   const handlePurchase = async (product: ProductItem) => {
     triggerHapticSelection();
@@ -74,12 +92,11 @@ export function CyberStore({
     setBuyingId(null);
     if (res.success && res.product) {
       triggerHapticSuccess();
-      if (res.product.coins > 0) {
-        onBuyCoins(res.product.coins);
-      }
-      if (res.product.unlimitedRadar) {
-        onBuyRadar();
-      }
+      if (res.product.coins > 0) onBuyCoins(res.product.coins);
+      if (res.product.unlimitedRadar) onBuyRadar();
+    } else {
+      setStoreMessage(res.error ?? "Satın alma şu anda kullanılamıyor.");
+      setTimeout(() => setStoreMessage(null), 3500);
     }
   };
 
@@ -140,7 +157,20 @@ export function CyberStore({
         </View>
       )}
 
+      <View style={styles.tabs}>
+        {([
+          ["equipment", "EKİPMAN"],
+          ["cosmetics", "KOZMETİK"],
+          ["chips", "ÇİP YÜKLE"],
+        ] as const).map(([tab, label]) => (
+          <Pressable key={tab} onPress={() => { triggerHapticSelection(); setActiveTab(tab); }} style={[styles.tab, activeTab === tab && styles.tabActive]}>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       <View style={styles.storeList}>
+        {activeTab === "equipment" && <>
         {/* Rewarded Ad Free Coins */}
         <View style={styles.adBannerCard}>
           <View style={styles.adIconCircle}>
@@ -151,15 +181,15 @@ export function CyberStore({
               <Text style={styles.adBannerKicker}>GÜNLÜK HEDİYE</Text>
               <View style={styles.adFreeBadge}><Text style={styles.adFreeText}>ÜCRETSİZ</Text></View>
             </View>
-            <Text style={styles.adBannerTitle}>Reklam İzle: +25 Siber Çip</Text>
-            <Text style={styles.adBannerDesc}>Kısa video ile anında 25 çip kazan.</Text>
+            <Text style={styles.adBannerTitle}>Ödüllü reklam yakında</Text>
+            <Text style={styles.adBannerDesc}>Reklam sağlayıcısı etkinleştirildiğinde çip kazanabileceksin.</Text>
           </View>
           <Pressable
             disabled={adLoading}
             onPress={handleWatchAdForCoins}
             style={({ pressed }) => [styles.adButton, pressed && { opacity: 0.8 }]}
           >
-            <Text style={styles.adButtonText}>{adLoading ? "..." : "+25 🪙"}</Text>
+            <Text style={styles.adButtonText}>{adLoading ? "..." : "YAKINDA"}</Text>
           </Pressable>
         </View>
 
@@ -200,6 +230,46 @@ export function CyberStore({
           );
         })}
 
+        </>}
+
+        {activeTab === "cosmetics" && <>
+          <View style={styles.tabIntro}>
+            <Text style={styles.tabIntroTitle}>PROFİL SİNYALİNİ KUR</Text>
+            <Text style={styles.tabIntroText}>Avatar, profil çerçevesi ve zafer efektini seç. Bunlar oyun gücünü etkilemez.</Text>
+          </View>
+          <Text style={[styles.sectionTitleHeader, { marginTop: 16 }]}>PROFİL ÇERÇEVELERİ</Text>
+          <View style={styles.cosmeticGrid}>
+            {PROFILE_FRAMES.map(([id, label, color, cost]) => {
+              const owned = Boolean(progress?.ownedFrames?.[id]);
+              return <Pressable key={id} onPress={() => owned ? onSelectFrame?.(id) : onBuyCosmetic?.("frame", id, cost)} style={[styles.frameCard, { borderColor: progress?.selectedFrame === id ? color : "#372B5E" }]}>
+                <View style={[styles.framePreview, { borderColor: color }]}><Text style={[styles.framePreviewText, { color }]}>KP</Text></View>
+                <Text style={styles.cosmeticName}>{label}</Text>
+                <Text style={styles.cosmeticMeta}>{progress?.selectedFrame === id ? "SEÇİLİ" : owned ? "AÇIK" : `🪙 ${cost}`}</Text>
+              </Pressable>;
+            })}
+          </View>
+          <Text style={[styles.sectionTitleHeader, { marginTop: 16 }]}>ZAFER EFEKTLERİ</Text>
+          <View style={styles.effectRow}>
+            {VICTORY_EFFECTS.map(([id, label, icon, cost]) => {
+              const owned = Boolean(progress?.ownedVictoryEffects?.[id]);
+              return <Pressable key={id} onPress={() => owned ? onSelectVictoryEffect?.(id) : onBuyCosmetic?.("effect", id, cost)} style={[styles.effectCard, progress?.selectedVictoryEffect === id && styles.effectCardActive]}>
+                <Text style={styles.effectIcon}>{icon}</Text><Text style={styles.cosmeticName}>{label}</Text><Text style={styles.cosmeticMeta}>{progress?.selectedVictoryEffect === id ? "SEÇİLİ" : owned ? "AÇIK" : `🪙 ${cost}`}</Text>
+              </Pressable>
+            })}
+          </View>
+          <Text style={[styles.sectionTitleHeader, { marginTop: 16 }]}>TAHTA GÖRÜNÜMLERİ</Text>
+          <View style={styles.cosmeticGrid}>
+            {BOARD_SKINS.map(([id, label, color, cost]) => {
+              const owned = Boolean(progress?.ownedBoardSkins?.[id]);
+              return <Pressable key={id} onPress={() => owned ? onSelectBoardSkin?.(id) : onBuyCosmetic?.("board", id, cost)} style={[styles.frameCard, { borderColor: progress?.selectedBoardSkin === id ? color : "#372B5E" }]}>
+                <View style={[styles.boardPreview, { borderColor: color, backgroundColor: `${color}18` }]}><View style={[styles.boardPreviewLine, { backgroundColor: color }]} /><View style={[styles.boardPreviewLine, { backgroundColor: color }]} /></View>
+                <Text style={styles.cosmeticName}>{label}</Text><Text style={styles.cosmeticMeta}>{progress?.selectedBoardSkin === id ? "SEÇİLİ" : owned ? "AÇIK" : `🪙 ${cost}`}</Text>
+              </Pressable>;
+            })}
+          </View>
+        </>}
+
+        {activeTab === "chips" && <>
         {/* Real Money / IAP Top Up */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitleHeader}>💳 ÇİP YÜKLEME (MAĞAZA PAKETLERİ)</Text>
@@ -226,6 +296,7 @@ export function CyberStore({
             </Pressable>
           </View>
         ))}
+        </>}
       </View>
     </ScrollView>
   );
@@ -248,6 +319,30 @@ const styles = StyleSheet.create({
   msgBannerText: { color: "#00F5D4", fontSize: 11, fontWeight: "800", textAlign: "center" },
 
   storeList: { gap: 10 },
+  tabs: { flexDirection: "row", backgroundColor: "#17112D", borderRadius: 14, padding: 4, marginBottom: 14, borderWidth: 1, borderColor: "#30264F" },
+  tab: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 10 },
+  tabActive: { backgroundColor: "#00F5D4" },
+  tabText: { color: "#8E82A8", fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
+  tabTextActive: { color: "#0E0922" },
+  tabIntro: { padding: 14, borderRadius: 16, backgroundColor: "#1B1533", borderWidth: 1, borderColor: "#493B70" },
+  tabIntroTitle: { color: "#FFF", fontSize: 13, fontWeight: "900" },
+  tabIntroText: { color: "#A49BBF", fontSize: 10, marginTop: 4 },
+  cosmeticGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  cosmeticCard: { width: "31.8%", minHeight: 88, borderRadius: 14, borderWidth: 1, padding: 9, justifyContent: "space-between" },
+  cosmeticSwatch: { width: 22, height: 22, borderRadius: 7, marginBottom: 7 },
+  frameCard: { width: "31.8%", minHeight: 88, borderRadius: 14, borderWidth: 1, padding: 9, backgroundColor: "#1B1533", justifyContent: "space-between" },
+  framePreview: { width: 34, height: 34, borderRadius: 12, borderWidth: 3, alignItems: "center", justifyContent: "center", marginBottom: 6 },
+  framePreviewText: { fontSize: 11, fontWeight: "900" },
+  boardPreview: { width: "100%", height: 34, borderRadius: 8, borderWidth: 1, padding: 6, justifyContent: "space-around", marginBottom: 6 },
+  boardPreviewLine: { height: 2, width: "100%", opacity: 0.8 },
+  effectRow: { flexDirection: "row", gap: 8 },
+  effectCard: { flex: 1, minHeight: 72, borderRadius: 14, borderWidth: 1, borderColor: "#372B5E", backgroundColor: "#1B1533", alignItems: "center", justifyContent: "center", gap: 6 },
+  effectCardActive: { borderColor: "#00F5D4", backgroundColor: "rgba(0,245,212,0.12)" },
+  effectIcon: { color: "#FFC24A", fontSize: 24, fontWeight: "900" },
+  avatarCard: { width: "31.8%", minHeight: 88, borderRadius: 14, borderWidth: 1, padding: 9, backgroundColor: "#1B1533", justifyContent: "space-between" },
+  avatarIcon: { fontSize: 27, fontWeight: "900" },
+  cosmeticName: { color: "#FFF", fontSize: 10, fontWeight: "900" },
+  cosmeticMeta: { color: "#A49BBF", fontSize: 8, fontWeight: "800", marginTop: 3 },
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 2 },
   sectionTitleHeader: { color: "#E9D5FF", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.8 },
   sectionSubHeader: { color: "#766D89", fontSize: 8, fontWeight: "900" },

@@ -15,6 +15,8 @@ export type User = {
   updatedAt: Date;
   lastSignedIn: Date;
   progress?: any;
+  guestClaimedBy?: string | null;
+  processedAwardIds?: string[];
 };
 
 export type InsertUser = Partial<User> & { openId: string };
@@ -44,13 +46,19 @@ const UserSchema = new Schema<User>({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   lastSignedIn: { type: Date, default: Date.now },
-  progress: { type: Schema.Types.Mixed, default: null }
+  progress: { type: Schema.Types.Mixed, default: null },
+  guestClaimedBy: { type: String, default: null },
+  processedAwardIds: { type: [String], default: [] }
 });
 
 export const UserModel = mongoose.models.User || mongoose.model<User>("User", UserSchema);
 
 function databaseUri() {
-  return process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/kelime_patlat";
+  const uri = process.env.MONGODB_URI?.trim();
+  if (process.env.NODE_ENV === "production" && !uri) {
+    throw new Error("MONGODB_URI must be configured in production.");
+  }
+  return uri || "mongodb://127.0.0.1:27017/kelime_patlat";
 }
 
 let connectionPromise: Promise<typeof mongoose> | null = null;

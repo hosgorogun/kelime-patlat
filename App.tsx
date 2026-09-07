@@ -26,6 +26,7 @@ import { MatchRewardsCard } from "./components/match-rewards";
 import { PremiumDock, type DockDestination } from "./components/premium-dock";
 import { ProfileScreen } from "./components/profile-screen";
 import { SeasonHub } from "./components/season-hub";
+import { LeagueHub } from "./components/league-hub";
 import { SoloChallenge } from "./components/solo-challenge";
 import { SoloLevels } from "./components/solo-levels";
 import { ArcadeChallenge } from "./components/arcade-challenge";
@@ -46,7 +47,7 @@ import { CyberStore } from "./components/cyber-store";
 import { GlobalGameToast, type ToastData } from "./components/global-game-toast";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 
-type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "arcade" | "daily-lobby" | "missions" | "auth" | "store";
+type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store";
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
@@ -92,7 +93,6 @@ function HomeScreen() {
   const selectionActiveRef = useRef(false);
   const activeRoomCodeRef = useRef<string | null>(null);
   const pendingWordRef = useRef<string | null>(null);
-  const remoteProfileRef = useRef(false);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingWordTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boardRef = useRef<View>(null);
@@ -293,8 +293,8 @@ function HomeScreen() {
   const scoreDifference = myScore - opponentScore;
   const scoreLeadLabel = scoreDifference === 0 ? "EŞİT" : scoreDifference > 0 ? `+${scoreDifference} ÖNDE` : `${scoreDifference} GERİDE`;
   const isBotMatch = Boolean(room?.players.some((p) => p.isBot));
-  const matchXpEarned = progress.lastMatchReward?.xp ?? (iWon ? (isBotMatch ? 35 : 65) : isDraw ? (isBotMatch ? 20 : 40) : (isBotMatch ? 20 : 40));
-  const matchLpEarned = progress.lastMatchReward?.lp ?? (iWon ? (isBotMatch ? 15 : 25) : isDraw ? (isBotMatch ? 2 : 5) : (isBotMatch ? -8 : -15));
+  const matchXpEarned = progress.lastMatchReward?.xp ?? (iWon ? (isBotMatch ? 35 : 60) : isDraw ? (isBotMatch ? 20 : 40) : (isBotMatch ? 20 : 35));
+  const matchLpEarned = progress.lastMatchReward?.lp ?? (iWon ? (isBotMatch ? 15 : 25) : isDraw ? 0 : (isBotMatch ? -10 : -20));
   const matchCoinsEarned = progress.lastMatchReward?.coins ?? (iWon ? (isBotMatch ? 15 : 25) : 5);
 
   useEffect(() => {
@@ -385,7 +385,7 @@ function HomeScreen() {
         setScreen(destination);
         return true;
       }
-      if (screen === "arcade" || screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store") {
+      if (screen === "arcade" || screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "league" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store") {
         setScreen("home");
         return true;
       }
@@ -421,7 +421,7 @@ function HomeScreen() {
               await AsyncStorage.setItem("kelime-patlat:player-id", user.openId);
               await AsyncStorage.setItem("kelime-patlat:player-name", user.name || user.username || "OYUNCU");
               if (user.progress) {
-                setProgress(user.progress);
+                setProgress((current) => mergePlayerProgress(current, user.progress));
               }
             } else {
               await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
@@ -461,6 +461,38 @@ function HomeScreen() {
     }
   }, []);
 
+  const awardProgressOnServer = useCallback(async (payload: { kind: "solo" | "arcade"; level?: number; score?: number; foundWords?: string[]; daily?: boolean }, fallback: (current: PlayerProgress) => PlayerProgress) => {
+    const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+    if (!token || token === "guest") { 
+      setProgress(fallback);
+      return;
+    }
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/game/award`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...payload, awardId: `${payload.kind}:${Date.now()}:${Math.random().toString(36).slice(2)}` }), 
+      });
+      if (!response.ok) throw new Error("Ödül sunucuda hesaplanamadı.");
+      const data = await response.json();
+      if (data.progress) setProgress(data.progress);
+      else throw new Error("Sunucu progress döndürmedi.");
+    } catch {
+      setProgress(fallback);
+    }
+  }, []);
+
+  const claimMissionOnServer = useCallback(async (kind: "daily" | "weekly", missionId: string, fallback: (current: PlayerProgress) => PlayerProgress) => {
+    const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+    if (!token || token === "guest") { setProgress(fallback); return; } 
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/game/claim`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ kind, missionId }) });
+      if (!response.ok) throw new Error("Görev ödülü alınamadı.");
+      const data = await response.json();
+      setProgress(data.progress);
+    } catch { setProgress(fallback); }
+  }, []);
+
   useEffect(() => {
     let active = true;
     AsyncStorage.getItem(PROGRESS_KEY).then((stored) => {
@@ -468,7 +500,11 @@ function HomeScreen() {
       if (stored) {
         try {
           const parsed = JSON.parse(stored) as Partial<PlayerProgress>;
-          setProgress({ ...DEFAULT_PROGRESS, ...parsed, missions: { ...DEFAULT_PROGRESS.missions, ...parsed.missions } });
+          setProgress((current) => mergePlayerProgress(current, {
+            ...DEFAULT_PROGRESS,
+            ...parsed,
+            missions: { ...DEFAULT_PROGRESS.missions, ...parsed.missions },
+          }));
         } catch { setProgress(DEFAULT_PROGRESS); }
       }
       setProgressReady(true);
@@ -510,21 +546,42 @@ function HomeScreen() {
     if (authToken) {
       syncProgressToCloud(progress);
     }
-    if (remoteProfileRef.current) {
-      remoteProfileRef.current = false;
-      return;
-    }
-    getGameSocket().emit("profile:save", { playerId, playerName: safeName, progress });
-  }, [progress, progressReady, safeName, playerId, authToken, syncProgressToCloud]);
+  }, [progress, progressReady, safeName, authToken, syncProgressToCloud]);
 
   useEffect(() => {
     if (!incomingUrl) return;
-    const code = normalizeRoomCode(Linking.parse(incomingUrl).queryParams?.code);
+    let active = true;
+    const parsedUrl = Linking.parse(incomingUrl);
+    const oauthCode = typeof parsedUrl.queryParams?.code === "string" ? parsedUrl.queryParams.code : null;
+    const oauthState = typeof parsedUrl.queryParams?.state === "string" ? parsedUrl.queryParams.state : null;
+    if (parsedUrl.path?.includes("oauth/callback") && oauthCode && oauthState) {
+      fetch(`${getApiBaseUrl()}/api/oauth/mobile?code=${encodeURIComponent(oauthCode)}&state=${encodeURIComponent(oauthState)}`)
+        .then(async (response) => {
+          if (!response.ok) throw new Error("OAuth callback failed");
+          return response.json();
+        })
+        .then(async (data) => {
+          if (!active || !data?.app_session_id || !data.user?.openId) return;
+          await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.app_session_id);
+          await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
+          await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || "OYUNCU");
+          setAuthToken(data.app_session_id);
+          setPlayerId(data.user.openId);
+          setPlayerName(data.user.name || "OYUNCU");
+          if (data.user.progress) setProgress((current) => mergePlayerProgress(current, data.user.progress));
+        })
+        .catch(() => {
+          if (active) setNotice("Giriş tamamlanamadı. Lütfen tekrar deneyin.");
+        });
+      return () => { active = false; };
+    }
+    const code = normalizeRoomCode(parsedUrl.queryParams?.code);
     if (code) {
       setRoomCodeInput(code);
       setScreen("online");
       setNotice("Davet kodu hazır. Adını kontrol edip odaya katıl.");
     }
+    return () => { active = false; };
   }, [incomingUrl]);
 
   useEffect(() => {
@@ -616,14 +673,7 @@ function HomeScreen() {
       clearFeedbackLater();
     };
     const onLeaderboardUpdate = (next: LeaderboardEntry[]) => setLeaderboard(next);
-    const onProfileUpdate = (next: { playerId: string; name: string; progress: PlayerProgress }) => {
-      if (next.playerId !== playerId) return;
-      remoteProfileRef.current = true;
-      setProgress((current) => mergePlayerProgress(current, next.progress));
-      if (next.name) setPlayerName(next.name);
-    };
     const onReconnect = () => {
-      socket.emit("profile:load", { playerId });
       if (activeRoomCodeRef.current) {
         socket.emit("room:reconnect", { code: activeRoomCodeRef.current, playerId });
       }
@@ -634,16 +684,13 @@ function HomeScreen() {
     socket.on("word:rejected", onRejected);
     socket.on("connect", onReconnect);
     socket.on("leaderboard:update", onLeaderboardUpdate);
-    socket.on("profile:update", onProfileUpdate);
     socket.emit("leaderboard:request");
-    socket.emit("profile:load", { playerId });
     return () => {
       socket.off("room:update", onRoomUpdate);
       socket.off("room:error", onRoomError);
       socket.off("word:rejected", onRejected);
       socket.off("connect", onReconnect);
       socket.off("leaderboard:update", onLeaderboardUpdate);
-      socket.off("profile:update", onProfileUpdate);
       if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
     };
   }, [clearFeedbackLater, setRoomFromServer, playerId]);
@@ -895,7 +942,10 @@ function HomeScreen() {
       AsyncStorage.setItem(SOLO_UNLOCK_KEY, String(next)).catch(() => undefined);
       return next;
     });
-    setProgress((current) => applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"));
+    void awardProgressOnServer(
+      { kind: "solo", level, foundWords },
+      (current) => applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"),
+    );
   };
 
   const startDailyChallenge = () => {
@@ -912,11 +962,19 @@ function HomeScreen() {
   const completeDailyChallenge = (level: number, foundWords: string[] = [], won = true) => {
     if (won) {
       setProgress((current) => {
-        const withMatch = applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo");
-        return completeDailyProgress(withMatch, daily);
+        return current;
       });
+      void awardProgressOnServer(
+        { kind: "solo", level, foundWords, daily: true },
+        (current) => completeDailyProgress(applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"), daily),
+      );
     } else {
-      setProgress((current) => ({ ...current, dailyCompletedId: daily.id }));
+      setProgress((current) => ({
+        ...current,
+        dailyCompletedId: daily.id,
+        streak: 0,
+        lastStreakCheckDate: daily.id,
+      }));
     }
   };
 
@@ -1075,6 +1133,15 @@ function HomeScreen() {
     );
   }
 
+  if (screen === "league") {
+    return (
+      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+        <StatusBar style="light" />
+        <LeagueHub playerId={playerId} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} />
+      </MainShell>
+    );
+  }
+
   if (screen === "levels") {
     return (
       <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 0, paddingTop: 0 }}>
@@ -1206,6 +1273,23 @@ function HomeScreen() {
               return { ...current, coins: nextCoins };
             });
           }}
+          onSelectFrame={(selectedFrame) => setProgress((current) => ({ ...current, selectedFrame }))}
+          onSelectVictoryEffect={(selectedVictoryEffect) => setProgress((current) => ({ ...current, selectedVictoryEffect }))}
+          onSelectBoardSkin={(selectedBoardSkin) => setProgress((current) => ({ ...current, selectedBoardSkin }))}
+          onBuyCosmetic={(kind, id, cost) => {
+            setProgress((current) => {
+              if ((current.coins ?? 50) < cost) {
+                setGlobalToast({ id: `store-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${cost} çip gerekiyor.`, icon: "!", accentColor: "#FF647C" });
+                return current;
+              }
+              const next = { ...current, coins: (current.coins ?? 50) - cost };
+              if (kind === "avatar") return { ...next, selectedAvatar: id as PlayerProgress["selectedAvatar"], purchasedAvatars: { ...(next.purchasedAvatars ?? {}), [id]: true } };
+              if (kind === "frame") return { ...next, selectedFrame: id, ownedFrames: { ...(next.ownedFrames ?? {}), [id]: true } };
+              if (kind === "board") return { ...next, selectedBoardSkin: id, ownedBoardSkins: { ...(next.ownedBoardSkins ?? {}), [id]: true } };
+              return { ...next, selectedVictoryEffect: id, ownedVictoryEffects: { ...(next.ownedVictoryEffects ?? {}), [id]: true } };
+            });
+            return true;
+          }}
           onBack={() => setScreen("home")}
         />
       </MainShell>
@@ -1299,7 +1383,7 @@ function HomeScreen() {
         <ArcadeChallenge
           onExit={() => setArcadeStarted(false)}
           onComplete={(score) => {
-            setProgress((current) => applyArcadeProgress(current, score));
+            void awardProgressOnServer({ kind: "arcade", score }, (current) => applyArcadeProgress(current, score));
           }}
         />
       </ScreenContainer>
@@ -1425,12 +1509,30 @@ function HomeScreen() {
       <AuthScreen
         onCancel={async () => {
           if (!authToken) {
-            setAuthToken("guest");
-            await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+            try {
+              const response = await fetch(`${getApiBaseUrl()}/api/auth/guest`, { method: "POST" });
+              const data = await response.json();
+              if (response.ok && data.token && data.user?.openId) {
+                setAuthToken(data.token);
+                setPlayerId(data.user.openId);
+                setPlayerName(data.user.name || "MİSAFİR");
+                await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
+                await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
+                await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || "MİSAFİR");
+                if (data.user.progress) setProgress(data.user.progress);
+              } else {
+                setAuthToken("guest");
+                await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+              }
+            } catch {
+              setAuthToken("guest");
+              await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+            }
           }
           setScreen("home");
         }}
         onSuccess={async (token, username, cloudProgress, openId) => {
+          const guestToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
           setAuthToken(token);
           setPlayerId(openId);
           setPlayerName(username);
@@ -1439,6 +1541,25 @@ function HomeScreen() {
           
           // Seamless guest to registered account progress merge (Keep higher XP, wins, unlocked levels, etc.)
           const mergedProgress = mergePlayerProgress(progress, cloudProgress);
+
+          if (guestToken && guestToken !== "guest") {
+            try {
+              const transferResponse = await fetch(`${getApiBaseUrl()}/api/auth/claim-guest`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ guestToken }),
+              });
+              const transferData = await transferResponse.json();
+              if (transferResponse.ok && transferData.progress) {
+                setProgress(transferData.progress);
+                await syncProgressToCloud(transferData.progress);
+                setScreen("home");
+                return;
+              }
+            } catch {
+              // Fall back to the local/cloud merge below when transfer is unavailable.
+            }
+          }
 
           setProgress(mergedProgress);
           await syncProgressToCloud(mergedProgress);
@@ -1457,7 +1578,7 @@ function HomeScreen() {
           onBack={() => setScreen("home")}
           onPlayDaily={() => setScreen("daily-lobby")}
           onClaimDaily={(missionId, xp, coins) => {
-            setProgress((current) => ({
+            void claimMissionOnServer("daily", missionId, (current) => ({
               ...current,
               xp: current.xp + xp,
               coins: (current.coins ?? 50) + coins,
@@ -1465,7 +1586,7 @@ function HomeScreen() {
             }));
           }}
           onClaimWeekly={(missionId, xp, shield, coins) => {
-            setProgress((current) => ({
+            void claimMissionOnServer("weekly", missionId, (current) => ({
               ...current,
               xp: current.xp + xp,
               streakShields: (current.streakShields || 0) + (shield || 0),

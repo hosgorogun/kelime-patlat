@@ -192,7 +192,7 @@ class SDKServer {
       });
       const { openId, appId, name } = payload as Record<string, unknown>;
 
-      if (!isNonEmptyString(openId) || !isNonEmptyString(appId) || !isNonEmptyString(name)) {
+      if (!isNonEmptyString(openId) || !isNonEmptyString(appId) || typeof name !== "string") {
         console.warn("[Auth] Session payload missing required fields");
         return null;
       }
@@ -256,6 +256,20 @@ class SDKServer {
     }
 
     const sessionUserId = session.openId;
+    if (sessionUserId.startsWith("guest_")) {
+      const now = new Date();
+      return {
+        id: -1,
+        openId: sessionUserId,
+        name: "MİSAFİR",
+        email: null,
+        loginMethod: "guest",
+        role: "user",
+        createdAt: now,
+        updatedAt: now,
+        lastSignedIn: now,
+      } as AuthenticatedUser;
+    }
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
