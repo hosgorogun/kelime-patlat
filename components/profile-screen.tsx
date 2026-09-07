@@ -385,20 +385,37 @@ export function ProfileScreen({
               }}
               style={({ pressed }) => [
                 styles.titleTile,
-                unlocked && styles.titleTileUnlocked,
+                unlocked ? styles.titleTileUnlocked : styles.titleTileLocked,
                 isSelected && styles.titleTileSelected,
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.titleTileBadge, isSelected && { color: "#00F5D4" }, !unlocked && { color: "#7B748C" }]}>
-                {unlocked ? title.badge : "🔒 " + title.badge}
-              </Text>
-              <Text numberOfLines={1} style={[styles.titleTileName, isSelected && { color: "#00F5D4", fontWeight: "900" }]}>{title.name}</Text>
-              {isSelected && (
-                <View style={[styles.activeDotBadge, { backgroundColor: "#00F5D4" }]}>
-                  <Text style={[styles.activeDotCheck, { color: "#0B071E" }]}>✓</Text>
+              <View style={styles.titleTopRow}>
+                <View style={[styles.titleIconCircle, isSelected && styles.titleIconCircleSelected, !unlocked && styles.titleIconCircleLocked]}>
+                  <Text style={styles.titleIconEmoji}>{unlocked ? (isSelected ? "⚡" : "🎖️") : "🔒"}</Text>
                 </View>
-              )}
+                <View style={[
+                  styles.titleStatusChip,
+                  isSelected && styles.titleStatusChipSelected,
+                  (!unlocked) && styles.titleStatusChipLocked,
+                ]}>
+                  <Text style={[
+                    styles.titleStatusText,
+                    isSelected && { color: "#00F5D4" },
+                    (!unlocked) && { color: "#7B748C" },
+                  ]}>
+                    {isSelected ? "KUŞANILDI" : unlocked ? "SEÇ" : "KİLİTLİ"}
+                  </Text>
+                </View>
+              </View>
+
+              <Text numberOfLines={1} style={[styles.titleTileBadgeText, isSelected && { color: "#00F5D4" }, !unlocked && { color: "#8E889C" }]}>
+                {title.badge}
+              </Text>
+
+              <Text numberOfLines={1} style={[styles.titleTileName, isSelected && { color: "#FFF" }]}>
+                {title.name}
+              </Text>
             </Pressable>
           );
         })}
@@ -885,43 +902,96 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* TITLE TILES */
+  /* TITLE TILES - MODERN CYBER BADGE */
   titleTile: {
-    width: 110,
-    height: 86,
-    borderRadius: 18,
+    width: 146,
+    height: 104,
+    borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: "#281F42",
-    backgroundColor: "rgba(18, 14, 34, 0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 8,
+    borderColor: "rgba(124, 92, 246, 0.2)",
+    backgroundColor: "rgba(19, 14, 38, 0.75)",
+    padding: 12,
+    justifyContent: "space-between",
     position: "relative",
-    opacity: 0.65,
   },
   titleTileUnlocked: {
-    backgroundColor: "rgba(23, 17, 44, 0.9)",
-    borderColor: "#3D3160",
-    opacity: 1,
+    borderColor: "rgba(124, 92, 246, 0.4)",
+    backgroundColor: "rgba(25, 18, 50, 0.9)",
+  },
+  titleTileLocked: {
+    borderColor: "rgba(50, 40, 75, 0.5)",
+    backgroundColor: "rgba(16, 12, 30, 0.55)",
+    opacity: 0.75,
   },
   titleTileSelected: {
     borderColor: "#00F5D4",
-    backgroundColor: "rgba(0, 245, 212, 0.12)",
+    backgroundColor: "rgba(0, 245, 212, 0.08)",
     shadowColor: "#00F5D4",
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  titleTileBadge: {
-    fontSize: 18,
-    marginBottom: 4,
+  titleTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  titleIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(124, 92, 246, 0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(167, 139, 250, 0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleIconCircleSelected: {
+    backgroundColor: "rgba(0, 245, 212, 0.2)",
+    borderColor: "#00F5D4",
+  },
+  titleIconCircleLocked: {
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderColor: "rgba(80, 70, 105, 0.4)",
+  },
+  titleIconEmoji: {
+    fontSize: 13,
+  },
+  titleStatusChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: "rgba(124, 92, 246, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(124, 92, 246, 0.3)",
+  },
+  titleStatusChipSelected: {
+    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    borderColor: "rgba(0, 245, 212, 0.5)",
+  },
+  titleStatusChipLocked: {
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    borderColor: "rgba(60, 50, 85, 0.4)",
+  },
+  titleStatusText: {
+    color: "#C4B5FD",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+  titleTileBadgeText: {
+    color: "#E2D9F3",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+    marginTop: 4,
   },
   titleTileName: {
-    color: "#E2D9F3",
-    fontSize: 9,
-    fontWeight: "800",
+    color: "#8E82A8",
+    fontSize: 9.5,
+    fontWeight: "700",
     letterSpacing: 0.4,
-    textAlign: "center",
   },
 
   /* 5. BADGES */
