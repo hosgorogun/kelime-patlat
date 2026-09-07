@@ -27,14 +27,16 @@ class SocialManager {
     if (this.initialized) return this.friends;
     try {
       const stored = await AsyncStorage.getItem(FRIENDS_STORAGE_KEY);
-      if (stored) {
+      if (stored !== null) {
+        // Key exists in storage — trust it, even if it's an empty array
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           this.friends = parsed;
         }
       }
+      // If key was never written (null), keep the default mock friends for demo purposes
     } catch {
-      // Fallback to default mock friends if storage is empty or fails
+      // Fallback to default mock friends if storage fails
     }
     this.initialized = true;
     return this.friends;

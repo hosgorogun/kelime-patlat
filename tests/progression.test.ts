@@ -6,7 +6,7 @@ import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
 import { socialManager } from "../shared/social";
-import { CHIP_EQUIPMENT_ITEMS } from "../components/cyber-store";
+import { CHIP_EQUIPMENT_ITEMS } from "../shared/store-items";
 
 describe("Günlük rota ve sezon ilerlemesi", () => {
   it("aynı takvim günü için aynı günlük rota kimliğini ve sabit varyasyonu üretir", () => {

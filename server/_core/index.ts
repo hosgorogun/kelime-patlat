@@ -12,7 +12,7 @@ import { UserModel, hashPassword, verifyPassword } from "../db";
 import { COOKIE_NAME } from "../../shared/const.js";
 import { getSessionCookieOptions } from "./cookies";
 import { z } from "zod";
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomInt } from "node:crypto";
 import { applyArcadeProgress, applyMatchProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, type PlayerProgress } from "../../shared/progression";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -83,6 +83,12 @@ async function startServer() {
     const now = Date.now();
     const current = authAttempts.get(key);
     if (!current || now - current.startedAt >= 60_000) {
+      // Periodically purge stale entries to prevent unbounded memory growth
+      if (authAttempts.size > 500) {
+        for (const [k, v] of authAttempts) {
+          if (now - v.startedAt >= 60_000) authAttempts.delete(k);
+        }
+      }
       authAttempts.set(key, { startedAt: now, count: 1 });
       return next();
     }
@@ -106,7 +112,7 @@ async function startServer() {
       const openId = `guest_${randomUUID()}`;
       const now = new Date();
       const user = new UserModel({
-        id: Math.abs([...openId].reduce((value, char) => ((value * 31) ^ char.charCodeAt(0)) >>> 0, 7_431)),
+        id: randomInt(1, 2_147_483_647),
         openId,
         name: "MİSAFİR",
         email: null,
@@ -147,7 +153,7 @@ async function startServer() {
       const initialProgress = { gender: validGender };
 
       const user = new UserModel({
-        id: Math.abs([...openId].reduce((value, char) => ((value * 31) ^ char.charCodeAt(0)) >>> 0, 7_431)),
+        id: randomInt(1, 2_147_483_647),
         openId,
         username: username.toLowerCase(),
         passwordHash,
@@ -177,7 +183,7 @@ async function startServer() {
       if (!guestSession?.openId.startsWith("guest_")) return res.status(400).json({ error: "Geçerli bir misafir oturumu bulunamadı." });
       const guest = await UserModel.findOneAndUpdate(
         { openId: guestSession.openId, guestClaimedBy: null },
-        { $set: { guestClaimedBy: user.openId, progress: DEFAULT_PROGRESS, updatedAt: new Date() } },
+        { $set: { guestClaimedBy: user.openId, updatedAt: new Date() } },
         { new: false },
       );
       if (!guest) return res.status(409).json({ error: "Bu misafir ilerlemesi daha önce başka bir hesaba aktarıldı." });
@@ -316,15 +322,6 @@ async function startServer() {
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    try {
-      const cookieOptions = getSessionCookieOptions(req);
-      res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ error: "Logout failed" });
-    }
-  });
 
   registerGameRooms(io);
 

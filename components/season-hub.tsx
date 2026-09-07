@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { getRank, getDailyMysteryWord, type PlayerProgress } from "@/shared/progression";
-import { type LeaderboardEntry } from "@/shared/game";
+import { type LeaderboardEntry, BOARD_SIZES, type BoardSize } from "@/shared/game";
 import { socialManager, type FriendUser } from "@/shared/social";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
@@ -10,21 +10,26 @@ type SeasonTab = "leaderboard" | "friends";
 
 export function SeasonHub({
   playerId,
+  playerName = "OYUNCU",
   progress,
   leaderboard,
   onBack,
   onChallengeFriend,
 }: {
   playerId: string;
+  playerName?: string;
   progress: PlayerProgress;
   leaderboard: LeaderboardEntry[];
   onBack: () => void;
-  onChallengeFriend?: (friendName: string) => void;
+  onChallengeFriend?: (friendName: string, size: BoardSize) => void;
 }) {
   const [activeTab, setActiveTab] = useState<SeasonTab>("leaderboard");
+  const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
   const [friendInput, setFriendInput] = useState("");
   const [friendsList, setFriendsList] = useState<FriendUser[]>(() => socialManager.getFriends());
   const [socialMessage, setSocialMessage] = useState<string | null>(null);
+  // Board size picker modal state
+  const [challengeTarget, setChallengeTarget] = useState<FriendUser | null>(null);
 
   useEffect(() => {
     socialManager.init().then((list) => {
@@ -33,8 +38,35 @@ export function SeasonHub({
   }, []);
 
   const rank = getRank(progress);
-  const mystery = getDailyMysteryWord();
   const onlineFriendsCount = friendsList.filter((f) => f.isOnline).length;
+
+  // Filtered leaderboard
+  const displayedLeaderboard = useMemo(() => {
+    if (leaderboardFilter === "global") return leaderboard;
+    // Friends filter: include friends + the user themselves
+    const friendNames = new Set(friendsList.map((f) => f.name.toLocaleLowerCase("tr-TR")));
+    const friendUsernames = new Set(friendsList.map((f) => f.username.toLocaleLowerCase("tr-TR")));
+    return leaderboard.filter(
+      (entry) =>
+        entry.id === playerId ||
+        friendNames.has(entry.name.toLocaleLowerCase("tr-TR")) ||
+        friendUsernames.has(entry.name.toLocaleLowerCase("tr-TR"))
+    );
+  }, [leaderboard, leaderboardFilter, friendsList, playerId]);
+
+  // Current user's standing in the leaderboard
+  const userEntryIndex = displayedLeaderboard.findIndex((e) => e.id === playerId);
+  const userEntry = userEntryIndex >= 0 ? displayedLeaderboard[userEntryIndex] : null;
+  const userRankPosition = userEntryIndex >= 0 ? userEntryIndex + 1 : null;
+  const top1Score = displayedLeaderboard[0]?.score ?? 0;
+  const userScore = userEntry?.score ?? progress.xp ?? 0;
+  const scoreDiffToLeader = Math.max(0, top1Score - userScore);
+
+  // Top 3 Podium
+  const top1 = displayedLeaderboard[0] || null;
+  const top2 = displayedLeaderboard[1] || null;
+  const top3 = displayedLeaderboard[2] || null;
+  const restOfLeaderboard = displayedLeaderboard.slice(3);
 
   const handleAddFriend = () => {
     if (!friendInput.trim()) return;
@@ -68,237 +100,376 @@ export function SeasonHub({
     );
   };
 
+  const handleDuelPress = (friend: FriendUser) => {
+    triggerHapticSelection();
+    setChallengeTarget(friend);
+  };
+
+  const handleSizeSelect = (size: BoardSize) => {
+    if (!challengeTarget || !onChallengeFriend) return;
+    triggerHapticSuccess();
+    onChallengeFriend(challengeTarget.name, size);
+    setChallengeTarget(null);
+  };
+
+  const SIZE_LABELS: Record<BoardSize, { label: string; desc: string; color: string }> = {
+    4:  { label: "4×4", desc: "Hızlı · 55 sn", color: "#00F5D4" },
+    6:  { label: "6×6", desc: "Orta · 75 sn",  color: "#A78BFA" },
+    8:  { label: "8×8", desc: "Zorlu · 95 sn", color: "#FB923C" },
+    10: { label: "10×10", desc: "Efsane · 125 sn", color: "#FFC24A" },
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.back}>
-          <Text style={styles.backText}>‹</Text>
-        </Pressable>
-        <View style={{ flex: 1, marginRight: 6 }}>
-          <Text style={styles.overline}>SEZON 01 · TOPLULUK & REKABET</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.title}>
-            LİDERLİK VE ARKADAŞLIK
-          </Text>
-        </View>
-        <View style={styles.rankOrb}>
-          <Text style={styles.rankOrbText}>{rank.slice(0, 1)}</Text>
-        </View>
-      </View>
-
-      {/* Sub-tabs: Sıralama vs Arkadaşlar */}
-      <View style={styles.tabSwitcher}>
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            setActiveTab("leaderboard");
-          }}
-          style={[styles.tabBtn, activeTab === "leaderboard" && styles.tabBtnActive]}
-        >
-          <Text
-            numberOfLines={1}
-            style={[styles.tabBtnText, activeTab === "leaderboard" && styles.tabBtnTextActive]}
-          >
-            🏆 LİDERLİK TABLOSU
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            setActiveTab("friends");
-          }}
-          style={[styles.tabBtn, activeTab === "friends" && styles.tabBtnActive]}
-        >
-          <Text
-            numberOfLines={1}
-            style={[styles.tabBtnText, activeTab === "friends" && styles.tabBtnTextActive]}
-          >
-            👥 ARKADAŞLAR ({friendsList.length})
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* TAB 1: 🏆 LİDERLİK TABLOSU */}
-      {activeTab === "leaderboard" && (
-        <View>
-          {/* Daily Mystery Word Card */}
-          <View style={styles.mysteryCard}>
-            <View style={styles.mysteryHeader}>
-              <Text style={styles.mysteryKicker}>🔍 GÜNÜN GİZEMLİ KELİMESİ</Text>
-              <Text style={styles.mysteryReward}>+{mystery.rewardXp} XP BONUSU</Text>
-            </View>
-            <Text style={styles.mysteryDef}>&quot;{mystery.definition}&quot;</Text>
-            <Text style={styles.mysteryHint}>
-              💡 İpucu: Bu tanıma uyan kelimeyi tahtada bul ve ekstra XP kazan!
+    <>
+      {/* Board size picker modal */}
+      <Modal
+        visible={challengeTarget !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setChallengeTarget(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setChallengeTarget(null)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalKicker}>DÜELLO GÖNDERİLİYOR</Text>
+            <Text style={styles.modalTitle} numberOfLines={1}>
+              {challengeTarget?.name}
             </Text>
-          </View>
-
-          {/* Canlı Sıralama */}
-          <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>CANLI SIRALAMA</Text>
-            <Text style={styles.sectionMeta}>{leaderboard.length} AVCI</Text>
-          </View>
-
-          <View style={styles.board}>
-            {leaderboard.length ? (
-              leaderboard.map((entry, index) => {
-                const winRate =
-                  entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
-                const isTop1 = index === 0;
-                const isTop2 = index === 1;
-                const isTop3 = index === 2;
+            <Text style={styles.modalSubtitle}>Tahta boyutunu seç</Text>
+            <View style={styles.sizeGrid}>
+              {(BOARD_SIZES as readonly BoardSize[]).map((size) => {
+                const info = SIZE_LABELS[size];
                 return (
-                  <View
-                    key={entry.id}
-                    style={[
-                      styles.row,
-                      isTop1 && styles.rowTop1,
-                      isTop2 && styles.rowTop2,
-                      isTop3 && styles.rowTop3,
+                  <Pressable
+                    key={size}
+                    style={({ pressed }) => [
+                      styles.sizeBtn,
+                      { borderColor: info.color },
+                      pressed && { opacity: 0.75 },
                     ]}
+                    onPress={() => handleSizeSelect(size)}
                   >
-                    <View
-                      style={[
-                        styles.position,
-                        isTop1 && styles.positionFirst,
-                        isTop2 && styles.positionSecond,
-                        isTop3 && styles.positionThird,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.positionText,
-                          (isTop1 || isTop2 || isTop3) && { color: "#000000" },
-                        ]}
-                      >
-                        {index + 1}
-                      </Text>
-                    </View>
-                    <View style={styles.playerMark}>
-                      <Text style={[styles.playerMarkText, isTop1 && { color: "#FFD000" }]}>
-                        {entry.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
-                      </Text>
-                    </View>
-                    <View style={styles.playerCopy}>
-                      <Text numberOfLines={1} style={styles.playerName}>
-                        {entry.name} {isTop1 ? "👑" : isTop2 ? "🥈" : isTop3 ? "🥉" : ""}
-                      </Text>
-                      <Text style={styles.playerMeta}>
-                        {entry.wins}/{entry.matches} Galibiyet (%{winRate}) · En İyi: {entry.bestRound} Puan
-                      </Text>
-                    </View>
-                    <Text style={[styles.score, isTop1 && { color: "#FFD000" }]}>
-                      {entry.score}
-                    </Text>
-                  </View>
+                    <Text style={[styles.sizeBtnLabel, { color: info.color }]}>{info.label}</Text>
+                    <Text style={styles.sizeBtnDesc}>{info.desc}</Text>
+                  </Pressable>
                 );
-              })
-            ) : (
-              <View style={styles.emptyBoard}>
-                <Text style={styles.emptyTitle}>SIRALAMA AÇIK</Text>
-                <Text style={styles.emptyCopy}>
-                  İlk tamamlanan canlı düello burada sezona yazılır.
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      )}
+              })}
+            </View>
+            <Pressable onPress={() => setChallengeTarget(null)} style={styles.modalCancel}>
+              <Text style={styles.modalCancelText}>İPTAL</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
-      {/* TAB 2: 👥 ARKADAŞLAR */}
-      {activeTab === "friends" && (
-        <View>
-          {/* Social Hero Banner */}
-          <View style={styles.socialHero}>
-            <Text style={styles.socialHeroKicker}>TOPLULUK AĞI</Text>
-            <Text style={styles.socialHeroTitle}>ARKADAŞLARINLA YARIŞ</Text>
-            <Text style={styles.socialHeroBody}>
-              {friendsList.length} arkadaş listende · {onlineFriendsCount} şu an çevrim içi
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable onPress={onBack} style={styles.back}>
+            <Text style={styles.backText}>‹</Text>
+          </Pressable>
+          <View style={{ flex: 1, marginRight: 6 }}>
+            <Text style={styles.overline}>SEZON 01 · TOPLULUK &amp; REKABET</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.title}>
+              LİDERLİK VE ARKADAŞLIK
             </Text>
           </View>
-
-          {/* Add Friend Card */}
-          <View style={styles.addCard}>
-            <Text style={styles.addCardLabel}>YENİ ARKADAŞ EKLE</Text>
-            <View style={styles.addFriendRow}>
-              <TextInput
-                value={friendInput}
-                onChangeText={setFriendInput}
-                placeholder="Kullanıcı adı girin (Örn: neon_007)"
-                placeholderTextColor="#877A9E"
-                autoCapitalize="none"
-                style={styles.addFriendInput}
-              />
-              <Pressable onPress={handleAddFriend} style={styles.addFriendBtn}>
-                <Text style={styles.addFriendBtnText}>EKLE</Text>
-              </Pressable>
-            </View>
-            {socialMessage && <Text style={styles.socialMsg}>{socialMessage}</Text>}
+          <View style={styles.rankOrb}>
+            <Text style={styles.rankOrbText}>{rank.slice(0, 1)}</Text>
           </View>
+        </View>
 
-          {/* Friends List */}
-          <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>ARKADAŞ LİSTESİ</Text>
-            <Text style={styles.sectionMeta}>{onlineFriendsCount} ÇEVRİM İÇİ</Text>
-          </View>
+        {/* Sub-tabs */}
+        <View style={styles.tabSwitcher}>
+          <Pressable
+            onPress={() => { triggerHapticSelection(); setActiveTab("leaderboard"); }}
+            style={[styles.tabBtn, activeTab === "leaderboard" && styles.tabBtnActive]}
+          >
+            <Text numberOfLines={1} style={[styles.tabBtnText, activeTab === "leaderboard" && styles.tabBtnTextActive]}>
+              🏆 LİDERLİK TABLOSU
+            </Text>
+          </Pressable>
 
-          <View style={styles.friendsBoard}>
-            {friendsList.map((f) => (
-              <View key={f.id} style={styles.friendRow}>
-                <Text style={styles.friendAvatarText}>{f.avatar}</Text>
+          <Pressable
+            onPress={() => { triggerHapticSelection(); setActiveTab("friends"); }}
+            style={[styles.tabBtn, activeTab === "friends" && styles.tabBtnActive]}
+          >
+            <Text numberOfLines={1} style={[styles.tabBtnText, activeTab === "friends" && styles.tabBtnTextActive]}>
+              👥 ARKADAŞLAR ({friendsList.length})
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* TAB 1: Leaderboard */}
+        {activeTab === "leaderboard" && (
+          <View>
+            {/* User Standing Highlight Card */}
+            <View style={styles.userStatusCard}>
+              <View style={styles.userStatusLeft}>
+                <View style={styles.userStatusAvatarOrb}>
+                  <Text style={styles.userStatusAvatarText}>{playerName.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
-                  <Text numberOfLines={1} style={styles.friendXpText}>
-                    @{f.username} · {f.xp} XP
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text numberOfLines={1} style={styles.userStatusName}>{playerName}</Text>
+                    <View style={styles.userRankBadge}>
+                      <Text style={styles.userRankBadgeText}>{rank}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.userStatusSub}>
+                    {userRankPosition ? `${userRankPosition}. SIRADASIN` : "SIRALAMA DIŞI"} · {userScore} PUAN
                   </Text>
                 </View>
+              </View>
+              <View style={styles.userStatusRight}>
+                {userRankPosition === 1 ? (
+                  <View style={styles.leaderCrownBadge}>
+                    <Text style={styles.leaderCrownText}>👑 LİDERSİN</Text>
+                  </View>
+                ) : scoreDiffToLeader > 0 ? (
+                  <View style={styles.diffBadge}>
+                    <Text style={styles.diffKicker}>ZİRVEYE KALAN</Text>
+                    <Text style={styles.diffScore}>-{scoreDiffToLeader} P</Text>
+                  </View>
+                ) : (
+                  <View style={styles.diffBadge}>
+                    <Text style={styles.diffKicker}>DÜELLO YAP</Text>
+                    <Text style={styles.diffScore}>PUAN KAZAN</Text>
+                  </View>
+                )}
+              </View>
+            </View>
 
-                {/* Actions & Status */}
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  {onChallengeFriend && (
-                    <Pressable
-                      onPress={() => {
-                        triggerHapticSuccess();
-                        onChallengeFriend(f.name);
-                      }}
-                      style={({ pressed }) => [
-                        styles.challengeBtn,
-                        pressed && { opacity: 0.8 },
-                      ]}
-                    >
-                      <Text style={styles.challengeBtnText}>DÜELLO ⚡</Text>
-                    </Pressable>
-                  )}
 
-                  <View style={styles.statusWrap}>
+            {/* Filter Buttons: Global vs Friends */}
+            <View style={styles.leaderFilterRow}>
+              <Pressable
+                onPress={() => { triggerHapticSelection(); setLeaderboardFilter("global"); }}
+                style={[styles.filterChip, leaderboardFilter === "global" && styles.filterChipActive]}
+              >
+                <Text style={[styles.filterChipText, leaderboardFilter === "global" && styles.filterChipTextActive]}>
+                  🌐 GENEL SIRALAMA ({leaderboard.length})
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { triggerHapticSelection(); setLeaderboardFilter("friends"); }}
+                style={[styles.filterChip, leaderboardFilter === "friends" && styles.filterChipActive]}
+              >
+                <Text style={[styles.filterChipText, leaderboardFilter === "friends" && styles.filterChipTextActive]}>
+                  👥 ARKADAŞLAR ({friendsList.length})
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Podium (Top 3) */}
+            {displayedLeaderboard.length >= 2 && (
+              <View style={styles.podiumContainer}>
+                {/* 2nd Place */}
+                {top2 && (
+                  <View style={[styles.podiumColumn, styles.podiumCol2]}>
+                    <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap2]}>
+                      <Text style={styles.podiumAvatarText}>{top2.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      <View style={[styles.podiumRankBadge, styles.podiumRankBadge2]}>
+                        <Text style={styles.podiumRankNum}>2</Text>
+                      </View>
+                    </View>
+                    <Text numberOfLines={1} style={styles.podiumName}>{top2.name}</Text>
+                    <Text style={styles.podiumScore}>{top2.score} P</Text>
+                    <View style={styles.podiumBar2}>
+                      <Text style={styles.podiumBarLabel}>🥈 İKİNCİ</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* 1st Place (Center, Tallest) */}
+                {top1 && (
+                  <View style={[styles.podiumColumn, styles.podiumCol1]}>
+                    <Text style={styles.crownIcon}>👑</Text>
+                    <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap1]}>
+                      <Text style={styles.podiumAvatarText}>{top1.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      <View style={[styles.podiumRankBadge, styles.podiumRankBadge1]}>
+                        <Text style={styles.podiumRankNum}>1</Text>
+                      </View>
+                    </View>
+                    <Text numberOfLines={1} style={styles.podiumName}>{top1.name}</Text>
+                    <Text style={[styles.podiumScore, { color: "#FFD000" }]}>{top1.score} P</Text>
+                    <View style={styles.podiumBar1}>
+                      <Text style={styles.podiumBarLabel}>🥇 ŞAMPİYON</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* 3rd Place */}
+                {top3 && (
+                  <View style={[styles.podiumColumn, styles.podiumCol3]}>
+                    <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap3]}>
+                      <Text style={styles.podiumAvatarText}>{top3.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      <View style={[styles.podiumRankBadge, styles.podiumRankBadge3]}>
+                        <Text style={styles.podiumRankNum}>3</Text>
+                      </View>
+                    </View>
+                    <Text numberOfLines={1} style={styles.podiumName}>{top3.name}</Text>
+                    <Text style={styles.podiumScore}>{top3.score} P</Text>
+                    <View style={styles.podiumBar3}>
+                      <Text style={styles.podiumBarLabel}>🥉 ÜÇÜNCÜ</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>
+                {displayedLeaderboard.length >= 3 ? "DİĞER YARIŞMACILAR" : "SIRALAMA"}
+              </Text>
+              <Text style={styles.sectionMeta}>{displayedLeaderboard.length} AVCI</Text>
+            </View>
+
+            <View style={styles.board}>
+              {(displayedLeaderboard.length >= 3 ? restOfLeaderboard : displayedLeaderboard).length ? (
+                (displayedLeaderboard.length >= 3 ? restOfLeaderboard : displayedLeaderboard).map((entry, sliceIdx) => {
+                  const index = displayedLeaderboard.length >= 3 ? sliceIdx + 3 : sliceIdx;
+                  const winRate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
+                  const isUser = entry.id === playerId;
+                  return (
                     <View
-                      style={[
-                        styles.onlineDot,
-                        f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline,
-                      ]}
-                    />
-                    <Text style={styles.onlineStatusText}>
-                      {f.isOnline ? "ÇEVRİM İÇİ" : "ÇEVRİM DIŞI"}
-                    </Text>
+                      key={entry.id}
+                      style={[styles.row, isUser && styles.rowUser]}
+                    >
+                      <View style={styles.position}>
+                        <Text style={styles.positionText}>
+                          {index + 1}
+                        </Text>
+                      </View>
+                      <View style={styles.playerMark}>
+                        <Text style={styles.playerMarkText}>
+                          {entry.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
+                        </Text>
+                      </View>
+                      <View style={styles.playerCopy}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#00F5D4" }]}>
+                            {entry.name}
+                          </Text>
+                          {isUser && (
+                            <View style={styles.userSelfTag}>
+                              <Text style={styles.userSelfTagText}>SEN</Text>
+                            </View>
+                          )}
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                          <Text style={styles.playerMeta}>
+                            {entry.wins}/{entry.matches} Galibiyet
+                          </Text>
+                          {entry.matches > 0 && (
+                            <View style={[styles.winRateBadge, winRate >= 50 ? styles.winRateHigh : styles.winRateNormal]}>
+                              <Text style={styles.winRateText}>%{winRate}</Text>
+                            </View>
+                          )}
+                          <Text style={styles.playerMeta}>· En İyi: {entry.bestRound}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.score}>{entry.score}</Text>
+                    </View>
+                  );
+                })
+              ) : (
+                <View style={styles.emptyBoard}>
+                  <Text style={styles.emptyTitle}>
+                    {leaderboardFilter === "friends" ? "ARKADAŞLARINDAN HENÜZ MAÇ YAPAN YOK" : "SIRALAMA AÇIK"}
+                  </Text>
+                  <Text style={styles.emptyCopy}>
+                    {leaderboardFilter === "friends"
+                      ? "Arkadaşlarını düelloya davet et ve sıralamada ilk sıraya yerleş!"
+                      : "İlk tamamlanan canlı düello burada sezona yazılır."}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* TAB 2: Friends */}
+        {activeTab === "friends" && (
+          <View>
+            <View style={styles.socialHero}>
+              <Text style={styles.socialHeroKicker}>TOPLULUK AĞI</Text>
+              <Text style={styles.socialHeroTitle}>ARKADAŞLARINLA YARIŞ</Text>
+              <Text style={styles.socialHeroBody}>
+                {friendsList.length} arkadaş listende · {onlineFriendsCount} şu an çevrim içi
+              </Text>
+            </View>
+
+            <View style={styles.addCard}>
+              <Text style={styles.addCardLabel}>YENİ ARKADAŞ EKLE</Text>
+              <View style={styles.addFriendRow}>
+                <TextInput
+                  value={friendInput}
+                  onChangeText={setFriendInput}
+                  placeholder="Kullanıcı adı girin (Örn: neon_007)"
+                  placeholderTextColor="#877A9E"
+                  autoCapitalize="none"
+                  style={styles.addFriendInput}
+                />
+                <Pressable onPress={handleAddFriend} style={styles.addFriendBtn}>
+                  <Text style={styles.addFriendBtnText}>EKLE</Text>
+                </Pressable>
+              </View>
+              {socialMessage && <Text style={styles.socialMsg}>{socialMessage}</Text>}
+            </View>
+
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionTitle}>ARKADAŞ LİSTESİ</Text>
+              <Text style={styles.sectionMeta}>{onlineFriendsCount} ÇEVRİM İÇİ</Text>
+            </View>
+
+            <View style={styles.friendsBoard}>
+              {friendsList.length === 0 && (
+                <View style={styles.emptyBoard}>
+                  <Text style={styles.emptyTitle}>LİSTE BOŞ</Text>
+                  <Text style={styles.emptyCopy}>Yukarıdan kullanıcı adı girerek arkadaş ekleyebilirsin.</Text>
+                </View>
+              )}
+              {friendsList.map((f) => (
+                <View key={f.id} style={styles.friendRow}>
+                  {/* Top row: avatar + info + status dot + remove */}
+                  <View style={styles.friendRowTop}>
+                    <Text style={styles.friendAvatarText}>{f.avatar}</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
+                      <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.xp} XP</Text>
+                    </View>
+                    <View style={styles.statusWrap}>
+                      <View style={[styles.onlineDot, f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline]} />
+                      <Text style={styles.onlineStatusText}>{f.isOnline ? "ÇEVRİM İÇİ" : "ÇEVRİM DIŞI"}</Text>
+                    </View>
+                    <Pressable
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => handleRemoveFriend(f)}
+                      style={({ pressed }) => [styles.removeFriendBtn, pressed && { opacity: 0.6 }]}
+                    >
+                      <Text style={styles.removeFriendText}>✕</Text>
+                    </Pressable>
                   </View>
 
-                  <Pressable
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    onPress={() => handleRemoveFriend(f)}
-                    style={({ pressed }) => [styles.removeFriendBtn, pressed && { opacity: 0.6 }]}
-                  >
-                    <Text style={styles.removeFriendText}>✕</Text>
-                  </Pressable>
+                  {/* Bottom row: challenge button */}
+                  {onChallengeFriend && (
+                    <Pressable
+                      onPress={() => handleDuelPress(f)}
+                      style={({ pressed }) => [styles.challengeBtn, pressed && { opacity: 0.8 }]}
+                    >
+                      <Text style={styles.challengeBtnText}>⚡ DÜELLO GÖNDERİ OLUŞTUR</Text>
+                    </Pressable>
+                  )}
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
-      )}
-    </ScrollView>
+        )}
+      </ScrollView>
+    </>
   );
 }
+
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 130 },
@@ -425,6 +596,285 @@ const styles = StyleSheet.create({
   },
   mysteryHint: { color: "#A78BFA", fontSize: 8, fontWeight: "800", marginTop: 6 },
 
+  /* User Status Banner */
+  userStatusCard: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: "rgba(30, 22, 58, 0.95)",
+    borderWidth: 1.5,
+    borderColor: "#6D28D9",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#6D28D9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  userStatusLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+  },
+  userStatusAvatarOrb: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#7C3AED",
+    borderWidth: 2,
+    borderColor: "#00F5D4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userStatusAvatarText: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  userStatusName: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  userRankBadge: {
+    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#00F5D4",
+  },
+  userRankBadgeText: {
+    color: "#00F5D4",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  userStatusSub: {
+    color: "#B7AAD1",
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  userStatusRight: {
+    marginLeft: 10,
+    alignItems: "flex-end",
+  },
+  leaderCrownBadge: {
+    backgroundColor: "rgba(255, 208, 0, 0.15)",
+    borderWidth: 1,
+    borderColor: "#FFD000",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  leaderCrownText: {
+    color: "#FFD000",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  diffBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  diffKicker: {
+    color: "#9F93B6",
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+  diffScore: {
+    color: "#FFC24A",
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 1,
+  },
+
+  /* Filter Switcher (Global vs Friends) */
+  leaderFilterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+  filterChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(23, 17, 44, 0.8)",
+    borderWidth: 1,
+    borderColor: "rgba(124, 92, 246, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterChipActive: {
+    backgroundColor: "rgba(124, 58, 237, 0.35)",
+    borderColor: "#7C3AED",
+  },
+  filterChipText: {
+    color: "#8E82A8",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  filterChipTextActive: {
+    color: "#00F5D4",
+  },
+
+  /* Podium (Top 3) */
+  podiumContainer: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    marginTop: 16,
+    paddingHorizontal: 8,
+    gap: 10,
+  },
+  podiumColumn: {
+    flex: 1,
+    alignItems: "center",
+  },
+  podiumCol1: {
+    zIndex: 3,
+  },
+  podiumCol2: {
+    zIndex: 2,
+  },
+  podiumCol3: {
+    zIndex: 1,
+  },
+  crownIcon: {
+    fontSize: 20,
+    marginBottom: -4,
+  },
+  podiumAvatarWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    position: "relative",
+  },
+  podiumAvatarWrap1: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#3A2A68",
+    borderColor: "#FFD000",
+    shadowColor: "#FFD000",
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  podiumAvatarWrap2: {
+    backgroundColor: "#2E2452",
+    borderColor: "#94A3B8",
+  },
+  podiumAvatarWrap3: {
+    backgroundColor: "#2E2452",
+    borderColor: "#FB923C",
+  },
+  podiumAvatarText: {
+    color: "#FFF",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  podiumRankBadge: {
+    position: "absolute",
+    bottom: -6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  podiumRankBadge1: {
+    backgroundColor: "#FFD000",
+    borderColor: "#FFF",
+  },
+  podiumRankBadge2: {
+    backgroundColor: "#94A3B8",
+    borderColor: "#FFF",
+  },
+  podiumRankBadge3: {
+    backgroundColor: "#FB923C",
+    borderColor: "#FFF",
+  },
+  podiumRankNum: {
+    color: "#000",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  podiumName: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  podiumScore: {
+    color: "#55E6B2",
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  podiumBar1: {
+    width: "100%",
+    height: 64,
+    backgroundColor: "rgba(255, 208, 0, 0.15)",
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 208, 0, 0.4)",
+    borderBottomWidth: 0,
+    alignItems: "center",
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  podiumBar2: {
+    width: "100%",
+    height: 48,
+    backgroundColor: "rgba(148, 163, 184, 0.12)",
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.3)",
+    borderBottomWidth: 0,
+    alignItems: "center",
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  podiumBar3: {
+    width: "100%",
+    height: 38,
+    backgroundColor: "rgba(251, 146, 60, 0.12)",
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(251, 146, 60, 0.3)",
+    borderBottomWidth: 0,
+    alignItems: "center",
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  podiumBarLabel: {
+    color: "#FFF",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+
   /* Section Head */
   sectionHead: {
     marginTop: 16,
@@ -452,6 +902,38 @@ const styles = StyleSheet.create({
     gap: 9,
     borderBottomWidth: 1,
     borderBottomColor: "#30254C",
+  },
+  rowUser: {
+    backgroundColor: "rgba(0, 245, 212, 0.08)",
+    borderLeftWidth: 4,
+    borderLeftColor: "#00F5D4",
+  },
+  userSelfTag: {
+    backgroundColor: "#00F5D4",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  userSelfTagText: {
+    color: "#0B071E",
+    fontSize: 7.5,
+    fontWeight: "900",
+  },
+  winRateBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  winRateHigh: {
+    backgroundColor: "rgba(0, 245, 212, 0.15)",
+  },
+  winRateNormal: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  winRateText: {
+    color: "#00F5D4",
+    fontSize: 7.5,
+    fontWeight: "900",
   },
   rowTop1: {
     backgroundColor: "rgba(255, 208, 0, 0.08)",
@@ -547,11 +1029,9 @@ const styles = StyleSheet.create({
 
   /* Friends Board */
   friendsBoard: {
-    gap: 8,
+    gap: 10,
   },
   friendRow: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "rgba(22, 16, 42, 0.85)",
     padding: 12,
     borderRadius: 16,
@@ -559,9 +1039,14 @@ const styles = StyleSheet.create({
     borderColor: "#2A204C",
     gap: 10,
   },
-  friendAvatarText: { fontSize: 22 },
-  friendNameText: { color: "#FFF", fontSize: 12, fontWeight: "900" },
-  friendXpText: { color: "#7E7299", fontSize: 9, marginTop: 2 },
+  friendRowTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  friendAvatarText: { fontSize: 24 },
+  friendNameText: { color: "#FFF", fontSize: 13, fontWeight: "900" },
+  friendXpText: { color: "#7E7299", fontSize: 9.5, marginTop: 2 },
   statusWrap: { alignItems: "flex-end", gap: 3 },
   onlineDot: { width: 8, height: 8, borderRadius: 4 },
   onlineDotActive: {
@@ -578,30 +1063,112 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   challengeBtn: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    backgroundColor: "rgba(0, 245, 212, 0.12)",
     borderWidth: 1,
-    borderColor: "#00F5D4",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    borderColor: "rgba(0, 245, 212, 0.5)",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   challengeBtnText: {
     color: "#00F5D4",
-    fontSize: 8.5,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   removeFriendBtn: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
   removeFriendText: {
     color: "#8E82A8",
     fontSize: 12,
     fontWeight: "900",
+  },
+
+  /* Board Size Picker Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(9, 6, 20, 0.82)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#1D1635",
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: "#4A3B75",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  modalKicker: {
+    color: "#00F5D4",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textAlign: "center",
+  },
+  modalTitle: {
+    color: "#FFF9FC",
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 4,
+  },
+  modalSubtitle: {
+    color: "#A89BC2",
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 2,
+    marginBottom: 16,
+  },
+  sizeGrid: {
+    gap: 9,
+    marginBottom: 16,
+  },
+  sizeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#130E26",
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  sizeBtnLabel: {
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  sizeBtnDesc: {
+    color: "#9F92BA",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  modalCancel: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  modalCancelText: {
+    color: "#D2C5E8",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.8,
   },
 });

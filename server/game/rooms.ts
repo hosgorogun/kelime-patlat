@@ -159,7 +159,12 @@ function buildFourByFourBoard(words: string[]) {
     });
     return { board: fillBoardBlanks(board), words, routes: routesMap };
   }
-  const fallbackPath = fullBoardPath(4)!;
+  const fallbackPath = fullBoardPath(4);
+  if (!fallbackPath) {
+    // Very unlikely: 120 failed attempts — return words with empty board
+    const emptyBoard = fillBoardBlanks(Array.from({ length: 16 }, () => ""));
+    return { board: emptyBoard, words, routes: {} };
+  }
   const board = Array.from({ length: 16 }, () => "");
   let cursor = 0;
   const routesMap: Record<string, number[]> = {};
@@ -589,6 +594,8 @@ export function registerGameRooms(io: Server) {
         matchmakingQueue.set(payload.size, queue);
         socket.emit("matchmaking:status", { status: "searching" });
         setTimeout(() => {
+          // If socket disconnected during the 5s wait, skip room creation
+          if (!io.sockets.sockets.get(socket.id)?.connected) return;
           const currentQueue = matchmakingQueue.get(payload.size) || [];
           const idx = currentQueue.findIndex(p => p.playerId === payload.playerId && p.socketId === socket.id);
           if (idx !== -1) {

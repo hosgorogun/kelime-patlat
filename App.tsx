@@ -250,7 +250,7 @@ function HomeScreen() {
     prevLevelRef.current = currentLevel;
 
     if (prevTierRef.current !== null && currentTier !== prevTierRef.current) {
-      const tierOrder = ["BRONZ", "GÜMÜŞ", "ALTIN", "ELMAS", "ŞAMPİYON"];
+      const tierOrder = ["DEMİR", "BRONZ", "GÜMÜŞ", "ALTIN", "PLATİN", "ELMAS", "YÜCELİK", "ÖLÜMSÜZLÜK", "RADIAN"];
       const prevIdx = tierOrder.indexOf(prevTierRef.current);
       const currIdx = tierOrder.indexOf(currentTier);
       if (currIdx > prevIdx) {
@@ -592,8 +592,15 @@ function HomeScreen() {
     const myFoundWords = room.foundWords.filter((entry) => entry.playerId === playerId && !entry.hidden).map((entry) => entry.word);
     const foundLongWord = myFoundWords.some((w) => w.length >= 7);
     const isBotMatch = room.players.some((p) => p.isBot);
-    setProgress((current) => applyMatchProgress(current, { score: myScore, tempo: myTempo, won: Boolean(iWon), isDraw: Boolean(isDraw), longWord: foundLongWord, foundWords: myFoundWords }, isBotMatch ? "bot" : "pvp"));
-  }, [iWon, isDraw, myScore, myTempo, room, playerId]);
+    // Compute result values directly from room to avoid stale derived-state deps
+    const currentMyScore = room.scores[playerId] ?? 0;
+    const myWc = room.foundWords.filter((e) => e.playerId === playerId).length;
+    const elapsedSec = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 1;
+    const currentTempo = Math.round((myWc * 60 / elapsedSec) * 10) / 10;
+    const currentIWon = room.winnerId === playerId;
+    const currentIsDraw = !room.winnerId;
+    setProgress((current) => applyMatchProgress(current, { score: currentMyScore, tempo: currentTempo, won: currentIWon, isDraw: currentIsDraw, longWord: foundLongWord, foundWords: myFoundWords }, isBotMatch ? "bot" : "pvp"));
+  }, [room, playerId]);
 
   useEffect(() => {
     if (!room) return;
@@ -1121,6 +1128,7 @@ function HomeScreen() {
         <StatusBar style="light" />
         <SeasonHub
           playerId={playerId}
+          playerName={playerName}
           progress={progress}
           leaderboard={leaderboard}
           onBack={() => setScreen("home")}

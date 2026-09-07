@@ -137,7 +137,6 @@ export function ProfileScreen({
                 {
                   backgroundColor: activeAvatar.surface,
                   borderColor: activeAvatar.color,
-                  shadowColor: activeAvatar.color,
                 },
                 pressed && { opacity: 0.8 },
               ]}
@@ -198,7 +197,12 @@ export function ProfileScreen({
               <View style={styles.titleBadge}>
                 <Text style={styles.titleBadgeText}>{activeTitle}</Text>
               </View>
-              <View
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  const nextGender = progress.gender === "male" ? "female" : progress.gender === "female" ? "unspecified" : "male";
+                  onUpdateGender?.(nextGender);
+                }}
                 style={[
                   styles.genderBadge,
                   progress.gender === "male" && styles.genderBadgeMale,
@@ -214,7 +218,7 @@ export function ProfileScreen({
                 >
                   {progress.gender === "male" ? "♂ ERKEK" : progress.gender === "female" ? "♀ KADIN" : "🧑 BELİRTİLMEDİ"}
                 </Text>
-              </View>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -234,6 +238,35 @@ export function ProfileScreen({
             Seviye {currentLevel + 1}&apos;e {nextLevelXp - currentLevelXp} XP kaldı
           </Text>
         </View>
+
+        {/* Quick Gender Picker Buttons */}
+        {onUpdateGender && (
+          <View style={styles.genderQuickRow}>
+            {(["male", "female", "unspecified"] as const).map((g) => {
+              const active = progress.gender === g || (!progress.gender && g === "unspecified");
+              const isM = g === "male";
+              const isF = g === "female";
+              return (
+                <Pressable
+                  key={g}
+                  onPress={() => {
+                    triggerHapticSelection();
+                    onUpdateGender(g);
+                  }}
+                  style={[
+                    styles.genderQuickBtn,
+                    active && (isM ? styles.genderQuickBtnM : isF ? styles.genderQuickBtnF : styles.genderQuickBtnU),
+                  ]}
+                >
+                  <Text style={styles.genderQuickIcon}>{isM ? "♂" : isF ? "♀" : "✦"}</Text>
+                  <Text style={[styles.genderQuickLabel, active && { color: "#FFF", fontWeight: "900" }]}>
+                    {isM ? "Erkek" : isF ? "Kadın" : "Gizli"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       {/* 2. KARİYER İSTATİSTİKLERİ (2x2 Balanced Grid) */}
@@ -314,18 +347,31 @@ export function ProfileScreen({
               }}
               style={({ pressed }) => [
                 styles.avatarTile,
-                { backgroundColor: unlocked ? avatar.surface : "rgba(22, 17, 40, 0.6)", borderColor: isSelected ? avatar.color : unlocked ? "#3D3160" : "#2A2146" },
-                isSelected && { shadowColor: avatar.color, shadowOpacity: 0.5, shadowRadius: 8, elevation: 4 },
+                {
+                  backgroundColor: isSelected
+                    ? "rgba(35, 26, 65, 0.95)"
+                    : unlocked
+                    ? "rgba(22, 16, 42, 0.75)"
+                    : "rgba(16, 12, 30, 0.55)",
+                  borderColor: isSelected ? avatar.color : unlocked ? "rgba(124, 92, 246, 0.25)" : "rgba(50, 40, 75, 0.5)",
+                },
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.avatarTileGlyph, { color: unlocked ? avatar.color : "#665E77" }]}>{unlocked ? avatar.icon : "🔒"}</Text>
+              <View style={[
+                styles.avatarIconWrapper,
+                isSelected && { backgroundColor: `${avatar.color}25`, borderColor: avatar.color }
+              ]}>
+                <Text style={[styles.avatarTileGlyph, { color: unlocked ? (isSelected ? avatar.color : "#DDD6FE") : "#665E77" }]}>
+                  {unlocked ? avatar.icon : "🔒"}
+                </Text>
+              </View>
               <Text numberOfLines={1} style={[styles.avatarTileLabel, isSelected && { color: avatar.color, fontWeight: "900" }, !unlocked && { color: "#7B748C" }]}>
                 {avatar.label}
               </Text>
               {isSelected && (
-                <View style={[styles.activeDotBadge, { backgroundColor: avatar.color }]}>
-                  <Text style={styles.activeDotCheck}>✓</Text>
+                <View style={[styles.activePillBadge, { backgroundColor: `${avatar.color}25`, borderColor: avatar.color }]}>
+                  <Text style={[styles.activePillText, { color: avatar.color }]}>✓ AKTİF</Text>
                 </View>
               )}
             </Pressable>
@@ -348,17 +394,26 @@ export function ProfileScreen({
               onPress={() => { triggerHapticSuccess(); onSelectTheme?.(theme.id); }}
               style={({ pressed }) => [
                 styles.themeTile,
-                { backgroundColor: theme.glow, borderColor: isSelected ? theme.accent : "rgba(124, 92, 246, 0.25)" },
-                isSelected && { shadowColor: theme.accent, shadowOpacity: 0.6, shadowRadius: 10, elevation: 5 },
+                {
+                  backgroundColor: isSelected
+                    ? "rgba(35, 26, 65, 0.95)"
+                    : "rgba(22, 16, 42, 0.75)",
+                  borderColor: isSelected ? theme.accent : "rgba(124, 92, 246, 0.25)",
+                },
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.themeTileIcon, { color: theme.accent }]}>{theme.icon}</Text>
+              <View style={[
+                styles.themeIconWrapper,
+                isSelected && { backgroundColor: `${theme.accent}25`, borderColor: theme.accent }
+              ]}>
+                <Text style={[styles.themeTileIcon, { color: isSelected ? theme.accent : "#DDD6FE" }]}>{theme.icon}</Text>
+              </View>
               <Text numberOfLines={1} style={[styles.themeTileTitle, isSelected && { color: theme.accent, fontWeight: "900" }]}>{theme.label}</Text>
               <Text numberOfLines={1} style={styles.themeTileSub}>{theme.title}</Text>
               {isSelected && (
-                <View style={[styles.activeDotBadge, { backgroundColor: theme.accent }]}>
-                  <Text style={[styles.activeDotCheck, { color: "#0B071E" }]}>✓</Text>
+                <View style={[styles.activePillBadge, { backgroundColor: `${theme.accent}25`, borderColor: theme.accent }]}>
+                  <Text style={[styles.activePillText, { color: theme.accent }]}>✓ AKTİF</Text>
                 </View>
               )}
             </Pressable>
@@ -404,7 +459,7 @@ export function ProfileScreen({
                     isSelected && { color: "#00F5D4" },
                     (!unlocked) && { color: "#7B748C" },
                   ]}>
-                    {isSelected ? "KUŞANILDI" : unlocked ? "SEÇ" : "KİLİTLİ"}
+                    {isSelected ? "✓ KUŞANILDI" : unlocked ? "SEÇ" : "KİLİTLİ"}
                   </Text>
                 </View>
               </View>
@@ -413,7 +468,7 @@ export function ProfileScreen({
                 {title.badge}
               </Text>
 
-              <Text numberOfLines={1} style={[styles.titleTileName, isSelected && { color: "#FFF" }]}>
+              <Text numberOfLines={1} style={[styles.titleTileName, isSelected && { color: "#F1F5F9" }]}>
                 {title.name}
               </Text>
             </Pressable>
@@ -540,10 +595,6 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1.5,
     borderColor: "rgba(124, 92, 246, 0.35)",
-    shadowColor: "#7C3AED",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 6,
     marginBottom: 16,
   },
   heroTopRow: {
@@ -561,9 +612,6 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     alignItems: "center",
     justifyContent: "center",
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
   },
   avatarGlyph: {
     fontSize: 30,
@@ -713,6 +761,50 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
 
+  /* Quick Gender Switcher */
+  genderQuickRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(124, 92, 246, 0.15)",
+  },
+  genderQuickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(16, 11, 34, 0.7)",
+    borderWidth: 1,
+    borderColor: "#2B214D",
+  },
+  genderQuickBtnM: {
+    borderColor: "#38BDF8",
+    backgroundColor: "rgba(56, 189, 248, 0.15)",
+  },
+  genderQuickBtnF: {
+    borderColor: "#F472B6",
+    backgroundColor: "rgba(244, 114, 182, 0.15)",
+  },
+  genderQuickBtnU: {
+    borderColor: "#A78BFA",
+    backgroundColor: "rgba(167, 139, 250, 0.15)",
+  },
+  genderQuickIcon: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  genderQuickLabel: {
+    color: "#8E82A8",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
   /* Section Headers */
   sectionHeader: {
     flexDirection: "row",
@@ -834,8 +926,8 @@ const styles = StyleSheet.create({
 
   /* 3. AVATARS */
   avatarTile: {
-    width: 78,
-    height: 86,
+    width: 82,
+    height: 98,
     borderRadius: 18,
     borderWidth: 1.5,
     alignItems: "center",
@@ -847,36 +939,44 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(22, 17, 40, 0.6)",
     borderColor: "#2A2146",
   },
+  avatarIconWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    marginBottom: 6,
+  },
   avatarTileGlyph: {
-    fontSize: 26,
-    marginBottom: 4,
+    fontSize: 20,
   },
   avatarTileLabel: {
     color: "#A79BBF",
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.4,
+    marginBottom: 4,
   },
-  activeDotBadge: {
-    position: "absolute",
-    top: 5,
-    right: 5,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
+  activePillBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 2,
   },
-  activeDotCheck: {
-    color: "#FFF",
-    fontSize: 9,
+  activePillText: {
+    fontSize: 7.5,
     fontWeight: "900",
+    letterSpacing: 0.5,
   },
 
   /* THEME TILES */
   themeTile: {
     width: 104,
-    height: 90,
+    height: 104,
     borderRadius: 18,
     borderWidth: 1.5,
     alignItems: "center",
@@ -884,9 +984,19 @@ const styles = StyleSheet.create({
     padding: 8,
     position: "relative",
   },
+  themeIconWrapper: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    marginBottom: 5,
+  },
   themeTileIcon: {
-    fontSize: 22,
-    marginBottom: 4,
+    fontSize: 18,
   },
   themeTileTitle: {
     color: "#E2D9F3",
@@ -898,15 +1008,16 @@ const styles = StyleSheet.create({
     color: "#8E82A8",
     fontSize: 7.5,
     fontWeight: "700",
-    marginTop: 2,
+    marginTop: 1,
+    marginBottom: 2,
     textAlign: "center",
   },
 
   /* TITLE TILES - MODERN CYBER BADGE */
   titleTile: {
-    width: 146,
-    height: 104,
-    borderRadius: 20,
+    width: 148,
+    height: 100,
+    borderRadius: 18,
     borderWidth: 1.5,
     borderColor: "rgba(124, 92, 246, 0.2)",
     backgroundColor: "rgba(19, 14, 38, 0.75)",
@@ -915,8 +1026,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   titleTileUnlocked: {
-    borderColor: "rgba(124, 92, 246, 0.4)",
-    backgroundColor: "rgba(25, 18, 50, 0.9)",
+    borderColor: "rgba(124, 92, 246, 0.35)",
+    backgroundColor: "rgba(24, 18, 46, 0.85)",
   },
   titleTileLocked: {
     borderColor: "rgba(50, 40, 75, 0.5)",
@@ -926,10 +1037,6 @@ const styles = StyleSheet.create({
   titleTileSelected: {
     borderColor: "#00F5D4",
     backgroundColor: "rgba(0, 245, 212, 0.08)",
-    shadowColor: "#00F5D4",
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
   },
   titleTopRow: {
     flexDirection: "row",
@@ -938,17 +1045,17 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   titleIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(124, 92, 246, 0.2)",
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(124, 92, 246, 0.15)",
     borderWidth: 1,
-    borderColor: "rgba(167, 139, 250, 0.35)",
+    borderColor: "rgba(167, 139, 250, 0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
   titleIconCircleSelected: {
-    backgroundColor: "rgba(0, 245, 212, 0.2)",
+    backgroundColor: "rgba(0, 245, 212, 0.15)",
     borderColor: "#00F5D4",
   },
   titleIconCircleLocked: {
@@ -956,19 +1063,19 @@ const styles = StyleSheet.create({
     borderColor: "rgba(80, 70, 105, 0.4)",
   },
   titleIconEmoji: {
-    fontSize: 13,
+    fontSize: 12,
   },
   titleStatusChip: {
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: "rgba(124, 92, 246, 0.15)",
     borderWidth: 1,
     borderColor: "rgba(124, 92, 246, 0.3)",
   },
   titleStatusChipSelected: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
-    borderColor: "rgba(0, 245, 212, 0.5)",
+    backgroundColor: "rgba(0, 245, 212, 0.12)",
+    borderColor: "rgba(0, 245, 212, 0.4)",
   },
   titleStatusChipLocked: {
     backgroundColor: "rgba(0, 0, 0, 0.25)",
@@ -1129,302 +1236,5 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#A78BFA",
     letterSpacing: 0.5,
-  },
-
-  /* Gender Selection Buttons */
-  genderRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 10,
-  },
-  genderBtn: {
-    flex: 1,
-    backgroundColor: "rgba(23, 17, 44, 0.85)",
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#2C2250",
-    position: "relative",
-  },
-  genderBtnActiveMale: {
-    borderColor: "#38BDF8",
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
-  },
-  genderBtnActiveFemale: {
-    borderColor: "#F472B6",
-    backgroundColor: "rgba(244, 114, 182, 0.12)",
-  },
-  genderBtnActiveUnspecified: {
-    borderColor: "#A78BFA",
-    backgroundColor: "rgba(167, 139, 250, 0.12)",
-  },
-  genderBtnIcon: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-  genderBtnLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#8E82A8",
-    letterSpacing: 0.6,
-  },
-  genderCheckDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  genderCheckDotText: {
-    color: "#0F0B1E",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-
-  /* Reset Photo Pill Button */
-  resetPhotoBtn: {
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.4)",
-  },
-  resetPhotoBtnText: {
-    color: "#F87171",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-
-  /* Pick Photo Row Button */
-  pickPhotoBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: "rgba(23, 17, 44, 0.9)",
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: "#2C2250",
-    marginBottom: 10,
-  },
-  pickPhotoBtnPreview: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: "#1D1636",
-  },
-  pickPhotoBtnIcon: {
-    fontSize: 28,
-    width: 50,
-    textAlign: "center",
-  },
-  pickPhotoBtnLabel: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 0.4,
-  },
-  pickPhotoBtnSub: {
-    color: "#8E82A8",
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  pickPhotoBtnArrow: {
-    color: "#7C3AED",
-    fontSize: 28,
-    fontWeight: "900",
-  },
-
-  /* Photo Tiles (Horizontal Carousel) */
-  photoTile: {
-    width: 82,
-    marginRight: 10,
-    backgroundColor: "rgba(23, 17, 44, 0.85)",
-    borderRadius: 16,
-    padding: 6,
-    borderWidth: 1.5,
-    borderColor: "#2C2250",
-    alignItems: "center",
-    position: "relative",
-  },
-  photoTileSelected: {
-    borderColor: "#00F5D4",
-    backgroundColor: "rgba(0, 245, 212, 0.1)",
-  },
-  photoTileImg: {
-    width: 68,
-    height: 68,
-    borderRadius: 12,
-    backgroundColor: "#1D1636",
-  },
-  photoTileName: {
-    color: "#94A3B8",
-    fontSize: 9,
-    fontWeight: "800",
-    marginTop: 6,
-    textAlign: "center",
-  },
-  photoSelectedBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "#00F5D4",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  photoSelectedBadgeText: {
-    color: "#0F0B1E",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-
-  /* Photo Modal */
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(10, 6, 25, 0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  photoModalCard: {
-    width: "100%",
-    maxWidth: 420,
-    backgroundColor: "#16102E",
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.4)",
-    shadowColor: "#7C3AED",
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(124, 92, 246, 0.2)",
-    paddingBottom: 12,
-  },
-  modalSub: {
-    color: "#A78BFA",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  modalTitle: {
-    color: "#FFF",
-    fontSize: 17,
-    fontWeight: "900",
-    marginTop: 2,
-  },
-  modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalCloseText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  modalSectionSub: {
-    color: "#8E82A8",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-    marginBottom: 10,
-  },
-  modalPhotoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    justifyContent: "space-between",
-  },
-  modalPhotoTile: {
-    width: "23%",
-    aspectRatio: 0.85,
-    backgroundColor: "rgba(23, 17, 44, 0.85)",
-    borderRadius: 14,
-    padding: 4,
-    borderWidth: 1.5,
-    borderColor: "#2C2250",
-    alignItems: "center",
-    position: "relative",
-  },
-  modalPhotoTileSelected: {
-    borderColor: "#00F5D4",
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
-  },
-  modalPhotoImg: {
-    width: "100%",
-    height: "75%",
-    borderRadius: 10,
-    backgroundColor: "#1D1636",
-  },
-  modalPhotoName: {
-    color: "#94A3B8",
-    fontSize: 8,
-    fontWeight: "800",
-    marginTop: 4,
-    textAlign: "center",
-  },
-  customUrlBox: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  customUrlInput: {
-    flex: 1,
-    backgroundColor: "#100B22",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    color: "#FFF",
-    fontSize: 12,
-    borderWidth: 1,
-    borderColor: "#2C2250",
-  },
-  customUrlApplyBtn: {
-    backgroundColor: "#00F5D4",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  customUrlApplyText: {
-    color: "#0F0B1E",
-    fontWeight: "900",
-    fontSize: 11,
-    letterSpacing: 0.6,
-  },
-  modalResetPhotoBtn: {
-    marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#4A3E72",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-  },
-  modalResetPhotoText: {
-    color: "#A78BFA",
-    fontSize: 11,
-    fontWeight: "800",
   },
 });

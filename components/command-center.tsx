@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Alert, Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, getDailyMysteryWord, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions";
@@ -48,6 +48,7 @@ export function CommandCenter({
     ? 100
     : Math.min(100, Math.round((league.currentTierPoints / league.targetTierPoints) * 100));
   const activeTheme = THEME_PACKS.find((pack) => pack.id === (progress.selectedTheme || daily.themeId)) ?? THEME_PACKS[0]!;
+  const mystery = getDailyMysteryWord();
   const dailyDone = progress.dailyCompletedId === daily.id;
 
   const todayId = getDayId();
@@ -294,6 +295,24 @@ export function CommandCenter({
 
     {/* Event Hub (Daily Route & Arcade) */}
     <View style={styles.sectionHead}><Text style={styles.sectionTitle}>ETKİNLİK MERKEZİ</Text><Text style={styles.sectionMeta}>ÖZEL GÖREVLER</Text></View>
+    
+    {/* Günün Gizemli Kelimesi Banner */}
+    <View style={styles.mysteryCard}>
+      <View style={styles.mysteryHeader}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={styles.mysteryKicker}>🔍 GÜNÜN GİZEMLİ KELİMESİ</Text>
+          <View style={styles.mysteryPill}>
+            <Text style={styles.mysteryPillText}>ÖZEL İPUCU</Text>
+          </View>
+        </View>
+        <Text style={styles.mysteryReward}>+{mystery.rewardXp} XP BONUSU</Text>
+      </View>
+      <Text style={styles.mysteryDef}>&quot;{mystery.definition}&quot;</Text>
+      <Text style={styles.mysteryHint}>
+        💡 İpucu: Bu tanıma uyan kelimeyi herhangi bir tahtada bul ve ekstra XP kazan!
+      </Text>
+    </View>
+
     <View style={styles.cardsRow}>
       <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.columnCard, { borderColor: dailyDone ? "#332653" : activeTheme.accent }, pressed && styles.pressed]}>
         <View style={[styles.cardIconCircle, { borderColor: dailyDone ? "#524376" : activeTheme.accent, backgroundColor: dailyDone ? "#201838" : activeTheme.glow }]}>
@@ -580,6 +599,65 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   milestoneBadgeText: { color: "#121025", fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
+
+  /* Mystery Word Card */
+  mysteryCard: {
+    marginBottom: 12,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: "rgba(38, 26, 70, 0.95)",
+    borderWidth: 1.5,
+    borderColor: "#8B5CF6",
+    shadowColor: "#8B5CF6",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  mysteryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  mysteryKicker: {
+    color: "#C4B5FD",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  mysteryPill: {
+    backgroundColor: "rgba(139, 92, 246, 0.25)",
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.5)",
+  },
+  mysteryPillText: {
+    color: "#DDD6FE",
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  mysteryReward: {
+    color: "#00F5D4",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  mysteryDef: {
+    color: "#FFF9FC",
+    fontSize: 12.5,
+    fontWeight: "700",
+    fontStyle: "italic",
+    lineHeight: 18,
+  },
+  mysteryHint: {
+    color: "#A78BFA",
+    fontSize: 8.5,
+    fontWeight: "800",
+    marginTop: 6,
+  },
 
   pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
 });

@@ -6,9 +6,12 @@ describe("Custom Credentials Parola Güvenliği", () => {
     const rawPassword = "oyuncu_sifre_123";
     const storedHash = hashPassword(rawPassword);
     
-    // Hash format should contain salt and digest separated by colon
-    expect(storedHash).toContain(":");
-    expect(storedHash.split(":")[0]).toHaveLength(32); // 16 bytes = 32 hex chars
+    // New format: "iterations:salt:hash" (3 colon-separated parts)
+    const parts = storedHash.split(":");
+    expect(parts).toHaveLength(3);
+    expect(Number(parts[0])).toBeGreaterThanOrEqual(100_000); // strong iteration count
+    expect(parts[1]).toHaveLength(32); // 16 bytes = 32 hex chars (salt)
+    expect(parts[2]).toHaveLength(128); // 64 bytes = 128 hex chars (hash)
     
     // Verification should succeed with correct password
     expect(verifyPassword(rawPassword, storedHash)).toBe(true);
