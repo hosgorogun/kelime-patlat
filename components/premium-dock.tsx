@@ -6,10 +6,12 @@ export function PremiumDock({
   active,
   onNavigate,
   missionsBadgeCount,
+  storeBadgeCount,
 }: {
   active: DockDestination;
   onNavigate: (destination: DockDestination) => void;
   missionsBadgeCount?: number;
+  storeBadgeCount?: number;
 }) {
   return (
     <View style={styles.dock}>
@@ -18,6 +20,7 @@ export function PremiumDock({
         icon="🛒"
         label="MAĞAZA"
         active={active === "store"}
+        badgeCount={storeBadgeCount}
         onPress={() => onNavigate("store")}
       />
 

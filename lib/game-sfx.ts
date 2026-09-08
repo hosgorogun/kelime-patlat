@@ -2,12 +2,17 @@ import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 
 type EffectName = "select" | "accepted" | "rejected" | "victory";
 
-const SOURCES = {
-  select: require("@/assets/sounds/select.wav"),
-  accepted: require("@/assets/sounds/accepted.wav"),
-  rejected: require("@/assets/sounds/rejected.wav"),
-  victory: require("@/assets/sounds/victory.wav"),
-} as const;
+let SOURCES: Record<EffectName, any> = { select: "select", accepted: "accepted", rejected: "rejected", victory: "victory" };
+try {
+  SOURCES = {
+    select: require("../assets/sounds/select.wav"),
+    accepted: require("../assets/sounds/accepted.wav"),
+    rejected: require("../assets/sounds/rejected.wav"),
+    victory: require("../assets/sounds/victory.wav"),
+  };
+} catch {
+  // Unit test ESM environment fallback
+}
 
 type Player = ReturnType<typeof createAudioPlayer>;
 const players: Partial<Record<EffectName, Player>> = {};

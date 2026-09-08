@@ -144,6 +144,9 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   useEffect(() => {
     initAudio().catch(() => undefined);
+    return () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    };
   }, []);
 
   const measureBoard = () => {
@@ -438,10 +441,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       const isSolution = solutionColor !== undefined;
       if (isFound || isSolution) return;
       if (!pointerActive.current) {
+        if (resetTimer.current) clearTimeout(resetTimer.current);
         submitted.current = false;
         pointerActive.current = true;
         setIsSelecting(true);
-        if (resetTimer.current) clearTimeout(resetTimer.current);
         setFeedback("idle");
         clearSelection();
         triggerHapticSelection(); playSelectionNote(0);

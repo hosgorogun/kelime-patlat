@@ -1,12 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { getRank, getDailyMysteryWord, type PlayerProgress } from "@/shared/progression";
+import { getRank, getLeagueTier, getDailyMysteryWord, type PlayerProgress } from "@/shared/progression";
 import { type LeaderboardEntry, BOARD_SIZES, type BoardSize } from "@/shared/game";
 import { socialManager, type FriendUser } from "@/shared/social";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
 type SeasonTab = "leaderboard" | "friends";
+type RankingType = "lp" | "level";
+
+// Lig Kademesi (LP) Sıralaması için Özel Yarışmacılar
+const MOCK_LP_LEADERBOARD: LeaderboardEntry[] = [
+  { id: "lp1", name: "Radyant_Yalçın", score: 9200, wins: 84, matches: 92, bestRound: 580, lp: 10450, tier: "RADIAN", level: 32 },
+  { id: "lp2", name: "Ege Neon", score: 4850, wins: 38, matches: 45, bestRound: 420, lp: 7800, tier: "ÖLÜMSÜZLÜK", level: 24 },
+  { id: "lp3", name: "Kraliçe_Bora", score: 6100, wins: 52, matches: 64, bestRound: 490, lp: 5900, tier: "YÜCELİK", level: 29 },
+  { id: "lp4", name: "Zeynep Matrix", score: 3900, wins: 28, matches: 35, bestRound: 380, lp: 4100, tier: "ELMAS", level: 21 },
+  { id: "lp5", name: "Kaan Kiber", score: 3200, wins: 22, matches: 30, bestRound: 310, lp: 2850, tier: "PLATİN", level: 16 },
+  { id: "lp6", name: "Selin Vektör", score: 2600, wins: 18, matches: 25, bestRound: 290, lp: 2150, tier: "ALTIN", level: 14 },
+  { id: "lp7", name: "Deniz Siber", score: 2100, wins: 14, matches: 20, bestRound: 260, lp: 1350, tier: "GÜMÜŞ", level: 12 },
+  { id: "lp8", name: "Barış Piksel", score: 1450, wins: 9, matches: 15, bestRound: 210, lp: 620, tier: "BRONZ", level: 9 },
+];
+
+// Seviye Sıralaması için Özel Yarışmacılar (En çok XP / Seviye kasan tecrübeli ustalar)
+const MOCK_LEVEL_LEADERBOARD: LeaderboardEntry[] = [
+  { id: "lvl1", name: "Usta_Kelimeci", score: 14200, wins: 120, matches: 140, bestRound: 640, lp: 3400, tier: "PLATİN", level: 71 },
+  { id: "lvl2", name: "Gece_Avcısı", score: 11800, wins: 98, matches: 115, bestRound: 550, lp: 5200, tier: "YÜCELİK", level: 59 },
+  { id: "lvl3", name: "Prof_Murat", score: 9900, wins: 76, matches: 90, bestRound: 510, lp: 2400, tier: "ALTIN", level: 49 },
+  { id: "lvl4", name: "Leyla_Harf", score: 8400, wins: 64, matches: 80, bestRound: 460, lp: 1900, tier: "ALTIN", level: 42 },
+  { id: "lvl5", name: "Ege Neon", score: 4850, wins: 38, matches: 45, bestRound: 420, lp: 7800, tier: "ÖLÜMSÜZLÜK", level: 24 },
+  { id: "lvl6", name: "Taktik_Mete", score: 4100, wins: 32, matches: 40, bestRound: 390, lp: 1200, tier: "GÜMÜŞ", level: 20 },
+  { id: "lvl7", name: "Kaan Kiber", score: 3200, wins: 22, matches: 30, bestRound: 310, lp: 2850, tier: "PLATİN", level: 16 },
+  { id: "lvl8", name: "Çaylak_Ozan", score: 1800, wins: 12, matches: 18, bestRound: 240, lp: 400, tier: "DEMİR", level: 9 },
+];
 
 export function SeasonHub({
   playerId,
@@ -25,6 +50,7 @@ export function SeasonHub({
 }) {
   const [activeTab, setActiveTab] = useState<SeasonTab>("leaderboard");
   const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
+  const [rankingType, setRankingType] = useState<RankingType>("lp");
   const [friendInput, setFriendInput] = useState("");
   const [friendsList, setFriendsList] = useState<FriendUser[]>(() => socialManager.getFriends());
   const [socialMessage, setSocialMessage] = useState<string | null>(null);
@@ -40,19 +66,59 @@ export function SeasonHub({
   const rank = getRank(progress);
   const onlineFriendsCount = friendsList.filter((f) => f.isOnline).length;
 
-  // Filtered leaderboard
+  // Ensure current user is in full pool with their latest progress depending on rankingType
+  const basePool = useMemo(() => {
+    const defaultMock = rankingType === "level" ? MOCK_LEVEL_LEADERBOARD : MOCK_LP_LEADERBOARD;
+    const rawList = leaderboard.length > 0 ? [...leaderboard] : [...defaultMock];
+    const userIndex = rawList.findIndex((e) => e.id === playerId);
+    const userTier = getLeagueTier(progress);
+    const userEntry: LeaderboardEntry = {
+      id: playerId,
+      name: playerName,
+      score: progress.xp ?? 0,
+      wins: progress.wins ?? 0,
+      matches: progress.matches ?? 0,
+      bestRound: progress.bestScore ?? 0,
+      lp: progress.lp ?? 0,
+      tier: userTier.tier,
+      level: Math.floor((progress.xp ?? 0) / 200) + 1,
+    };
+    if (userIndex >= 0) {
+      rawList[userIndex] = userEntry;
+    } else {
+      rawList.push(userEntry);
+    }
+    return rawList;
+  }, [leaderboard, playerId, playerName, progress, rankingType]);
+
+  // Filtered & Sorted Leaderboard
   const displayedLeaderboard = useMemo(() => {
-    if (leaderboardFilter === "global") return leaderboard;
-    // Friends filter: include friends + the user themselves
-    const friendNames = new Set(friendsList.map((f) => f.name.toLocaleLowerCase("tr-TR")));
-    const friendUsernames = new Set(friendsList.map((f) => f.username.toLocaleLowerCase("tr-TR")));
-    return leaderboard.filter(
-      (entry) =>
-        entry.id === playerId ||
-        friendNames.has(entry.name.toLocaleLowerCase("tr-TR")) ||
-        friendUsernames.has(entry.name.toLocaleLowerCase("tr-TR"))
-    );
-  }, [leaderboard, leaderboardFilter, friendsList, playerId]);
+    let pool = basePool;
+
+    if (leaderboardFilter === "friends") {
+      const friendNames = new Set(friendsList.map((f) => f.name.toLocaleLowerCase("tr-TR")));
+      const friendUsernames = new Set(friendsList.map((f) => f.username.toLocaleLowerCase("tr-TR")));
+      pool = basePool.filter(
+        (entry) =>
+          entry.id === playerId ||
+          friendNames.has(entry.name.toLocaleLowerCase("tr-TR")) ||
+          friendUsernames.has(entry.name.toLocaleLowerCase("tr-TR"))
+      );
+    }
+
+    return [...pool].sort((a, b) => {
+      if (rankingType === "level") {
+        const lvlA = a.level ?? Math.floor(a.score / 200) + 1;
+        const lvlB = b.level ?? Math.floor(b.score / 200) + 1;
+        if (lvlB !== lvlA) return lvlB - lvlA;
+        return b.score - a.score;
+      }
+      // "lp" sort
+      const lpA = a.lp ?? a.score;
+      const lpB = b.lp ?? b.score;
+      return lpB - lpA;
+    });
+  }, [basePool, leaderboardFilter, rankingType, friendsList, playerId]);
 
   // Current user's standing in the leaderboard
   const userEntryIndex = displayedLeaderboard.findIndex((e) => e.id === playerId);
@@ -240,24 +306,47 @@ export function SeasonHub({
             </View>
 
 
-            {/* Filter Buttons: Global vs Friends */}
-            <View style={styles.leaderFilterRow}>
-              <Pressable
-                onPress={() => { triggerHapticSelection(); setLeaderboardFilter("global"); }}
-                style={[styles.filterChip, leaderboardFilter === "global" && styles.filterChipActive]}
-              >
-                <Text style={[styles.filterChipText, leaderboardFilter === "global" && styles.filterChipTextActive]}>
-                  🌐 GENEL SIRALAMA ({leaderboard.length})
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => { triggerHapticSelection(); setLeaderboardFilter("friends"); }}
-                style={[styles.filterChip, leaderboardFilter === "friends" && styles.filterChipActive]}
-              >
-                <Text style={[styles.filterChipText, leaderboardFilter === "friends" && styles.filterChipTextActive]}>
-                  👥 ARKADAŞLAR ({friendsList.length})
-                </Text>
-              </Pressable>
+            {/* Filter Buttons: Global vs Friends & Ranking Metric Toggle */}
+            <View style={{ gap: 10, marginBottom: 16 }}>
+              {/* Metric Switcher: LP vs Level */}
+              <View style={{ flexDirection: "row", gap: 8, backgroundColor: "rgba(19, 13, 43, 0.8)", padding: 4, borderRadius: 14, borderWidth: 1, borderColor: "rgba(124, 58, 237, 0.25)" }}>
+                <Pressable
+                  onPress={() => { triggerHapticSelection(); setRankingType("lp"); }}
+                  style={[{ flex: 1, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" }, rankingType === "lp" && { backgroundColor: "#7C3AED" }]}
+                >
+                  <Text style={[{ fontSize: 11, fontWeight: "900", color: "#94A3B8" }, rankingType === "lp" && { color: "#FFFFFF" }]}>
+                    🛡️ LİG KADEMESİ (LP)
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { triggerHapticSelection(); setRankingType("level"); }}
+                  style={[{ flex: 1, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" }, rankingType === "level" && { backgroundColor: "#38BDF8" }]}
+                >
+                  <Text style={[{ fontSize: 11, fontWeight: "900", color: "#94A3B8" }, rankingType === "level" && { color: "#0B132B" }]}>
+                    ⚡ SEVİYE SIRALAMASI
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Scope Switcher: Global vs Friends */}
+              <View style={styles.leaderFilterRow}>
+                <Pressable
+                  onPress={() => { triggerHapticSelection(); setLeaderboardFilter("global"); }}
+                  style={[styles.filterChip, leaderboardFilter === "global" && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, leaderboardFilter === "global" && styles.filterChipTextActive]}>
+                    🌐 GENEL SIRALAMA ({displayedLeaderboard.length})
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { triggerHapticSelection(); setLeaderboardFilter("friends"); }}
+                  style={[styles.filterChip, leaderboardFilter === "friends" && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, leaderboardFilter === "friends" && styles.filterChipTextActive]}>
+                    👥 ARKADAŞLAR ({friendsList.length})
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             {/* Podium (Top 3) */}
@@ -273,6 +362,11 @@ export function SeasonHub({
                       </View>
                     </View>
                     <Text numberOfLines={1} style={styles.podiumName}>{top2.name}</Text>
+                    {top2.tier ? (
+                      <View style={[styles.tierBadge, { borderColor: getLeagueTier(top2.lp ?? 0).color }]}>
+                        <Text style={[styles.tierBadgeText, { color: getLeagueTier(top2.lp ?? 0).color }]}>{top2.tier}</Text>
+                      </View>
+                    ) : null}
                     <Text style={styles.podiumScore}>{top2.score} P</Text>
                     <View style={styles.podiumBar2}>
                       <Text style={styles.podiumBarLabel}>🥈 İKİNCİ</Text>
@@ -291,6 +385,11 @@ export function SeasonHub({
                       </View>
                     </View>
                     <Text numberOfLines={1} style={styles.podiumName}>{top1.name}</Text>
+                    {top1.tier ? (
+                      <View style={[styles.tierBadge, { borderColor: getLeagueTier(top1.lp ?? 0).color }]}>
+                        <Text style={[styles.tierBadgeText, { color: getLeagueTier(top1.lp ?? 0).color }]}>{top1.tier}</Text>
+                      </View>
+                    ) : null}
                     <Text style={[styles.podiumScore, { color: "#FFD000" }]}>{top1.score} P</Text>
                     <View style={styles.podiumBar1}>
                       <Text style={styles.podiumBarLabel}>🥇 ŞAMPİYON</Text>
@@ -308,6 +407,11 @@ export function SeasonHub({
                       </View>
                     </View>
                     <Text numberOfLines={1} style={styles.podiumName}>{top3.name}</Text>
+                    {top3.tier ? (
+                      <View style={[styles.tierBadge, { borderColor: getLeagueTier(top3.lp ?? 0).color }]}>
+                        <Text style={[styles.tierBadgeText, { color: getLeagueTier(top3.lp ?? 0).color }]}>{top3.tier}</Text>
+                      </View>
+                    ) : null}
                     <Text style={styles.podiumScore}>{top3.score} P</Text>
                     <View style={styles.podiumBar3}>
                       <Text style={styles.podiumBarLabel}>🥉 ÜÇÜNCÜ</Text>
@@ -330,6 +434,7 @@ export function SeasonHub({
                   const index = displayedLeaderboard.length >= 3 ? sliceIdx + 3 : sliceIdx;
                   const winRate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
                   const isUser = entry.id === playerId;
+                  const tierInfo = getLeagueTier(entry.lp ?? 0);
                   return (
                     <View
                       key={entry.id}
@@ -355,6 +460,11 @@ export function SeasonHub({
                               <Text style={styles.userSelfTagText}>SEN</Text>
                             </View>
                           )}
+                          {entry.tier && (
+                            <View style={[styles.rowTierBadge, { borderColor: tierInfo.color }]}>
+                              <Text style={[styles.rowTierText, { color: tierInfo.color }]}>{entry.tier}</Text>
+                            </View>
+                          )}
                         </View>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
                           <Text style={styles.playerMeta}>
@@ -368,7 +478,21 @@ export function SeasonHub({
                           <Text style={styles.playerMeta}>· En İyi: {entry.bestRound}</Text>
                         </View>
                       </View>
-                      <Text style={styles.score}>{entry.score}</Text>
+                      <View style={{ alignItems: "flex-end" }}>
+                        {rankingType === "level" ? (
+                          <View style={{ alignItems: "flex-end" }}>
+                            <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
+                              <Text style={{ color: "#38BDF8", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? Math.floor(entry.score / 200) + 1}</Text>
+                            </View>
+                            <Text style={{ color: "#94A3B8", fontSize: 10, fontWeight: "700" }}>{entry.score} XP</Text>
+                          </View>
+                        ) : (
+                          <View style={{ alignItems: "flex-end" }}>
+                            <Text style={styles.score}>{entry.lp ?? entry.score} LP</Text>
+                            <Text style={styles.rowLpText}>{entry.score} XP</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   );
                 })
@@ -435,8 +559,13 @@ export function SeasonHub({
                   <View style={styles.friendRowTop}>
                     <Text style={styles.friendAvatarText}>{f.avatar}</Text>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
-                      <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.xp} XP</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
+                        <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                          <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {f.level ?? Math.floor(f.xp / 200) + 1}</Text>
+                        </View>
+                      </View>
+                      <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.tier ?? "DEMİR"} ({f.lp ?? f.xp} LP) · {f.xp} XP</Text>
                     </View>
                     <View style={styles.statusWrap}>
                       <View style={[styles.onlineDot, f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline]} />
@@ -822,6 +951,37 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 8,
     textAlign: "center",
+  },
+  tierBadge: {
+    marginTop: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 5,
+    borderWidth: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  tierBadgeText: {
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  rowTierBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  rowTierText: {
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  rowLpText: {
+    color: "#FFC24A",
+    fontSize: 8.5,
+    fontWeight: "800",
+    marginTop: 2,
   },
   podiumScore: {
     color: "#55E6B2",

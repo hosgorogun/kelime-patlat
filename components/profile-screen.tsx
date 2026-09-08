@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,7 +25,11 @@ import {
   type PlayerProgress,
   type ThemePackId,
 } from "@/shared/progression";
-import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import {
+  triggerHapticError,
+  triggerHapticSelection,
+  triggerHapticSuccess,
+} from "@/shared/audio-haptics";
 
 export function ProfileScreen({
   playerName,
@@ -41,6 +46,8 @@ export function ProfileScreen({
   toggleHaptics,
   onBack,
   onLogout,
+  onDeleteAccount,
+  onShowToast,
 }: {
   playerName: string;
   onUpdatePlayerName: (name: string) => void;
@@ -56,9 +63,14 @@ export function ProfileScreen({
   toggleHaptics: (val: boolean) => void;
   onBack?: () => void;
   onLogout: () => void;
+  onDeleteAccount?: () => void;
+  onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
 }) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
@@ -342,8 +354,16 @@ export function ProfileScreen({
             <Pressable
               key={avatar.id}
               onPress={() => {
-                if (!unlocked) { Alert.alert(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint); }
-                else { triggerHapticSuccess(); onSelectAvatar(avatar.id); }
+                if (!unlocked) {
+                  if (onShowToast) {
+                    onShowToast(`🔒 ${avatar.label.toUpperCase()} KİLİTLİ`, avatar.unlockHint, "🔒", "#EF4444");
+                  } else {
+                    Alert.alert(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint);
+                  }
+                } else {
+                  triggerHapticSuccess();
+                  onSelectAvatar(avatar.id);
+                }
               }}
               style={({ pressed }) => [
                 styles.avatarTile,
@@ -379,48 +399,6 @@ export function ProfileScreen({
         })}
       </ScrollView>
 
-      {/* 4. ARAYÜZ VE SİBER TEMALAR */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>🎨 ARAYÜZ TEMALARI</Text>
-        <Text style={styles.sectionMeta}>DOKUN VE SEÇ</Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-        {THEME_PACKS.map((theme) => {
-          const isSelected = (progress.selectedTheme || "nature") === theme.id;
-          return (
-            <Pressable
-              key={theme.id}
-              onPress={() => { triggerHapticSuccess(); onSelectTheme?.(theme.id); }}
-              style={({ pressed }) => [
-                styles.themeTile,
-                {
-                  backgroundColor: isSelected
-                    ? "rgba(35, 26, 65, 0.95)"
-                    : "rgba(22, 16, 42, 0.75)",
-                  borderColor: isSelected ? theme.accent : "rgba(124, 92, 246, 0.25)",
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={[
-                styles.themeIconWrapper,
-                isSelected && { backgroundColor: `${theme.accent}25`, borderColor: theme.accent }
-              ]}>
-                <Text style={[styles.themeTileIcon, { color: isSelected ? theme.accent : "#DDD6FE" }]}>{theme.icon}</Text>
-              </View>
-              <Text numberOfLines={1} style={[styles.themeTileTitle, isSelected && { color: theme.accent, fontWeight: "900" }]}>{theme.label}</Text>
-              <Text numberOfLines={1} style={styles.themeTileSub}>{theme.title}</Text>
-              {isSelected && (
-                <View style={[styles.activePillBadge, { backgroundColor: `${theme.accent}25`, borderColor: theme.accent }]}>
-                  <Text style={[styles.activePillText, { color: theme.accent }]}>✓ AKTİF</Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
       {/* 5. SİBER UNVANLAR */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>🏷️ SİBER UNVANLAR</Text>
@@ -435,8 +413,16 @@ export function ProfileScreen({
             <Pressable
               key={title.id}
               onPress={() => {
-                if (!unlocked) { Alert.alert(`🔒 ${title.name} KİLİTLİ`, title.unlockHint); }
-                else { triggerHapticSuccess(); onSelectTitle?.(title.badge); }
+                if (!unlocked) {
+                  if (onShowToast) {
+                    onShowToast(`🔒 ${title.name.toUpperCase()} KİLİTLİ`, title.unlockHint, "🔒", "#EF4444");
+                  } else {
+                    Alert.alert(`🔒 ${title.name} KİLİTLİ`, title.unlockHint);
+                  }
+                } else {
+                  triggerHapticSuccess();
+                  onSelectTitle?.(title.badge);
+                }
               }}
               style={({ pressed }) => [
                 styles.titleTile,
@@ -544,19 +530,111 @@ export function ProfileScreen({
       <View style={styles.footerActions}>
         <Pressable
           onPress={() => {
-            Alert.alert(
-              "⚠️ HESAP ÇIKIŞI & SIFIRLAMA",
-              "Hesabınızdan çıkış yapmak ve oturumu sıfırlamak istediğinize emin misiniz?",
-              [
-                { text: "VAZGEÇ", style: "cancel" },
-                { text: "ÇIKIŞ YAP", style: "destructive", onPress: onLogout },
-              ]
-            );
+            triggerHapticError();
+            setShowLogoutModal(true);
           }}
           style={styles.logoutBtn}
         >
           <Text style={styles.logoutBtnText}>HESAPTAN ÇIKIŞ YAP</Text>
         </Pressable>
+
+        {/* Logout Modal */}
+        <Modal
+          visible={showLogoutModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowLogoutModal(false)}
+        >
+          <View style={styles.deleteModalOverlay}>
+            <View style={[styles.deleteModalCard, { borderColor: "#9A76ED" }]}>
+              <Text style={[styles.deleteModalTitle, { color: "#FFF" }]}>⚠️ HESAP ÇIKIŞI & SIFIRLAMA</Text>
+              <Text style={styles.deleteModalDesc}>
+                Hesabınızdan çıkış yapmak ve oturumu sıfırlamak istediğinize emin misiniz?
+              </Text>
+              <View style={styles.deleteModalActions}>
+                <Pressable
+                  onPress={() => setShowLogoutModal(false)}
+                  style={styles.deleteModalCancelBtn}
+                >
+                  <Text style={styles.deleteModalCancelText}>VAZGEÇ</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setShowLogoutModal(false);
+                    onLogout();
+                  }}
+                  style={[styles.deleteModalConfirmBtn, { backgroundColor: "#9A76ED" }]}
+                >
+                  <Text style={[styles.deleteModalConfirmText, { color: "#FFF" }]}>ÇIKIŞ YAP</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {onDeleteAccount && (
+          <Pressable
+            onPress={() => {
+              triggerHapticError();
+              setDeleteConfirmInput("");
+              setShowDeleteModal(true);
+            }}
+            style={[styles.logoutBtn, { backgroundColor: "rgba(239, 68, 68, 0.15)", borderColor: "#EF4444", marginTop: 10 }]}
+          >
+            <Text style={[styles.logoutBtnText, { color: "#EF4444" }]}>🗑️ HESABIMI KALICI OLARAK SİL</Text>
+          </Pressable>
+        )}
+
+        {/* Text Confirmation Delete Modal */}
+        <Modal
+          visible={showDeleteModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDeleteModal(false)}
+        >
+          <View style={styles.deleteModalOverlay}>
+            <View style={styles.deleteModalCard}>
+              <Text style={styles.deleteModalTitle}>🚨 HESAP SİLME DOĞRULAMASI</Text>
+              <Text style={styles.deleteModalDesc}>
+                Hesabınız ve tüm kayıtlı verileriniz (XP, Çip, Seviye İlerlemesi) kalıcı olarak silinecektir. Bu işlem <Text style={{ fontWeight: "900", color: "#EF4444" }}>GERİ ALINAMAZ</Text>.
+              </Text>
+              <Text style={styles.deleteModalPrompt}>
+                Onaylamak için aşağıya büyük harflerle <Text style={{ fontWeight: "900", color: "#EF4444" }}>SİL</Text> yazın:
+              </Text>
+              <TextInput
+                value={deleteConfirmInput}
+                onChangeText={setDeleteConfirmInput}
+                placeholder="SİL"
+                placeholderTextColor="rgba(239, 68, 68, 0.4)"
+                autoCapitalize="characters"
+                style={styles.deleteModalInput}
+              />
+              <View style={styles.deleteModalActions}>
+                <Pressable
+                  onPress={() => setShowDeleteModal(false)}
+                  style={styles.deleteModalCancelBtn}
+                >
+                  <Text style={styles.deleteModalCancelText}>VAZGEÇ</Text>
+                </Pressable>
+                <Pressable
+                  disabled={deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL"}
+                  onPress={() => {
+                    if (deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") === "SİL") {
+                      setShowDeleteModal(false);
+                      onDeleteAccount?.();
+                    }
+                  }}
+                  style={[
+                    styles.deleteModalConfirmBtn,
+                    deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL" && styles.deleteModalConfirmDisabled
+                  ]}
+                >
+                  <Text style={styles.deleteModalConfirmText}>EVET, SİL</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <Pressable
           onPress={() => {
@@ -608,10 +686,11 @@ const styles = StyleSheet.create({
   avatarRing: {
     width: 66,
     height: 66,
-    borderRadius: 22,
+    borderRadius: 33,
     borderWidth: 2.5,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   avatarGlyph: {
     fontSize: 30,
@@ -1195,7 +1274,8 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 20,
+    borderRadius: 33,
+    resizeMode: "cover",
   },
   cameraIconBtn: {
     position: "absolute",
@@ -1235,6 +1315,98 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
     color: "#A78BFA",
+    letterSpacing: 0.5,
+  },
+
+  /* Delete Confirmation Modal Styles */
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(10, 6, 22, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  deleteModalCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#16102B",
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: "#EF4444",
+    padding: 22,
+    shadowColor: "#EF4444",
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  deleteModalTitle: {
+    color: "#EF4444",
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  deleteModalDesc: {
+    color: "#E2E8F0",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  deleteModalPrompt: {
+    color: "#94A3B8",
+    fontSize: 12,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  deleteModalInput: {
+    backgroundColor: "rgba(15, 11, 30, 0.9)",
+    borderWidth: 1.5,
+    borderColor: "#EF4444",
+    borderRadius: 14,
+    color: "#EF4444",
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center",
+    paddingVertical: 10,
+    letterSpacing: 4,
+    marginBottom: 18,
+  },
+  deleteModalActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  deleteModalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+  },
+  deleteModalCancelText: {
+    color: "#CBD5E1",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  deleteModalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+  },
+  deleteModalConfirmDisabled: {
+    opacity: 0.35,
+    backgroundColor: "rgba(239, 68, 68, 0.3)",
+  },
+  deleteModalConfirmText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "900",
     letterSpacing: 0.5,
   },
 });

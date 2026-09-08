@@ -66,6 +66,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<Feedback>("idle");
   const [status, setStatus] = useState<"playing" | "lost">("playing");
+  const [doubled, setDoubled] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
@@ -113,6 +114,9 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
   useEffect(() => {
     initAudio().catch(() => undefined);
+    return () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    };
   }, []);
 
   const measureBoard = () => {
@@ -387,10 +391,10 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       const isFound = foundPaths.some((p) => p.includes(index));
       if (isFound) return;
       if (!pointerActive.current) {
+        if (resetTimer.current) clearTimeout(resetTimer.current);
         submitted.current = false;
         pointerActive.current = true;
         setIsSelecting(true);
-        if (resetTimer.current) clearTimeout(resetTimer.current);
         setFeedback("idle");
         clearSelection();
         triggerHapticSelection();
@@ -673,13 +677,41 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         <View style={styles.arcadeRewardsRow}>
           <View style={styles.arcadeRewardPill}>
             <Text style={styles.arcadeRewardIcon}>⚡</Text>
-            <Text style={styles.arcadeRewardText}>+{Math.max(5, Math.floor(score / 10))} XP</Text>
+            <Text style={styles.arcadeRewardText}>+{doubled ? Math.max(5, Math.floor(score / 10)) * 2 : Math.max(5, Math.floor(score / 10))} XP</Text>
           </View>
           <View style={[styles.arcadeRewardPill, { borderColor: "#FFC24A" }]}>
             <Text style={styles.arcadeRewardIcon}>🪙</Text>
-            <Text style={[styles.arcadeRewardText, { color: "#FFC24A" }]}>+{Math.floor(score / 40)} ÇİP</Text>
+            <Text style={[styles.arcadeRewardText, { color: "#FFC24A" }]}>+{doubled ? Math.floor(score / 40) * 2 : Math.floor(score / 40)} ÇİP</Text>
           </View>
         </View>
+
+        {!doubled && score > 0 && (
+          <Pressable
+            onPress={() => {
+              Alert.alert(
+                "📺 Ödülü 2X Yap",
+                "15 saniyelik sponsorlu reklam izleyerek bu turdaki XP ve Çip ödülünü 2 katına çıkarmak ister misin?",
+                [
+                  { text: "Vazgeç", style: "cancel" },
+                  {
+                    text: "İzle ve 2X Yap",
+                    onPress: () => {
+                      triggerHapticSuccess();
+                      gameSfx.victory();
+                      setDoubled(true);
+                      const bonusScore = score;
+                      onCompleteRef.current(bonusScore);
+                    },
+                  },
+                ]
+              );
+            }}
+            style={[styles.action, { backgroundColor: "rgba(255, 208, 0, 0.2)", borderColor: "#FFD000", borderWidth: 1.5, marginBottom: 8 }]}
+          >
+            <Text style={[styles.actionText, { color: "#FFD000" }]}>🎁 REKLAM İZLE: KAZANILAN ÖDÜLLERİ 2X YAP 🔥</Text>
+            <Text style={[styles.actionArrow, { color: "#FFD000" }]}>⚡</Text>
+          </Pressable>
+        )}
 
         <Pressable onPress={handleRestart} style={[styles.action, { backgroundColor: "#00F5D4", marginBottom: 8 }]}>
           <Text style={[styles.actionText, { color: "#121025" }]}>↺ YENİDEN DENE (REKOR KIR)</Text>

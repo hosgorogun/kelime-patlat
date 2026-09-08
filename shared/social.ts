@@ -9,12 +9,19 @@ export type FriendUser = {
   avatar: string;
   isOnline: boolean;
   xp: number;
+  level?: number;
+  lp?: number;
+  tier?: string;
+  wins?: number;
+  matches?: number;
 };
 
 export const MOCK_FRIENDS: FriendUser[] = [
-  { id: "f1", name: "Kaan Kiber", username: "kaan_cyber", avatar: "🤖", isOnline: true, xp: 2400 },
-  { id: "f2", name: "Zeynep Matrix", username: "zeynep_m", avatar: "👾", isOnline: false, xp: 1950 },
-  { id: "f3", name: "Ege Neon", username: "ege_neon", avatar: "⚡", isOnline: true, xp: 3100 },
+  { id: "f1", name: "Ege Neon", username: "ege_neon", avatar: "⚡", isOnline: true, xp: 4850, level: 24, lp: 4200, tier: "ELMAS", wins: 38, matches: 45 },
+  { id: "f2", name: "Kaan Kiber", username: "kaan_cyber", avatar: "🤖", isOnline: true, xp: 3200, level: 16, lp: 2800, tier: "PLATİN", wins: 22, matches: 30 },
+  { id: "f3", name: "Zeynep Matrix", username: "zeynep_m", avatar: "👾", isOnline: false, xp: 2400, level: 12, lp: 1850, tier: "ALTIN", wins: 15, matches: 22 },
+  { id: "f4", name: "Selin Vektör", username: "selin_vector", avatar: "🔮", isOnline: true, xp: 1750, level: 9, lp: 1150, tier: "GÜMÜŞ", wins: 10, matches: 18 },
+  { id: "f5", name: "Barış Piksel", username: "baris_pixel", avatar: "🎮", isOnline: false, xp: 920, level: 5, lp: 450, tier: "BRONZ", wins: 5, matches: 12 },
 ];
 
 export const FRIENDS_STORAGE_KEY = "kelime-patlat:friends-list-v1";

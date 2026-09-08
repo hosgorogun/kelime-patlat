@@ -9,6 +9,7 @@ import { sdk } from "./sdk";
 import { registerGameRooms } from "../game/rooms";
 
 import { UserModel, hashPassword, verifyPassword } from "../db";
+import { deletePlayerProfile } from "../game/mongo-store";
 import { COOKIE_NAME } from "../../shared/const.js";
 import { getSessionCookieOptions } from "./cookies";
 import { z } from "zod";
@@ -110,11 +111,13 @@ async function startServer() {
   app.post("/api/auth/guest", async (_req, res) => {
     try {
       const openId = `guest_${randomUUID()}`;
+      const guestNumber = Math.floor(1000 + Math.random() * 9000);
+      const guestName = `Misafir #${guestNumber}`;
       const now = new Date();
       const user = new UserModel({
         id: randomInt(1, 2_147_483_647),
         openId,
-        name: "MİSAFİR",
+        name: guestName,
         email: null,
         loginMethod: "guest",
         role: "user",
@@ -124,8 +127,8 @@ async function startServer() {
         progress: DEFAULT_PROGRESS,
       });
       await user.save();
-      const token = await sdk.createSessionToken(openId, { name: "MİSAFİR" });
-      res.json({ success: true, token, user: { openId, name: "MİSAFİR", progress: DEFAULT_PROGRESS } });
+      const token = await sdk.createSessionToken(openId, { name: guestName });
+      res.json({ success: true, token, user: { openId, name: guestName, progress: DEFAULT_PROGRESS } });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Misafir oturumu oluşturulamadı." });
     }
@@ -242,10 +245,23 @@ async function startServer() {
     }
   });
 
+  app.post("/api/auth/delete-account", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
+
+      await UserModel.deleteOne({ openId: user.openId });
+      await deletePlayerProfile(user.openId);
+      res.json({ success: true, message: "Hesabınız ve verileriniz başarıyla silindi." });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Hesap silme başarısız." });
+    }
+  });
+
   app.post("/api/game/award", async (req, res) => {
     const payload = z.object({
       awardId: z.string().trim().min(8).max(128),
-      kind: z.enum(["solo", "arcade"]),
+      kind: z.enum(["solo", "arcade", "vintage"]),
       level: z.number().int().min(1).max(100).optional(),
       score: z.number().int().min(0).max(5000).optional(),
       foundWords: z.array(z.string().max(32)).max(32).optional(),
@@ -263,6 +279,8 @@ async function startServer() {
       const current = { ...DEFAULT_PROGRESS, ...(dbUser?.progress ?? {}) } as PlayerProgress;
       const next = payload.data.kind === "arcade"
         ? applyArcadeProgress(current, payload.data.score ?? 0)
+        : payload.data.kind === "vintage"
+        ? { ...current, xp: current.xp + (payload.data.score ?? 30) }
         : applyMatchProgress(current, {
             score: (payload.data.level ?? 1) * 14,
             tempo: Math.max(1, (payload.data.level ?? 1) / 2),

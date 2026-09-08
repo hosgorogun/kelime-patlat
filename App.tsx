@@ -13,6 +13,7 @@ import {
   Animated,
   BackHandler,
   Modal,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
@@ -45,9 +46,12 @@ import { AuthScreen } from "./components/auth-screen";
 import { MissionsScreen } from "./components/missions-screen";
 import { CyberStore } from "./components/cyber-store";
 import { GlobalGameToast, type ToastData } from "./components/global-game-toast";
+import { TermsModal } from "./components/terms-modal";
+import { consentManager, notificationManager, reviewManager } from "./lib/engagement";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
+import { VintagePuzzle } from "./components/vintage-puzzle";
 
-type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store";
+type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
@@ -206,11 +210,17 @@ function HomeScreen() {
   const [progress, setProgress] = useState<PlayerProgress>(DEFAULT_PROGRESS);
   const [progressReady, setProgressReady] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dailySession, setDailySession] = useState<DailyChallenge | null>(null);
   const daily = useMemo(() => getDailyChallenge(), []);
   const unclaimedMissions = useMemo(() => getUnclaimedMissionsCount(progress), [progress]);
   const unclaimedMilestones = useMemo(() => getUnclaimedMilestonesCount(progress, soloUnlockedLevel), [progress, soloUnlockedLevel]);
+  const hasClaimableDailyReward = useMemo(() => {
+    const todayId = getDayId();
+    return progress.lastLoginDay !== todayId;
+  }, [progress.lastLoginDay]);
+  const [seasonResetModal, setSeasonResetModal] = useState<{ newSeasonId: string; previousRank: string; previousLp: number; newLp: number } | null>(null);
   const [globalToast, setGlobalToast] = useState<ToastData | null>(null);
   const prevLevelRef = useRef<number | null>(null);
   const prevTierRef = useRef<string | null>(null);
@@ -223,6 +233,22 @@ function HomeScreen() {
   const [arcadeStarted, setArcadeStarted] = useState(false);
   const [gameCountdown, setGameCountdown] = useState<number | null>(null);
   const prevStartedAtRef = useRef<number | null>(null);
+
+  const watchAd = (onReward: () => void) => {
+    Alert.alert(
+      "📺 Sponsorlu Reklam İzle",
+      "Serini korumak için 15 saniyelik sponsorlu ödüllü reklam oynatılacak. Onaylıyor musunuz?",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        {
+          text: "İzle ve Koruları Al",
+          onPress: () => {
+            onReward();
+          },
+        },
+      ]
+    );
+  };
 
   // Reactive Level-up & League Promotion Celebrations
   useEffect(() => {
@@ -254,14 +280,19 @@ function HomeScreen() {
       const prevIdx = tierOrder.indexOf(prevTierRef.current);
       const currIdx = tierOrder.indexOf(currentTier);
       if (currIdx > prevIdx) {
-        setGlobalToast({
+        const tierToastData = {
           id: `tier-${currentTier}-${Date.now()}`,
           title: `LİG TERFİSİ! ${currentTier} LİGİ`,
           subtitle: `Harika performans! ${currentTier} ligine yükseldin. Ödüllerini sezon menüsünden incele.`,
           icon: "🏆",
           accentColor: "#FFC24A",
           badge: currentTier,
-        });
+        };
+        if (prevLevelRef.current !== null && currentLevel > prevLevelRef.current) {
+          setTimeout(() => setGlobalToast(tierToastData), 4500);
+        } else {
+          setGlobalToast(tierToastData);
+        }
       }
     }
     prevTierRef.current = currentTier;
@@ -287,6 +318,7 @@ function HomeScreen() {
   const remainingMs = room?.status === "playing" && room.startedAt ? Math.max(0, Math.min(roundDuration, room.startedAt + roundDuration - clockNow)) : 0;
   const remainingSeconds = Math.ceil(remainingMs / 1000);
   const isFinalPush = room?.status === "playing" && remainingSeconds > 0 && remainingSeconds <= 10;
+  const disconnectRemainingSeconds = room?.disconnectExpiresAt ? Math.max(0, Math.ceil((room.disconnectExpiresAt - clockNow) / 1000)) : 0;
   const elapsedSeconds = room?.startedAt ? Math.max(1, Math.floor((clockNow - room.startedAt) / 1000)) : 1;
   const myTempo = Math.round((myWordCount * 60 / elapsedSeconds) * 10) / 10;
   const opponentTempo = Math.round((opponentWordCount * 60 / elapsedSeconds) * 10) / 10;
@@ -424,11 +456,35 @@ function HomeScreen() {
                 setProgress((current) => mergePlayerProgress(current, user.progress));
               }
             } else {
-              await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+              const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
+              const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
+              setAuthToken(token);
+              setPlayerId(cachedId || `user-${Math.random().toString(36).slice(2, 10)}`);
+              setPlayerName(cachedName || "OYUNCU");
+            }
+          } else if (response.status === 401 || response.status === 403) {
+            const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
+            const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
+            const isGuestSession = cachedId?.startsWith("guest_") || cachedName?.startsWith("Misafir");
+            
+            if (isGuestSession) {
+              // Keep guest session active on reload
+              setAuthToken(token);
+              setPlayerId(cachedId || `guest_${Math.random().toString(36).slice(2, 10)}`);
+              setPlayerName(cachedName || "Misafir");
+            } else {
+              // Registered account invalid/expired credentials, force open AuthScreen
+              await AsyncStorage.removeItem(SESSION_TOKEN_KEY).catch(() => undefined);
+              setAuthToken(null);
+              setScreen("auth");
             }
           } else {
-            // Bad response status (like 401 Unauthorized), clean up
-            await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+            // Server temporary offline, allow cached offline session
+            const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
+            const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
+            setAuthToken(token);
+            setPlayerId(cachedId || `user-${Math.random().toString(36).slice(2, 10)}`);
+            setPlayerName(cachedName || "OYUNCU");
           }
         } catch (err) {
           console.warn("[Auth] Failed to verify token on startup (offline fallback active):", err);
@@ -438,6 +494,10 @@ function HomeScreen() {
           setPlayerId(cachedId || `offline-${Math.random().toString(36).slice(2, 10)}`);
           setPlayerName(cachedName || "OYUNCU");
         }
+      } else {
+        // No token stored -> Show Auth (Login/Signup) Screen
+        setAuthToken(null);
+        setScreen("auth");
       }
       setAuthLoading(false);
     }).catch(() => { if (active) setAuthLoading(false); });
@@ -461,7 +521,7 @@ function HomeScreen() {
     }
   }, []);
 
-  const awardProgressOnServer = useCallback(async (payload: { kind: "solo" | "arcade"; level?: number; score?: number; foundWords?: string[]; daily?: boolean }, fallback: (current: PlayerProgress) => PlayerProgress) => {
+  const awardProgressOnServer = useCallback(async (payload: { kind: "solo" | "arcade" | "vintage"; level?: number; score?: number; foundWords?: string[]; daily?: boolean }, fallback: (current: PlayerProgress) => PlayerProgress) => {
     const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
     if (!token || token === "guest") { 
       setProgress(fallback);
@@ -515,18 +575,26 @@ function HomeScreen() {
   useEffect(() => {
     if (!progressReady) return;
     AsyncStorage.getItem("kelime-patlat:guide-seen").then((seen) => {
-      if (!seen && progress.xp === 0) {
+      if (!seen) {
         setShowGuide(true);
       }
     });
 
-    // Comprehensive daily reconciliation: streak shields and daily/weekly missions
+    // Comprehensive daily reconciliation: streak shields, daily/weekly missions, and season resets
     const reconciliation = reconcilePlayerProgress(progress);
-    if (reconciliation.shieldSaved || reconciliation.streakReset || reconciliation.missionsReset) {
+    if (reconciliation.shieldSaved || reconciliation.streakReset || reconciliation.missionsReset || reconciliation.seasonReset.seasonResetPerformed) {
       setProgress(reconciliation.progress);
     }
 
-    if (reconciliation.shieldSaved) {
+    if (reconciliation.seasonReset.seasonResetPerformed) {
+      const sr = reconciliation.seasonReset;
+      setSeasonResetModal({
+        newSeasonId: sr.newSeasonId,
+        previousRank: sr.previousRank || "DEMİR",
+        previousLp: sr.previousLp ?? 0,
+        newLp: sr.newLp ?? 0,
+      });
+    } else if (reconciliation.shieldSaved) {
       Alert.alert(
         "🛡️ Seri Kalkanı Devreye Girdi!",
         `Dün oyuna giremediğin için ${reconciliation.shieldsConsumed} adet Seri Kalkanı kullanıldı ve ${reconciliation.previousStreak} günlük serin başarıyla korundu!`
@@ -584,6 +652,19 @@ function HomeScreen() {
     return () => { active = false; };
   }, [incomingUrl]);
 
+  const [showConsentModal, setShowConsentModal] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    consentManager.isConsentAccepted().then((accepted) => {
+      if (active && !accepted) {
+        setShowConsentModal(true);
+      }
+    });
+    void notificationManager.initAndScheduleReminders();
+    return () => { active = false; };
+  }, []);
+
   useEffect(() => {
     if (!room || room.status !== "finished") return;
     const roundId = `${room.code}:${room.startedAt ?? 0}`;
@@ -595,12 +676,17 @@ function HomeScreen() {
     // Compute result values directly from room to avoid stale derived-state deps
     const currentMyScore = room.scores[playerId] ?? 0;
     const myWc = room.foundWords.filter((e) => e.playerId === playerId).length;
-    const elapsedSec = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 1;
+    const elapsedSec = room.startedAt ? Math.max(5, Math.floor((Date.now() - room.startedAt) / 1000)) : 5;
     const currentTempo = Math.round((myWc * 60 / elapsedSec) * 10) / 10;
     const currentIWon = room.winnerId === playerId;
     const currentIsDraw = !room.winnerId;
+    
+    if (currentIWon) {
+      void reviewManager.recordVictoryAndCheckPrompt(progress.wins + 1);
+    }
+    
     setProgress((current) => applyMatchProgress(current, { score: currentMyScore, tempo: currentTempo, won: currentIWon, isDraw: currentIsDraw, longWord: foundLongWord, foundWords: myFoundWords }, isBotMatch ? "bot" : "pvp"));
-  }, [room, playerId]);
+  }, [room, playerId, progress.wins]);
 
   useEffect(() => {
     if (!room) return;
@@ -843,7 +929,10 @@ function HomeScreen() {
   const startPointerSelection = useCallback((index: number) => {
     if (room?.status !== "playing") return;
     if (pendingWordRef.current) return;
-    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    if (feedbackTimerRef.current) {
+      clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = null;
+    }
     selectionActiveRef.current = true;
     setSelectionFeedback("idle");
     clearSelection();
@@ -878,7 +967,10 @@ function HomeScreen() {
       if (isFound) return;
       if (!selectionActiveRef.current) {
         if (pendingWordRef.current) return;
-        if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+        if (feedbackTimerRef.current) {
+          clearTimeout(feedbackTimerRef.current);
+          feedbackTimerRef.current = null;
+        }
         selectionActiveRef.current = true;
         setSelectionFeedback("idle");
         clearSelection();
@@ -955,12 +1047,6 @@ function HomeScreen() {
     );
   };
 
-  const startDailyChallenge = () => {
-    setDailySession(daily);
-    setSoloLevel(daily.level);
-    setScreen("solo");
-  };
-
   const closeGuide = async () => {
     setShowGuide(false);
     await AsyncStorage.setItem("kelime-patlat:guide-seen", "true");
@@ -976,12 +1062,27 @@ function HomeScreen() {
         (current) => completeDailyProgress(applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"), daily),
       );
     } else {
-      setProgress((current) => ({
-        ...current,
-        dailyCompletedId: daily.id,
-        streak: 0,
-        lastStreakCheckDate: daily.id,
-      }));
+      setProgress((current) => {
+        const availableShields = current.streakShields || 0;
+        if (availableShields >= 1) {
+          Alert.alert(
+            "🛡️ Seri Kalkanı Kullanıldı!",
+            "Günlük rotayı tamamlayamadın ancak 1 adet Seri Kalkanın kullanılarak serin korundu!"
+          );
+          return {
+            ...current,
+            dailyCompletedId: daily.id,
+            streakShields: availableShields - 1,
+            lastStreakCheckDate: daily.id,
+          };
+        }
+        return {
+          ...current,
+          dailyCompletedId: daily.id,
+          streak: 0,
+          lastStreakCheckDate: daily.id,
+        };
+      });
     }
   };
 
@@ -1003,9 +1104,17 @@ function HomeScreen() {
     });
   };
 
+  const handleCloseGuide = () => {
+    setShowGuide(false);
+    AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
+    setTimeout(() => {
+      setShowWelcomeModal(true);
+    }, 250);
+  };
+
   if (screen === "home") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={closeGuide} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)}>
         <StatusBar style="light" />
         <CommandCenter
           playerName={safeName}
@@ -1024,7 +1133,104 @@ function HomeScreen() {
           unclaimedMissionsCount={unclaimedMissions}
           unclaimedMilestonesCount={unclaimedMilestones}
           onClaimDailyReward={handleClaimDailyReward}
+          onShowToast={(title, subtitle, icon, accentColor) => {
+            setGlobalToast({
+              id: Date.now().toString(),
+              title,
+              subtitle,
+              icon: icon || "🔒",
+              accentColor: accentColor || "#EF4444",
+            });
+          }}
         />
+        <TermsModal
+          visible={showConsentModal}
+          onAccept={async () => {
+            await consentManager.acceptConsent();
+            setShowConsentModal(false);
+          }}
+        />
+
+        {/* Hoş Geldin Hediyesi Modal */}
+        <Modal
+          visible={showWelcomeModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowWelcomeModal(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)", justifyContent: "center", alignItems: "center", padding: 24 }}>
+            <View style={{
+              width: "100%", maxWidth: 360,
+              backgroundColor: "#130E26",
+              borderRadius: 28,
+              borderWidth: 2,
+              borderColor: "#00F5D4",
+              padding: 28,
+              shadowColor: "#00F5D4",
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 16,
+            }}>
+              {/* Başlık */}
+              <Text style={{ fontSize: 26, textAlign: "center", marginBottom: 4 }}>🎁</Text>
+              <Text style={{ color: "#00F5D4", fontSize: 18, fontWeight: "900", letterSpacing: 1.2, textAlign: "center", marginBottom: 4 }}>
+                HOŞ GELDİN HEDİYESİ!
+              </Text>
+              <Text style={{ color: "#94A3B8", fontSize: 12, textAlign: "center", marginBottom: 20, lineHeight: 18 }}>
+                Kelime Patlat dünyasına hoş geldin! Başlangıç hediyelerin hesabına tanımlandı.
+              </Text>
+
+              {/* Hediye kartları */}
+              <View style={{ gap: 10, marginBottom: 22 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255, 208, 0, 0.1)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255, 208, 0, 0.35)", padding: 14, gap: 14 }}>
+                  <Text style={{ fontSize: 28 }}>🪙</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#FFD000", fontSize: 20, fontWeight: "900" }}>50</Text>
+                    <Text style={{ color: "#E2E8F0", fontSize: 13, fontWeight: "700" }}>Siber Çip</Text>
+                  </View>
+                  <Text style={{ color: "#FFD000", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>BAŞLANGIÇ</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0, 245, 212, 0.08)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.3)", padding: 14, gap: 14 }}>
+                  <Text style={{ fontSize: 28 }}>👁️</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#00F5D4", fontSize: 20, fontWeight: "900" }}>2</Text>
+                    <Text style={{ color: "#E2E8F0", fontSize: 13, fontWeight: "700" }}>Radar İpucu Hakkı</Text>
+                  </View>
+                  <Text style={{ color: "#00F5D4", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>JOKER</Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(154, 118, 237, 0.1)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(154, 118, 237, 0.35)", padding: 14, gap: 14 }}>
+                  <Text style={{ fontSize: 28 }}>🛡️</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: "#9A76ED", fontSize: 20, fontWeight: "900" }}>1</Text>
+                    <Text style={{ color: "#E2E8F0", fontSize: 13, fontWeight: "700" }}>Seri Kalkanı</Text>
+                  </View>
+                  <Text style={{ color: "#9A76ED", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>KORUMA</Text>
+                </View>
+              </View>
+
+              {/* Buton */}
+              <Pressable
+                onPress={() => {
+                  setShowWelcomeModal(false);
+                  AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
+                }}
+                style={({ pressed }) => ({
+                  backgroundColor: "#00F5D4",
+                  borderRadius: 18,
+                  paddingVertical: 15,
+                  alignItems: "center",
+                  opacity: pressed ? 0.85 : 1,
+                  shadowColor: "#00F5D4",
+                  shadowOpacity: 0.4,
+                  shadowRadius: 10,
+                  elevation: 6,
+                })}
+              >
+                <Text style={{ color: "#0B132B", fontSize: 14, fontWeight: "900", letterSpacing: 1 }}>HARİKA, BAŞLA! 🚀</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
       </MainShell>
     );
   }
@@ -1187,7 +1393,7 @@ function HomeScreen() {
           }}
         />
         <View style={{ position: "absolute", bottom: 8, left: 14, right: 14 }}>
-          <PremiumDock active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} />
+          <PremiumDock active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} />
         </View>
       </ScreenContainer>
     );
@@ -1281,22 +1487,34 @@ function HomeScreen() {
               return { ...current, coins: nextCoins };
             });
           }}
-          onSelectFrame={(selectedFrame) => setProgress((current) => ({ ...current, selectedFrame }))}
-          onSelectVictoryEffect={(selectedVictoryEffect) => setProgress((current) => ({ ...current, selectedVictoryEffect }))}
-          onSelectBoardSkin={(selectedBoardSkin) => setProgress((current) => ({ ...current, selectedBoardSkin }))}
+          onSelectFrame={(selectedFrame) => {
+            setProgress((current) => ({ ...current, selectedFrame }));
+            setGlobalToast({ id: `frame-${Date.now()}`, title: "ÇERÇEVE KUŞANILDI", subtitle: "Profiler sinyalin güncellendi.", icon: "✨", accentColor: "#00F5D4" });
+          }}
+          onSelectVictoryEffect={(selectedVictoryEffect) => {
+            setProgress((current) => ({ ...current, selectedVictoryEffect }));
+            setGlobalToast({ id: `effect-${Date.now()}`, title: "ZAFER EFEKTİ SEÇİLDİ", subtitle: "Bitiriş kutlama efekti aktif.", icon: "💥", accentColor: "#A78BFA" });
+          }}
+          onSelectBoardSkin={(selectedBoardSkin) => {
+            setProgress((current) => ({ ...current, selectedBoardSkin }));
+            setGlobalToast({ id: `skin-${Date.now()}`, title: "TAHTA GÖRÜNÜMÜ DEĞİŞTİ", subtitle: "Matris arka planın güncellendi.", icon: "🎨", accentColor: "#FFC24A" });
+          }}
           onBuyCosmetic={(kind, id, cost) => {
+            let success = false;
             setProgress((current) => {
               if ((current.coins ?? 50) < cost) {
-                setGlobalToast({ id: `store-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${cost} çip gerekiyor.`, icon: "!", accentColor: "#FF647C" });
+                setGlobalToast({ id: `store-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
                 return current;
               }
+              success = true;
+              setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#00F5D4" });
               const next = { ...current, coins: (current.coins ?? 50) - cost };
               if (kind === "avatar") return { ...next, selectedAvatar: id as PlayerProgress["selectedAvatar"], purchasedAvatars: { ...(next.purchasedAvatars ?? {}), [id]: true } };
               if (kind === "frame") return { ...next, selectedFrame: id, ownedFrames: { ...(next.ownedFrames ?? {}), [id]: true } };
               if (kind === "board") return { ...next, selectedBoardSkin: id, ownedBoardSkins: { ...(next.ownedBoardSkins ?? {}), [id]: true } };
               return { ...next, selectedVictoryEffect: id, ownedVictoryEffects: { ...(next.ownedVictoryEffects ?? {}), [id]: true } };
             });
-            return true;
+            return success;
           }}
           onBack={() => setScreen("home")}
         />
@@ -1521,20 +1739,28 @@ function HomeScreen() {
               const response = await fetch(`${getApiBaseUrl()}/api/auth/guest`, { method: "POST" });
               const data = await response.json();
               if (response.ok && data.token && data.user?.openId) {
+                const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
+                const finalGuestName = data.user?.name || fallbackGuestName;
                 setAuthToken(data.token);
                 setPlayerId(data.user.openId);
-                setPlayerName(data.user.name || "MİSAFİR");
+                setPlayerName(finalGuestName);
                 await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
                 await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
-                await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || "MİSAFİR");
+                await AsyncStorage.setItem("kelime-patlat:player-name", finalGuestName);
                 if (data.user.progress) setProgress(data.user.progress);
               } else {
+                const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
                 setAuthToken("guest");
+                setPlayerName(fallbackGuestName);
                 await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+                await AsyncStorage.setItem("kelime-patlat:player-name", fallbackGuestName);
               }
             } catch {
+              const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
               setAuthToken("guest");
+              setPlayerName(fallbackGuestName);
               await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+              await AsyncStorage.setItem("kelime-patlat:player-name", fallbackGuestName);
             }
           }
           setScreen("home");
@@ -1572,8 +1798,39 @@ function HomeScreen() {
           setProgress(mergedProgress);
           await syncProgressToCloud(mergedProgress);
           setScreen("home");
+
+          const seen = await AsyncStorage.getItem("kelime-patlat:guide-seen");
+          if (!seen) {
+            setTimeout(() => {
+              setShowGuide(true);
+            }, 300);
+          }
         }}
       />
+    );
+  }
+
+  if (screen === "vintage") {
+    return (
+      <ScreenContainer style={{ flex: 1, backgroundColor: "#0C091C" }}>
+        <StatusBar style="light" />
+        <VintagePuzzle
+          onBack={() => setScreen("home")}
+          onRewardXp={(amount: number) => {
+            void awardProgressOnServer(
+              { kind: "vintage", score: amount },
+              (current) => ({ ...current, xp: current.xp + amount })
+            );
+            setGlobalToast({
+              id: `vintage-${Date.now()}`,
+              title: "🗞️ SEVİYE TAMAMLANDI!",
+              subtitle: `Nostaljik gazeteyi başarıyla tamamladın. +${amount} XP kazanıldı!`,
+              icon: "🗞️",
+              accentColor: "#FFC24A",
+            });
+          }}
+        />
+      </ScreenContainer>
     );
   }
 
@@ -1631,6 +1888,9 @@ function HomeScreen() {
           onSelectTheme={(selectedTheme) => {
             setProgress((current) => ({ ...current, selectedTheme }));
           }}
+          onUpdateGender={(gender) => {
+            setProgress((current) => ({ ...current, gender }));
+          }}
           onUpdateAvatarPhoto={(avatarPhoto) => {
             setProgress((current) => ({ ...current, avatarPhoto }));
             setGlobalToast({
@@ -1646,18 +1906,58 @@ function HomeScreen() {
           hapticsOn={hapticsOn}
           toggleHaptics={toggleHaptics}
           onBack={() => setScreen("home")}
+          onShowToast={(title, subtitle, icon, accentColor) => {
+            setGlobalToast({
+              id: Date.now().toString(),
+              title,
+              subtitle,
+              icon: icon || "🔒",
+              accentColor: accentColor || "#EF4444",
+            });
+          }}
           onLogout={async () => {
             haptics.error();
-            await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
-            await AsyncStorage.removeItem(PROGRESS_KEY);
-            await AsyncStorage.removeItem(SOLO_UNLOCK_KEY);
-            await AsyncStorage.removeItem("kelime-patlat:player-id");
-            await AsyncStorage.removeItem("kelime-patlat:player-name");
             setAuthToken(null);
             setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
             setPlayerName("OYUNCU");
             setProgress(DEFAULT_PROGRESS);
             setSoloUnlockedLevel(1);
+            setShowGuide(false);
+            setScreen("auth");
+            await AsyncStorage.removeItem(SESSION_TOKEN_KEY).catch(() => undefined);
+            await AsyncStorage.removeItem(PROGRESS_KEY).catch(() => undefined);
+            await AsyncStorage.removeItem(SOLO_UNLOCK_KEY).catch(() => undefined);
+            await AsyncStorage.removeItem("kelime-patlat:player-id").catch(() => undefined);
+            await AsyncStorage.removeItem("kelime-patlat:player-name").catch(() => undefined);
+          }}
+          onDeleteAccount={async () => {
+            haptics.error();
+            if (authToken) {
+              try {
+                await fetch(`${getApiBaseUrl()}/api/auth/delete-account`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                });
+              } catch (e) {
+                console.warn("Delete account API failed", e);
+              }
+            }
+            await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+            await AsyncStorage.removeItem(PROGRESS_KEY);
+            await AsyncStorage.removeItem(SOLO_UNLOCK_KEY);
+            await AsyncStorage.removeItem("kelime-patlat:player-id");
+            await AsyncStorage.removeItem("kelime-patlat:player-name");
+            await AsyncStorage.removeItem("kelime-patlat:guide-seen");
+            setAuthToken(null);
+            setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
+            setPlayerName("OYUNCU");
+            setProgress(DEFAULT_PROGRESS);
+            setSoloUnlockedLevel(1);
+            setShowGuide(false);
+            setNotice("Hesabınız ve tüm verileriniz kalıcı olarak silindi.");
             setScreen("auth");
           }}
         />
@@ -1761,8 +2061,19 @@ function HomeScreen() {
         <View style={styles.targetCard}>
           <Text style={styles.targetLabel}>{room.status === "finished" ? "TUR TAMAMLANDI" : "GİZLİ KELİMELERİ BUL"}</Text>
           <Text style={styles.targetWord}>{room.wordsTotal} KELİME</Text>
-        <Text style={styles.targetTip}>{room.status === "playing" ? "Parmağını/mouse'u basılı tutarak yatay/dikey komşu harfleri bağla." : room.message}</Text>
-      </View>
+          {disconnectRemainingSeconds > 0 ? (
+            <View style={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 8, backgroundColor: "rgba(239, 68, 68, 0.2)", borderRadius: 8, borderWidth: 1, borderColor: "#EF4444", alignItems: "center" }}>
+              <Text style={{ color: "#EF4444", fontSize: 11, fontWeight: "900" }}>
+                ⚠️ RAKİBİN BAĞLANTISI KOPDU ({disconnectRemainingSeconds}s)
+              </Text>
+              <Text style={{ color: "#FCA5A5", fontSize: 9, fontWeight: "800", marginTop: 2 }}>
+                Geri dönmezse hükmen galip sayılacaksın.
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.targetTip}>{room.status === "playing" ? "Parmağını/mouse'u basılı tutarak yatay/dikey komşu harfleri bağla." : room.message}</Text>
+          )}
+        </View>
       <View
         ref={boardRef}
         onLayout={measureBoard}
@@ -2032,6 +2343,31 @@ function HomeScreen() {
                 />
 
                 {/* Action Buttons */}
+                {!iWon && !isDraw && (
+                  <Pressable
+                    onPress={() => watchAd(() => {
+                      haptics.success();
+                      gameSfx.victory();
+                      setGlobalToast({
+                        id: `streak-save-${Date.now()}`,
+                        title: "🛡️ SERİ KORUNDU!",
+                        subtitle: "Reklam izlendi! Günlük seriniz mağlubiyetten etkilenmedi ve korundu.",
+                        icon: "🔥",
+                        accentColor: "#FFD000",
+                      });
+                    })}
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      { backgroundColor: "rgba(255, 208, 0, 0.2)", borderColor: "#FFD000", borderWidth: 1.5, marginTop: 10 },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.primaryButtonText, { color: "#FFD000", fontSize: 12 }]}>
+                      🎬 REKLAM İZLE: GÜNLÜK SERİNİ KORU 🔥
+                    </Text>
+                  </Pressable>
+                )}
+
                 <Pressable
                   onPress={() => {
                     requestRematch();
@@ -2236,6 +2572,104 @@ function ScoreBadge({ name, score, words, total, active, won, accent, combo }: {
   );
 }
 
+const RANK_IMAGES: Record<string, any> = {
+  DEMİR: require("./assets/ranks/iron.jpg"),
+  BRONZ: require("./assets/ranks/bronze.jpg"),
+  GÜMÜŞ: require("./assets/ranks/silver.jpg"),
+  ALTIN: require("./assets/ranks/gold.jpg"),
+  PLATİN: require("./assets/ranks/platinum.jpg"),
+  ELMAS: require("./assets/ranks/diamond.jpg"),
+  YÜCELİK: require("./assets/ranks/ascendant.jpg"),
+  ÖLÜMSÜZLÜK: require("./assets/ranks/immortal.jpg"),
+  RADIAN: require("./assets/ranks/radian.jpg"),
+};
+
+function SeasonResetModal({ data, onClose }: { data: { newSeasonId: string; previousRank: string; previousLp: number; newLp: number }; onClose: () => void }) {
+  const prevTier = getLeagueTier(data.previousLp);
+  const newTier = getLeagueTier(data.newLp);
+
+  const prevImg = RANK_IMAGES[prevTier.tier];
+  const newImg = RANK_IMAGES[newTier.tier];
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: "#130D2B", borderColor: "#7C3AED", borderWidth: 2, width: "90%", maxWidth: 390, paddingVertical: 24, paddingHorizontal: 20, borderRadius: 28 }]}>
+          {/* Header Trophy Circle */}
+          <View style={{ width: 72, height: 72, borderRadius: 26, backgroundColor: "rgba(255, 194, 74, 0.14)", borderWidth: 2, borderColor: "#FFC24A", alignItems: "center", justifyContent: "center", marginBottom: 14, shadowColor: "#FFC24A", shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 }}>
+            <Text style={{ fontSize: 36 }}>🏆</Text>
+          </View>
+
+          <View style={{ backgroundColor: "rgba(255, 194, 74, 0.12)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255, 194, 74, 0.3)", marginBottom: 8 }}>
+            <Text style={{ color: "#FFC24A", fontSize: 10, fontWeight: "900", letterSpacing: 1.5 }}>SEZON {data.newSeasonId}</Text>
+          </View>
+          
+          <Text style={{ color: "#FFFFFF", textAlign: "center", fontSize: 22, fontWeight: "900", letterSpacing: 0.5, marginBottom: 18 }}>YENİ SEZON BAŞLADI!</Text>
+
+          {/* Rank comparison cards */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, width: "100%", marginBottom: 20 }}>
+            {/* Previous season */}
+            <View style={{ flex: 1, backgroundColor: "rgba(23, 17, 48, 0.95)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.16)" }}>
+              <Text style={{ color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginBottom: 6 }}>ÖNCEKİ SEZON</Text>
+              <View style={{ width: 52, height: 52, borderRadius: 16, borderWidth: 1.5, borderColor: prevTier.color, backgroundColor: "rgba(255, 255, 255, 0.06)", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
+                {prevImg ? (
+                  <Image source={prevImg} style={{ width: 52, height: 52, borderRadius: 14 }} resizeMode="cover" />
+                ) : (
+                  <Text style={{ color: prevTier.color, fontSize: 20, fontWeight: "900" }}>{prevTier.icon}</Text>
+                )}
+              </View>
+              <Text style={{ color: prevTier.color, fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>{data.previousRank}</Text>
+              <Text style={{ color: "#94A3B8", fontSize: 10, fontWeight: "800", marginTop: 2 }}>{data.previousLp} LP</Text>
+            </View>
+
+            {/* Arrow icon */}
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(124, 58, 237, 0.2)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#7C3AED" }}>
+              <Text style={{ color: "#A78BFA", fontSize: 13, fontWeight: "900" }}>➔</Text>
+            </View>
+
+            {/* New season */}
+            <View style={{ flex: 1, backgroundColor: "rgba(6, 182, 212, 0.14)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 2, borderColor: "#00F5D4", shadowColor: "#00F5D4", shadowOpacity: 0.2, shadowRadius: 8 }}>
+              <Text style={{ color: "#00F5D4", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginBottom: 6 }}>YENİ DERECE</Text>
+              <View style={{ width: 52, height: 52, borderRadius: 16, borderWidth: 2, borderColor: newTier.color, backgroundColor: "rgba(0, 245, 212, 0.15)", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
+                {newImg ? (
+                  <Image source={newImg} style={{ width: 52, height: 52, borderRadius: 14 }} resizeMode="cover" />
+                ) : (
+                  <Text style={{ color: newTier.color, fontSize: 20, fontWeight: "900" }}>{newTier.icon}</Text>
+                )}
+              </View>
+              <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>{newTier.tier}</Text>
+              <Text style={{ color: "#00F5D4", fontSize: 10, fontWeight: "900", marginTop: 2 }}>{data.newLp} LP</Text>
+            </View>
+          </View>
+
+          <Text style={{ color: "#CBD5E1", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 22, paddingHorizontal: 4 }}>
+            Kademeli lig puanı sıfırlaması uygulandı. Yeni sezonda liderlik sıralamasında zirveye tırmanmak için hemen yarışmaya katıl!
+          </Text>
+
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => [{
+              alignSelf: "stretch",
+              height: 52,
+              borderRadius: 18,
+              backgroundColor: "#00F5D4",
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#00F5D4",
+              shadowOpacity: 0.4,
+              shadowRadius: 10,
+              elevation: 6,
+              opacity: pressed ? 0.85 : 1,
+            } as any]}
+          >
+            <Text style={{ color: "#0B132B", fontSize: 14, fontWeight: "900", letterSpacing: 1 }}>YENİ SEZONA BAŞLA 🚀</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function MainShell({
   active,
   children,
@@ -2245,6 +2679,8 @@ function MainShell({
   missionsBadgeCount,
   toast,
   onDismissToast,
+  seasonResetModal,
+  onCloseSeasonResetModal,
 }: {
   active: DockDestination;
   children: React.ReactNode;
@@ -2254,6 +2690,8 @@ function MainShell({
   missionsBadgeCount?: number;
   toast?: ToastData | null;
   onDismissToast?: () => void;
+  seasonResetModal?: { newSeasonId: string; previousRank: string; previousLp: number; newLp: number } | null;
+  onCloseSeasonResetModal?: () => void;
 }) {
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 14, paddingTop: 6 }}>
@@ -2268,6 +2706,9 @@ function MainShell({
       </View>
       {showGuide !== undefined && onCloseGuide && (
         <OnboardingGuide visible={showGuide} onClose={onCloseGuide} />
+      )}
+      {seasonResetModal && onCloseSeasonResetModal && (
+        <SeasonResetModal data={seasonResetModal} onClose={onCloseSeasonResetModal} />
       )}
     </ScreenContainer>
   );
@@ -2299,7 +2740,7 @@ const battleStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  shell: { flex: 1 },
+  shell: { flex: 1, userSelect: "none", touchAction: "none" } as any,
   fixedDock: { position: "absolute", left: 0, right: 0, bottom: 8 },
   homeScroll: { paddingBottom: 132, flexGrow: 1 },
   subHeader: { flexDirection: "row", alignItems: "center", gap: 12 },

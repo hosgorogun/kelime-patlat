@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { SEASON_MISSIONS, type PlayerProgress, type SeasonMission } from "@/shared/progression";
@@ -33,8 +33,11 @@ export function MissionsScreen({
 
   const completedCount = SEASON_MISSIONS.filter((m) => (progress.missions[m.id] ?? 0) >= m.target).length;
   const totalXp = SEASON_MISSIONS.reduce((sum, m) => sum + ((progress.missions[m.id] ?? 0) >= m.target ? m.rewardXp : 0), 0);
+  const claimingRef = useRef<Set<string>>(new Set());
 
   const handleClaimDaily = (mission: SeasonMission) => {
+    if (claimingRef.current.has(mission.id)) return;
+    claimingRef.current.add(mission.id);
     haptics.success();
     gameSfx.victory();
     const coinsReward = 25;
@@ -59,6 +62,8 @@ export function MissionsScreen({
     shield = 0,
     coins = 0
   ) => {
+    if (claimingRef.current.has(missionId)) return;
+    claimingRef.current.add(missionId);
     haptics.success();
     gameSfx.victory();
     onClaimWeekly?.(missionId, xp, shield, coins);

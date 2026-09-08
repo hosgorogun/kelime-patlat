@@ -68,6 +68,7 @@ export type RoomSnapshot = {
   message: string;
   botSelection?: number[];
   combos?: Record<string, number>;
+  disconnectExpiresAt?: number | null;
 };
 
 export type LeaderboardEntry = {
@@ -77,6 +78,10 @@ export type LeaderboardEntry = {
   wins: number;
   matches: number;
   bestRound: number;
+  lp?: number;
+  tier?: string;
+  avatar?: string;
+  level?: number;
 };
 
 export const TURKISH_LETTERS = [

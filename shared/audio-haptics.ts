@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
-import { gameSfx, setSfxEnabled, getSfxEnabled } from "@/lib/game-sfx";
+import { gameSfx, setSfxEnabled, getSfxEnabled } from "../lib/game-sfx";
 export { gameSfx, setSfxEnabled, getSfxEnabled };
 
 export async function initAudio() {

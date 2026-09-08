@@ -12,7 +12,7 @@ type ProfileDocument = {
 };
 
 type LeaderboardDocument = LeaderboardEntry & { updatedAt: Date };
-type RoundEntry = { id: string; name: string; score: number; won: boolean };
+type RoundEntry = { id: string; name: string; score: number; won: boolean; lp?: number; tier?: string; avatar?: string };
 
 const ProfileSchema = new Schema<ProfileDocument>({
   playerId: { type: String, required: true, unique: true },
@@ -29,6 +29,9 @@ const LeaderboardSchema = new Schema<LeaderboardDocument>({
   wins: { type: Number, default: 0 },
   matches: { type: Number, default: 0 },
   bestRound: { type: Number, default: 0 },
+  lp: { type: Number, default: 0 },
+  tier: { type: String, default: "DEMİR" },
+  avatar: { type: String, default: "spark" },
   updatedAt: { type: Date, default: Date.now }
 });
 
@@ -83,11 +86,19 @@ export async function savePlayerProfile(playerId: string, name: string, progress
   }, null);
 }
 
+export async function deletePlayerProfile(playerId: string) {
+  return safely(async () => {
+    await ProfileModel.deleteOne({ playerId });
+    await LeaderboardModel.deleteOne({ id: playerId });
+    return true;
+  }, false);
+}
+
 export async function loadLeaderboard() {
   return safely(async () => {
-    const entries = await LeaderboardModel.find({}, { _id: 0, id: 1, name: 1, score: 1, wins: 1, matches: 1, bestRound: 1 })
+    const entries = await LeaderboardModel.find({}, { _id: 0, id: 1, name: 1, score: 1, wins: 1, matches: 1, bestRound: 1, lp: 1, tier: 1, avatar: 1 })
       .sort({ score: -1, wins: -1, bestRound: -1 })
-      .limit(20)
+      .limit(50)
       .lean();
     return entries as LeaderboardEntry[];
   }, null);
@@ -96,16 +107,23 @@ export async function loadLeaderboard() {
 export async function recordLeaderboardRounds(rounds: RoundEntry[]) {
   return safely(async () => {
     const now = new Date();
-    await Promise.all(rounds.map((round) => LeaderboardModel.updateOne(
-      { id: round.id },
-      {
-        $set: { name: round.name, updatedAt: now },
-        $setOnInsert: { id: round.id },
-        $inc: { score: round.score, wins: round.won ? 1 : 0, matches: 1 },
-        $max: { bestRound: round.score },
-      },
-      { upsert: true },
-    )));
+    await Promise.all(rounds.map((round) => {
+      const setFields: Record<string, any> = { name: round.name, updatedAt: now };
+      if (round.lp !== undefined) setFields.lp = round.lp;
+      if (round.tier !== undefined) setFields.tier = round.tier;
+      if (round.avatar !== undefined) setFields.avatar = round.avatar;
+
+      return LeaderboardModel.updateOne(
+        { id: round.id },
+        {
+          $set: setFields,
+          $setOnInsert: { id: round.id },
+          $inc: { score: round.score, wins: round.won ? 1 : 0, matches: 1 },
+          $max: { bestRound: round.score },
+        },
+        { upsert: true },
+      );
+    }));
     return loadLeaderboard();
   }, null);
 }

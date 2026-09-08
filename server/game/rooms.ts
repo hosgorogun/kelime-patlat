@@ -24,6 +24,8 @@ import {
   type RoomStatus,
 } from "../../shared/game";
 import { createSoloBoard } from "../../shared/solo";
+import { DEFAULT_PROGRESS, getLeagueTier } from "../../shared/progression";
+import { UserModel } from "../db";
 import { loadLeaderboard, recordLeaderboardRounds } from "./mongo-store";
 
 type PlayerRecord = GamePlayer & { socketId: string | null };
@@ -48,6 +50,9 @@ type Room = {
   botSelection?: number[];
   lastWordFoundTime?: Record<string, number>;
   comboCount?: Record<string, number>;
+  disconnectTimer?: NodeJS.Timeout | null;
+  disconnectPlayerId?: string | null;
+  disconnectExpiresAt?: number | null;
 };
 
 const rooms = new Map<string, Room>();
@@ -264,6 +269,7 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
     message: room.message,
     botSelection: undefined, // Bot seçimi oyuncu ekranında gösterilmez
     combos: room.comboCount,
+    disconnectExpiresAt: room.disconnectExpiresAt ?? null,
   };
 }
 
@@ -285,25 +291,93 @@ function publishLeaderboard(io: Server) {
   });
 }
 
-function recordRoundForLeaderboard(io: Server, room: Room) {
-  [room.host, room.guest].filter((player): player is PlayerRecord => Boolean(player && !player.isBot)).forEach((player) => {
-    const roundScore = room.scores[player.id] ?? 0;
-    const previous = leaderboard.get(player.id) ?? { id: player.id, name: player.name, score: 0, wins: 0, matches: 0, bestRound: 0 };
-    leaderboard.set(player.id, {
-      ...previous,
-      name: player.name,
-      score: previous.score + roundScore,
-      wins: previous.wins + (room.winnerId === player.id ? 1 : 0),
-      matches: previous.matches + 1,
-      bestRound: Math.max(previous.bestRound, roundScore),
-    });
-  });
+async function recordRoundForLeaderboard(io: Server, room: Room) {
+  const activeHumanPlayers = [room.host, room.guest].filter((player): player is PlayerRecord => Boolean(player && !player.isBot));
+  const isBotMatch = Boolean(room.guest?.isBot);
+  const isDraw = !room.winnerId;
+
+  // Process and update authoritative LP/XP on DB for each player
+  const roundsToRecord = await Promise.all(
+    activeHumanPlayers.map(async (player) => {
+      const roundScore = room.scores[player.id] ?? 0;
+      const won = room.winnerId === player.id;
+
+      let lpDelta = 0;
+      let xpDelta = 0;
+      if (isBotMatch) {
+        if (won) { lpDelta = 15; xpDelta = 35; }
+        else if (isDraw) { lpDelta = 0; xpDelta = 20; }
+        else { lpDelta = -10; xpDelta = 20; }
+      } else {
+        if (won) { lpDelta = 25; xpDelta = 60; }
+        else if (isDraw) { lpDelta = 0; xpDelta = 40; }
+        else { lpDelta = -20; xpDelta = 35; }
+      }
+
+      let currentLp = 0;
+      let currentTier = "DEMİR";
+      let userAvatar: string | undefined;
+
+      try {
+        const dbUser = await UserModel.findOne({ openId: player.id });
+        if (dbUser) {
+          const prevProgress = dbUser.progress || {};
+          const prevLp = typeof prevProgress.lp === "number" ? prevProgress.lp : 0;
+          const prevXp = typeof prevProgress.xp === "number" ? prevProgress.xp : 0;
+          const nextLp = Math.max(0, prevLp + lpDelta);
+          const nextXp = prevXp + xpDelta;
+
+          dbUser.progress = {
+            ...prevProgress,
+            lp: nextLp,
+            xp: nextXp,
+            wins: (prevProgress.wins || 0) + (won ? 1 : 0),
+            matches: (prevProgress.matches || 0) + 1,
+            bestScore: Math.max(prevProgress.bestScore || 0, roundScore),
+          };
+          dbUser.updatedAt = new Date();
+          await dbUser.save();
+
+          currentLp = nextLp;
+          currentTier = getLeagueTier(nextLp).tier;
+          userAvatar = prevProgress.selectedAvatar;
+        } else {
+          currentTier = getLeagueTier(0).tier;
+        }
+      } catch (err) {
+        console.error(`[Leaderboard] Error updating user ${player.id} progress:`, err);
+      }
+
+      // In-memory leaderboard
+      const previous = leaderboard.get(player.id) ?? { id: player.id, name: player.name, score: 0, wins: 0, matches: 0, bestRound: 0 };
+      const nextScore = previous.score + roundScore;
+      leaderboard.set(player.id, {
+        ...previous,
+        name: player.name,
+        score: nextScore,
+        wins: previous.wins + (won ? 1 : 0),
+        matches: previous.matches + 1,
+        bestRound: Math.max(previous.bestRound, roundScore),
+        lp: currentLp,
+        tier: currentTier,
+        avatar: userAvatar,
+        level: Math.floor(nextScore / 200) + 1,
+      });
+
+      return {
+        id: player.id,
+        name: player.name,
+        score: roundScore,
+        won,
+        lp: currentLp,
+        tier: currentTier,
+        avatar: userAvatar,
+      };
+    })
+  );
+
   publishLeaderboard(io);
-  void recordLeaderboardRounds(
-    [room.host, room.guest]
-      .filter((player): player is PlayerRecord => Boolean(player && !player.isBot))
-      .map((player) => ({ id: player.id, name: player.name, score: room.scores[player.id] ?? 0, won: room.winnerId === player.id })),
-  ).then((persisted) => {
+  void recordLeaderboardRounds(roundsToRecord).then((persisted) => {
     if (persisted) io.emit("leaderboard:update", persisted);
   });
 }
@@ -354,6 +428,12 @@ function findWordPath(board: string[], size: BoardSize, word: string) {
 
 function finishRound(io: Server, room: Room) {
   if (room.status !== "playing") return;
+  if (room.disconnectTimer) {
+    clearTimeout(room.disconnectTimer);
+    room.disconnectTimer = null;
+    room.disconnectPlayerId = null;
+    room.disconnectExpiresAt = null;
+  }
   const players = [room.host, room.guest].filter(Boolean);
   const hostScore = room.scores[room.host.id] ?? 0;
   const guestScore = room.guest ? (room.scores[room.guest.id] ?? 0) : 0;
@@ -696,6 +776,12 @@ export function registerGameRooms(io: Server) {
       if (!room || !player || (player.socketId && player.socketId !== socket.id)) return;
       player.socketId = socket.id;
       player.connected = true;
+      if (room.disconnectTimer && room.disconnectPlayerId === player.id) {
+        clearTimeout(room.disconnectTimer);
+        room.disconnectTimer = null;
+        room.disconnectPlayerId = null;
+        room.message = `${player.name} maça yeniden bağlandı!`;
+      }
       socket.join(`room:${room.code}`);
       emitRoom(io, room);
     });
@@ -790,6 +876,33 @@ export function registerGameRooms(io: Server) {
         
         if (room.status === "lobby" || room.status === "waiting" || room.status === "finished") {
           leaveRoom(io, socket, room, player.id);
+        } else if (room.status === "playing") {
+          const opponent = room.host.id === player.id ? room.guest : room.host;
+          room.message = `${player.name} bağlantısı koptu. (15s içinde yeniden bağlanmazsa hükmen yenilecek)`;
+          emitRoom(io, room);
+
+          if (room.disconnectTimer) clearTimeout(room.disconnectTimer);
+          room.disconnectPlayerId = player.id;
+          room.disconnectExpiresAt = Date.now() + 15_000;
+          emitRoom(io, room);
+
+          room.disconnectTimer = setTimeout(() => {
+            const currentRoom = rooms.get(room.code);
+            if (!currentRoom || currentRoom.status !== "playing") return;
+            if (!player.connected) {
+              // Award forfeit victory to opponent if available
+              if (opponent) {
+                currentRoom.winnerId = opponent.id;
+                currentRoom.message = `${player.name} maçı terk etti. ${opponent.name} hükmen kazandı!`;
+              } else {
+                currentRoom.winnerId = null;
+                currentRoom.message = `${player.name} maçı terk etti.`;
+              }
+              currentRoom.status = "finished";
+              recordRoundForLeaderboard(io, currentRoom);
+              emitRoom(io, currentRoom);
+            }
+          }, 15_000);
         } else {
           room.message = `${player.name} bağlantısını yeniliyor…`;
           emitRoom(io, room);

@@ -49,9 +49,11 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
-    "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+      NSCameraUsageDescription: "Profil fotoğrafı çekmek ve avatarınızı güncellemek için kamera erişimi gereklidir.",
+      NSPhotoLibraryUsageDescription: "Profil fotoğrafı seçmek ve profilinizi kişiselleştirmek için galeri erişimi gereklidir."
+    }
   },
   android: {
     adaptiveIcon: {
@@ -62,7 +64,7 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS"],
+    permissions: ["POST_NOTIFICATIONS", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
     intentFilters: [
       {
         action: "VIEW",
@@ -90,7 +92,13 @@ const config: ExpoConfig = {
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
       },
     ],
-
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "Profil fotoğrafı seçmek için galeri erişimi gereklidir.",
+        cameraPermission: "Profil fotoğrafı çekmek için kamera erişimi gereklidir."
+      }
+    ],
 
     [
       "expo-build-properties",

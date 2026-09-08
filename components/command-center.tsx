@@ -22,6 +22,7 @@ type CommandCenterProps = {
   unclaimedMissionsCount?: number;
   unclaimedMilestonesCount?: number;
   onClaimDailyReward?: () => void;
+  onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
 };
 
 export function CommandCenter({
@@ -39,9 +40,11 @@ export function CommandCenter({
   unclaimedMissionsCount = 0,
   unclaimedMilestonesCount = 0,
   onClaimDailyReward,
+  onShowToast,
 }: CommandCenterProps) {
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
+  const dailyRewardClaimingRef = useRef(false);
   const rank = getRank(progress);
   const league = getLeagueTier(progress);
   const leagueProgressPercent = league.tier === "RADIAN"
@@ -86,10 +89,19 @@ export function CommandCenter({
 
   const makeLockedHandler = (size: 6 | 8 | 10, requiredLevel: number, action: () => void) => () => {
     if (currentLevel < requiredLevel) {
-      Alert.alert(
-        `🔒 Seviye ${requiredLevel} Gerekli`,
-        `${size}×${size} modu Seviye ${requiredLevel}'de açılır. Şu anki seviyeniz: ${currentLevel}. Daha fazla kelime bul ve seviye atla!`
-      );
+      if (onShowToast) {
+        onShowToast(
+          `🔒 SEVİYE ${requiredLevel} GEREKLİ`,
+          `${size}×${size} modu Seviye ${requiredLevel}'de açılır (Şu an: Seviye ${currentLevel}).`,
+          "🔒",
+          "#EF4444"
+        );
+      } else {
+        Alert.alert(
+          `🔒 Seviye ${requiredLevel} Gerekli`,
+          `${size}×${size} modu Seviye ${requiredLevel}'de açılır. Şu anki seviyeniz: ${currentLevel}.`
+        );
+      }
     } else {
       action();
     }
@@ -108,7 +120,7 @@ export function CommandCenter({
         <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
           <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
             {progress.avatarPhoto ? (
-              <Image source={{ uri: progress.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 12 }} />
+              <Image source={{ uri: progress.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 22, resizeMode: "cover" }} />
             ) : (
               <Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text>
             )}
@@ -158,6 +170,9 @@ export function CommandCenter({
           <View style={styles.plusBadge}>
             <Text style={styles.plusText}>＋</Text>
           </View>
+          {!isClaimedToday && (
+            <View style={{ position: "absolute", top: -4, right: -4, width: 10, height: 10, borderRadius: 5, backgroundColor: "#EF4444", borderWidth: 1.5, borderColor: "#0B071E" }} />
+          )}
         </Pressable>
       </View>
 
@@ -273,6 +288,8 @@ export function CommandCenter({
       {!isClaimedToday ? (
         <Pressable
           onPress={() => {
+            if (dailyRewardClaimingRef.current || isClaimedToday) return;
+            dailyRewardClaimingRef.current = true;
             triggerHapticSelection();
             onClaimDailyReward?.();
           }}
@@ -358,43 +375,79 @@ export function CommandCenter({
       </View>
     </Pressable>
 
+    {/* Nostaljik Gazete Labirenti Mini Oyunu */}
+    <View style={[styles.sectionHead, { marginTop: 14 }]}><Text style={styles.sectionTitle}>NOSTALJİ MİNİ OYUN</Text><Text style={styles.sectionMeta}>GAZETE BULMACASI</Text></View>
+    <Pressable onPress={() => onNavigate("vintage" as any)} style={({ pressed }) => [styles.soloBanner, { borderColor: "#FFC24A", backgroundColor: "rgba(255, 194, 74, 0.08)" }, pressed && styles.pressed]}>
+      <View style={styles.soloSkin}>
+        <Text style={styles.soloTrophy}>🗞️</Text>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={[styles.soloEyebrow, { color: "#FFC24A" }]}>ÇİZGİ TAKİP LABİRENTİ</Text>
+            <View style={[styles.milestoneBadgePill, { backgroundColor: "rgba(255, 194, 74, 0.2)" }]}>
+              <Text style={[styles.milestoneBadgeText, { color: "#FFC24A" }]}>YENİ MİNİ OYUN</Text>
+            </View>
+          </View>
+          <Text style={styles.soloHeading}>GAZETE LABİRENTİ</Text>
+          <Text style={styles.soloDesc}>
+            Eski gazetelerdeki gibi çizgileri parmağınla takip et, karakterleri hedeflerine ulaştır ve bonus XP kazan!
+          </Text>
+        </View>
+        <Text style={[styles.soloArrow, { color: "#FFC24A" }]}>›</Text>
+      </View>
+    </Pressable>
+
     {/* Fast Bot Duels */}
-    <View style={styles.sectionHead}><Text style={styles.sectionTitle}>HIZLI ANTRENMAN</Text><Text style={styles.sectionMeta}>BOT DÜELLOSU</Text></View>
+    <View style={styles.sectionHead}><Text style={styles.sectionTitle}>DERECELİ</Text></View>
     <View style={styles.modeGrid}>
       <Pressable onPress={() => onPlayBot(4)} style={({ pressed }) => [styles.modeNode, { borderColor: "#00F5D4" }, pressed && styles.pressed]}>
         <View style={styles.modeNodeHeader}>
-          <Text style={[styles.modeSize, { color: "#00F5D4" }]}>4×4</Text>
+          <Text numberOfLines={1} style={[styles.modeSize, { color: "#00F5D4" }]}>4×4</Text>
           <View style={[styles.modeMiniDot, { backgroundColor: "#00F5D4" }]} />
         </View>
-        <Text style={styles.modeTitle}>4x4 Hızlı</Text>
-        <Text style={styles.modeMeta}>55 SN</Text>
+        <Text numberOfLines={1} style={styles.modeTitle}>4x4 Hızlı</Text>
+        <Text numberOfLines={1} style={styles.modeMeta}>55 SN</Text>
       </Pressable>
 
-      <Pressable onPress={handlePlayBot6} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked6 ? "#4C4660" : "#A78BFA", opacity: isLocked6 ? 0.65 : 1 }, pressed && styles.pressed]}>
+      <Pressable onPress={handlePlayBot6} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked6 ? "#4C4660" : "#A78BFA", opacity: isLocked6 ? 0.75 : 1 }, pressed && styles.pressed]}>
         <View style={styles.modeNodeHeader}>
-          <Text style={[styles.modeSize, { color: isLocked6 ? "#6B7280" : "#A78BFA" }]}>{isLocked6 ? "🔒" : "6×6"}</Text>
+          <Text numberOfLines={1} style={[styles.modeSize, { color: isLocked6 ? "#6B7280" : "#A78BFA" }]}>{isLocked6 ? "🔒 6×6" : "6×6"}</Text>
           <View style={[styles.modeMiniDot, { backgroundColor: isLocked6 ? "#6B7280" : "#A78BFA" }]} />
         </View>
-        <Text style={styles.modeTitle}>{isLocked6 ? "6x6 (Sev.5)" : "6x6 Akış"}</Text>
-        <Text style={styles.modeMeta}>75 SN</Text>
+        <Text numberOfLines={1} style={styles.modeTitle}>{isLocked6 ? "6x6 Modu" : "6x6 Akış"}</Text>
+        <Text numberOfLines={1} style={styles.modeMeta}>{isLocked6 ? `Sev. ${currentLevel}/5` : "75 SN"}</Text>
+        {isLocked6 && (
+          <View style={{ width: "100%", height: 3, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, marginTop: 3, overflow: "hidden" }}>
+            <View style={{ width: `${Math.min(100, (currentLevel / 5) * 100)}%`, height: "100%", backgroundColor: "#A78BFA" }} />
+          </View>
+        )}
       </Pressable>
 
-      <Pressable onPress={handlePlayBot8} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked8 ? "#4C4660" : "#F59E0B", opacity: isLocked8 ? 0.65 : 1 }, pressed && styles.pressed]}>
+      <Pressable onPress={handlePlayBot8} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked8 ? "#4C4660" : "#F59E0B", opacity: isLocked8 ? 0.75 : 1 }, pressed && styles.pressed]}>
         <View style={styles.modeNodeHeader}>
-          <Text style={[styles.modeSize, { color: isLocked8 ? "#6B7280" : "#F59E0B" }]}>{isLocked8 ? "🔒" : "8×8"}</Text>
+          <Text numberOfLines={1} style={[styles.modeSize, { color: isLocked8 ? "#6B7280" : "#F59E0B" }]}>{isLocked8 ? "🔒 8×8" : "8×8"}</Text>
           <View style={[styles.modeMiniDot, { backgroundColor: isLocked8 ? "#6B7280" : "#F59E0B" }]} />
         </View>
-        <Text style={styles.modeTitle}>{isLocked8 ? "8x8 (Sev.8)" : "8x8"}</Text>
-        <Text style={styles.modeMeta}>90 SN</Text>
+        <Text numberOfLines={1} style={styles.modeTitle}>{isLocked8 ? "8x8 Modu" : "8x8"}</Text>
+        <Text numberOfLines={1} style={styles.modeMeta}>{isLocked8 ? `Sev. ${currentLevel}/8` : "90 SN"}</Text>
+        {isLocked8 && (
+          <View style={{ width: "100%", height: 3, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, marginTop: 3, overflow: "hidden" }}>
+            <View style={{ width: `${Math.min(100, (currentLevel / 8) * 100)}%`, height: "100%", backgroundColor: "#F59E0B" }} />
+          </View>
+        )}
       </Pressable>
 
-      <Pressable onPress={handlePlayBot10} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked10 ? "#4C4660" : "#F472B6", opacity: isLocked10 ? 0.65 : 1 }, pressed && styles.pressed]}>
+      <Pressable onPress={handlePlayBot10} style={({ pressed }) => [styles.modeNode, { borderColor: isLocked10 ? "#4C4660" : "#F472B6", opacity: isLocked10 ? 0.75 : 1 }, pressed && styles.pressed]}>
         <View style={styles.modeNodeHeader}>
-          <Text style={[styles.modeSize, { color: isLocked10 ? "#6B7280" : "#F472B6" }]}>{isLocked10 ? "🔒" : "10×10"}</Text>
+          <Text numberOfLines={1} style={[styles.modeSize, { color: isLocked10 ? "#6B7280" : "#F472B6" }]}>{isLocked10 ? "🔒 10×10" : "10×10"}</Text>
           <View style={[styles.modeMiniDot, { backgroundColor: isLocked10 ? "#6B7280" : "#F472B6" }]} />
         </View>
-        <Text style={styles.modeTitle}>{isLocked10 ? "10x10 (Sev.10)" : "10x10 Master"}</Text>
-        <Text style={styles.modeMeta}>110 SN</Text>
+        <Text numberOfLines={1} style={styles.modeTitle}>{isLocked10 ? "10x10 Modu" : "10x10 Master"}</Text>
+        <Text numberOfLines={1} style={styles.modeMeta}>{isLocked10 ? `Sev. ${currentLevel}/10` : "110 SN"}</Text>
+        {isLocked10 && (
+          <View style={{ width: "100%", height: 3, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, marginTop: 3, overflow: "hidden" }}>
+            <View style={{ width: `${Math.min(100, (currentLevel / 10) * 100)}%`, height: "100%", backgroundColor: "#F472B6" }} />
+          </View>
+        )}
       </Pressable>
     </View>
 
@@ -447,7 +500,7 @@ const styles = StyleSheet.create({
   avatarText: { color: "#FFF9FC", fontWeight: "900" }, 
   name: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", letterSpacing: 0.4 }, 
   cyberBadge: { color: "#00F5D4", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
-  rank: { color: "#E9D5FF", fontSize: 8, fontWeight: "800", letterSpacing: 0.6, marginTop: 2 }, 
+  rank: { color: "#E9D5FF", fontSize: 11, fontWeight: "900", letterSpacing: 0.6, marginTop: 2 }, 
   
   topActionsGroup: { flexDirection: "row", gap: 6, alignItems: "center" },
   topIconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(124, 92, 246, 0.15)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.3)", alignItems: "center", justifyContent: "center" },
@@ -484,7 +537,7 @@ const styles = StyleSheet.create({
   signalUnit: { color: "#D8B4FE", fontSize: 7.5 }, 
   signalRule: { width: 1, height: 18, backgroundColor: "#64519B" },
 
-  dailyRewardSection: { marginTop: 12, borderRadius: 20, backgroundColor: "rgba(25, 20, 48, 0.65)", borderWidth: 1.5, borderColor: "rgba(124, 92, 246, 0.35)", padding: 14 },
+  dailyRewardSection: { marginTop: 12, borderRadius: 20, backgroundColor: "#16102B", borderWidth: 1.5, borderColor: "rgba(124, 92, 246, 0.35)", padding: 14 },
   dailyRewardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   dailyRewardTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   dailyRewardDayPill: { backgroundColor: "rgba(124, 92, 246, 0.25)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
@@ -494,10 +547,10 @@ const styles = StyleSheet.create({
   dailyStatusBadgeClaimed: { backgroundColor: "rgba(80, 227, 194, 0.12)", borderColor: "rgba(80, 227, 194, 0.4)" },
   dailyStatusBadgeText: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
   dailyDaysRow: { flexDirection: "row", gap: 5, marginTop: 10, width: "100%" },
-  dailyDayCard: { flex: 1, minHeight: 64, borderRadius: 12, backgroundColor: "rgba(17, 13, 35, 0.6)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.2)", alignItems: "center", justifyContent: "center", paddingVertical: 5, position: "relative" },
-  dailyDayCardActive: { borderColor: "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1.5, shadowColor: "#00F5D4", shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
-  dailyDayCardPast: { opacity: 0.7, borderColor: "rgba(80, 227, 194, 0.3)" },
-  dailyDayCardClaimedToday: { borderColor: "rgba(80, 227, 194, 0.5)", backgroundColor: "rgba(80, 227, 194, 0.1)" },
+  dailyDayCard: { flex: 1, minHeight: 64, borderRadius: 12, backgroundColor: "#1E1640", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.3)", alignItems: "center", justifyContent: "center", paddingVertical: 5, position: "relative" },
+  dailyDayCardActive: { borderColor: "#00F5D4", backgroundColor: "#0E3330", borderWidth: 1.5, shadowColor: "#00F5D4", shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
+  dailyDayCardPast: { opacity: 0.7, borderColor: "rgba(80, 227, 194, 0.3)", backgroundColor: "#141028" },
+  dailyDayCardClaimedToday: { borderColor: "rgba(80, 227, 194, 0.5)", backgroundColor: "#0E3330" },
   dailyDayCardEpic: { borderColor: "#FFC24A" },
   epicTag: { position: "absolute", top: -5, backgroundColor: "#FFC24A", paddingHorizontal: 3, borderRadius: 4 },
   epicTagText: { color: "#121025", fontSize: 6.5, fontWeight: "900" },
@@ -533,13 +586,13 @@ const styles = StyleSheet.create({
   soloDesc: { color: "#C4B5FD", fontSize: 9, lineHeight: 13, marginTop: 3 },
   soloArrow: { color: "#A78BFA", fontSize: 22, fontWeight: "300" },
   
-  modeGrid: { flexDirection: "row", gap: 10 }, 
-  modeNode: { flex: 1, minHeight: 110, borderRadius: 20, padding: 12, backgroundColor: "rgba(32, 26, 57, 0.4)", borderWidth: 1.5, justifyContent: "space-between" }, 
+  modeGrid: { flexDirection: "row", gap: 6, width: "100%" }, 
+  modeNode: { flex: 1, minHeight: 96, borderRadius: 16, padding: 8, backgroundColor: "rgba(32, 26, 57, 0.4)", borderWidth: 1.5, justifyContent: "space-between" }, 
   modeNodeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  modeSize: { fontSize: 18, fontWeight: "900", textShadowColor: "rgba(255, 255, 255, 0.1)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, 
-  modeMiniDot: { width: 8, height: 8, borderRadius: 4 },
-  modeTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900", marginTop: 8 }, 
-  modeMeta: { color: "#DDD6FE", fontSize: 9, fontWeight: "800", marginTop: 2 },
+  modeSize: { fontSize: 14, fontWeight: "900", textShadowColor: "rgba(255, 255, 255, 0.1)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, 
+  modeMiniDot: { width: 6, height: 6, borderRadius: 3 },
+  modeTitle: { color: "#FFF9FC", fontSize: 10, fontWeight: "900", marginTop: 4 }, 
+  modeMeta: { color: "#DDD6FE", fontSize: 8, fontWeight: "800", marginTop: 1 },
   
   hubBannersRow: { flexDirection: "row", gap: 10, marginTop: 22, width: "100%" },
   hubBanner: { flex: 1, flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 18, borderWidth: 1, gap: 8 },
@@ -605,11 +658,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 14,
     borderRadius: 20,
-    backgroundColor: "rgba(38, 26, 70, 0.95)",
+    backgroundColor: "#1A1235",
     borderWidth: 1.5,
     borderColor: "#8B5CF6",
     shadowColor: "#8B5CF6",
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 4,
   },

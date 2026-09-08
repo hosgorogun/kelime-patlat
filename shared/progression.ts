@@ -69,6 +69,8 @@ export type PlayerProgress = {
   ownedVictoryEffects?: Record<string, boolean>;
   selectedBoardSkin?: string;
   ownedBoardSkins?: Record<string, boolean>;
+  seasonHistory?: Array<{ seasonId: string; rank: string; lp: number; date: string }>;
+  lastSeasonResetId?: string;
 };
 
 export type GenderType = "male" | "female" | "unspecified";
@@ -84,12 +86,12 @@ export type MilestoneReward = {
 };
 
 export const MILESTONE_REWARDS: MilestoneReward[] = [
-  { level: 15, title: "4×4 MEZUNİYETİ", coins: 50, shields: 1, xp: 150, desc: "Mini siber ağı tamamladın!" },
-  { level: 30, title: "SİBER ROTA SANDIĞI", coins: 75, shields: 1, xp: 200, desc: "Orta hat operasyon başarısı!" },
-  { level: 45, title: "6×6 USTALIK SANDIĞI", coins: 100, shields: 2, xp: 300, desc: "6×6 geniş ağı fethettin!" },
-  { level: 60, title: "DERİN SİBER KASASI", coins: 125, shields: 2, xp: 400, desc: "Büyük 8×8 operasyon ödülü!" },
-  { level: 75, title: "8×8 EFSANE SANDIĞI", coins: 150, shields: 2, xp: 500, desc: "Devasa ızgarayı aştın!" },
-  { level: 100, title: "KOZMİK ŞAMPİYON TACI", coins: 300, shields: 3, xp: 1000, desc: "100 seviyenin mutlak galibi!" },
+  { level: 15, title: "4×4 MEZUNİYETİ", coins: 20, shields: 1, xp: 150, desc: "Mini siber ağı tamamladın!" },
+  { level: 30, title: "SİBER ROTA SANDIĞI", coins: 35, shields: 1, xp: 200, desc: "Orta hat operasyon başarısı!" },
+  { level: 45, title: "6×6 USTALIK SANDIĞI", coins: 50, shields: 2, xp: 300, desc: "6×6 geniş ağı fethettin!" },
+  { level: 60, title: "DERİN SİBER KASASI", coins: 75, shields: 2, xp: 400, desc: "Büyük 8×8 operasyon ödülü!" },
+  { level: 75, title: "8×8 EFSANE SANDIĞI", coins: 100, shields: 2, xp: 500, desc: "Devasa ızgarayı aştın!" },
+  { level: 100, title: "KOZMİK ŞAMPİYON TACI", coins: 150, shields: 3, xp: 1000, desc: "100 seviyenin mutlak galibi!" },
 ];
 
 export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string; unlockHint: string };
@@ -142,7 +144,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   history: [],
   streakShields: 1,
   coins: 50,
-  radarChargesBonus: 0,
+  radarChargesBonus: 2,
   claimedMilestones: {},
   dailyClaimed: {},
   gender: "unspecified",
@@ -196,6 +198,7 @@ export type LeagueTierInfo = {
   name: string;
   tier: "DEMİR" | "BRONZ" | "GÜMÜŞ" | "ALTIN" | "PLATİN" | "ELMAS" | "YÜCELİK" | "ÖLÜMSÜZLÜK" | "RADIAN";
   icon: string;
+  image: string;
   color: string;
   badge: string;
   minPoints: number;
@@ -214,15 +217,15 @@ export function getLeagueTier(progressOrPoints: PlayerProgress | number): League
   }
 
   const tiers = [
-    { tier: "DEMİR", icon: "D", color: "#94A3B8", minPoints: 0, maxPoints: 349 },
-    { tier: "BRONZ", icon: "B", color: "#F97316", minPoints: 350, maxPoints: 899 },
-    { tier: "GÜMÜŞ", icon: "G", color: "#38BDF8", minPoints: 900, maxPoints: 1599 },
-    { tier: "ALTIN", icon: "A", color: "#FBBF24", minPoints: 1600, maxPoints: 2499 },
-    { tier: "PLATİN", icon: "P", color: "#67E8F9", minPoints: 2500, maxPoints: 3599 },
-    { tier: "ELMAS", icon: "◇", color: "#60A5FA", minPoints: 3600, maxPoints: 4999 },
-    { tier: "YÜCELİK", icon: "Y", color: "#C084FC", minPoints: 5000, maxPoints: 6999 },
-    { tier: "ÖLÜMSÜZLÜK", icon: "Ö", color: "#FB7185", minPoints: 7000, maxPoints: 9999 },
-    { tier: "RADIAN", icon: "R", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
+    { tier: "DEMİR", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/iron.jpg", color: "#94A3B8", minPoints: 0, maxPoints: 349 },
+    { tier: "BRONZ", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/bronze.jpg", color: "#F97316", minPoints: 350, maxPoints: 899 },
+    { tier: "GÜMÜŞ", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/silver.jpg", color: "#38BDF8", minPoints: 900, maxPoints: 1599 },
+    { tier: "ALTIN", icon: "🦅", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/gold.jpg", color: "#FBBF24", minPoints: 1600, maxPoints: 2499 },
+    { tier: "PLATİN", icon: "🪽", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/platinum.jpg", color: "#67E8F9", minPoints: 2500, maxPoints: 3599 },
+    { tier: "ELMAS", icon: "💎", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/diamond.jpg", color: "#60A5FA", minPoints: 3600, maxPoints: 4999 },
+    { tier: "YÜCELİK", icon: "🔮", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/ascendant.jpg", color: "#C084FC", minPoints: 5000, maxPoints: 6999 },
+    { tier: "ÖLÜMSÜZLÜK", icon: "🔥", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/immortal.jpg", color: "#FB7185", minPoints: 7000, maxPoints: 9999 },
+    { tier: "RADIAN", icon: "👑", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/radian.jpg", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
   ] as const;
   const current = [...tiers].reverse().find((tier) => points >= tier.minPoints) ?? tiers[0];
   const next = tiers[tiers.indexOf(current) + 1];
@@ -230,6 +233,7 @@ export function getLeagueTier(progressOrPoints: PlayerProgress | number): League
     name: `${current.tier} LİGİ`,
     tier: current.tier,
     icon: current.icon,
+    image: current.image,
     color: current.color,
     badge: current.tier,
     minPoints: current.minPoints,
@@ -257,58 +261,89 @@ export function applyMatchProgress(
   const wordsmithProgress = Math.min(1, previousWordsmith + (hasLongWord ? 1 : 0));
   const newHistory = [...(progress.history || []), ...(result.foundWords || [])].slice(-150);
 
-  let xpGain = 0;
+  // --- KADEMELİ VE DİNAMİK LİG PUANI (LP) HESAPLAMASI ---
+  const currentLp = Math.max(0, progress.lp ?? 0);
+  const tierInfo = getLeagueTier(currentLp);
+  const isHighTier = tierInfo.tier === "ELMAS" || tierInfo.tier === "YÜCELİK" || tierInfo.tier === "ÖLÜMSÜZLÜK" || tierInfo.tier === "RADIAN";
+  const isEntryTier = tierInfo.tier === "DEMİR" || tierInfo.tier === "BRONZ";
+
+  let baseXP = 0;
   let lpGain = 0;
   if (type === "pvp") {
     if (result.won) {
-      xpGain = 60;
-      lpGain = 25;
+      baseXP = 25;
+      lpGain = isEntryTier ? 30 : isHighTier ? 20 : 25;
+      if (result.score >= 120 || (result.tempo && result.tempo >= 3.5)) {
+        lpGain += 5; // Ezici galibiyet bonusu
+      }
     } else if (result.isDraw) {
-      xpGain = 40;
+      baseXP = 12;
       lpGain = 0;
     } else {
-      xpGain = 35;
-      lpGain = -20;
+      baseXP = 5;
+      lpGain = isEntryTier ? -10 : isHighTier ? -22 : -18;
     }
   } else if (type === "bot") {
     if (result.won) {
-      xpGain = 35;
-      lpGain = 15;
+      baseXP = 15;
+      lpGain = isHighTier ? 0 : isEntryTier ? 12 : 8; // Yüksek liglerde bot maçı LP vermez
     } else if (result.isDraw) {
-      xpGain = 20;
+      baseXP = 8;
       lpGain = 0;
     } else {
-      xpGain = 20;
-      lpGain = -10;
+      baseXP = 3;
+      lpGain = isHighTier ? -15 : -10;
     }
   } else if (type === "solo") {
-    xpGain = 30;
+    baseXP = 10;
     lpGain = 0;
   }
 
+  // 2. Kelime Dağarcığı ve Harf Uzunluğu Bonusu (Harf Başı İlerleme)
+  let wordLengthBonus = 0;
+  if (result.foundWords && result.foundWords.length > 0) {
+    result.foundWords.forEach((w) => {
+      if (w.length >= 7) wordLengthBonus += 8; // 7+ Harfli efsanevi kelime
+      else if (w.length >= 5) wordLengthBonus += 3; // 5-6 Harfli kelime
+      else if (w.length >= 3) wordLengthBonus += 1; // 3-4 Harfli kelime
+    });
+    wordLengthBonus = Math.min(25, wordLengthBonus); // Maksimum uzunluk bonus tavanı: +25 XP
+  } else if (result.longWord) {
+    wordLengthBonus = 10;
+  }
+
+  // 3. Hız ve Tempo Bonusu (Saniye ve Çözüm Hızına Göre)
+  let speedBonus = 0;
+  if (result.won && result.tempo) {
+    if (result.tempo >= 3.5) speedBonus = 20; // Şimşek Hızı (< 20 saniye)
+    else if (result.tempo >= 2.0) speedBonus = 10; // Seri Çözüm (< 40 saniye)
+    else if (result.tempo >= 1.0) speedBonus = 5; // Normal Çözüm (< 60 saniye)
+  }
+
+  let xpGain = baseXP + wordLengthBonus + speedBonus;
+
   // Mission completion XP rewards
   if (previousDuels < 2 && duelProgress >= 2) {
-    xpGain += 80;
+    xpGain += 50;
   }
   if (previousWordsmith < 1 && wordsmithProgress >= 1) {
-    xpGain += 70;
+    xpGain += 50;
   }
 
-  // Daily Mystery Word bonus (+150 XP)
+  // Daily Mystery Word bonus (+100 XP)
   const mystery = getDailyMysteryWord();
   if (result.foundWords && result.foundWords.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
-    xpGain += mystery.rewardXp;
+    xpGain += 100;
   }
 
-  // Coin earnings
+  // Coin earnings (Dengeli Çip İlerlemesi)
   let coinsEarned = 0;
   if (result.won) {
-    coinsEarned = type === "pvp" ? 25 : type === "bot" ? 15 : 10;
+    coinsEarned = type === "pvp" ? 10 : type === "bot" ? 4 : 3;
   } else {
-    coinsEarned = 5;
+    coinsEarned = 1;
   }
 
-  const currentLp = Math.max(0, progress.lp ?? 0);
   const nextLp = Math.max(0, currentLp + lpGain);
 
   return {
@@ -334,7 +369,7 @@ export function applyMatchProgress(
 export function applyArcadeProgress(progress: PlayerProgress, score: number) {
   const newBest = Math.max(progress.bestArcadeScore || 0, score);
   const xpGain = Math.max(5, Math.floor(score / 10));
-  const coinsGain = Math.floor(score / 40);
+  const coinsGain = Math.floor(score / 80);
   return {
     ...progress,
     xp: progress.xp + xpGain,
@@ -348,26 +383,31 @@ export function mergePlayerProgress(
   remote?: Partial<PlayerProgress> | null
 ): PlayerProgress {
   if (!remote) return local;
+  const safeNum = (val: any, fallback: number, maxCap = 2_000_000_000) => {
+    const num = typeof val === "number" && Number.isFinite(val) ? val : fallback;
+    return Math.max(0, Math.min(maxCap, num));
+  };
+
   return {
     ...DEFAULT_PROGRESS,
     ...local,
     ...remote,
-    xp: Math.max(local.xp, remote.xp ?? 0),
-    lp: Math.max(local.lp ?? 0, remote.lp ?? 0),
-    coins: Math.max(local.coins ?? 50, remote.coins ?? 50),
-    streakShields: Math.max(local.streakShields ?? 0, remote.streakShields ?? 0),
-    radarChargesBonus: Math.max(local.radarChargesBonus ?? 0, remote.radarChargesBonus ?? 0),
-    streak: Math.max(local.streak, remote.streak ?? 0),
-    wins: Math.max(local.wins, remote.wins ?? 0),
-    matches: Math.max(local.matches, remote.matches ?? 0),
-    bestScore: Math.max(local.bestScore, remote.bestScore ?? 0),
-    bestTempo: Math.max(local.bestTempo, remote.bestTempo ?? 0),
-    bestArcadeScore: Math.max(local.bestArcadeScore ?? 0, remote.bestArcadeScore ?? 0),
+    xp: safeNum(Math.max(local.xp, remote.xp ?? 0), local.xp),
+    lp: safeNum(Math.max(local.lp ?? 0, remote.lp ?? 0), local.lp ?? 0),
+    coins: safeNum(Math.max(local.coins ?? 50, remote.coins ?? 50), local.coins ?? 50),
+    streakShields: safeNum(Math.max(local.streakShields ?? 0, remote.streakShields ?? 0), local.streakShields ?? 0, 99),
+    radarChargesBonus: safeNum(Math.max(local.radarChargesBonus ?? 0, remote.radarChargesBonus ?? 0), local.radarChargesBonus ?? 0, 99),
+    streak: safeNum(Math.max(local.streak, remote.streak ?? 0), local.streak, 3650),
+    wins: safeNum(Math.max(local.wins, remote.wins ?? 0), local.wins),
+    matches: safeNum(Math.max(local.matches, remote.matches ?? 0), local.matches),
+    bestScore: safeNum(Math.max(local.bestScore, remote.bestScore ?? 0), local.bestScore),
+    bestTempo: safeNum(Math.max(local.bestTempo, remote.bestTempo ?? 0), local.bestTempo),
+    bestArcadeScore: safeNum(Math.max(local.bestArcadeScore ?? 0, remote.bestArcadeScore ?? 0), local.bestArcadeScore ?? 0),
     dailyCompletedId: local.dailyCompletedId || remote.dailyCompletedId || null,
     missions: {
-      daily: Math.max(local.missions?.daily ?? 0, remote.missions?.daily ?? 0),
-      duels: Math.max(local.missions?.duels ?? 0, remote.missions?.duels ?? 0),
-      wordsmith: Math.max(local.missions?.wordsmith ?? 0, remote.missions?.wordsmith ?? 0),
+      daily: safeNum(Math.max(local.missions?.daily ?? 0, remote.missions?.daily ?? 0), local.missions?.daily ?? 0, 100),
+      duels: safeNum(Math.max(local.missions?.duels ?? 0, remote.missions?.duels ?? 0), local.missions?.duels ?? 0, 100),
+      wordsmith: safeNum(Math.max(local.missions?.wordsmith ?? 0, remote.missions?.wordsmith ?? 0), local.missions?.wordsmith ?? 0, 100),
     },
     claimedMilestones: {
       ...(remote.claimedMilestones ?? {}),
@@ -473,18 +513,44 @@ export type DailyMystery = {
 };
 
 export function getDailyMysteryWord(date = new Date()): DailyMystery {
-  const dayId = getDayId(date);
-  const seed = seededNumber(dayId + "mystery");
-  const mysteryWords = [
-    { word: "DENİZ", definition: "Yeryüzünün büyük kısmını kaplayan geniş tuzlu su kütlesi." },
-    { word: "YILDIZ", definition: "Gökyüzünde ışık saçan devasa plazma küresi." },
-    { word: "ORMAN", definition: "Ağaçlarla kaplı geniş doğal alan ve ekosistem." },
-    { word: "GİZEM", definition: "Sır, akıl erdirilemeyen bilinmez durum." },
-    { word: "PUSULA", definition: "Yön bulmaya yarayan, üzerinde mıknatıslı ibre olan cihaz." },
-    { word: "MACERA", definition: "Heyecan verici, sıra dışı ve riskli olaylar zinciri." },
-    { word: "FORMÜL", definition: "Bir gerçeği veya kuralı sembollerle gösteren kısa anlatım." },
+  // Tam 30 günlük bilmeceli gizemli kelime havuzu (Her ay başı 1. güne sıfırlanır, 31 çeken aylarda 31. gün 1. kelimeye döner)
+  const dayOfMonth = date.getDate(); // 1 - 31
+  const mysteryWords: { word: string; definition: string }[] = [
+    { word: "ANAFOR", definition: "Görünmez bir el gibi seni derine çekerim; suyun içinde kendi etrafımda dönen gizli bir kapıyım." },
+    { word: "SİMŞEK", definition: "Gökyüzünde saniyelerce çakan devasa bir kılıcım; arkamdan hemen gök gürültüsü yürür." },
+    { word: "YANKI", definition: "Sesini bana verirsin, sana aynısını geri yankılatırım; yalnız kayalıklarda yaşayan gölgeyim." },
+    { word: "KİMBİLİR", definition: "Bilinmezin ardındaki soruların cevapsız anahtarıyım; ne zaman gelsen sırrı korurum." },
+    { word: "GÖLGE", definition: "Işık varken arkandan ayrılmam, karanlık çökünce aniden ortadan kaybolurum." },
+    { word: "PUSULA", definition: "Yolunu kaybettiğinde iğnem hep kuzeyi gösterir, ama sana nereye gideceğini söylemem." },
+    { word: "ZAMAN", definition: "Görünmem ama herkesi yaşlandırırım, durduramazsın; sürekli akar ama kabı yoktur." },
+    { word: "AYNA", definition: "Bana bakarsan seni gösteririm; ama konuşmam, sır tutarım ve dokunursan soğuğumdur." },
+    { word: "KOSMOS", definition: "Sonsuz karanlığın içinde milyarlarca elmas taşıyan devasa gizemli çarkım." },
+    { word: "RÜZGAR", definition: "Dokunamazsın ama saçını dalgalandırırım; ağaçları eğip geçerim ama izim görünmez." },
+    { word: "SARMAŞIK", definition: "Duvarlara sessizce tırmanır, etrafı kuşatırım; ayaksızım ama her yere sarılırım." },
+    { word: "SERAP", definition: "Susuz çölde sana serin bir göl vaat ederim, yaklaştıkça kaybolup seni hayal kırıklığına uğratırım." },
+    { word: "TILSIM", definition: "Boynunda taşırsın ya da zihninde saklarsın; kötü gözlerden koruduğuna inanılan gizli güç." },
+    { word: "KRİSTAL", definition: "Karanlık mağarada doğarım, ışık vurduğunda rengarenk parlayan geometrik bir mucizeyim." },
+    { word: "HAKİKAT", definition: "Herkes beni arar ama kimse bütünüyle kabullenemez; yalanın maskesini düşüren keskin kılıç." },
+    { word: "LABİRENT", definition: "Binbir yolum vardır ama sadece biri seni özgürlüğe çıkarır; yanlış adımda başa dönersin." },
+    { word: "KEHANET", definition: "Henüz yaşanmamış günlerin üzerindeki sis perdesini aralayan gizemli kehanet fısıltısı." },
+    { word: "KIVILCIM", definition: "Küçücük bir temasla doğarım; dikkatsiz olursan koskoca bir ormanı küleye çeviririm." },
+    { word: "UFUK", definition: "Bana doğru ne kadar koşarsan koş, aramızdaki mesafe hiç kısalmaz." },
+    { word: "EFSANE", definition: "Gerçek mi yalan mı kimse bilmez; dilden dile dolaşarak ölümsüzleşen kadim öykü." },
+    { word: "SENTEZ", definition: "Ayrı ayrı parçaları simya gibi eritip yepyeni bir hakikate dönüştüren bağ." },
+    { word: "ZİRVE", definition: "Oraya tırmanmak yıllar alır, orada kalmak ise rüzgara karşı amansız bir mücadeledir." },
+    { word: "BELLEK", definition: "Gözlerini kapattığında çocukluğunu ve geçmişi sana tekrar yaşatan zihin kütüphanesi." },
+    { word: "KİLİT", definition: "Anahtarım olmadan kapıları açamazsın; sırları koruyan dilsiz muhafızım." },
+    { word: "RESONANS", definition: "Aynı frekansta atan iki yüreğin veya telin birleşip dünyayı sarsan titreşimi." },
+    { word: "DÖNÜŞÜM", definition: "Tırtılın kozadan çıkıp kanat çırpması gibi, eski halinden eser bırakmayan değişim." },
+    { word: "KEŞİF", definition: "Karanlık haritalarda ayak basılmamış kara parçalarını gün ışığına çıkarma cesareti." },
+    { word: "ÖZELİK", definition: "Seni sen yapan, eşsiz kılan ve kalabalıklar arasında parlamanı sağlayan gizli imza." },
+    { word: "SARMAL", definition: "Kendi etrafında döne döne sonsuzluğa veya merkeze doğru çekilen gizemli çizgi." },
+    { word: "MÜCADELE", definition: "Düşsen de defalarca ayağa kalkıp hedefe doğru atılan kararlı adım." },
   ];
-  const picked = mysteryWords[seed % mysteryWords.length]!;
+
+  // (dayOfMonth - 1) % 30 ile tam 30 günlük döngü sağlanır.
+  const index = (dayOfMonth - 1) % mysteryWords.length;
+  const picked = mysteryWords[index]!;
   return { ...picked, rewardXp: 150 };
 }
 
@@ -497,13 +563,13 @@ export type DailyLoginReward = {
 };
 
 export const DAILY_LOGIN_REWARDS: DailyLoginReward[] = [
-  { day: 1, label: "1. GÜN", rewardType: "coins", amount: 25, icon: "🪙" },
-  { day: 2, label: "2. GÜN", rewardType: "xp", amount: 60, icon: "⚡" },
-  { day: 3, label: "3. GÜN", rewardType: "coins", amount: 50, icon: "🪙" },
-  { day: 4, label: "4. GÜN", rewardType: "xp", amount: 100, icon: "⚡" },
-  { day: 5, label: "5. GÜN", rewardType: "coins", amount: 75, icon: "🪙" },
-  { day: 6, label: "6. GÜN", rewardType: "xp", amount: 150, icon: "⚡" },
-  { day: 7, label: "7. GÜN", rewardType: "shield", amount: 1, icon: "🛡️" },
+  { day: 1, label: "1. GÜN", rewardType: "coins", amount: 15, icon: "🪙" },
+  { day: 2, label: "2. GÜN", rewardType: "xp", amount: 100, icon: "⚡" },
+  { day: 3, label: "3. GÜN", rewardType: "coins", amount: 30, icon: "🪙" },
+  { day: 4, label: "4. GÜN", rewardType: "xp", amount: 200, icon: "⚡" },
+  { day: 5, label: "5. GÜN", rewardType: "coins", amount: 50, icon: "🪙" },
+  { day: 6, label: "6. GÜN", rewardType: "xp", amount: 300, icon: "⚡" },
+  { day: 7, label: "7. GÜN", rewardType: "shield", amount: 2, icon: "🛡️" },
 ];
 
 export function checkDailyLoginReward(progress: PlayerProgress, todayId: string): { reward: DailyLoginReward; updatedProgress: PlayerProgress } | null {
@@ -666,6 +732,88 @@ export function getUnclaimedMissionsCount(progress: PlayerProgress): number {
   return count;
 }
 
+export function getSeasonId(date = new Date()): string {
+  const bimonthlySeason = Math.floor(date.getMonth() / 2) + 1;
+  return `${date.getFullYear()}-S${String(bimonthlySeason).padStart(2, "0")}`;
+}
+
+export function getSeasonRemainingTime(date = new Date()): { days: number; hours: number; minutes: number; seconds: number; formatted: string } {
+  const currentMonth = date.getMonth();
+  const nextSeasonMonth = currentMonth % 2 === 0 ? currentMonth + 2 : currentMonth + 1;
+  const nextSeasonDate = new Date(date.getFullYear(), nextSeasonMonth, 1, 0, 0, 0, 0);
+  
+  const diffMs = Math.max(0, nextSeasonDate.getTime() - date.getTime());
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+  
+  const formatted = days > 0 ? `${days}g ${hours}s` : `${hours}s ${minutes}dk`;
+  return { days, hours, minutes, seconds, formatted };
+}
+
+export type SeasonResetResult = {
+  seasonResetPerformed: boolean;
+  oldSeasonId?: string;
+  newSeasonId: string;
+  previousRank?: string;
+  previousLp?: number;
+  newLp?: number;
+};
+
+export function reconcileSeasonReset(progress: PlayerProgress, date = new Date()): { updatedProgress: PlayerProgress; resetResult: SeasonResetResult } {
+  const currentSeasonId = getSeasonId(date);
+  const lastReset = progress.lastSeasonResetId;
+
+  if (lastReset === currentSeasonId) {
+    return {
+      updatedProgress: progress,
+      resetResult: { seasonResetPerformed: false, newSeasonId: currentSeasonId },
+    };
+  }
+
+  const currentLp = progress.lp ?? 0;
+  const currentTierInfo = getLeagueTier(currentLp);
+  const oldRank = currentTierInfo.tier;
+
+  // Kademeli Lig Puanı Soft Reset Mantığı:
+  // DEMİR / BRONZ (0 - 899 LP): LP değişmez
+  // GÜMÜŞ / ALTIN / PLATİN (900 - 3599 LP): LP %30 düşürülür
+  // ELMAS / YÜCELİK / ÖLÜMSÜZLÜK / RADIAN (3600+ LP): LP 2500'e (Platin kademesine) çekilir
+  let newLp = currentLp;
+  if (currentLp >= 3600) {
+    newLp = 2500;
+  } else if (currentLp >= 900) {
+    newLp = Math.floor(currentLp * 0.7);
+  }
+
+  const newHistoryEntry = {
+    seasonId: lastReset || "2026-S08",
+    rank: oldRank,
+    lp: currentLp,
+    date: getDayId(date),
+  };
+
+  const updatedProgress: PlayerProgress = {
+    ...progress,
+    lp: newLp,
+    lastSeasonResetId: currentSeasonId,
+    seasonHistory: [...(progress.seasonHistory || []), newHistoryEntry],
+  };
+
+  return {
+    updatedProgress,
+    resetResult: {
+      seasonResetPerformed: true,
+      oldSeasonId: lastReset || "Önceki Sezon",
+      newSeasonId: currentSeasonId,
+      previousRank: oldRank,
+      previousLp: currentLp,
+      newLp,
+    },
+  };
+}
+
 export type DailyReconciliation = {
   progress: PlayerProgress;
   shieldSaved: boolean;
@@ -674,6 +822,7 @@ export type DailyReconciliation = {
   previousStreak: number;
   missionsReset: boolean;
   loginReward: DailyLoginReward | null;
+  seasonReset: SeasonResetResult;
 };
 
 export function reconcilePlayerProgress(progress: PlayerProgress, date = new Date()): DailyReconciliation {
@@ -686,7 +835,9 @@ export function reconcilePlayerProgress(progress: PlayerProgress, date = new Dat
   const missionsNeedReset = currentProgress.missionsDate !== todayId;
   currentProgress = reconcileMissions(currentProgress, todayId, weekId);
 
-  // Login reward is claimed manually via the CommandCenter UI container
+  // Sezonluk Lig Puanı Soft Reset Kontrolü
+  const seasonRes = reconcileSeasonReset(currentProgress, date);
+  currentProgress = seasonRes.updatedProgress;
 
   return {
     progress: currentProgress,
@@ -696,5 +847,6 @@ export function reconcilePlayerProgress(progress: PlayerProgress, date = new Dat
     previousStreak: streakRes.previousStreak,
     missionsReset: missionsNeedReset,
     loginReward: null,
+    seasonReset: seasonRes.resetResult,
   };
 }

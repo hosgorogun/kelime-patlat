@@ -22,6 +22,7 @@ export function SoloLevels({
   const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
   const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
   const scrollViewRef = useRef<ScrollView>(null);
+  const claimingRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     const current = Math.min(unlockedLevel, MAX_SOLO_LEVEL);
@@ -159,7 +160,8 @@ export function SoloLevels({
                       </View>
                       <Pressable
                         onPress={() => {
-                          if (!isUnlocked || isClaimed) return;
+                          if (!isUnlocked || isClaimed || claimingRef.current.has(milestone.level)) return;
+                          claimingRef.current.add(milestone.level);
                           gameSfx.victory();
                           onClaimMilestone?.(milestone);
                         }}

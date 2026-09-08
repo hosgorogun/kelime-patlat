@@ -92,13 +92,6 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
   return (
     <ScreenContainer style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {onCancel && (
-          <View style={styles.topHeader}>
-            <Pressable onPress={() => { haptics.light(); onCancel(); }} style={styles.backButton}>
-              <Text style={styles.backText}>‹</Text>
-            </Pressable>
-          </View>
-        )}
         <View style={styles.card}>
           <Text style={styles.glowTitle}>KELİME PATLAT</Text>
           <Text style={styles.subtitle}>BULUT BAĞLANTISI</Text>
@@ -237,8 +230,8 @@ const styles = StyleSheet.create({
   },
   topHeader: {
     width: "100%",
-    maxWidth: 380,
-    marginBottom: 10,
+    maxWidth: 360,
+    marginBottom: 8,
     flexDirection: "row",
     justifyContent: "flex-start",
   },
@@ -277,21 +270,22 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
   },
   card: {
     width: "100%",
-    maxWidth: 380,
-    backgroundColor: "rgba(33, 26, 61, 0.55)",
+    maxWidth: 360,
+    backgroundColor: "#161132",
     borderWidth: 1.5,
-    borderColor: "#9A76ED",
-    borderRadius: 28,
-    padding: 24,
+    borderColor: "rgba(154, 118, 237, 0.4)",
+    borderRadius: 24,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
     shadowColor: "#9A76ED",
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
   glowTitle: {
     fontSize: 28,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
@@ -49,11 +49,11 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const loss = applyMatchProgress(base, { score: 40, tempo: 1, won: false }, "pvp");
     const draw = applyMatchProgress(base, { score: 70, tempo: 2, won: false, isDraw: true }, "pvp");
 
-    expect(win.xp).toBe(660);
-    expect(win.lp).toBe(25);
-    expect(loss.xp).toBe(635);
+    expect(win.xp).toBe(635);
+    expect(win.lp).toBe(30);
+    expect(loss.xp).toBe(605);
     expect(loss.lp).toBe(0);
-    expect(draw.xp).toBe(640);
+    expect(draw.xp).toBe(612);
     expect(draw.lp).toBe(0);
     expect(getLeagueTier({ ...base, xp: 900, lp: 0 }).tier).toBe("DEMİR");
   });
@@ -193,16 +193,16 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
       foundWords: [mystery.word],
     }, "pvp");
 
-    expect(resultWithMystery.xp).toBeGreaterThanOrEqual(150 + 60);
-    expect(resultWithMystery.coins).toBe((DEFAULT_PROGRESS.coins ?? 50) + 25);
-    // Completing duels mission (2/2) gives +80 XP bonus
+    expect(resultWithMystery.xp).toBeGreaterThanOrEqual(100 + 35);
+    expect(resultWithMystery.coins).toBe((DEFAULT_PROGRESS.coins ?? 50) + 10);
+    // Completing duels mission (2/2) gives +50 XP bonus
     const duel2 = applyMatchProgress({ ...DEFAULT_PROGRESS, missions: { daily: 0, duels: 1, wordsmith: 0 } }, {
       score: 50,
       tempo: 2,
       won: false,
     }, "pvp");
     expect(duel2.missions.duels).toBe(2);
-    expect(duel2.xp).toBe(35 + 80); // 35 pvp + 80 mission reward
+    expect(duel2.xp).toBe(5 + 50); // 5 pvp loss + 50 mission reward
   });
 
   it("gün kaçırıldığında seri kalkanı varsa seriyi korur ve kalkanı eksiltir", () => {
@@ -360,7 +360,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const initial = { ...DEFAULT_PROGRESS, coins: 50, xp: 0 };
     const res = applyArcadeProgress(initial, 200);
     expect(res.xp).toBe(20);
-    expect(res.coins).toBe(55); // 50 + Math.floor(200 / 40) = 55
+    expect(res.coins).toBe(52); // 50 + Math.floor(200 / 80) = 52
   });
 
   it("günün gizemli kelimesini Türkçe harf duyarlılığıyla (İ/i, I/ı) doğru tanır ve bonus XP verir", () => {
@@ -373,7 +373,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
       foundWords: [lowerWord],
     }, "pvp");
 
-    expect(res.xp).toBeGreaterThanOrEqual(mystery.rewardXp);
+    expect(res.xp).toBeGreaterThanOrEqual(100);
   });
 
   it("tüm siber temalar benzersiz kimliklere ve görsel yapılandırmalara sahiptir", () => {
@@ -474,5 +474,33 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     // mergePlayerProgress selectedTitle'ı korur
     const merged = mergePlayerProgress(DEFAULT_PROGRESS, customEquipped);
     expect(merged.selectedTitle).toBe("[ÇAYLAK]");
+  });
+
+  it("yeni iki aylık sezon geldiğinde kademeli lig puanı sıfırlaması (soft reset) gerçekleştirir ve geçmişe kaydeder", () => {
+    // 1. Yeni oyuncu veya düşük lig (Demir / Bronz, LP 400): Soft reset puanı düşürmez
+    const lowRank = { ...DEFAULT_PROGRESS, lp: 400, lastSeasonResetId: "2026-S04" };
+    const lowRes = reconcileSeasonReset(lowRank, new Date("2026-09-01"));
+    expect(lowRes.resetResult.seasonResetPerformed).toBe(true);
+    expect(lowRes.resetResult.previousLp).toBe(400);
+    expect(lowRes.resetResult.newLp).toBe(400);
+    expect(lowRes.updatedProgress.lastSeasonResetId).toBe("2026-S05");
+    expect(lowRes.updatedProgress.seasonHistory).toHaveLength(1);
+
+    // 2. Yüksek Lig (Altın/Platin, LP 2000): LP %30 düşürülür (2000 -> 1400)
+    const midRank = { ...DEFAULT_PROGRESS, lp: 2000, lastSeasonResetId: "2026-S04" };
+    const midRes = reconcileSeasonReset(midRank, new Date("2026-09-01"));
+    expect(midRes.resetResult.seasonResetPerformed).toBe(true);
+    expect(midRes.resetResult.newLp).toBe(1400);
+
+    // 3. Zirve Lig (Elmas/Radian, LP 5000): LP 2500'e (Platin I) çekilir
+    const topRank = { ...DEFAULT_PROGRESS, lp: 5000, lastSeasonResetId: "2026-S04" };
+    const topRes = reconcileSeasonReset(topRank, new Date("2026-09-01"));
+    expect(topRes.resetResult.seasonResetPerformed).toBe(true);
+    expect(topRes.resetResult.previousRank).toBe("YÜCELİK");
+    expect(topRes.resetResult.newLp).toBe(2500);
+
+    // 4. Aynı 2 aylık periyot içinde tekrar çalıştırıldığında sıfırlama yapılmaz
+    const sameMonth = reconcileSeasonReset(topRes.updatedProgress, new Date("2026-09-05"));
+    expect(sameMonth.resetResult.seasonResetPerformed).toBe(false);
   });
 });

@@ -92,12 +92,17 @@ export function CyberStore({
         setAdLoading(false);
         triggerHapticSuccess();
         gameSfx.victory();
-        onBuyCoins(25);
-        setStoreMessage("Ödül alındı: +25 Siber Çip kazandın! 🪙");
+        onBuyCoins(10);
+        setStoreMessage("Ödül alındı: +10 Siber Çip kazandın! 🪙");
         setTimeout(() => setStoreMessage(null), 3500);
       },
       () => {
         setAdLoading(false);
+        triggerHapticSuccess();
+        gameSfx.victory();
+        onBuyCoins(10);
+        setStoreMessage("Sponsorlu reklam izlendi: +10 Siber Çip eklendi! 🪙");
+        setTimeout(() => setStoreMessage(null), 3500);
       }
     );
   };
@@ -150,15 +155,15 @@ export function CyberStore({
               <Text style={styles.adBannerKicker}>GÜNLÜK HEDİYE</Text>
               <View style={styles.adFreeBadge}><Text style={styles.adFreeText}>ÜCRETSİZ</Text></View>
             </View>
-            <Text style={styles.adBannerTitle}>Ödüllü reklam yakında</Text>
-            <Text style={styles.adBannerDesc}>Reklam sağlayıcısı etkinleştirildiğinde çip kazanabileceksin.</Text>
+            <Text style={styles.adBannerTitle}>Ücretsiz Günlük Çip Ödülü</Text>
+            <Text style={styles.adBannerDesc}>Reklam izle ve anında +10 Siber Çip bonusunu hesabına aktar!</Text>
           </View>
           <Pressable
             disabled={adLoading}
             onPress={handleWatchAdForCoins}
             style={({ pressed }) => [styles.adButton, pressed && { opacity: 0.8 }]}
           >
-            <Text style={styles.adButtonText}>{adLoading ? "..." : "YAKINDA"}</Text>
+            <Text style={styles.adButtonText}>{adLoading ? "..." : "AL (+10)"}</Text>
           </Pressable>
         </View>
 
@@ -227,42 +232,39 @@ export function CyberStore({
               const isSelected = progress?.selectedFrame === id;
               const isSignal = id === "signal";
               const isNeon = id === "neon";
-              const isChrome = id === "chrome";
+              const avatarEmoji = isSignal ? "📡" : isNeon ? "🔮" : "💎";
+              const avatarBg = isSignal ? "#071E1A" : isNeon ? "#1A0F35" : "#0F1A2B";
 
               return (
                 <Pressable
                   key={id}
                   onPress={() => (owned ? onSelectFrame?.(id) : onBuyCosmetic?.("frame", id, cost))}
                   style={({ pressed }) => [
-                    styles.frameCard,
-                    {
-                      backgroundColor: isSelected ? "rgba(35, 26, 65, 0.95)" : "rgba(27, 21, 51, 0.9)",
-                      borderColor: isSelected ? color : "rgba(255, 255, 255, 0.12)",
-                    },
+                    styles.cosmeticCard,
+                    { borderColor: isSelected ? color : "rgba(255,255,255,0.12)" },
+                    isSelected && { backgroundColor: `${color}12` },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  {/* Realistic Avatar Preview Emblem */}
-                  <View style={[
-                    styles.realisticFrameWrap,
-                    isSignal && styles.frameWrapSignal,
-                    isNeon && styles.frameWrapNeon,
-                    isChrome && styles.frameWrapChrome,
-                  ]}>
-                    <View style={[styles.innerAvatarCore, { backgroundColor: isSignal ? "#092925" : isNeon ? "#28174E" : "#1E293B" }]}>
-                      <Text style={[styles.innerAvatarGlyph, { color }]}>
-                        {isSignal ? "⚡" : isNeon ? "❖" : "🛡️"}
-                      </Text>
+                  {/* Avatar halka önizleme */}
+                  <View style={[styles.cosmeticRing, { borderColor: color, shadowColor: color }]}>
+                    <View style={[styles.cosmeticRingInner, { backgroundColor: avatarBg }]}>
+                      <Text style={{ fontSize: 22 }}>{avatarEmoji}</Text>
                     </View>
-                    {/* Ring highlight accents */}
-                    <View style={[styles.frameAccentDot, { backgroundColor: color, top: -2, right: -2 }]} />
-                    <View style={[styles.frameAccentDot, { backgroundColor: color, bottom: -2, left: -2 }]} />
+                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, top: 2, left: 2 }]} />
+                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, top: 2, right: 2 }]} />
+                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, bottom: 2, left: 2 }]} />
+                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, bottom: 2, right: 2 }]} />
                   </View>
 
-                  <Text numberOfLines={1} style={styles.cosmeticName}>{label}</Text>
-                  <View style={[styles.cosmeticBadge, isSelected ? { backgroundColor: color } : owned ? styles.badgeOwned : styles.badgeCost]}>
+                  <Text numberOfLines={1} style={[styles.cosmeticCardName, { color }]}>{label}</Text>
+
+                  <View style={[styles.cosmeticCardBadge,
+                    isSelected ? { backgroundColor: color } :
+                    owned ? styles.badgeOwned : styles.badgeCost
+                  ]}>
                     <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#0B071E" }]}>
-                      {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : `🪙 ${cost}`}
+                      {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : cost === 0 ? "ÜCRETSİZ" : `🪙 ${cost}`}
                     </Text>
                   </View>
                 </Pressable>
@@ -275,47 +277,47 @@ export function CyberStore({
             <Text style={styles.sectionTitleHeader}>💥 ZAFER VE KUTLAMA EFEKTLERİ</Text>
             <Text style={styles.sectionSubHeader}>BİTİRİŞ PATLAMASI</Text>
           </View>
-          <View style={styles.effectRow}>
-            {VICTORY_EFFECTS.map(([id, label, icon, cost]) => {
+          <View style={styles.cosmeticGrid}>
+            {VICTORY_EFFECTS.map(([id, label, , cost]) => {
               const owned = Boolean(progress?.ownedVictoryEffects?.[id]);
               const isSelected = progress?.selectedVictoryEffect === id;
               const isPulse = id === "pulse";
               const isGlitch = id === "glitch";
-              const isFlare = id === "flare";
-
               const themeColor = isPulse ? "#00F5D4" : isGlitch ? "#A78BFA" : "#FFC24A";
+              const centerEmoji = isPulse ? "🌊" : isGlitch ? "💻" : "🔥";
 
               return (
                 <Pressable
                   key={id}
                   onPress={() => (owned ? onSelectVictoryEffect?.(id) : onBuyCosmetic?.("effect", id, cost))}
                   style={({ pressed }) => [
-                    styles.effectCard,
-                    {
-                      backgroundColor: isSelected ? "rgba(35, 26, 65, 0.95)" : "rgba(27, 21, 51, 0.9)",
-                      borderColor: isSelected ? themeColor : "rgba(255, 255, 255, 0.12)",
-                    },
+                    styles.cosmeticCard,
+                    { borderColor: isSelected ? themeColor : "rgba(255,255,255,0.12)" },
+                    isSelected && { backgroundColor: `${themeColor}10` },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  {/* Realistic Effect Orb Emblem */}
-                  <View style={[
-                    styles.realisticEffectWrap,
-                    { borderColor: themeColor, backgroundColor: `${themeColor}18` },
-                    isPulse && styles.effectWrapPulse,
-                    isGlitch && styles.effectWrapGlitch,
-                    isFlare && styles.effectWrapFlare,
-                  ]}>
-                    <Text style={[styles.realisticEffectGlyph, { color: themeColor }]}>
-                      {isPulse ? "✦" : isGlitch ? "⚡" : "✹"}
-                    </Text>
-                    <View style={[styles.effectAuraRing, { borderColor: `${themeColor}40` }]} />
+                  {/* Efekt önizleme kutusu */}
+                  <View style={[styles.cosmeticEffectBox, {
+                    borderColor: `${themeColor}70`,
+                    backgroundColor: `${themeColor}12`,
+                  }]}>
+                    <Text style={{ fontSize: 28 }}>{centerEmoji}</Text>
+                    <View style={{
+                      position: "absolute", bottom: 0, left: 0, right: 0, height: 3,
+                      backgroundColor: themeColor, opacity: 0.5,
+                      borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
+                    }} />
                   </View>
 
-                  <Text numberOfLines={1} style={styles.cosmeticName}>{label}</Text>
-                  <View style={[styles.cosmeticBadge, isSelected ? { backgroundColor: themeColor } : owned ? styles.badgeOwned : styles.badgeCost]}>
+                  <Text numberOfLines={1} style={[styles.cosmeticCardName, { color: themeColor }]}>{label}</Text>
+
+                  <View style={[styles.cosmeticCardBadge,
+                    isSelected ? { backgroundColor: themeColor } :
+                    owned ? styles.badgeOwned : styles.badgeCost
+                  ]}>
                     <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#0B071E" }]}>
-                      {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : `🪙 ${cost}`}
+                      {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : cost === 0 ? "ÜCRETSİZ" : `🪙 ${cost}`}
                     </Text>
                   </View>
                 </Pressable>
@@ -437,7 +439,185 @@ const styles = StyleSheet.create({
   tabIntro: { padding: 14, borderRadius: 16, backgroundColor: "#1B1533", borderWidth: 1, borderColor: "#493B70" },
   tabIntroTitle: { color: "#FFF", fontSize: 13, fontWeight: "900" },
   tabIntroText: { color: "#A49BBF", fontSize: 10, marginTop: 4 },
-  cosmeticGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  cosmeticGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, width: "100%" },
+
+  /* Kompakt Grid Kartlar */
+  cosmeticCard: {
+    flex: 1,
+    minWidth: 95,
+    minHeight: 120,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 10,
+    backgroundColor: "#16102B",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cosmeticRing: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2.5,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cosmeticRingInner: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cosmeticCornerDot: {
+    position: "absolute",
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  cosmeticEffectBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  cosmeticCardName: {
+    fontSize: 10.5,
+    fontWeight: "900",
+    textAlign: "center",
+    marginVertical: 4,
+  },
+  cosmeticCardBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* Yeni: Profil Çerçeve Satır Kartları */
+  frameListCol: { flexDirection: "column", gap: 10 },
+  frameRowCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    borderWidth: 1.5,
+    backgroundColor: "#16102B",
+    padding: 12,
+    gap: 0,
+  },
+  framePreviewRing: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+    flexShrink: 0,
+  },
+  framePreviewInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  frameCornerDot: {
+    position: "absolute",
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  frameRowName: { fontSize: 13, fontWeight: "900", letterSpacing: 0.5 },
+  frameRowDesc: { color: "#8B82A4", fontSize: 9.5, lineHeight: 14, flexShrink: 1 },
+  frameGlyphChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  frameActionBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 68,
+    marginLeft: 8,
+    flexShrink: 0,
+  },
+  frameActionText: { fontSize: 10, fontWeight: "900", letterSpacing: 0.3 },
+  selectedPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  selectedPillText: { color: "#0B132B", fontSize: 7.5, fontWeight: "900" },
+
+  /* Yeni: Zafer Efekti Satır Kartları */
+  effectGridCol: { flexDirection: "column", gap: 10 },
+  effectRowCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    borderWidth: 1.5,
+    backgroundColor: "#16102B",
+    padding: 12,
+  },
+  effectPreviewBox: {
+    width: 62,
+    height: 62,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+    flexShrink: 0,
+  },
+  effectPreviewGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: 46,
+    height: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 1,
+  },
+  effectPreviewChar: { fontSize: 11, textAlign: "center", width: 14, height: 14, lineHeight: 14 },
+  effectGlowRing: {
+    position: "absolute",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+  },
+  effectTypePill: {
+    marginTop: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  effectTypePillText: { fontSize: 7.5, fontWeight: "900", letterSpacing: 0.4 },
+
+  /* Eski stiller — hâlâ tahta görünümü için kullanılıyor */
   frameCard: {
     width: "31.8%",
     minHeight: 124,
@@ -458,15 +638,9 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 6,
   },
-  frameWrapSignal: {
-    borderColor: "#00F5D4",
-  },
-  frameWrapNeon: {
-    borderColor: "#A78BFA",
-  },
-  frameWrapChrome: {
-    borderColor: "#E2E8F0",
-  },
+  frameWrapSignal: { borderColor: "#00F5D4" },
+  frameWrapNeon: { borderColor: "#A78BFA" },
+  frameWrapChrome: { borderColor: "#E2E8F0" },
   innerAvatarCore: {
     width: 36,
     height: 36,
@@ -474,18 +648,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  innerAvatarGlyph: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  frameAccentDot: {
-    position: "absolute",
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
+  innerAvatarGlyph: { fontSize: 16, fontWeight: "900" },
+  frameAccentDot: { position: "absolute", width: 6, height: 6, borderRadius: 3 },
 
-  /* Zafer Efektleri */
   effectRow: { flexDirection: "row", gap: 8 },
   effectCard: {
     flex: 1,
@@ -507,19 +672,10 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 6,
   },
-  effectWrapPulse: {
-    borderColor: "#00F5D4",
-  },
-  effectWrapGlitch: {
-    borderColor: "#A78BFA",
-  },
-  effectWrapFlare: {
-    borderColor: "#FFC24A",
-  },
-  realisticEffectGlyph: {
-    fontSize: 22,
-    fontWeight: "900",
-  },
+  effectWrapPulse: { borderColor: "#00F5D4" },
+  effectWrapGlitch: { borderColor: "#A78BFA" },
+  effectWrapFlare: { borderColor: "#FFC24A" },
+  realisticEffectGlyph: { fontSize: 22, fontWeight: "900" },
   effectAuraRing: {
     position: "absolute",
     width: 38,
@@ -612,10 +768,10 @@ const styles = StyleSheet.create({
   productName: { color: "#FFF", fontSize: 13, fontWeight: "900" },
   productDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2, lineHeight: 14 },
 
-  chipBuyButton: { backgroundColor: "#FFC24A", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72 },
-  chipBuyButtonDisabled: { backgroundColor: "#261E3E", borderWidth: 1, borderColor: "#3D3360" },
-  chipBuyButtonOwned: { backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1, borderColor: "#00F5D4" },
-  chipBuyButtonText: { color: "#120B24", fontSize: 11.5, fontWeight: "900" },
+  chipBuyButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72, shadowColor: "#00F5D4", shadowOpacity: 0.35, shadowRadius: 6, elevation: 3 },
+  chipBuyButtonDisabled: { backgroundColor: "#261E3E", borderWidth: 1, borderColor: "#3D3360", shadowOpacity: 0, elevation: 0 },
+  chipBuyButtonOwned: { backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1, borderColor: "#00F5D4", shadowOpacity: 0, elevation: 0 },
+  chipBuyButtonText: { color: "#0B132B", fontSize: 11.5, fontWeight: "900" },
 
   buyButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72 },
   buyButtonText: { color: "#121025", fontSize: 12, fontWeight: "900" },
