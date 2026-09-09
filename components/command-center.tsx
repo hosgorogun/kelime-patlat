@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Alert, Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Animated, Easing, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { type LeaderboardEntry } from "@/shared/game";
 import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, getDailyMysteryWord, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
@@ -113,7 +113,78 @@ export function CommandCenter({
 
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
 
-  return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+  const [infoModal, setInfoModal] = useState<"shield" | "radar" | null>(null);
+
+  return <>
+    {/* Resource Info Modal (Kalkan & Radar) */}
+    <Modal
+      visible={infoModal !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setInfoModal(null)}
+    >
+      <Pressable style={styles.modalOverlay} onPress={() => setInfoModal(null)}>
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <View style={[styles.modalIconBadge, infoModal === "shield" ? styles.modalIconBadgeShield : styles.modalIconBadgeRadar]}>
+            <Text style={styles.modalIconText}>{infoModal === "shield" ? "🛡️" : "👁️"}</Text>
+          </View>
+          
+          <Text style={styles.modalKicker}>
+            {infoModal === "shield" ? "SİBER SAVUNMA BİLEŞENİ" : "SİBER TARAMA BİLEŞENİ"}
+          </Text>
+          <Text style={styles.modalTitle}>
+            {infoModal === "shield" ? "Seri Kalkanı" : "Siber Radar"}
+          </Text>
+
+          <View style={styles.modalCountPill}>
+            <Text style={styles.modalCountLabel}>MEVCUT MİKTAR:</Text>
+            <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: "#38BDF8" } : { color: "#00F5D4" }]}>
+              {infoModal === "shield" ? (progress.streakShields ?? 1) : (3 + (progress.radarChargesBonus ?? 0))} Adet
+            </Text>
+          </View>
+
+          <Text style={styles.modalBody}>
+            {infoModal === "shield"
+              ? "Oyuna giremediğin veya günlük rotayı tamamlayamadığın günlerde otomatik olarak 1 Seri Kalkanı tüketilir. Böylece günlük galibiyet serin sıfırlanmaz ve korunur."
+              : "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."}
+          </Text>
+
+          <View style={styles.modalTipBox}>
+            <Text style={styles.modalTipTitle}>💡 NASIL KAZANILIR?</Text>
+            <Text style={styles.modalTipText}>
+              {infoModal === "shield"
+                ? "• Mağaza'dan Siber Çip ile satın alabilirsin.\n• Haftalık görevleri tamamlayarak kazanabilirsin.\n• 7 günlük giriş zincirinin son gününde epik hediye olarak verilir."
+                : "• Her seviyede 3 temel hak otomatik verilir.\n• Mağaza ve görevlerden ek kalıcı bonus haklar elde edebilirsin.\n• Seviye içi gizli sandıkları çözerek ekstra hak toplayabilirsin."}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => {
+              const target = infoModal;
+              setInfoModal(null);
+              if (target === "shield") onNavigate("store");
+            }}
+            style={({ pressed }) => [
+              styles.modalActionBtn,
+              infoModal === "shield" ? styles.modalActionBtnStore : styles.modalActionBtnClose,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.modalActionBtnText}>
+              {infoModal === "shield" ? "🛒 MAĞAZADA İNCELE" : "ANLADIM"}
+            </Text>
+          </Pressable>
+
+          {infoModal === "shield" && (
+            <Pressable onPress={() => setInfoModal(null)} style={styles.modalSecondaryBtn}>
+              <Text style={styles.modalSecondaryBtnText}>KAPAT</Text>
+            </Pressable>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     {/* Cockpit Profile & Control Bar with Realtime Currencies */}
     <View style={styles.topbar}>
       <View style={styles.topbarRow}>
@@ -152,13 +223,31 @@ export function CommandCenter({
         </View>
       </View>
 
-      {/* Persistent Resource Rail (Shields & Chips with Store Shortcut) */}
+      {/* Persistent Resource Rail (Shields, Radar, Chips with Info Modals) */}
       <View style={styles.resourceRow}>
-        <View style={styles.resourcePill}>
+        <Pressable 
+          onPress={() => { triggerHapticSelection(); setInfoModal("shield"); }}
+          style={({ pressed }) => [styles.resourcePill, styles.shieldPill, pressed && styles.pressed]}
+        >
           <Text style={styles.resourceIcon}>🛡️</Text>
           <Text style={styles.resourceLabel}>KALKAN</Text>
           <Text style={styles.resourceValue}>{progress.streakShields ?? 1}</Text>
-        </View>
+          <View style={styles.infoDot}><Text style={styles.infoDotText}>i</Text></View>
+        </Pressable>
+
+        <Pressable 
+          onPress={() => { triggerHapticSelection(); setInfoModal("radar"); }}
+          style={({ pressed }) => [styles.resourcePill, styles.radarPill, pressed && styles.pressed]}
+        >
+          <Text style={styles.resourceIcon}>👁️</Text>
+          <Text style={styles.resourceLabel}>RADAR</Text>
+          <Text style={[styles.resourceValue, { color: "#00F5D4" }]}>
+            {3 + (progress.radarChargesBonus ?? 0)}
+          </Text>
+          <View style={[styles.infoDot, { borderColor: "#00F5D480", backgroundColor: "#00F5D420" }]}>
+            <Text style={[styles.infoDotText, { color: "#00F5D4" }]}>i</Text>
+          </View>
+        </Pressable>
 
         <Pressable 
           onPress={() => onNavigate("store")} 
@@ -375,21 +464,21 @@ export function CommandCenter({
       </View>
     </Pressable>
 
-    {/* Nostaljik Gazete Labirenti Mini Oyunu */}
+    {/* Nostaljik Gazete Kare Bulmaca Mini Oyunu */}
     <View style={[styles.sectionHead, { marginTop: 14 }]}><Text style={styles.sectionTitle}>NOSTALJİ MİNİ OYUN</Text><Text style={styles.sectionMeta}>GAZETE BULMACASI</Text></View>
     <Pressable onPress={() => onNavigate("vintage" as any)} style={({ pressed }) => [styles.soloBanner, { borderColor: "#FFC24A", backgroundColor: "rgba(255, 194, 74, 0.08)" }, pressed && styles.pressed]}>
       <View style={styles.soloSkin}>
         <Text style={styles.soloTrophy}>🗞️</Text>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={[styles.soloEyebrow, { color: "#FFC24A" }]}>ÇİZGİ TAKİP LABİRENTİ</Text>
+            <Text style={[styles.soloEyebrow, { color: "#FFC24A" }]}>NOSTALJİ KARE BULMACA</Text>
             <View style={[styles.milestoneBadgePill, { backgroundColor: "rgba(255, 194, 74, 0.2)" }]}>
-              <Text style={[styles.milestoneBadgeText, { color: "#FFC24A" }]}>YENİ MİNİ OYUN</Text>
+              <Text style={[styles.milestoneBadgeText, { color: "#FFC24A" }]}>20 ÖZEL BÖLÜM</Text>
             </View>
           </View>
-          <Text style={styles.soloHeading}>GAZETE LABİRENTİ</Text>
+          <Text style={styles.soloHeading}>GAZETE BULMACASI</Text>
           <Text style={styles.soloDesc}>
-            Eski gazetelerdeki gibi çizgileri parmağınla takip et, karakterleri hedeflerine ulaştır ve bonus XP kazan!
+            Gazetedeki kare bulmaca ipuçlarını çöz, harf taşlarını 10×10 tahtaya yerleştir ve bonus XP kazan!
           </Text>
         </View>
         <Text style={[styles.soloArrow, { color: "#FFC24A" }]}>›</Text>
@@ -451,44 +540,8 @@ export function CommandCenter({
       </Pressable>
     </View>
 
-    {/* Quick Hub Jumpers: Görevler & Liderlik */}
-    <View style={styles.hubBannersRow}>
-      <Pressable 
-        onPress={() => onNavigate("missions")} 
-        style={({ pressed }) => [styles.hubBanner, styles.missionsBanner, pressed && styles.pressed]}
-      >
-        <Text style={styles.hubBannerGlyph}>⚡</Text>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={styles.hubBannerTitle}>GÖREVLER</Text>
-            {unclaimedMissionsCount > 0 && (
-              <View style={styles.hubBadgePill}>
-                <Text style={styles.hubBadgePillText}>{unclaimedMissionsCount}</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.hubBannerSub}>
-            {unclaimedMissionsCount > 0
-              ? `${unclaimedMissionsCount} ödül hazır!`
-              : "Haftalık hedefler ve XP"}
-          </Text>
-        </View>
-        <Text style={styles.hubBannerArrow}>→</Text>
-      </Pressable>
 
-      <Pressable 
-        onPress={() => onNavigate("season")} 
-        style={({ pressed }) => [styles.hubBanner, styles.seasonBanner, pressed && styles.pressed]}
-      >
-        <Text style={styles.hubBannerGlyph}>🏆</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.hubBannerTitle}>LİDER & ARKADAŞ</Text>
-          <Text style={styles.hubBannerSub}>Sıralama ve topluluk</Text>
-        </View>
-        <Text style={styles.hubBannerArrow}>→</Text>
-      </Pressable>
-    </View>
-  </ScrollView>;
+    </ScrollView></>;
 }
 
 const styles = StyleSheet.create({
@@ -506,15 +559,164 @@ const styles = StyleSheet.create({
   topIconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(124, 92, 246, 0.15)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.3)", alignItems: "center", justifyContent: "center" },
   topIconText: { fontSize: 14 },
   
-  resourceRow: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(124, 92, 246, 0.15)" },
-  resourcePill: { flex: 1, flexDirection: "row", alignItems: "center", paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: "rgba(23, 17, 43, 0.7)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)" },
+  resourceRow: { flexDirection: "row", gap: 6, alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(124, 92, 246, 0.15)" },
+  resourcePill: { flex: 1, flexDirection: "row", alignItems: "center", paddingVertical: 6, paddingHorizontal: 8, borderRadius: 14, backgroundColor: "rgba(23, 17, 43, 0.7)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", position: "relative" },
+  shieldPill: { backgroundColor: "rgba(56, 189, 248, 0.1)", borderColor: "rgba(56, 189, 248, 0.35)" },
+  radarPill: { backgroundColor: "rgba(0, 245, 212, 0.1)", borderColor: "rgba(0, 245, 212, 0.35)" },
   coinPill: { backgroundColor: "rgba(255, 194, 74, 0.1)", borderColor: "rgba(255, 194, 74, 0.35)" },
-  resourceIcon: { fontSize: 14, marginRight: 6 },
-  resourceLabel: { color: "#A799C7", fontSize: 9, fontWeight: "900", letterSpacing: 0.5, flex: 1 },
-  resourceValue: { color: "#FFF", fontSize: 12, fontWeight: "900" },
-  coinValue: { color: "#FFD000", fontSize: 12, fontWeight: "900", marginRight: 6 },
-  plusBadge: { width: 18, height: 18, borderRadius: 9, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center" },
-  plusText: { color: "#1A102B", fontSize: 12, fontWeight: "900", lineHeight: 14 },
+  resourceIcon: { fontSize: 13, marginRight: 4 },
+  resourceLabel: { color: "#A799C7", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.4, flex: 1 },
+  resourceValue: { color: "#FFF", fontSize: 11.5, fontWeight: "900" },
+  coinValue: { color: "#FFD000", fontSize: 11.5, fontWeight: "900", marginRight: 4 },
+  infoDot: { width: 13, height: 13, borderRadius: 7, borderWidth: 1, borderColor: "#38BDF880", backgroundColor: "#38BDF820", alignItems: "center", justifyContent: "center", marginLeft: 4 },
+  infoDotText: { color: "#38BDF8", fontSize: 8.5, fontWeight: "900", lineHeight: 10 },
+  plusBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center" },
+  plusText: { color: "#1A102B", fontSize: 11, fontWeight: "900", lineHeight: 13 },
+
+  /* Resource Info Modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(9, 6, 20, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#16112C",
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1.5,
+    borderColor: "#4A3B75",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  modalIconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    borderWidth: 2,
+  },
+  modalIconBadgeShield: {
+    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    borderColor: "#38BDF8",
+    shadowColor: "#38BDF8",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  modalIconBadgeRadar: {
+    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    borderColor: "#00F5D4",
+    shadowColor: "#00F5D4",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  modalIconText: { fontSize: 28 },
+  modalKicker: {
+    color: "#A78BFA",
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 1.1,
+    textAlign: "center",
+  },
+  modalTitle: {
+    color: "#FFF9FC",
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  modalCountPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  modalCountLabel: { color: "#C4B5FD", fontSize: 9.5, fontWeight: "800", letterSpacing: 0.5 },
+  modalCountValue: { fontSize: 13, fontWeight: "900" },
+  modalBody: {
+    color: "#E2E8F0",
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  modalTipBox: {
+    width: "100%",
+    backgroundColor: "rgba(23, 17, 44, 0.8)",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(124, 92, 246, 0.3)",
+    marginBottom: 18,
+  },
+  modalTipTitle: {
+    color: "#FFD000",
+    fontSize: 9.5,
+    fontWeight: "900",
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  modalTipText: {
+    color: "#CBD5E1",
+    fontSize: 10.5,
+    lineHeight: 16,
+    fontWeight: "600",
+  },
+  modalActionBtn: {
+    width: "100%",
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalActionBtnStore: {
+    backgroundColor: "#38BDF8",
+    shadowColor: "#38BDF8",
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalActionBtnClose: {
+    backgroundColor: "#00F5D4",
+    shadowColor: "#00F5D4",
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalActionBtnText: {
+    color: "#0F172A",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  modalSecondaryBtn: {
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+  },
+  modalSecondaryBtnText: {
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "800",
+  },
   
   signalDeck: { minHeight: 185, marginTop: 12, padding: 16, borderRadius: 20, overflow: "hidden", backgroundColor: "rgba(43, 33, 88, 0.5)", borderWidth: 1, borderColor: "rgba(127, 103, 211, 0.35)", position: "relative" }, 
   radarRing: { position: "absolute", right: -25, top: -28, width: 135, height: 135, borderRadius: 70, borderWidth: 1.5, zIndex: 1 }, 

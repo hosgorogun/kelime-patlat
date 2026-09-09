@@ -9,9 +9,10 @@ let gameSocket: Socket | null = null;
 export function getGameSocket() {
   if (gameSocket?.connected) return gameSocket;
   if (!gameSocket) {
-    gameSocket = io(getApiBaseUrl(), {
+    const url = getApiBaseUrl();
+    gameSocket = io(url, {
       autoConnect: true,
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       auth: (callback) => {
         void AsyncStorage.getItem(SESSION_TOKEN_KEY).then((token) => callback({ token: token && token !== "guest" ? token : undefined }));
       },
@@ -19,6 +20,7 @@ export function getGameSocket() {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 800,
       reconnectionDelayMax: 3_000,
+      timeout: 10_000,
     });
   } else {
     gameSocket.connect();

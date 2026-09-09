@@ -39,6 +39,17 @@ export type GamePlayer = {
   connected: boolean;
   ready: boolean;
   rematch: boolean;
+  avatar?: string;
+  avatarPhoto?: string;
+  selectedTitle?: string;
+  level?: number;
+  tier?: string;
+  lp?: number;
+  wins?: number;
+  matches?: number;
+  streak?: number;
+  bestScore?: number;
+  bestTempo?: number;
 };
 
 export type FoundWord = {

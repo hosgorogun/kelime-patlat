@@ -40,6 +40,8 @@ export function SeasonHub({
   leaderboard,
   onBack,
   onChallengeFriend,
+  onUpdateFriends,
+  onInspectUser,
 }: {
   playerId: string;
   playerName?: string;
@@ -47,6 +49,8 @@ export function SeasonHub({
   leaderboard: LeaderboardEntry[];
   onBack: () => void;
   onChallengeFriend?: (friendName: string, size: BoardSize) => void;
+  onUpdateFriends?: (updatedFriends: FriendUser[]) => void;
+  onInspectUser?: (user: Partial<LeaderboardEntry> & { id: string; name: string }) => void;
 }) {
   const [activeTab, setActiveTab] = useState<SeasonTab>("leaderboard");
   const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
@@ -124,8 +128,9 @@ export function SeasonHub({
   const userEntryIndex = displayedLeaderboard.findIndex((e) => e.id === playerId);
   const userEntry = userEntryIndex >= 0 ? displayedLeaderboard[userEntryIndex] : null;
   const userRankPosition = userEntryIndex >= 0 ? userEntryIndex + 1 : null;
-  const top1Score = displayedLeaderboard[0]?.score ?? 0;
-  const userScore = userEntry?.score ?? progress.xp ?? 0;
+  const isLpRank = rankingType === "lp";
+  const top1Score = isLpRank ? (displayedLeaderboard[0]?.lp ?? displayedLeaderboard[0]?.score ?? 0) : (displayedLeaderboard[0]?.score ?? 0);
+  const userScore = isLpRank ? (userEntry?.lp ?? progress.lp ?? 0) : (userEntry?.score ?? progress.xp ?? 0);
   const scoreDiffToLeader = Math.max(0, top1Score - userScore);
 
   // Top 3 Podium
@@ -141,7 +146,9 @@ export function SeasonHub({
     setSocialMessage(res.message);
     if (res.success) {
       triggerHapticSuccess();
-      setFriendsList([...socialManager.getFriends()]);
+      const updated = [...socialManager.getFriends()];
+      setFriendsList(updated);
+      onUpdateFriends?.(updated);
       setFriendInput("");
     }
     setTimeout(() => setSocialMessage(null), 3500);
@@ -159,7 +166,9 @@ export function SeasonHub({
           onPress: () => {
             triggerHapticSelection();
             socialManager.removeFriend(friend.id);
-            setFriendsList([...socialManager.getFriends()]);
+            const updated = [...socialManager.getFriends()];
+            setFriendsList(updated);
+            onUpdateFriends?.(updated);
           },
         },
       ]
@@ -354,7 +363,13 @@ export function SeasonHub({
               <View style={styles.podiumContainer}>
                 {/* 2nd Place */}
                 {top2 && (
-                  <View style={[styles.podiumColumn, styles.podiumCol2]}>
+                  <Pressable
+                    style={[styles.podiumColumn, styles.podiumCol2]}
+                    onPress={() => {
+                      triggerHapticSelection();
+                      onInspectUser?.(top2);
+                    }}
+                  >
                     <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap2]}>
                       <Text style={styles.podiumAvatarText}>{top2.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
                       <View style={[styles.podiumRankBadge, styles.podiumRankBadge2]}>
@@ -367,16 +382,26 @@ export function SeasonHub({
                         <Text style={[styles.tierBadgeText, { color: getLeagueTier(top2.lp ?? 0).color }]}>{top2.tier}</Text>
                       </View>
                     ) : null}
-                    <Text style={styles.podiumScore}>{top2.score} P</Text>
+                    <Text style={styles.podiumScore}>
+                      {rankingType === "level"
+                        ? `Lv.${top2.level ?? Math.floor(top2.score / 200) + 1} (${top2.score} XP)`
+                        : `${top2.lp ?? top2.score} LP`}
+                    </Text>
                     <View style={styles.podiumBar2}>
                       <Text style={styles.podiumBarLabel}>🥈 İKİNCİ</Text>
                     </View>
-                  </View>
+                  </Pressable>
                 )}
 
                 {/* 1st Place (Center, Tallest) */}
                 {top1 && (
-                  <View style={[styles.podiumColumn, styles.podiumCol1]}>
+                  <Pressable
+                    style={[styles.podiumColumn, styles.podiumCol1]}
+                    onPress={() => {
+                      triggerHapticSelection();
+                      onInspectUser?.(top1);
+                    }}
+                  >
                     <Text style={styles.crownIcon}>👑</Text>
                     <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap1]}>
                       <Text style={styles.podiumAvatarText}>{top1.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
@@ -390,16 +415,26 @@ export function SeasonHub({
                         <Text style={[styles.tierBadgeText, { color: getLeagueTier(top1.lp ?? 0).color }]}>{top1.tier}</Text>
                       </View>
                     ) : null}
-                    <Text style={[styles.podiumScore, { color: "#FFD000" }]}>{top1.score} P</Text>
+                    <Text style={[styles.podiumScore, { color: "#FFD000" }]}>
+                      {rankingType === "level"
+                        ? `Lv.${top1.level ?? Math.floor(top1.score / 200) + 1} (${top1.score} XP)`
+                        : `${top1.lp ?? top1.score} LP`}
+                    </Text>
                     <View style={styles.podiumBar1}>
                       <Text style={styles.podiumBarLabel}>🥇 ŞAMPİYON</Text>
                     </View>
-                  </View>
+                  </Pressable>
                 )}
 
                 {/* 3rd Place */}
                 {top3 && (
-                  <View style={[styles.podiumColumn, styles.podiumCol3]}>
+                  <Pressable
+                    style={[styles.podiumColumn, styles.podiumCol3]}
+                    onPress={() => {
+                      triggerHapticSelection();
+                      onInspectUser?.(top3);
+                    }}
+                  >
                     <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap3]}>
                       <Text style={styles.podiumAvatarText}>{top3.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
                       <View style={[styles.podiumRankBadge, styles.podiumRankBadge3]}>
@@ -412,11 +447,15 @@ export function SeasonHub({
                         <Text style={[styles.tierBadgeText, { color: getLeagueTier(top3.lp ?? 0).color }]}>{top3.tier}</Text>
                       </View>
                     ) : null}
-                    <Text style={styles.podiumScore}>{top3.score} P</Text>
+                    <Text style={styles.podiumScore}>
+                      {rankingType === "level"
+                        ? `Lv.${top3.level ?? Math.floor(top3.score / 200) + 1} (${top3.score} XP)`
+                        : `${top3.lp ?? top3.score} LP`}
+                    </Text>
                     <View style={styles.podiumBar3}>
                       <Text style={styles.podiumBarLabel}>🥉 ÜÇÜNCÜ</Text>
                     </View>
-                  </View>
+                  </Pressable>
                 )}
               </View>
             )}
@@ -436,9 +475,13 @@ export function SeasonHub({
                   const isUser = entry.id === playerId;
                   const tierInfo = getLeagueTier(entry.lp ?? 0);
                   return (
-                    <View
+                    <Pressable
                       key={entry.id}
-                      style={[styles.row, isUser && styles.rowUser]}
+                      style={({ pressed }) => [styles.row, isUser && styles.rowUser, pressed && { opacity: 0.75 }]}
+                      onPress={() => {
+                        triggerHapticSelection();
+                        onInspectUser?.(entry);
+                      }}
                     >
                       <View style={styles.position}>
                         <Text style={styles.positionText}>
@@ -493,7 +536,7 @@ export function SeasonHub({
                           </View>
                         )}
                       </View>
-                    </View>
+                    </Pressable>
                   );
                 })
               ) : (
@@ -557,16 +600,24 @@ export function SeasonHub({
                 <View key={f.id} style={styles.friendRow}>
                   {/* Top row: avatar + info + status dot + remove */}
                   <View style={styles.friendRowTop}>
-                    <Text style={styles.friendAvatarText}>{f.avatar}</Text>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
-                        <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
-                          <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {f.level ?? Math.floor(f.xp / 200) + 1}</Text>
+                    <Pressable
+                      style={{ flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0, gap: 10 }}
+                      onPress={() => {
+                        triggerHapticSelection();
+                        onInspectUser?.(f);
+                      }}
+                    >
+                      <Text style={styles.friendAvatarText}>{f.avatar}</Text>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
+                          <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                            <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {f.level ?? Math.floor(f.xp / 200) + 1}</Text>
+                          </View>
                         </View>
+                        <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.tier ?? "DEMİR"} ({f.lp ?? f.xp} LP) · {f.xp} XP</Text>
                       </View>
-                      <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.tier ?? "DEMİR"} ({f.lp ?? f.xp} LP) · {f.xp} XP</Text>
-                    </View>
+                    </Pressable>
                     <View style={styles.statusWrap}>
                       <View style={[styles.onlineDot, f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline]} />
                       <Text style={styles.onlineStatusText}>{f.isOnline ? "ÇEVRİM İÇİ" : "ÇEVRİM DIŞI"}</Text>

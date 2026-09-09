@@ -91,6 +91,9 @@ export async function connectDb() {
   if (!connectionPromise) {
     connectionPromise = mongoose.connect(databaseUri(), {
       serverSelectionTimeoutMS: 4000
+    }).catch((err) => {
+      connectionPromise = null;
+      throw err;
     });
   }
   return connectionPromise;

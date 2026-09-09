@@ -111,6 +111,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
   const boardRef = useRef<any>(null);
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
+  const lastTouchedIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     initAudio().catch(() => undefined);
@@ -121,8 +122,8 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
   const measureBoard = () => {
     boardRef.current?.measure((x: any, y: any, width: any, height: any, pageX: any, pageY: any) => {
-      if (pageX !== undefined) boardPageX.current = pageX;
-      if (pageY !== undefined) boardPageY.current = pageY;
+      if (pageX !== undefined && !isNaN(pageX)) boardPageX.current = pageX;
+      if (pageY !== undefined && !isNaN(pageY)) boardPageY.current = pageY;
     });
   };
 
@@ -174,7 +175,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     }
   }, []);
 
-  const clearSelection = () => { selectionRef.current = []; setSelected([]); };
+  const clearSelection = () => { selectionRef.current = []; lastTouchedIndexRef.current = null; setSelected([]); };
 
   const triggerShake = () => {
     Animated.sequence([
@@ -388,6 +389,8 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     const row = Math.floor(oy / cellSize);
     if (col >= 0 && col < challenge.size && row >= 0 && row < challenge.size) {
       const index = row * challenge.size + col;
+      if (lastTouchedIndexRef.current === index) return;
+      lastTouchedIndexRef.current = index;
       const isFound = foundPaths.some((p) => p.includes(index));
       if (isFound) return;
       if (!pointerActive.current) {

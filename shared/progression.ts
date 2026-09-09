@@ -29,6 +29,9 @@ export type DailyChallenge = {
   rewardXp: number;
 };
 
+export * from "./missions-catalog";
+import { getDailyMissions, getWeeklyMissions, CatalogMission } from "./missions-catalog";
+
 export type PlayerProgress = {
   xp: number;
   lp?: number;
@@ -39,7 +42,7 @@ export type PlayerProgress = {
   bestScore: number;
   bestTempo: number;
   bestArcadeScore: number;
-  missions: Record<SeasonMission["id"], number>;
+  missions: Record<string, number>;
   selectedTheme: ThemePackId;
   selectedAvatar: AvatarId;
   history: string[];
@@ -71,6 +74,29 @@ export type PlayerProgress = {
   ownedBoardSkins?: Record<string, boolean>;
   seasonHistory?: Array<{ seasonId: string; rank: string; lp: number; date: string }>;
   lastSeasonResetId?: string;
+  soloUnlockedLevel?: number;
+  vintageProgress?: VintageProgress;
+  sfxEnabled?: boolean;
+  hapticsEnabled?: boolean;
+  friends?: Array<{
+    id: string;
+    name: string;
+    username: string;
+    avatar: string;
+    isOnline: boolean;
+    xp: number;
+    level?: number;
+    lp?: number;
+    tier?: string;
+    wins?: number;
+    matches?: number;
+  }>;
+};
+
+export type VintageProgress = {
+  maxUnlockedLevel: number;
+  completedLevels: number[];
+  score: number;
 };
 
 export type GenderType = "male" | "female" | "unspecified";
@@ -155,10 +181,20 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   ownedVictoryEffects: { pulse: true },
   selectedBoardSkin: "grid",
   ownedBoardSkins: { grid: true },
+  soloUnlockedLevel: 1,
+  vintageProgress: {
+    maxUnlockedLevel: 1,
+    completedLevels: [],
+    score: 0,
+  },
+  sfxEnabled: true,
+  hapticsEnabled: true,
+  friends: [],
 };
 
 export function badgesFor(progress: PlayerProgress): Badge[] {
   const totalMatchesCount = progress.matches + (progress.history ? Math.floor(progress.history.length / 3) : 0);
+  const wordsCount = progress.history ? progress.history.length : 0;
   return [
     { id: "first-route", title: "İLK ROTA", description: "İlk turunu bitir.", icon: "✦", accent: "#50E3C2", unlocked: totalMatchesCount >= 1 || progress.wins >= 1 || progress.xp > 0 },
     { id: "victor", title: "ZAFER HATTI", description: "İlk düellonu kazan.", icon: "♕", accent: "#FFC24A", unlocked: progress.wins >= 1 },
@@ -166,9 +202,18 @@ export function badgesFor(progress: PlayerProgress): Badge[] {
     { id: "wordsmith", title: "UZUN USTA", description: "Yedi harfli kelime bul.", icon: "◌", accent: "#9A76ED", unlocked: progress.missions.wordsmith >= 1 },
     { id: "streak", title: "AKIŞTA", description: "Üç günlük seri yap.", icon: "↗", accent: "#79C8FF", unlocked: progress.streak >= 3 },
     { id: "streak-expert", title: "NEON HAKİMİ", description: "Yedi günlük seri yap.", icon: "🔥", accent: "#FF9B62", unlocked: progress.streak >= 7 },
+    { id: "streak-master", title: "ALEV EFENDİSİ", description: "On dört günlük seri yap.", icon: "🌟", accent: "#F43F5E", unlocked: progress.streak >= 14 },
     { id: "collector", title: "ROTA KOLEKSİYONCUSU", description: "Altı maç tamamla.", icon: "◇", accent: "#FF83A4", unlocked: totalMatchesCount >= 6 },
+    { id: "veteran-fighter", title: "GLADYATÖR", description: "Yirmi beş maç tamamla.", icon: "⚔️", accent: "#C084FC", unlocked: totalMatchesCount >= 25 },
+    { id: "duel-master", title: "DÜELLO KRALI", description: "On galibiyet kazan.", icon: "👑", accent: "#FBBF24", unlocked: progress.wins >= 10 },
+    { id: "conqueror", title: "FATİH", description: "Yirmi beş galibiyet kazan.", icon: "🏆", accent: "#34D399", unlocked: progress.wins >= 25 },
     { id: "arcade-hero", title: "ARCADE USTA", description: "Zamana Karşı modda 500 puan yap.", icon: "⚡", accent: "#FFC24A", unlocked: (progress.bestArcadeScore || 0) >= 500 },
+    { id: "arcade-god", title: "REKOR AVCISI", description: "Zamana Karşı modda 1000 puan yap.", icon: "🎯", accent: "#38BDF8", unlocked: (progress.bestArcadeScore || 0) >= 1000 },
     { id: "speedy-fingers", title: "HIZLI PARMAK", description: "Toplam 600 XP biriktir.", icon: "🚀", accent: "#FF647C", unlocked: progress.xp >= 600 },
+    { id: "xp-overload", title: "BİLGİ KAYNAĞI", description: "Toplam 2000 XP biriktir.", icon: "💎", accent: "#A855F7", unlocked: progress.xp >= 2000 },
+    { id: "tempo-beast", title: "FIRTINA TEMPO", description: "Dakikada en az 4 kelime temposuna ulaş.", icon: "🌪️", accent: "#06B6D4", unlocked: (progress.bestTempo || 0) >= 4 },
+    { id: "word-hoarder", title: "SÖZLÜK EFENDİSİ", description: "Toplam 50 kelime çöz.", icon: "📖", accent: "#10B981", unlocked: wordsCount >= 50 },
+    { id: "rich-operator", title: "KOZMİK ZENGİN", description: "Kasanı 200 çipe ulaştır.", icon: "🪙", accent: "#F59E0B", unlocked: (progress.coins || 0) >= 200 },
   ];
 }
 
@@ -330,10 +375,10 @@ export function applyMatchProgress(
     xpGain += 50;
   }
 
-  // Daily Mystery Word bonus (+100 XP)
+  // Daily Mystery Word bonus (+150 XP)
   const mystery = getDailyMysteryWord();
   if (result.foundWords && result.foundWords.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
-    xpGain += 100;
+    xpGain += mystery.rewardXp;
   }
 
   // Coin earnings (Dengeli Çip İlerlemesi)
@@ -342,6 +387,51 @@ export function applyMatchProgress(
     coinsEarned = type === "pvp" ? 10 : type === "bot" ? 4 : 3;
   } else {
     coinsEarned = 1;
+  }
+
+  let nextMissions: Record<string, number> = {
+    ...progress.missions,
+    duels: type !== "solo" ? duelProgress : (progress.missions?.duels ?? 0),
+    wordsmith: wordsmithProgress,
+  };
+
+  const todayId = getDayId();
+  const weekId = getWeekId();
+  const activeCatalogMissions = [...getDailyMissions(todayId), ...getWeeklyMissions(weekId)];
+
+  // Update duel_play
+  if (type !== "solo") {
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_play", 1);
+  }
+  // Update duel_win
+  if (result.won && type !== "solo") {
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_win", 1);
+  }
+  // Update solo_progress
+  if (type === "solo" && result.won) {
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "solo_progress", 1);
+  }
+  // Update word_count
+  const foundWordsCount = result.foundWords?.length || (result.score > 0 ? 1 : 0);
+  if (foundWordsCount > 0) {
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_count", foundWordsCount);
+  }
+  // Update word_length
+  if (result.foundWords && result.foundWords.length > 0) {
+    for (const w of result.foundWords) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_length", 1, w.length);
+    }
+  } else if (result.longWord) {
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_length", 1, 7);
+  }
+  // Update combo_count
+  if (result.tempo && result.tempo >= 2.0) {
+    const comboIncrement = result.tempo >= 3.5 ? 2 : 1;
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "combo_count", comboIncrement);
+  }
+  // Update earn_chips
+  if (coinsEarned > 0) {
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "earn_chips", coinsEarned);
   }
 
   const nextLp = Math.max(0, currentLp + lpGain);
@@ -356,7 +446,7 @@ export function applyMatchProgress(
     bestScore: Math.max(progress.bestScore, result.score),
     bestTempo: Math.max(progress.bestTempo, result.tempo),
     bestArcadeScore: Math.max(progress.bestArcadeScore || 0, result.arcadeScore || 0),
-    missions: { ...progress.missions, duels: type !== "solo" ? duelProgress : progress.missions.duels, wordsmith: wordsmithProgress },
+    missions: nextMissions,
     history: newHistory,
     lastMatchReward: {
       xp: xpGain,
@@ -369,18 +459,27 @@ export function applyMatchProgress(
 export function applyArcadeProgress(progress: PlayerProgress, score: number) {
   const newBest = Math.max(progress.bestArcadeScore || 0, score);
   const xpGain = Math.max(5, Math.floor(score / 10));
-  const coinsGain = Math.floor(score / 80);
+  const coinsGain = Math.floor(score / 40);
+
+  const activeCatalog = [...getDailyMissions(getDayId()), ...getWeeklyMissions(getWeekId())];
+  let nextMissions = updateMissionAction(progress.missions, activeCatalog, "arcade_score", score);
+  if (coinsGain > 0) {
+    nextMissions = updateMissionAction(nextMissions, activeCatalog, "earn_chips", coinsGain);
+  }
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
     coins: (progress.coins ?? 50) + coinsGain,
     bestArcadeScore: newBest,
+    missions: nextMissions,
   };
 }
 
 export function mergePlayerProgress(
   local: PlayerProgress,
-  remote?: Partial<PlayerProgress> | null
+  remote?: Partial<PlayerProgress> | null,
+  options?: { preferRemoteBalances?: boolean }
 ): PlayerProgress {
   if (!remote) return local;
   const safeNum = (val: any, fallback: number, maxCap = 2_000_000_000) => {
@@ -388,15 +487,23 @@ export function mergePlayerProgress(
     return Math.max(0, Math.min(maxCap, num));
   };
 
+  const useRemoteBalances = Boolean(options?.preferRemoteBalances);
+
   return {
     ...DEFAULT_PROGRESS,
     ...local,
     ...remote,
     xp: safeNum(Math.max(local.xp, remote.xp ?? 0), local.xp),
     lp: safeNum(Math.max(local.lp ?? 0, remote.lp ?? 0), local.lp ?? 0),
-    coins: safeNum(Math.max(local.coins ?? 50, remote.coins ?? 50), local.coins ?? 50),
-    streakShields: safeNum(Math.max(local.streakShields ?? 0, remote.streakShields ?? 0), local.streakShields ?? 0, 99),
-    radarChargesBonus: safeNum(Math.max(local.radarChargesBonus ?? 0, remote.radarChargesBonus ?? 0), local.radarChargesBonus ?? 0, 99),
+    coins: useRemoteBalances && remote.coins !== undefined
+      ? safeNum(remote.coins, local.coins ?? 50)
+      : safeNum(Math.max(local.coins ?? 50, remote.coins ?? 50), local.coins ?? 50),
+    streakShields: useRemoteBalances && remote.streakShields !== undefined
+      ? safeNum(remote.streakShields, local.streakShields ?? 0, 99)
+      : safeNum(Math.max(local.streakShields ?? 0, remote.streakShields ?? 0), local.streakShields ?? 0, 99),
+    radarChargesBonus: useRemoteBalances && remote.radarChargesBonus !== undefined
+      ? safeNum(remote.radarChargesBonus, local.radarChargesBonus ?? 0, 99)
+      : safeNum(Math.max(local.radarChargesBonus ?? 0, remote.radarChargesBonus ?? 0), local.radarChargesBonus ?? 0, 99),
     streak: safeNum(Math.max(local.streak, remote.streak ?? 0), local.streak, 3650),
     wins: safeNum(Math.max(local.wins, remote.wins ?? 0), local.wins),
     matches: safeNum(Math.max(local.matches, remote.matches ?? 0), local.matches),
@@ -404,11 +511,18 @@ export function mergePlayerProgress(
     bestTempo: safeNum(Math.max(local.bestTempo, remote.bestTempo ?? 0), local.bestTempo),
     bestArcadeScore: safeNum(Math.max(local.bestArcadeScore ?? 0, remote.bestArcadeScore ?? 0), local.bestArcadeScore ?? 0),
     dailyCompletedId: local.dailyCompletedId || remote.dailyCompletedId || null,
-    missions: {
-      daily: safeNum(Math.max(local.missions?.daily ?? 0, remote.missions?.daily ?? 0), local.missions?.daily ?? 0, 100),
-      duels: safeNum(Math.max(local.missions?.duels ?? 0, remote.missions?.duels ?? 0), local.missions?.duels ?? 0, 100),
-      wordsmith: safeNum(Math.max(local.missions?.wordsmith ?? 0, remote.missions?.wordsmith ?? 0), local.missions?.wordsmith ?? 0, 100),
-    },
+    missions: (() => {
+      const mergedMissions: Record<string, number> = {
+        daily: safeNum(Math.max(local.missions?.daily ?? 0, remote.missions?.daily ?? 0), local.missions?.daily ?? 0, 100),
+        duels: safeNum(Math.max(local.missions?.duels ?? 0, remote.missions?.duels ?? 0), local.missions?.duels ?? 0, 100),
+        wordsmith: safeNum(Math.max(local.missions?.wordsmith ?? 0, remote.missions?.wordsmith ?? 0), local.missions?.wordsmith ?? 0, 100),
+      };
+      const allKeys = new Set([...Object.keys(local.missions ?? {}), ...Object.keys(remote?.missions ?? {})]);
+      for (const k of allKeys) {
+        mergedMissions[k] = safeNum(Math.max(local.missions?.[k] ?? 0, remote?.missions?.[k] ?? 0), local.missions?.[k] ?? 0, 10000);
+      }
+      return mergedMissions;
+    })(),
     claimedMilestones: {
       ...(remote.claimedMilestones ?? {}),
       ...(local.claimedMilestones ?? {}),
@@ -437,18 +551,40 @@ export function mergePlayerProgress(
     ownedVictoryEffects: { ...(remote.ownedVictoryEffects ?? {}), ...(local.ownedVictoryEffects ?? {}) },
     selectedBoardSkin: local.selectedBoardSkin || remote.selectedBoardSkin || "grid",
     ownedBoardSkins: { ...(remote.ownedBoardSkins ?? {}), ...(local.ownedBoardSkins ?? {}) },
+    soloUnlockedLevel: safeNum(Math.max(local.soloUnlockedLevel ?? 1, remote.soloUnlockedLevel ?? 1), local.soloUnlockedLevel ?? 1, 101),
+    vintageProgress: {
+      maxUnlockedLevel: safeNum(Math.max(local.vintageProgress?.maxUnlockedLevel ?? 1, remote.vintageProgress?.maxUnlockedLevel ?? 1), 1, 20),
+      completedLevels: Array.from(new Set([
+        ...(local.vintageProgress?.completedLevels ?? []),
+        ...(remote.vintageProgress?.completedLevels ?? []),
+      ])).sort((a, b) => a - b),
+      score: safeNum(Math.max(local.vintageProgress?.score ?? 0, remote.vintageProgress?.score ?? 0), 0),
+    },
+    sfxEnabled: remote?.sfxEnabled ?? local.sfxEnabled ?? true,
+    hapticsEnabled: remote?.hapticsEnabled ?? local.hapticsEnabled ?? true,
+    lastLoginDay: local.lastLoginDay || remote?.lastLoginDay,
+    loginDaysCount: safeNum(Math.max(local.loginDaysCount ?? 0, remote?.loginDaysCount ?? 0), 0),
+    friends: (() => {
+      const map = new Map<string, any>();
+      (local.friends ?? []).forEach((f) => map.set(f.username.toLowerCase(), f));
+      (remote?.friends ?? []).forEach((f) => map.set(f.username.toLowerCase(), f));
+      return Array.from(map.values());
+    })(),
   };
 }
 
 export function completeDailyProgress(progress: PlayerProgress, daily: DailyChallenge) {
   if (progress.dailyCompletedId === daily.id && (progress.missions?.daily ?? 0) >= 1) return progress;
+  const activeCatalog = [...getDailyMissions(daily.id), ...getWeeklyMissions(getWeekId())];
+  const updatedMissions = updateMissionAction({ ...progress.missions, daily: 1 }, activeCatalog, "daily_route", 1);
+
   return {
     ...progress,
     xp: progress.xp + daily.rewardXp,
     dailyCompletedId: daily.id,
     lastStreakCheckDate: daily.id,
     streak: progress.streak + 1,
-    missions: { ...progress.missions, daily: 1 },
+    missions: updatedMissions,
   };
 }
 
@@ -473,16 +609,27 @@ export type CyberTitle = {
   id: string;
   name: string;
   badge: string;
+  icon?: string;
+  accent?: string;
   unlockHint: string;
   unlocked: (p: PlayerProgress) => boolean;
 };
 
 export const CYBER_TITLES: CyberTitle[] = [
-  { id: "novice", name: "ÇAYLAK ROTA", badge: "[ÇAYLAK]", unlockHint: "Oyuna başlarken açık.", unlocked: () => true },
-  { id: "scout", name: "SİBER İZCİ", badge: "[İZCİ]", unlockHint: "3 maç tamamla.", unlocked: (p) => p.matches >= 3 },
-  { id: "architect", name: "ROTA MİMARI", badge: "[MİMAR]", unlockHint: "Seviye 3'e ulaş.", unlocked: (p) => getPlayerLevel(p.xp) >= 3 },
-  { id: "victor", name: "NEON HAKİMİ", badge: "[NEON HAKİMİ]", unlockHint: "5 düello kazan.", unlocked: (p) => p.wins >= 5 },
-  { id: "legend", name: "MATRİS EFSANESİ", badge: "[MATRİS EFSANESİ]", unlockHint: "Seviye 10'a ulaş veya 500 Arcade puanı yap.", unlocked: (p) => getPlayerLevel(p.xp) >= 10 || (p.bestArcadeScore || 0) >= 500 },
+  { id: "novice", name: "ÇAYLAK ROTA", badge: "[ÇAYLAK]", icon: "🌱", accent: "#50E3C2", unlockHint: "Oyuna başlarken açık.", unlocked: () => true },
+  { id: "scout", name: "SİBER İZCİ", badge: "[İZCİ]", icon: "🧭", accent: "#79C8FF", unlockHint: "3 maç tamamla.", unlocked: (p) => p.matches >= 3 },
+  { id: "architect", name: "ROTA MİMARI", badge: "[MİMAR]", icon: "📐", accent: "#A78BFA", unlockHint: "Seviye 3'e ulaş.", unlocked: (p) => getPlayerLevel(p.xp) >= 3 },
+  { id: "victor", name: "NEON HAKİMİ", badge: "[NEON HAKİMİ]", icon: "⚡", accent: "#00F5D4", unlockHint: "5 düello kazan.", unlocked: (p) => p.wins >= 5 },
+  { id: "hunter", name: "DÜELLO AVCISI", badge: "[AVCI]", icon: "🎯", accent: "#F43F5E", unlockHint: "10 düello kazan.", unlocked: (p) => p.wins >= 10 },
+  { id: "gladiator", name: "ARENA KURDU", badge: "[GLADYATÖR]", icon: "⚔️", accent: "#FB923C", unlockHint: "20 maç tamamla.", unlocked: (p) => p.matches >= 20 },
+  { id: "lexicon", name: "KELİME BÜKÜCÜ", badge: "[KELİME BÜKÜCÜ]", icon: "📚", accent: "#34D399", unlockHint: "En az 30 kelime çöz veya 7 harfli kelime bul.", unlocked: (p) => (p.history ? p.history.length >= 30 : false) || (p.missions?.wordsmith || 0) >= 1 },
+  { id: "storm", name: "FIRTINA OPERATÖRÜ", badge: "[FIRTINA]", icon: "🌪️", accent: "#38BDF8", unlockHint: "En az 4 K/DK tempo hızına ulaş.", unlocked: (p) => (p.bestTempo || 0) >= 4 },
+  { id: "firestreak", name: "ALEV HÜKÜMDARI", badge: "[ALEV MUHAFIZI]", icon: "🔥", accent: "#FF7849", unlockHint: "7 günlük galibiyet serisine ulaş.", unlocked: (p) => p.streak >= 7 },
+  { id: "tycoon", name: "KAPİTAL LİDERİ", badge: "[KOZMİK ZENGİN]", icon: "🪙", accent: "#F59E0B", unlockHint: "Kasadaki çip miktarını 200'e ulaştır.", unlocked: (p) => (p.coins || 0) >= 200 },
+  { id: "ranked-gold", name: "LİG ŞAMPİYONU", badge: "[LİG FATİHİ]", icon: "🏅", accent: "#FFD700", unlockHint: "Lig puanını (LP) 1000'e ulaştır.", unlocked: (p) => (p.lp || 0) >= 1000 },
+  { id: "mastermind", name: "BİLGE MATRİS", badge: "[KOD BİLGE]", icon: "🔮", accent: "#C084FC", unlockHint: "Seviye 6'ya ulaş.", unlocked: (p) => getPlayerLevel(p.xp) >= 6 },
+  { id: "legend", name: "MATRİS EFSANESİ", badge: "[MATRİS EFSANESİ]", icon: "👑", accent: "#FFC24A", unlockHint: "Seviye 10'a ulaş veya 500 Arcade puanı yap.", unlocked: (p) => getPlayerLevel(p.xp) >= 10 || (p.bestArcadeScore || 0) >= 500 },
+  { id: "overlord", name: "SİBER OVERLORD", badge: "[SİBER HAKİM]", icon: "🪐", accent: "#E879F9", unlockHint: "Seviye 15'e ulaş veya 2000 XP biriktir.", unlocked: (p) => getPlayerLevel(p.xp) >= 15 || p.xp >= 2000 },
 ];
 
 export function getActiveCyberTitle(progress: PlayerProgress): string {
@@ -684,21 +831,62 @@ export function reconcileDailyStreak(progress: PlayerProgress, todayId: string):
   }
 }
 
+export function updateMissionAction(
+  missions: Record<string, number>,
+  activeMissions: CatalogMission[],
+  actionType: string,
+  increment: number = 1,
+  param?: number
+): Record<string, number> {
+  const nextMissions = { ...missions };
+  for (const m of activeMissions) {
+    if (m.actionType === actionType) {
+      if (m.param !== undefined) {
+        if (param !== undefined && param >= m.param) {
+          nextMissions[m.id] = (nextMissions[m.id] ?? 0) + increment;
+        }
+      } else {
+        nextMissions[m.id] = (nextMissions[m.id] ?? 0) + increment;
+      }
+    }
+  }
+  return nextMissions;
+}
+
 export function reconcileMissions(progress: PlayerProgress, todayId: string, weekId: string): PlayerProgress {
   let updated = { ...progress };
 
   if (updated.missionsDate !== todayId) {
+    // Reset daily mission counters and claimed state
+    const nextMissions = { ...(updated.missions || {}) };
+    // Clear old legacy keys
+    nextMissions.daily = 0;
+    nextMissions.duels = 0;
+    nextMissions.wordsmith = 0;
+    // Clear catalog daily keys
+    const dailyMissions = getDailyMissions(todayId);
+    dailyMissions.forEach((m) => {
+      nextMissions[m.id] = 0;
+    });
+
     updated = {
       ...updated,
-      missions: { daily: 0, duels: 0, wordsmith: 0 },
+      missions: nextMissions,
       dailyClaimed: {},
       missionsDate: todayId,
     };
   }
 
   if (updated.weeklyMissionsWeek !== weekId) {
+    const nextMissions = { ...(updated.missions || {}) };
+    const weeklyMissions = getWeeklyMissions(weekId);
+    weeklyMissions.forEach((m) => {
+      nextMissions[m.id] = 0;
+    });
+
     updated = {
       ...updated,
+      missions: nextMissions,
       weeklyClaimed: {},
       weeklyMissionsWeek: weekId,
     };
@@ -707,11 +895,25 @@ export function reconcileMissions(progress: PlayerProgress, todayId: string, wee
   return updated;
 }
 
-export function getUnclaimedMissionsCount(progress: PlayerProgress): number {
+export function getUnclaimedMissionsCount(progress: PlayerProgress, todayId?: string, weekId?: string): number {
   if (!progress) return 0;
   let count = 0;
 
-  // Daily missions
+  const currentTodayId = todayId || getDayId();
+  const currentWeekId = weekId || getWeekId();
+
+  // Dynamic daily missions from 90-pool
+  const activeDaily = getDailyMissions(currentTodayId);
+  for (const mission of activeDaily) {
+    const current = progress.missions?.[mission.id] ?? 0;
+    const isDone = current >= mission.target;
+    const isClaimed = Boolean(progress.dailyClaimed?.[mission.id]);
+    if (isDone && !isClaimed) {
+      count++;
+    }
+  }
+
+  // Legacy seasonal daily missions fallback
   for (const mission of SEASON_MISSIONS) {
     const current = progress.missions?.[mission.id] ?? 0;
     const isDone = current >= mission.target;
@@ -721,7 +923,18 @@ export function getUnclaimedMissionsCount(progress: PlayerProgress): number {
     }
   }
 
-  // Weekly missions
+  // Dynamic weekly missions from 30-pool
+  const activeWeekly = getWeeklyMissions(currentWeekId);
+  for (const mission of activeWeekly) {
+    const current = progress.missions?.[mission.id] ?? 0;
+    const isDone = current >= mission.target;
+    const isClaimed = Boolean(progress.weeklyClaimed?.[mission.id]);
+    if (isDone && !isClaimed) {
+      count++;
+    }
+  }
+
+  // Legacy weekly missions fallback
   if (progress.wins >= 3 && !progress.weeklyClaimed?.victoryStreak) {
     count++;
   }

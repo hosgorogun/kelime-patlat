@@ -24,6 +24,8 @@ export const OWNER_OPEN_ID = env.ownerId;
 export const OWNER_NAME = env.ownerName;
 export const API_BASE_URL = env.apiBaseUrl;
 
+import Constants from "expo-constants";
+
 /**
  * Get the API base URL, deriving from current hostname if not set.
  * Metro runs on 8081, API server runs on 3000.
@@ -49,6 +51,15 @@ export function getApiBaseUrl(): string {
     }
     // Local dev on web: same host, port 3000
     return `${protocol}//${hostname}:3000`;
+  }
+
+  // Check Expo Metro host IP if available (dynamically resolves Metro host for Android emulator or physical device)
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
+  if (hostUri) {
+    const host = hostUri.split(":")[0];
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      return `http://${host}:3000`;
+    }
   }
 
   // Android emulator: localhost maps to 10.0.2.2

@@ -40,8 +40,22 @@ function play(effect: EffectName) {
       void setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
     }
     const player = playerFor(effect);
-    player.seekTo(0);
-    player.play();
+    try {
+      const seekRes: any = player.seekTo(0);
+      if (seekRes && typeof seekRes.catch === "function") {
+        seekRes.catch(() => undefined);
+      }
+    } catch {
+      // Ignore seek error
+    }
+    try {
+      const playRes: any = player.play();
+      if (playRes && typeof playRes.catch === "function") {
+        playRes.catch(() => undefined);
+      }
+    } catch {
+      // Ignore play error
+    }
   } catch {
     // Ses cihazda kullanılamadığında görsel ve haptik geri bildirim sürer.
   }

@@ -8,13 +8,14 @@ import { registerStorageProxy } from "./storageProxy";
 import { sdk } from "./sdk";
 import { registerGameRooms } from "../game/rooms";
 
-import { UserModel, hashPassword, verifyPassword } from "../db";
-import { deletePlayerProfile } from "../game/mongo-store";
+import { UserModel, hashPassword, verifyPassword, connectDb } from "../db";
+import { deletePlayerProfile, loadPlayerProfile, ProfileModel } from "../game/mongo-store";
 import { COOKIE_NAME } from "../../shared/const.js";
 import { getSessionCookieOptions } from "./cookies";
 import { z } from "zod";
 import { randomUUID, randomInt } from "node:crypto";
-import { applyArcadeProgress, applyMatchProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, type PlayerProgress } from "../../shared/progression";
+import { applyArcadeProgress, applyMatchProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, findMissionById, getLeagueTier, type PlayerProgress } from "../../shared/progression";
+import type { LeaderboardEntry } from "../../shared/game";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -51,6 +52,8 @@ async function startServer() {
   const io = new SocketIOServer(server, {
     cors: { origin: (origin, callback) => callback(null, isAllowedOrigin(origin) ? origin : false), credentials: true },
   });
+
+  app.set("trust proxy", 1);
 
   // Enable CORS for all routes - reflect the request origin to support credentials
   app.use((req, res, next) => {
@@ -110,6 +113,7 @@ async function startServer() {
 
   app.post("/api/auth/guest", async (_req, res) => {
     try {
+      await connectDb();
       const openId = `guest_${randomUUID()}`;
       const guestNumber = Math.floor(1000 + Math.random() * 9000);
       const guestName = `Misafir #${guestNumber}`;
@@ -136,6 +140,7 @@ async function startServer() {
 
   app.post("/api/auth/signup", async (req, res) => {
     try {
+      await connectDb();
       const { username, password, email, fullName, gender } = req.body;
       if (!username || !password || username.length < 3 || password.length < 4) {
         return res.status(400).json({ error: "Geçersiz kullanıcı adı veya şifre (Kullanıcı adı min 3, şifre min 4 karakter olmalıdır)." });
@@ -180,6 +185,7 @@ async function startServer() {
 
   app.post("/api/auth/claim-guest", async (req, res) => {
     try {
+      await connectDb();
       const user = await sdk.authenticateRequest(req);
       const guestToken = typeof req.body?.guestToken === "string" ? req.body.guestToken : "";
       const guestSession = await sdk.verifySession(guestToken);
@@ -204,6 +210,7 @@ async function startServer() {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
+      await connectDb();
       const { username, password } = req.body;
       if (!username || !password) {
         return res.status(400).json({ error: "Kullanıcı adı ve şifre gereklidir." });
@@ -230,11 +237,13 @@ async function startServer() {
       
       const { progress } = req.body as { progress?: Partial<PlayerProgress> };
       if (!progress || typeof progress !== "object") return res.status(400).json({ error: "Geçersiz progress verisi." });
+      await connectDb();
       const dbUser = await UserModel.findOne({ openId: user.openId });
       if (dbUser) {
         dbUser.progress = mergePlayerProgress(
           { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress,
           progress,
+          { preferRemoteBalances: true },
         );
         dbUser.updatedAt = new Date();
         await dbUser.save();
@@ -247,6 +256,7 @@ async function startServer() {
 
   app.post("/api/auth/delete-account", async (req, res) => {
     try {
+      await connectDb();
       const user = await sdk.authenticateRequest(req);
       if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
 
@@ -255,6 +265,104 @@ async function startServer() {
       res.json({ success: true, message: "Hesabınız ve verileriniz başarıyla silindi." });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Hesap silme başarısız." });
+    }
+  });
+
+  app.get("/api/user/profile/:idOrName", async (req, res) => {
+    try {
+      const idOrName = req.params.idOrName?.trim();
+      if (!idOrName) return res.status(400).json({ error: "Geçersiz arama parametresi." });
+
+      // Bot kontrolü
+      if (idOrName.startsWith("bot:") || idOrName.toLowerCase().includes("bot")) {
+        return res.json({
+          id: idOrName,
+          name: "KELİME BOT",
+          username: "kelime_bot",
+          isBot: true,
+          avatar: "🤖",
+          selectedTitle: "[SİBER İZCİ]",
+          level: 10,
+          tier: "GÜMÜŞ",
+          lp: 950,
+          wins: 14,
+          matches: 26,
+          streak: 4,
+          bestScore: 120,
+          bestTempo: 3.5,
+          xp: 1900,
+        });
+      }
+
+      await connectDb();
+      // 1. UserModel arayışı (username veya openId)
+      let user = await UserModel.findOne({
+        $or: [
+          { openId: idOrName },
+          { username: idOrName.toLowerCase() },
+          { name: new RegExp(`^${idOrName}$`, "i") },
+        ]
+      }).lean();
+
+      if (user) {
+        const prog = (user.progress || {}) as PlayerProgress;
+        const tierInfo = getLeagueTier(prog);
+        return res.json({
+          id: user.openId,
+          name: user.name || user.username || idOrName,
+          username: user.username || user.openId,
+          isBot: false,
+          avatar: prog.selectedAvatar || "spark",
+          avatarPhoto: prog.avatarPhoto,
+          selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
+          level: Math.floor((prog.xp || 0) / 200) + 1,
+          tier: tierInfo.tier,
+          lp: prog.lp || 0,
+          wins: prog.wins || 0,
+          matches: prog.matches || 0,
+          streak: prog.streak || 0,
+          bestScore: prog.bestScore || 0,
+          bestTempo: prog.bestTempo || 0,
+          xp: prog.xp || 0,
+          historyCount: prog.history ? prog.history.length : 0,
+        });
+      }
+
+      // 2. ProfileModel arayışı
+      let profile = await ProfileModel.findOne({
+        $or: [
+          { playerId: idOrName },
+          { name: new RegExp(`^${idOrName}$`, "i") },
+        ]
+      }).lean();
+
+      if (profile) {
+        const prog = (profile.progress || {}) as PlayerProgress;
+        const tierInfo = getLeagueTier(prog);
+        return res.json({
+          id: profile.playerId,
+          name: profile.name || idOrName,
+          username: profile.name || idOrName,
+          isBot: false,
+          avatar: prog.selectedAvatar || "spark",
+          avatarPhoto: prog.avatarPhoto,
+          selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
+          level: Math.floor((prog.xp || 0) / 200) + 1,
+          tier: tierInfo.tier,
+          lp: prog.lp || 0,
+          wins: prog.wins || 0,
+          matches: prog.matches || 0,
+          streak: prog.streak || 0,
+          bestScore: prog.bestScore || 0,
+          bestTempo: prog.bestTempo || 0,
+          xp: prog.xp || 0,
+          historyCount: prog.history ? prog.history.length : 0,
+        });
+      }
+
+      return res.status(404).json({ error: "Oyuncu profili bulunamadı." });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Profil getirilemedi." });
     }
   });
 
@@ -269,6 +377,7 @@ async function startServer() {
     }).safeParse(req.body);
     if (!payload.success) return res.status(400).json({ error: "Geçersiz ödül isteği." });
     try {
+      await connectDb();
       const user = await sdk.authenticateRequest(req);
       const dbUser = await UserModel.findOneAndUpdate(
         { openId: user.openId, processedAwardIds: { $ne: payload.data.awardId } },
@@ -280,14 +389,29 @@ async function startServer() {
       const next = payload.data.kind === "arcade"
         ? applyArcadeProgress(current, payload.data.score ?? 0)
         : payload.data.kind === "vintage"
-        ? { ...current, xp: current.xp + (payload.data.score ?? 30) }
-        : applyMatchProgress(current, {
-            score: (payload.data.level ?? 1) * 14,
-            tempo: Math.max(1, (payload.data.level ?? 1) / 2),
-            won: true,
-            longWord: (payload.data.level ?? 1) >= 5,
-            foundWords: payload.data.foundWords ?? [],
-          }, "solo");
+        ? {
+            ...current,
+            xp: current.xp + (payload.data.score ?? 30),
+            coins: (current.coins ?? 50) + Math.max(2, Math.floor((payload.data.score ?? 30) / 10)),
+            vintageProgress: {
+              maxUnlockedLevel: Math.min(20, Math.max(current.vintageProgress?.maxUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
+              completedLevels: Array.from(new Set([
+                ...(current.vintageProgress?.completedLevels ?? []),
+                ...(payload.data.level ? [payload.data.level] : []),
+              ])).sort((a, b) => a - b),
+              score: (current.vintageProgress?.score ?? 0) + (payload.data.score ?? 100),
+            },
+          }
+        : {
+            ...applyMatchProgress(current, {
+              score: (payload.data.level ?? 1) * 14,
+              tempo: Math.max(1, (payload.data.level ?? 1) / 2),
+              won: true,
+              longWord: (payload.data.level ?? 1) >= 5,
+              foundWords: payload.data.foundWords ?? [],
+            }, "solo"),
+            soloUnlockedLevel: Math.min(101, Math.max(current.soloUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
+          };
       const awarded = payload.data.daily ? completeDailyProgress(next, getDailyChallenge()) : next;
       dbUser.progress = awarded;
       dbUser.updatedAt = new Date();
@@ -302,11 +426,34 @@ async function startServer() {
     const payload = z.object({ kind: z.enum(["daily", "weekly"]), missionId: z.string().max(32) }).safeParse(req.body);
     if (!payload.success) return res.status(400).json({ error: "Geçersiz görev isteği." });
     try {
+      await connectDb();
       const user = await sdk.authenticateRequest(req);
       const dbUser = await UserModel.findOne({ openId: user.openId });
       const current = { ...DEFAULT_PROGRESS, ...(dbUser?.progress ?? {}) } as PlayerProgress;
       let next = current;
-      if (payload.data.kind === "daily") {
+      const catalogMission = findMissionById(payload.data.missionId);
+      if (catalogMission) {
+        const isDaily = catalogMission.period === "daily";
+        const isClaimed = isDaily
+          ? Boolean(current.dailyClaimed?.[catalogMission.id])
+          : Boolean(current.weeklyClaimed?.[catalogMission.id]);
+        const progressVal = current.missions?.[catalogMission.id] ?? 0;
+        if (progressVal < catalogMission.target || isClaimed) {
+          return res.status(409).json({ error: "Görev henüz tamamlanmadı veya zaten ödülü alındı." });
+        }
+        next = {
+          ...current,
+          xp: current.xp + catalogMission.rewardXp,
+          coins: (current.coins ?? 50) + catalogMission.rewardCoins,
+          streakShields: (current.streakShields ?? 0) + (catalogMission.rewardShields ?? 0),
+          dailyClaimed: isDaily
+            ? { ...(current.dailyClaimed ?? {}), [catalogMission.id]: true }
+            : current.dailyClaimed,
+          weeklyClaimed: !isDaily
+            ? { ...(current.weeklyClaimed ?? {}), [catalogMission.id]: true }
+            : current.weeklyClaimed,
+        };
+      } else if (payload.data.kind === "daily") {
         const mission = SEASON_MISSIONS.find((item) => item.id === payload.data.missionId);
         if (!mission || (current.missions?.[mission.id] ?? 0) < mission.target || current.dailyClaimed?.[mission.id]) {
           return res.status(409).json({ error: "Günlük görev henüz tamamlanmadı veya zaten alındı." });
@@ -330,6 +477,7 @@ async function startServer() {
 
   app.get("/api/auth/get-progress", async (req, res) => {
     try {
+      await connectDb();
       const user = await sdk.authenticateRequest(req);
       if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
 
@@ -337,6 +485,36 @@ async function startServer() {
       res.json({ progress: dbUser?.progress || null });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "İlerleme verisi alınamadı." });
+    }
+  });
+
+  app.get("/api/game/leaderboard", async (_req, res) => {
+    try {
+      await connectDb();
+      const topUsers = await UserModel.find({ "progress.xp": { $exists: true } })
+        .sort({ "progress.xp": -1 })
+        .limit(50)
+        .lean();
+
+      const leaderboard: LeaderboardEntry[] = topUsers.map((u: any, idx: number) => {
+        const prog = u.progress || {};
+        const tier = getLeagueTier(prog);
+        return {
+          id: u.openId || `user_${idx}`,
+          name: u.username || u.name || `Oyuncu_${idx + 1}`,
+          score: prog.xp || 0,
+          wins: prog.wins || 0,
+          matches: prog.matches || 0,
+          bestRound: prog.bestScore || 0,
+          lp: prog.lp || 0,
+          tier: tier.tier,
+          level: Math.floor((prog.xp || 0) / 200) + 1,
+        };
+      });
+
+      res.json({ leaderboard });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Liderlik tablosu alınamadı." });
     }
   });
 

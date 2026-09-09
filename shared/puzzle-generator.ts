@@ -75,7 +75,7 @@ export const WORD_DICTIONARY: Omit<WordEntry, "id">[] = [
   { answer: "HAKİKAT", category: "Kavram", clue: "Gerçeğin ta kendisi, asıl olan hakiki durum.", length: 7, difficulty: "hard" },
   { answer: "ERDEM", category: "Kavram", clue: "Ahlaki aydınlanma, dürüstlük ve iyilik niteliği.", length: 5, difficulty: "medium" },
   { answer: "DÜŞÜNCE", category: "Kavram", clue: "Zihinde üretilen akılcı fikir veya imge.", length: 7, difficulty: "medium" },
-  { answer: "BİLİNÇ", category: "Felsefe", clue: "İnsanın kendisini ve çevresini algılama farkındalığı.", length: 5, difficulty: "hard" },
+  { answer: "BİLİNÇ", category: "Felsefe", clue: "İnsanın kendisini ve çevresini algılama farkındalığı.", length: 6, difficulty: "hard" },
   { answer: "KUBBE", category: "Mimari", clue: "Yarım küre biçimindeki çatı mimari yapısı.", length: 5, difficulty: "medium" },
   { answer: "SÜTUN", category: "Mimari", clue: "Tavanı ve yapıyı taşıyan dikey silindirik direk.", length: 5, difficulty: "medium" },
   { answer: "ŞADIRVAN", category: "Mimari", clue: "Cami avlularında bulunan abdest çeşmeli su yapısı.", length: 8, difficulty: "hard" },
@@ -94,7 +94,7 @@ export const WORD_DICTIONARY: Omit<WordEntry, "id">[] = [
   { answer: "SARAY", category: "Mimari", clue: "Hükümdarların ve kralların yaşadığı görkemli yapı.", length: 5, difficulty: "easy" },
   { answer: "HEYKEL", category: "Sanat", clue: "Taş, mermer veya metalden yapılan yontu eser.", length: 6, difficulty: "medium" },
   { answer: "FOTOĞRAF", category: "Sanat", clue: "Işıkla görüntü kaydetme ve dondurma sanatı.", length: 8, difficulty: "hard" },
-  { answer: "TEKNOLOJİ", category: "Bilim", clue: "İnsanın hayatını kolaylaştıran teknik imkanlar bütünü.", length: 10, difficulty: "hard" },
+  { answer: "TEKNOLOJİ", category: "Bilim", clue: "İnsanın hayatını kolaylaştıran teknik imkanlar bütünü.", length: 9, difficulty: "hard" },
   { answer: "MANTIK", category: "Felsefe", clue: "Doğru düşünme kural ve ilkesi.", length: 6, difficulty: "medium" },
   { answer: "ADALET", category: "Kavram", clue: "Hakkı gözetme, doğruluk ve hakkaniyet.", length: 6, difficulty: "medium" },
   { answer: "BİLGELİK", category: "Felsefe", clue: "Derin kavrayış ve olgun akıl düzeyi.", length: 8, difficulty: "hard" },
@@ -246,7 +246,8 @@ export function placeWordOnBoard(
   isCenter: boolean = false
 ): PlacedWord {
   const cells: [number, number][] = [];
-  for (let i = 0; i < word.length; i++) {
+  const len = word.answer.length;
+  for (let i = 0; i < len; i++) {
     const r = direction === "horizontal" ? row : row + i;
     const c = direction === "horizontal" ? col + i : col;
     board[r]![c] = word.answer[i]!;
@@ -259,13 +260,24 @@ export function placeWordOnBoard(
     category: word.category,
     clue: word.clue,
     difficulty: word.difficulty,
-    length: word.length,
+    length: len,
     row,
     col,
     direction,
     isCenter,
     cells,
   };
+}
+
+function shuffleArray<T>(items: readonly T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = copy[i]!;
+    copy[i] = copy[j]!;
+    copy[j] = temp;
+  }
+  return copy;
 }
 
 export function generatePuzzle(difficulty: "easy" | "medium" | "hard" | "expert" = "easy"): PuzzleResult {
@@ -278,7 +290,7 @@ export function generatePuzzle(difficulty: "easy" | "medium" | "hard" | "expert"
   });
 
   for (let attempt = 0; attempt < 50; attempt++) {
-    const shuffled = [...filteredWords].sort(() => Math.random() - 0.5);
+    const shuffled = shuffleArray(filteredWords);
     const pool = shuffled.slice(0, Math.min(targetCount + 5, shuffled.length));
 
     const center = selectCenterWord(pool);
@@ -301,7 +313,8 @@ export function generatePuzzle(difficulty: "easy" | "medium" | "hard" | "expert"
         return placedWords.length >= Math.min(3, targetCount);
       }
 
-      const currentWord = remainingWords[index]!;
+      const currentWord = remainingWords[index];
+      if (!currentWord) return placedWords.length >= Math.min(3, targetCount);
       const candidates = findPossiblePlacements(board, currentWord);
 
       candidates.sort((a, b) => b.intersectionsCount - a.intersectionsCount);
@@ -318,7 +331,9 @@ export function generatePuzzle(difficulty: "easy" | "medium" | "hard" | "expert"
         placedWords.pop();
         for (let r = 0; r < 10; r++) {
           for (let c = 0; c < 10; c++) {
-            board[r]![c] = boardSnapshot[r]![c]!;
+            if (board[r] && boardSnapshot[r]) {
+              board[r]![c] = boardSnapshot[r]![c] ?? null;
+            }
           }
         }
       }
@@ -343,11 +358,12 @@ export function generatePuzzle(difficulty: "easy" | "medium" | "hard" | "expert"
   const fallbackBoard: (string | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
   const fallbackCenterPlaced = placeWordOnBoard(fallbackBoard, fallbackCenter, 4, 3, "horizontal", true);
   const fallbackKalem = placeWordOnBoard(fallbackBoard, { answer: "KALEM", category: "Eşya", clue: "Yazı yazmak için kullanılan araç.", length: 5, difficulty: "easy" as const }, 2, 4, "vertical", false);
+  const fallbackMasa = placeWordOnBoard(fallbackBoard, { answer: "MASA", category: "Eşya", clue: "Üzerinde yemek yediğimiz, ders çalıştığımız mobilya.", length: 4, difficulty: "easy" as const }, 6, 4, "horizontal", false);
 
   return {
     boardSize: 10,
     centerWord: fallbackCenterPlaced,
-    words: [fallbackCenterPlaced, fallbackKalem],
+    words: [fallbackCenterPlaced, fallbackKalem, fallbackMasa],
     score: 100,
   };
 }
@@ -374,19 +390,24 @@ export function checkPlacement(
   }
 
   // 2. Çözüm ile uyumluluk kontrolü (Solution Validation)
-  const targetSolution = solutionWords.find(
-    (w) => w.answer.toLocaleUpperCase("tr-TR") === wordAnswer.toLocaleUpperCase("tr-TR")
+  const normalizedAnswer = wordAnswer.toLocaleUpperCase("tr-TR");
+  const matchingWordExists = solutionWords.some(
+    (w) => w.answer.toLocaleUpperCase("tr-TR") === normalizedAnswer
   );
 
-  if (!targetSolution) {
+  if (!matchingWordExists) {
     return { valid: false, reason: "Geçersiz kelime!" };
   }
 
-  if (
-    targetSolution.row !== startRow ||
-    targetSolution.col !== startCol ||
-    targetSolution.direction !== direction
-  ) {
+  const targetSolution = solutionWords.find(
+    (w) =>
+      w.answer.toLocaleUpperCase("tr-TR") === normalizedAnswer &&
+      w.row === startRow &&
+      w.col === startCol &&
+      w.direction === direction
+  );
+
+  if (!targetSolution) {
     return { valid: false, reason: "Kelime bu konuma veya yöne yerleştirilemez!" };
   }
 

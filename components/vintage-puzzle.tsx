@@ -6,19 +6,41 @@ import {
   Pressable,
   ScrollView,
   Animated,
-  Dimensions,
-  PanResponder,
+  useWindowDimensions,
 } from "react-native";
-import { triggerHapticSelection, triggerHapticSuccess, triggerHapticError } from "@/shared/audio-haptics";
-import { generatePuzzle, checkPlacement, PuzzleResult, PlacedWord } from "@/shared/puzzle-generator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  triggerHapticSelection,
+  triggerHapticSuccess,
+  triggerHapticError,
+  triggerHapticLongWord,
+  playSelectionNote,
+  playSuccessSound,
+  playErrorSound,
+} from "@/shared/audio-haptics";
+import { generatePuzzle, PuzzleResult, PlacedWord } from "@/shared/puzzle-generator";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CELL_SIZE = (SCREEN_WIDTH - 20) / 10;
 const TR_ALPHABET = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
+const VINTAGE_STORAGE_KEY = "@kelime_patlat:vintage_puzzle_progress";
+
+export interface PoolTile {
+  id: string;
+  letter: string;
+}
 
 export type VintagePuzzleProps = {
   onBack: () => void;
-  onRewardXp?: (amount: number) => void;
+  onRewardXp?: (amount: number, level: number) => void;
+  vintageProgress?: {
+    maxUnlockedLevel: number;
+    completedLevels: number[];
+    score: number;
+  };
+  onSaveProgress?: (progress: {
+    maxUnlockedLevel: number;
+    completedLevels: number[];
+    score: number;
+  }) => void;
 };
 
 // Alt Performans Bileşeni: Grid Hücresi (60 FPS)
@@ -27,69 +49,101 @@ const GridCellItem = React.memo(
     row,
     col,
     char,
+    isPuzzleCell,
+    cellNumber,
     isCenterArea,
+    isCellCompleted,
     isCenterWordPlaced,
     isSelected,
     isTargetWordCell,
+    cellSize,
     onPress,
   }: {
     row: number;
     col: number;
     char: string | null;
+    isPuzzleCell: boolean;
+    cellNumber?: number;
     isCenterArea: boolean;
+    isCellCompleted: boolean;
     isCenterWordPlaced: boolean;
     isSelected: boolean;
     isTargetWordCell: boolean;
+    cellSize: number;
     onPress: (r: number, c: number) => void;
   }) => {
+    if (!isPuzzleCell) {
+      return (
+        <View style={[styles.gridCell, { width: cellSize, height: cellSize }, styles.gridCellBlocked]}>
+          <View style={styles.blockedHatch} />
+        </View>
+      );
+    }
+
     return (
       <Pressable
         onPress={() => onPress(row, col)}
         style={({ pressed }) => [
           styles.gridCell,
+          { width: cellSize, height: cellSize },
           isTargetWordCell && styles.gridCellTargetWord,
           isCenterArea && !char && styles.gridCellCenterArea,
-          isCenterWordPlaced && char && styles.gridCellCenterWord,
-          char && !isCenterWordPlaced && styles.gridCellPlaced,
+          isCenterWordPlaced && isCellCompleted && styles.gridCellCenterWord,
+          isCellCompleted && !isCenterWordPlaced && styles.gridCellCompleted,
+          char && !isCellCompleted && styles.gridCellDraft,
           isSelected && styles.gridCellSelected,
           pressed && { opacity: 0.8 },
         ]}
       >
-        {isCenterArea && !char && <Text style={styles.centerStarIcon}>⭐</Text>}
-        <Text style={[styles.cellCharText, isSelected && styles.cellCharSelectedText]}>
+        {cellNumber !== undefined && (
+          <Text style={[styles.cellNumberBadge, isSelected && styles.cellNumberBadgeSelected]}>
+            {cellNumber}
+          </Text>
+        )}
+        {isCenterArea && !char && cellNumber === undefined && <Text style={styles.centerStarIcon}>⭐</Text>}
+        <Text
+          style={[
+            styles.cellCharText,
+            isCellCompleted && styles.cellCharCompletedText,
+            isSelected && styles.cellCharSelectedText,
+          ]}
+        >
           {char || ""}
         </Text>
       </Pressable>
     );
   }
 );
+GridCellItem.displayName = "GridCellItem";
 
 // Sürüklenebilir Harf Taşları
 const LetterTileItem = React.memo(
   ({
-    letter,
-    index,
-    onPressLetter,
+    tile,
+    onPressTile,
   }: {
-    letter: string;
-    index: number;
-    onPressLetter: (letter: string, index: number) => void;
+    tile: PoolTile;
+    onPressTile: (tile: PoolTile) => void;
   }) => {
     return (
       <Pressable
-        onPress={() => onPressLetter(letter, index)}
+        onPress={() => onPressTile(tile)}
         style={({ pressed }) => [styles.letterTile, pressed && styles.letterTilePressed]}
       >
-        <Text style={styles.letterTileText}>{letter}</Text>
+        <Text style={styles.letterTileText}>{tile.letter}</Text>
       </Pressable>
     );
   }
 );
+LetterTileItem.displayName = "LetterTileItem";
 
-export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
+export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgress }: VintagePuzzleProps) {
+  const { width: windowWidth } = useWindowDimensions();
+  const cellSize = Math.max(26, Math.floor((windowWidth - 28) / 10));
+
   const [viewMode, setViewMode] = useState<"map" | "play">("map");
-  const [maxUnlockedLevel, setMaxUnlockedLevel] = useState<number>(1);
-  const [completedLevels, setCompletedLevels] = useState<Set<number>>(new Set());
+  const [maxUnlockedLevel, setMaxUnlockedLevel] = useState<number>(() => vintageProgress?.maxUnlockedLevel ?? 1);
+  const [completedLevels, setCompletedLevels] = useState<Set<number>>(() => new Set(vintageProgress?.completedLevels ?? []));
   const [levelIndex, setLevelIndex] = useState(1);
   const [puzzle, setPuzzle] = useState<PuzzleResult | null>(null);
 
@@ -99,7 +153,7 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
   );
 
   // Harf Havuzu & Seçili/Çözülen Kelimeler
-  const [letterPool, setLetterPool] = useState<string[]>([]);
+  const [letterPool, setLetterPool] = useState<PoolTile[]>([]);
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [solvedWordIds, setSolvedWordIds] = useState<Set<string>>(new Set());
 
@@ -107,15 +161,90 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
   const [placementDirection, setPlacementDirection] = useState<"horizontal" | "vertical">("horizontal");
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
 
-  const [score, setScore] = useState(0);
+  const [score, setScore] = useState(() => vintageProgress?.score ?? 0);
   const [isLevelComplete, setIsLevelComplete] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Drag (Sürükle-Bırak) Koordinatları
   const gridContainerRef = useRef<View>(null);
-  const [gridPageOffset, setGridPageOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  // Bulmaca hücre haritası ve başlangıç numaraları
+  const { puzzleCellsMap, cellNumbersMap } = useMemo(() => {
+    const pMap = new Map<string, { words: PlacedWord[]; isCenter: boolean }>();
+    const nMap = new Map<string, number>();
+    if (!puzzle) return { puzzleCellsMap: pMap, cellNumbersMap: nMap };
+
+    let numCounter = 1;
+    puzzle.words.forEach((w) => {
+      const startKey = `${w.row},${w.col}`;
+      if (!nMap.has(startKey)) {
+        nMap.set(startKey, numCounter++);
+      }
+      w.cells.forEach(([r, c]) => {
+        const key = `${r},${c}`;
+        const existing = pMap.get(key) || { words: [], isCenter: false };
+        existing.words.push(w);
+        if (w.isCenter) existing.isCenter = true;
+        pMap.set(key, existing);
+      });
+    });
+
+    return { puzzleCellsMap: pMap, cellNumbersMap: nMap };
+  }, [puzzle]);
+
+  // Kalıcı İlerleme Yükleme (AsyncStorage + Veritabanı Prop Senkronizasyonu)
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(VINTAGE_STORAGE_KEY)
+      .then((raw) => {
+        if (!raw || !active) {
+          if (vintageProgress) {
+            setMaxUnlockedLevel(Math.min(20, Math.max(1, vintageProgress.maxUnlockedLevel)));
+            setCompletedLevels(new Set(vintageProgress.completedLevels));
+            setScore(vintageProgress.score);
+          }
+          return;
+        }
+        try {
+          const parsed = JSON.parse(raw);
+          const localMax = typeof parsed?.maxUnlockedLevel === "number" ? parsed.maxUnlockedLevel : 1;
+          const localCompleted = Array.isArray(parsed?.completedLevels) ? parsed.completedLevels.filter((n: any) => typeof n === "number") : [];
+          const localScore = typeof parsed?.score === "number" ? parsed.score : 0;
+
+          const remoteMax = vintageProgress?.maxUnlockedLevel ?? 1;
+          const remoteCompleted = vintageProgress?.completedLevels ?? [];
+          const remoteScore = vintageProgress?.score ?? 0;
+
+          const mergedMax = Math.min(20, Math.max(localMax, remoteMax));
+          const mergedCompleted = new Set([...localCompleted, ...remoteCompleted]);
+          const mergedScore = Math.max(localScore, remoteScore);
+
+          setMaxUnlockedLevel(mergedMax);
+          setCompletedLevels(mergedCompleted);
+          setScore(mergedScore);
+        } catch (e) {
+          console.warn("[VintagePuzzle] Failed to parse progress", e);
+        }
+      })
+      .catch((err) => {
+        console.warn("[VintagePuzzle] Failed to load progress", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, [vintageProgress]);
+
+  const persistProgress = useCallback((newMaxUnlocked: number, newCompleted: Set<number>, newScore: number) => {
+    const payload = {
+      maxUnlockedLevel: newMaxUnlocked,
+      completedLevels: Array.from(newCompleted),
+      score: newScore,
+    };
+    AsyncStorage.setItem(VINTAGE_STORAGE_KEY, JSON.stringify(payload)).catch((err) => {
+      console.warn("[VintagePuzzle] Failed to save progress", err);
+    });
+    onSaveProgress?.(payload);
+  }, [onSaveProgress]);
 
   // Yeni Bulmaca Yükle
   const loadNewPuzzleForLevel = useCallback((targetLevel: number) => {
@@ -125,15 +254,33 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
 
     setPlayerBoard(Array(10).fill(null).map(() => Array(10).fill(null)));
     setSelectedWordId(generated.centerWord.id);
+    setPlacementDirection(generated.centerWord.direction);
 
-    // Bulmaca kelimelerinin harflerinden harf havuzu oluştur
-    const allChars: string[] = [];
-    generated.words.forEach((w) => allChars.push(...w.answer.split("")));
-    for (let i = 0; i < 4; i++) {
-      allChars.push(TR_ALPHABET[Math.floor(Math.random() * TR_ALPHABET.length)]!);
+    // Bulmaca tahtasındaki benzersiz hücrelerdeki harfleri topla (kesişim çiftlerini tekilleştir)
+    const uniqueChars: string[] = [];
+    const seenCells = new Set<string>();
+
+    generated.words.forEach((w) => {
+      w.cells.forEach(([r, c], idx) => {
+        const key = `${r},${c}`;
+        if (!seenCells.has(key)) {
+          seenCells.add(key);
+          uniqueChars.push(w.answer[idx]!);
+        }
+      });
+    });
+
+    // 3 adet rastgele çeldirici harf ekle
+    for (let i = 0; i < 3; i++) {
+      uniqueChars.push(TR_ALPHABET[Math.floor(Math.random() * TR_ALPHABET.length)]!);
     }
 
-    setLetterPool(allChars.sort(() => Math.random() - 0.5));
+    const tiles: PoolTile[] = uniqueChars.map((ch, idx) => ({
+      id: `p-${targetLevel}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+      letter: ch,
+    }));
+
+    setLetterPool(tiles.sort(() => Math.random() - 0.5));
     setSolvedWordIds(new Set());
     setSelectedCell([generated.centerWord.row, generated.centerWord.col]);
     setIsLevelComplete(false);
@@ -144,10 +291,18 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
     loadNewPuzzleForLevel(levelIndex);
   }, [levelIndex, loadNewPuzzleForLevel]);
 
+  // Seviyeyi Sıfırla / Baştan Başla
+  const handleResetLevel = useCallback(() => {
+    triggerHapticSelection();
+    playSelectionNote(0);
+    loadNewPuzzleForLevel(levelIndex);
+  }, [levelIndex, loadNewPuzzleForLevel]);
+
   // Hata Uyarısı
   const triggerError = useCallback(
     (msg: string) => {
       triggerHapticError();
+      playErrorSound();
       setErrorMessage(msg);
       Animated.sequence([
         Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
@@ -159,200 +314,252 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
     [shakeAnim]
   );
 
-  // Dokunulan Harf Taşını Doğrudan Tahtadaki Seçili Hücreye Koy
-  const handlePressPoolLetterToBoard = useCallback(
-    (letter: string, poolIndex: number) => {
-      if (!puzzle || !selectedCell) {
-        triggerError("Harfi yerleştirmek için önce tahtadan bir hücreye dokunun!");
-        return;
-      }
-
-      const [r, c] = selectedCell;
-      const targetCellChar = playerBoard[r]![c];
-
-      // Eğer hücre doluysa ve aynı kesişim harfi koyuluyorsa (Örn: 'KEDİ' ve 'ŞEKER' kesişimindeki 'K')
-      if (targetCellChar !== null) {
-        if (targetCellChar === letter) {
-          // Ortak harf zaten orada, sadece seçimi ilerlet
-          triggerHapticSelection();
-          if (placementDirection === "horizontal" && c + 1 < 10) {
-            setSelectedCell([r, c + 1]);
-          } else if (placementDirection === "vertical" && r + 1 < 10) {
-            setSelectedCell([r + 1, c]);
-          }
-          return;
+  const isCellLocked = useCallback(
+    (r: number, c: number, solvedIds: Set<string>) => {
+      if (!puzzle) return false;
+      return puzzle.words.some((w) => {
+        if (!solvedIds.has(w.id)) return false;
+        if (w.direction === "horizontal") {
+          return w.row === r && c >= w.col && c < w.col + w.length;
         } else {
-          triggerError("Bu hücrede farklı bir harf var!");
-          return;
+          return w.col === c && r >= w.row && r < w.row + w.length;
+        }
+      });
+    },
+    [puzzle]
+  );
+
+  const isCellLockedByCompletedWord = useCallback(
+    (r: number, c: number) => isCellLocked(r, c, solvedWordIds),
+    [isCellLocked, solvedWordIds]
+  );
+
+  // Tahtadaki Kelimeleri Otomatik Kontrol Et
+  const checkCompletedWordsOnBoard = useCallback(
+    (currentBoard: (string | null)[][]) => {
+      if (!puzzle) return;
+
+      let newlySolvedCount = 0;
+      const newSolvedIds = new Set(solvedWordIds);
+
+      puzzle.words.forEach((w) => {
+        if (newSolvedIds.has(w.id)) return;
+
+        let isFullMatch = true;
+        for (let i = 0; i < w.length; i++) {
+          const r = w.direction === "horizontal" ? w.row : w.row + i;
+          const c = w.direction === "horizontal" ? w.col + i : w.col;
+          if (currentBoard[r]?.[c] !== w.answer[i]) {
+            isFullMatch = false;
+            break;
+          }
+        }
+
+        if (isFullMatch) {
+          newSolvedIds.add(w.id);
+          newlySolvedCount++;
+        }
+      });
+
+      if (newlySolvedCount > 0) {
+        triggerHapticSuccess();
+        playSuccessSound();
+        setSolvedWordIds(newSolvedIds);
+        const scoreGain = newlySolvedCount * 100;
+        const nextScore = score + scoreGain;
+        setScore(nextScore);
+
+        if (newSolvedIds.size >= puzzle.words.length) {
+          triggerHapticLongWord();
+          setIsLevelComplete(true);
+          const isFirstTime = !completedLevels.has(levelIndex);
+          const baseXP = levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100;
+          const xpEarned = isFirstTime ? baseXP : Math.max(3, Math.floor(baseXP / 10));
+          onRewardXp?.(xpEarned, levelIndex);
+
+          const nextCompleted = new Set([...completedLevels, levelIndex]);
+          const nextMax = Math.min(20, Math.max(maxUnlockedLevel, levelIndex + 1));
+          setCompletedLevels(nextCompleted);
+          setMaxUnlockedLevel(nextMax);
+
+          persistProgress(nextMax, nextCompleted, nextScore);
+        } else {
+          // Çözülen kelimeden sonra çözülmemiş sıradaki kelimeye otomatik geç
+          const nextUnsolved = puzzle.words.find((w) => !newSolvedIds.has(w.id));
+          if (nextUnsolved) {
+            setSelectedWordId(nextUnsolved.id);
+            setPlacementDirection(nextUnsolved.direction);
+            const nextEmpty = nextUnsolved.cells.find(([r, c]) => currentBoard[r]?.[c] === null);
+            if (nextEmpty) {
+              setSelectedCell(nextEmpty);
+            }
+          }
+        }
+      }
+    },
+    [puzzle, solvedWordIds, score, completedLevels, levelIndex, maxUnlockedLevel, onRewardXp, persistProgress]
+  );
+
+  // Dokunulan Harf Taşını Doğrudan Tahtadaki Uygun Hücreye Koy
+  const handlePressPoolLetterToBoard = useCallback(
+    (tile: PoolTile) => {
+      if (!puzzle) return;
+
+      const letter = tile.letter;
+      let targetR: number | null = null;
+      let targetC: number | null = null;
+
+      // 1. Seçili hücre boş ve geçerliyse doğrudan oraya yerleştir
+      if (selectedCell) {
+        const [sr, sc] = selectedCell;
+        const cellChar = playerBoard[sr]![sc];
+        if (cellChar === null && puzzleCellsMap.has(`${sr},${sc}`)) {
+          targetR = sr;
+          targetC = sc;
         }
       }
 
+      // 2. Seçili hücre doluysa veya seçili hücre yoksa aktif kelimenin ilk boş hücresini bul
+      if (targetR === null || targetC === null) {
+        const activeWord = puzzle.words.find((w) => w.id === selectedWordId);
+        if (activeWord) {
+          const firstEmpty = activeWord.cells.find(([r, c]) => playerBoard[r]?.[c] === null);
+          if (firstEmpty) {
+            targetR = firstEmpty[0];
+            targetC = firstEmpty[1];
+          }
+        }
+      }
+
+      // 3. Aktif kelimede boş hücre yoksa çözülmemiş herhangi bir kelimenin ilk boş hücresini bul
+      if (targetR === null || targetC === null) {
+        for (const w of puzzle.words) {
+          if (!solvedWordIds.has(w.id)) {
+            const empty = w.cells.find(([r, c]) => playerBoard[r]?.[c] === null);
+            if (empty) {
+              targetR = empty[0];
+              targetC = empty[1];
+              setSelectedWordId(w.id);
+              setPlacementDirection(w.direction);
+              break;
+            }
+          }
+        }
+      }
+
+      if (targetR === null || targetC === null) {
+        triggerError("Tahtada yerleştirilecek boş kare kalmadı!");
+        return;
+      }
+
       triggerHapticSelection();
+      playSelectionNote(tile.letter.charCodeAt(0) % 7);
 
       // Tahtaya harfi yerleştir
       const newBoard = playerBoard.map((rowArr) => [...rowArr]);
-      newBoard[r]![c] = letter;
+      newBoard[targetR]![targetC] = letter;
       setPlayerBoard(newBoard);
 
-      // Havuzdan harfi çıkar
-      setLetterPool((prev) => prev.filter((_, idx) => idx !== poolIndex));
+      // Havuzdan taşı çıkar
+      setLetterPool((prev) => prev.filter((t) => t.id !== tile.id));
 
-      // Otomatik olarak bir sonraki hücreye geç
-      if (placementDirection === "horizontal" && c + 1 < 10) {
-        setSelectedCell([r, c + 1]);
-      } else if (placementDirection === "vertical" && r + 1 < 10) {
-        setSelectedCell([r + 1, c]);
+      // Otomatik olarak sıradaki BOŞ hücreye akıcı şekilde ilerle
+      const targetWord = puzzle.words.find((w) => w.id === selectedWordId) || puzzleCellsMap.get(`${targetR},${targetC}`)?.words[0];
+      if (targetWord) {
+        const currentIdx = targetWord.cells.findIndex(([cr, cc]) => cr === targetR && cc === targetC);
+        let nextEmpty: [number, number] | null = null;
+        if (currentIdx !== -1) {
+          for (let i = currentIdx + 1; i < targetWord.cells.length; i++) {
+            const [nr, nc] = targetWord.cells[i]!;
+            if (newBoard[nr]![nc] === null) {
+              nextEmpty = [nr, nc];
+              break;
+            }
+          }
+        }
+        if (nextEmpty) {
+          setSelectedCell(nextEmpty);
+        } else {
+          setSelectedCell([targetR, targetC]);
+        }
       }
 
       // Tahtadaki tamamlanan kelimeleri kontrol et
       checkCompletedWordsOnBoard(newBoard);
     },
-    [puzzle, selectedCell, playerBoard, placementDirection, triggerError]
+    [puzzle, selectedCell, puzzleCellsMap, playerBoard, selectedWordId, solvedWordIds, triggerError, checkCompletedWordsOnBoard]
   );
 
-  // Tahtadaki Kelimeleri Otomatik Kontrol Et
-  const checkCompletedWordsOnBoard = (currentBoard: (string | null)[][]) => {
-    if (!puzzle) return;
-
-    let newlySolvedCount = 0;
-    const newSolvedIds = new Set(solvedWordIds);
-
-    puzzle.words.forEach((w) => {
-      if (newSolvedIds.has(w.id)) return;
-
-      // 1. Birincil (jeneratörün belirlediği) konumu kontrol et
-      let isFullMatch = true;
-      for (let i = 0; i < w.length; i++) {
-        const r = w.direction === "horizontal" ? w.row : w.row + i;
-        const c = w.direction === "horizontal" ? w.col + i : w.col;
-        if (currentBoard[r]?.[c] !== w.answer[i]) {
-          isFullMatch = false;
-          break;
-        }
-      }
-
-      // 2. Birincil eşleşmediyse, tahta üzerindeki alternatif geçerli kesişim konumlarını kontrol et
-      if (!isFullMatch) {
-        const len = w.length;
-        const ans = w.answer;
-
-        // Dikey tarama
-        for (let r = 0; r <= 10 - len && !isFullMatch; r++) {
-          for (let c = 0; c < 10 && !isFullMatch; c++) {
-            let match = true;
-            let intersects = false;
-            for (let i = 0; i < len; i++) {
-              if (currentBoard[r + i]?.[c] !== ans[i]) {
-                match = false;
-                break;
-              }
-              // En az bir kilitli veya merkez hücreyle kesişmeli
-              if (lockedCellsMap.has(`${r + i},${c}`)) {
-                intersects = true;
-              }
-            }
-            if (match && (intersects || newSolvedIds.size === 0)) {
-              w.row = r;
-              w.col = c;
-              w.direction = "vertical";
-              isFullMatch = true;
-            }
-          }
-        }
-
-        // Yatay tarama
-        for (let r = 0; r < 10 && !isFullMatch; r++) {
-          for (let c = 0; c <= 10 - len && !isFullMatch; c++) {
-            let match = true;
-            let intersects = false;
-            for (let i = 0; i < len; i++) {
-              if (currentBoard[r]?.[c + i] !== ans[i]) {
-                match = false;
-                break;
-              }
-              if (lockedCellsMap.has(`${r},${c + i}`)) {
-                intersects = true;
-              }
-            }
-            if (match && (intersects || newSolvedIds.size === 0)) {
-              w.row = r;
-              w.col = c;
-              w.direction = "horizontal";
-              isFullMatch = true;
-            }
-          }
-        }
-      }
-
-      if (isFullMatch) {
-        newSolvedIds.add(w.id);
-        newlySolvedCount++;
-      }
-    });
-
-    if (newlySolvedCount > 0) {
-      triggerHapticSuccess();
-      setSolvedWordIds(newSolvedIds);
-      setScore((s) => s + newlySolvedCount * 100);
-
-      if (newSolvedIds.size >= puzzle.words.length) {
-        setIsLevelComplete(true);
-        const isFirstTime = !completedLevels.has(levelIndex);
-        const baseXP = levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100;
-        const xpEarned = isFirstTime ? baseXP : Math.max(3, Math.floor(baseXP / 10));
-        onRewardXp?.(xpEarned);
-
-        setCompletedLevels((prev) => new Set([...prev, levelIndex]));
-        setMaxUnlockedLevel((prev) => Math.max(prev, levelIndex + 1));
-      }
-    }
-  };
-
-  // Tamamlanmış kelimelerin hücrelerinin O(1) haritası (60 FPS İçin Performans Koruması)
-  const lockedCellsMap = useMemo(() => {
-    const set = new Set<string>();
-    if (!puzzle) return set;
-    puzzle.words.forEach((w) => {
-      if (solvedWordIds.has(w.id)) {
-        for (let i = 0; i < w.length; i++) {
-          const wr = w.direction === "horizontal" ? w.row : w.row + i;
-          const wc = w.direction === "horizontal" ? w.col + i : w.col;
-          set.add(`${wr},${wc}`);
-        }
-      }
-    });
-    return set;
-  }, [puzzle, solvedWordIds]);
-
-  const isCellLockedByCompletedWord = useCallback(
-    (r: number, c: number) => {
-      return lockedCellsMap.has(`${r},${c}`);
-    },
-    [lockedCellsMap]
-  );
-
-  // Tahtadaki Harfe Dokunarak Geri Havuza Gönder
+  // Tahtadaki Harfe Dokunarak Geri Havuza Gönder & Hücre/Kelime Seç
   const handleCellPress = useCallback(
     (r: number, c: number) => {
+      const cellInfo = puzzleCellsMap.get(`${r},${c}`);
+      if (!cellInfo || cellInfo.words.length === 0) {
+        return;
+      }
+
       const char = playerBoard[r]![c];
+
+      // Eğer hücrede harf varsa ve tamamlanmış kelimeye ait değilse geri havuza al
       if (char !== null) {
-        // Eğer hücre tamamlanmış kelimeye aitse silmeye izin verme
         if (isCellLockedByCompletedWord(r, c)) {
           triggerHapticSelection();
-          setSelectedCell([r, c]);
+          playSelectionNote(3);
+        } else {
+          triggerHapticSelection();
+          playSelectionNote(1);
+          const newBoard = playerBoard.map((rowArr) => [...rowArr]);
+          newBoard[r]![c] = null;
+          setPlayerBoard(newBoard);
+          setLetterPool((prev) => [
+            ...prev,
+            { id: `p-ret-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, letter: char },
+          ]);
+        }
+      } else {
+        triggerHapticSelection();
+        playSelectionNote(0);
+      }
+
+      setSelectedCell([r, c]);
+
+      // Kesişim hücresi kontrolü: Aynı hücreye tekrar basıldıysa yön değiştir
+      const currentWordMatches = cellInfo.words.find((w) => w.id === selectedWordId);
+      if (currentWordMatches && cellInfo.words.length > 1 && selectedCell?.[0] === r && selectedCell?.[1] === c) {
+        const otherWord = cellInfo.words.find((w) => w.id !== selectedWordId);
+        if (otherWord) {
+          setSelectedWordId(otherWord.id);
+          setPlacementDirection(otherWord.direction);
           return;
         }
-
-        // Değilse harfi silip havuza ekle
-        triggerHapticSelection();
-        const newBoard = playerBoard.map((rowArr) => [...rowArr]);
-        newBoard[r]![c] = null;
-        setPlayerBoard(newBoard);
-        setLetterPool((prev) => [...prev, char]);
       }
-      setSelectedCell([r, c]);
+
+      if (currentWordMatches) {
+        setPlacementDirection(currentWordMatches.direction);
+      } else {
+        const nextWord = cellInfo.words[0]!;
+        setSelectedWordId(nextWord.id);
+        setPlacementDirection(nextWord.direction);
+      }
     },
-    [playerBoard, isCellLockedByCompletedWord]
+    [puzzleCellsMap, playerBoard, isCellLockedByCompletedWord, selectedWordId, selectedCell]
+  );
+
+  const handleSelectDirection = useCallback(
+    (dir: "horizontal" | "vertical") => {
+      triggerHapticSelection();
+      setPlacementDirection(dir);
+      if (selectedCell) {
+        const cellInfo = puzzleCellsMap.get(`${selectedCell[0]},${selectedCell[1]}`);
+        if (cellInfo && cellInfo.words.length > 0) {
+          const matchingWord = cellInfo.words.find((w) => w.direction === dir);
+          if (matchingWord) {
+            setSelectedWordId(matchingWord.id);
+          }
+        }
+      }
+    },
+    [selectedCell, puzzleCellsMap]
   );
 
   const activeWordItem = useMemo(
@@ -363,11 +570,7 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
   const activeTargetCellsMap = useMemo(() => {
     const set = new Set<string>();
     if (!activeWordItem) return set;
-    for (let i = 0; i < activeWordItem.length; i++) {
-      const wr = activeWordItem.direction === "horizontal" ? activeWordItem.row : activeWordItem.row + i;
-      const wc = activeWordItem.direction === "horizontal" ? activeWordItem.col + i : activeWordItem.col;
-      set.add(`${wr},${wc}`);
-    }
+    activeWordItem.cells.forEach(([r, c]) => set.add(`${r},${c}`));
     return set;
   }, [activeWordItem]);
 
@@ -429,8 +632,12 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
                   disabled={!isUnlocked}
                   onPress={() => {
                     triggerHapticSelection();
-                    setLevelIndex(lvl);
-                    loadNewPuzzleForLevel(lvl);
+                    playSelectionNote(lvl % 7);
+                    if (lvl === levelIndex) {
+                      loadNewPuzzleForLevel(lvl);
+                    } else {
+                      setLevelIndex(lvl);
+                    }
                     setViewMode("play");
                   }}
                   style={({ pressed }) => [
@@ -479,127 +686,146 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
           <Text style={styles.newspaperKicker}>10×10 KELİME BULMACA</Text>
           <Text style={styles.newspaperTitle}>{levelIndex}. BÖLÜM</Text>
         </View>
-        <View style={styles.scorePill}>
-          <Text style={styles.scoreText}>🪙 {score}</Text>
+        <View style={styles.headerRightRow}>
+          <Pressable onPress={handleResetLevel} style={styles.resetBtn}>
+            <Text style={styles.resetBtnText}>🔄 SIFIRLA</Text>
+          </Pressable>
+          <View style={styles.scorePill}>
+            <Text style={styles.scoreText}>🪙 {score}</Text>
+          </View>
         </View>
       </View>
 
-      {/* Bulmaca Alanı - Tek Sabit Ekran (Scroll Yok) */}
-      <View style={styles.paperBoard}>
-        <View style={styles.paperTextureOverlay} />
+      {/* Bulmaca Alanı - Duyarlı Kaydırılabilir Kağıt */}
+      <ScrollView
+        style={styles.paperBoardScroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.paperBoard}>
+          <View style={styles.paperTextureOverlay} />
 
-        {errorMessage && (
-          <Animated.View style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}>
-            <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
-          </Animated.View>
-        )}
-
-        {/* Aktif Seçili İpucu Kartı (Sabit Yükseklikte Temiz Görünüm) */}
-        {activeWordItem ? (
-          <View style={styles.activeClueBannerCard}>
-            <View style={styles.activeClueBadgeRow}>
-              <Text style={styles.activeClueBadgeTag}>
-                {activeWordItem.isCenter ? "⭐ ANKOR: MERKEZ KELİME" : `İPUCU (${completedCount}/${totalCount})`}
-              </Text>
-              <Text style={styles.activeClueLengthText}>{activeWordItem.length} HARF • [{activeWordItem.category}]</Text>
-              <View style={styles.dirRowCompactInline}>
-                <Pressable
-                  onPress={() => setPlacementDirection("horizontal")}
-                  style={[styles.dirBtnMini, placementDirection === "horizontal" && styles.dirBtnActive]}
-                >
-                  <Text style={[styles.dirBtnTextMini, placementDirection === "horizontal" && styles.dirBtnTextActive]}>↔ YATAY</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setPlacementDirection("vertical")}
-                  style={[styles.dirBtnMini, placementDirection === "vertical" && styles.dirBtnActive]}
-                >
-                  <Text style={[styles.dirBtnTextMini, placementDirection === "vertical" && styles.dirBtnTextActive]}>↕ DİKEY</Text>
-                </Pressable>
-              </View>
-            </View>
-            <Text numberOfLines={2} style={styles.activeClueText}>"{activeWordItem.clue}"</Text>
-          </View>
-        ) : (
-          <View style={styles.activeClueBannerCardEmpty}>
-            <Text style={styles.emptyClueText}>İpuçlarından birine veya tahtadan bir hücreye dokunun.</Text>
-          </View>
-        )}
-
-        {/* Yatay İpucu Çubuğu */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalTargetList}>
-          {puzzle?.words.map((w) => {
-            const isSolved = solvedWordIds.has(w.id);
-            const isSelected = selectedWordId === w.id;
-
-            return (
-              <Pressable
-                key={w.id}
-                onPress={() => {
-                  triggerHapticSelection();
-                  setSelectedWordId(w.id);
-                  setSelectedCell([w.row, w.col]);
-                  setPlacementDirection(w.direction);
-                }}
-                style={[
-                  styles.targetChipHorizontal,
-                  w.isCenter && styles.targetChipCenterWord,
-                  isSolved && styles.targetChipCompleted,
-                  isSelected && styles.targetChipSelected,
-                ]}
-              >
-                <Text style={[styles.targetWordText, isSolved && styles.targetWordTextCompleted]}>
-                  {w.isCenter ? `⭐ ` : ""}{isSolved ? `✓ ${w.answer}` : `❓ ${w.length}H [${w.category}]`}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {/* 10×10 OYUN TAHTASI */}
-        <View ref={gridContainerRef} style={styles.gridContainer}>
-          {playerBoard.map((row, rIdx) => (
-            <View key={rIdx} style={styles.gridRow}>
-              {row.map((char, cIdx) => {
-                const isSelected = selectedCell?.[0] === rIdx && selectedCell?.[1] === cIdx;
-                const isCenterArea = rIdx === 4 && cIdx >= 3 && cIdx <= 6;
-                const isCenterWordPlaced = puzzle?.centerWord ? solvedWordIds.has(puzzle.centerWord.id) : false;
-                const isTargetWordCell = activeTargetCellsMap.has(`${rIdx},${cIdx}`);
-
-                return (
-                  <GridCellItem
-                    key={cIdx}
-                    row={rIdx}
-                    col={cIdx}
-                    char={char}
-                    isCenterArea={isCenterArea}
-                    isCenterWordPlaced={isCenterWordPlaced}
-                    isSelected={isSelected}
-                    isTargetWordCell={isTargetWordCell}
-                    onPress={handleCellPress}
-                  />
-                );
-              })}
-            </View>
-          ))}
-        </View>
-
-        {/* HARF TAŞLARI HAVUZU */}
-        <Text style={styles.sectionLabelCompact}>HARF TAŞLARI (DOKUN TAHTAYA KOY):</Text>
-        <View style={styles.letterPoolContainer}>
-          {letterPool.length === 0 ? (
-            <Text style={styles.emptyPoolText}>Tüm harfler yerleştirildi.</Text>
-          ) : (
-            letterPool.map((letter, idx) => (
-              <LetterTileItem
-                key={idx}
-                letter={letter}
-                index={idx}
-                onPressLetter={handlePressPoolLetterToBoard}
-              />
-            ))
+          {errorMessage && (
+            <Animated.View style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}>
+              <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+            </Animated.View>
           )}
+
+          {/* Aktif Seçili İpucu Kartı (Sabit Yükseklikte Temiz Görünüm) */}
+          {activeWordItem ? (
+            <View style={styles.activeClueBannerCard}>
+              <View style={styles.activeClueBadgeRow}>
+                <Text style={styles.activeClueBadgeTag}>
+                  {activeWordItem.isCenter ? "⭐ ANKOR: MERKEZ KELİME" : `İPUCU (${completedCount}/${totalCount})`}
+                </Text>
+                <Text style={styles.activeClueLengthText}>{activeWordItem.length} HARF • [{activeWordItem.category}]</Text>
+                <View style={styles.dirRowCompactInline}>
+                  <Pressable
+                    onPress={() => handleSelectDirection("horizontal")}
+                    style={[styles.dirBtnMini, placementDirection === "horizontal" && styles.dirBtnActive]}
+                  >
+                    <Text style={[styles.dirBtnTextMini, placementDirection === "horizontal" && styles.dirBtnTextActive]}>↔ YATAY</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleSelectDirection("vertical")}
+                    style={[styles.dirBtnMini, placementDirection === "vertical" && styles.dirBtnActive]}
+                  >
+                    <Text style={[styles.dirBtnTextMini, placementDirection === "vertical" && styles.dirBtnTextActive]}>↕ DİKEY</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <Text numberOfLines={2} style={styles.activeClueText}>{`"${activeWordItem.clue}"`}</Text>
+            </View>
+          ) : (
+            <View style={styles.activeClueBannerCardEmpty}>
+              <Text style={styles.emptyClueText}>İpuçlarından birine veya tahtadan bir hücreye dokunun.</Text>
+            </View>
+          )}
+
+          {/* Yatay İpucu Çubuğu */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalTargetList}>
+            {puzzle?.words.map((w) => {
+              const isSolved = solvedWordIds.has(w.id);
+              const isSelected = selectedWordId === w.id;
+
+              return (
+                <Pressable
+                  key={w.id}
+                  onPress={() => {
+                    triggerHapticSelection();
+                    setSelectedWordId(w.id);
+                    setPlacementDirection(w.direction);
+                    const firstEmpty = w.cells.find(([r, c]) => playerBoard[r]?.[c] === null);
+                    setSelectedCell(firstEmpty || [w.row, w.col]);
+                  }}
+                  style={[
+                    styles.targetChipHorizontal,
+                    w.isCenter && styles.targetChipCenterWord,
+                    isSolved && styles.targetChipCompleted,
+                    isSelected && styles.targetChipSelected,
+                  ]}
+                >
+                  <Text style={[styles.targetWordText, isSolved && styles.targetWordTextCompleted]}>
+                    {w.isCenter ? `⭐ ` : ""}{isSolved ? `✓ ${w.answer}` : `❓ ${w.length}H [${w.category}]`}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* 10×10 OYUN TAHTASI */}
+          <View ref={gridContainerRef} style={styles.gridContainer}>
+            {playerBoard.map((row, rIdx) => (
+              <View key={rIdx} style={styles.gridRow}>
+                {row.map((char, cIdx) => {
+                  const isSelected = selectedCell?.[0] === rIdx && selectedCell?.[1] === cIdx;
+                  const cellInfo = puzzleCellsMap.get(`${rIdx},${cIdx}`);
+                  const isPuzzleCell = !!cellInfo;
+                  const cellNumber = cellNumbersMap.get(`${rIdx},${cIdx}`);
+                  const isCenterArea = cellInfo?.isCenter ?? false;
+                  const isCellCompleted = isCellLockedByCompletedWord(rIdx, cIdx);
+                  const isCenterWordPlaced = puzzle?.centerWord ? solvedWordIds.has(puzzle.centerWord.id) : false;
+                  const isTargetWordCell = activeTargetCellsMap.has(`${rIdx},${cIdx}`);
+
+                  return (
+                    <GridCellItem
+                      key={cIdx}
+                      row={rIdx}
+                      col={cIdx}
+                      char={char}
+                      isPuzzleCell={isPuzzleCell}
+                      cellNumber={cellNumber}
+                      isCenterArea={isCenterArea}
+                      isCellCompleted={isCellCompleted}
+                      isCenterWordPlaced={isCenterWordPlaced}
+                      isSelected={isSelected}
+                      isTargetWordCell={isTargetWordCell}
+                      cellSize={cellSize}
+                      onPress={handleCellPress}
+                    />
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+
+          {/* HARF TAŞLARI HAVUZU */}
+          <Text style={styles.sectionLabelCompact}>HARF TAŞLARI (DOKUN TAHTAYA KOY):</Text>
+          <View style={styles.letterPoolContainer}>
+            {letterPool.length === 0 ? (
+              <Text style={styles.emptyPoolText}>Tüm harfler yerleştirildi.</Text>
+            ) : (
+              letterPool.map((tile) => (
+                <LetterTileItem
+                  key={tile.id}
+                  tile={tile}
+                  onPressTile={handlePressPoolLetterToBoard}
+                />
+              ))
+            )}
+          </View>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Seviye Başarı Modalı */}
       {isLevelComplete && (
@@ -614,19 +840,30 @@ export function VintagePuzzle({ onBack, onRewardXp }: VintagePuzzleProps) {
               +{levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100} XP KAZANILDI
             </Text>
 
-            <Pressable
-              onPress={() => {
-                const nextLvl = levelIndex + 1;
-                setLevelIndex(nextLvl);
-                loadNewPuzzleForLevel(nextLvl);
-              }}
-              style={({ pressed }) => [styles.nextBtn, pressed && { opacity: 0.8 }]}
-            >
-              <Text style={styles.nextBtnText}>SONRAKİ BÖLÜM ({levelIndex + 1}) ➔</Text>
-            </Pressable>
+            {levelIndex < 20 ? (
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  playSuccessSound();
+                  const nextLvl = levelIndex + 1;
+                  setLevelIndex(nextLvl);
+                }}
+                style={({ pressed }) => [styles.nextBtn, pressed && { opacity: 0.8 }]}
+              >
+                <Text style={styles.nextBtnText}>SONRAKİ BÖLÜM ({levelIndex + 1}) ➔</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.completedAllBanner}>
+                <Text style={styles.completedAllText}>🏆 TEBRİKLER! TÜM BÖLÜMLERİ TAMAMLADINIZ! 🏆</Text>
+              </View>
+            )}
 
             <Pressable
-              onPress={() => setViewMode("map")}
+              onPress={() => {
+                triggerHapticSelection();
+                setIsLevelComplete(false);
+                setViewMode("map");
+              }}
               style={({ pressed }) => [styles.mapReturnBtn, pressed && { opacity: 0.8 }]}
             >
               <Text style={styles.mapReturnBtnText}>SEVİYE HARİTASI 🗞️</Text>
@@ -693,9 +930,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
   },
+  headerRightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  resetBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.18)",
+  },
+  resetBtnText: {
+    color: "#E2E8F0",
+    fontSize: 10.5,
+    fontWeight: "800",
+  },
+  paperBoardScroll: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
   paperBoard: {
     flex: 1,
@@ -913,14 +1171,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   gridCell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
+    width: 34,
+    height: 34,
     backgroundColor: "#FAF5E8",
     borderWidth: 1,
     borderColor: "#D1C4AC",
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+  },
+  gridCellBlocked: {
+    backgroundColor: "#201815",
+    borderColor: "#30241E",
+  },
+  blockedHatch: {
+    width: "40%",
+    height: "40%",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.05)",
+    borderRadius: 2,
+  },
+  cellNumberBadge: {
+    position: "absolute",
+    top: 1,
+    left: 2,
+    fontSize: 7.5,
+    fontWeight: "900",
+    color: "#78695C",
+  },
+  cellNumberBadgeSelected: {
+    color: "#0B132B",
   },
   gridCellCenterArea: {
     backgroundColor: "#FEF3C7",
@@ -932,6 +1212,14 @@ const styles = StyleSheet.create({
   },
   gridCellPlaced: {
     backgroundColor: "#A7F3D0",
+    borderColor: "#059669",
+  },
+  gridCellDraft: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#8C7A6B",
+  },
+  gridCellCompleted: {
+    backgroundColor: "#D1FAE5",
     borderColor: "#059669",
   },
   gridCellTargetWord: {
@@ -952,6 +1240,10 @@ const styles = StyleSheet.create({
   cellCharText: {
     color: "#1E1B18",
     fontSize: 13,
+    fontWeight: "900",
+  },
+  cellCharCompletedText: {
+    color: "#065F46",
     fontWeight: "900",
   },
   cellCharSelectedText: {
@@ -1033,6 +1325,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 20,
+  },
+  completedAllBanner: {
+    backgroundColor: "rgba(255, 194, 74, 0.15)",
+    borderWidth: 1.5,
+    borderColor: "#FFC24A",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  completedAllText: {
+    color: "#FFC24A",
+    fontSize: 11.5,
+    fontWeight: "900",
+    textAlign: "center",
   },
   nextBtn: {
     backgroundColor: "#00F5D4",

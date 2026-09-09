@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { DIGITAL_STORE_PRODUCTS, monetizationManager, type ProductItem } from "@/shared/monetization";
 import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { type PlayerProgress } from "@/shared/progression";
@@ -54,6 +54,15 @@ export function CyberStore({
   const [adLoading, setAdLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<StoreTab>("equipment");
 
+  // Satın alma onay modalı durumu
+  const [confirmPurchase, setConfirmPurchase] = useState<{
+    title: string;
+    description: string;
+    cost: number;
+    icon: string;
+    onConfirm: () => void;
+  } | null>(null);
+
   const handlePurchase = async (product: ProductItem) => {
     triggerHapticSelection();
     setBuyingId(product.id);
@@ -69,7 +78,7 @@ export function CyberStore({
     }
   };
 
-  const handleSpendChips = (item: ChipEquipmentItem) => {
+  const executeSpendChips = (item: ChipEquipmentItem) => {
     if (coins < item.cost) {
       triggerHapticSelection();
       setStoreMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
@@ -81,6 +90,61 @@ export function CyberStore({
     onSpendCoins?.(item);
     setStoreMessage(`Tebrikler! ${item.name} başarıyla envanterine eklendi! 🎉`);
     setTimeout(() => setStoreMessage(null), 3500);
+  };
+
+  const handleSpendChips = (item: ChipEquipmentItem) => {
+    if (coins < item.cost) {
+      triggerHapticSelection();
+      setStoreMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
+      setTimeout(() => setStoreMessage(null), 3500);
+      return;
+    }
+    triggerHapticSelection();
+    setConfirmPurchase({
+      title: item.name,
+      description: item.description,
+      cost: item.cost,
+      icon: item.icon,
+      onConfirm: () => executeSpendChips(item),
+    });
+  };
+
+  const handleCosmeticPress = (
+    kind: "frame" | "effect" | "board",
+    id: string,
+    label: string,
+    color: string,
+    cost: number,
+    owned: boolean,
+    onSelect?: (id: string) => void
+  ) => {
+    triggerHapticSelection();
+    if (owned) {
+      onSelect?.(id);
+      return;
+    }
+    if (cost === 0) {
+      onBuyCosmetic?.(kind, id, 0);
+      return;
+    }
+    if (coins < cost) {
+      setStoreMessage(`Yetersiz Çip! Bu kozmetik için ${cost} siber çip gerekiyor.`);
+      setTimeout(() => setStoreMessage(null), 3500);
+      return;
+    }
+    setConfirmPurchase({
+      title: `${label} (${kind === "frame" ? "Çerçeve" : kind === "effect" ? "Zafer Efekti" : "Tahta"})`,
+      description: `${cost} Siber Çip karşılığında bu kozmetiğin kilidini açıp kuşanmak istiyor musunuz?`,
+      cost,
+      icon: kind === "frame" ? "✨" : kind === "effect" ? "💥" : "🎨",
+      onConfirm: () => {
+        triggerHapticSuccess();
+        gameSfx.victory();
+        onBuyCosmetic?.(kind, id, cost);
+        setStoreMessage(`Tebrikler! ${label} açıldı ve kuşanıldı! 🎉`);
+        setTimeout(() => setStoreMessage(null), 3500);
+      },
+    });
   };
 
   const handleWatchAdForCoins = async () => {
@@ -108,7 +172,62 @@ export function CyberStore({
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+    <>
+      {/* Satın Alma Onay Modalı */}
+      <Modal
+        visible={confirmPurchase !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmPurchase(null)}
+      >
+        <Pressable style={styles.confirmOverlay} onPress={() => setConfirmPurchase(null)}>
+          <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.confirmBadge}>
+              <Text style={styles.confirmBadgeIcon}>{confirmPurchase?.icon}</Text>
+            </View>
+
+            <Text style={styles.confirmKicker}>İŞLEMİ ONAYLIYOR MUSUNUZ?</Text>
+            <Text numberOfLines={2} style={styles.confirmTitle}>
+              {confirmPurchase?.title}
+            </Text>
+
+            <View style={styles.confirmCostPill}>
+              <Text style={styles.confirmCostLabel}>ÖDENECEK TUTAR:</Text>
+              <Text style={styles.confirmCostValue}>🪙 {confirmPurchase?.cost} ÇİP</Text>
+            </View>
+
+            <Text style={styles.confirmDesc}>{confirmPurchase?.description}</Text>
+
+            <View style={styles.confirmBalanceInfo}>
+              <Text style={styles.confirmBalanceText}>
+                Mevcut Bakiye: <Text style={{ color: "#FFC24A", fontWeight: "900" }}>{coins} Çip</Text> → Kalan: <Text style={{ color: "#00F5D4", fontWeight: "900" }}>{Math.max(0, coins - (confirmPurchase?.cost ?? 0))} Çip</Text>
+              </Text>
+            </View>
+
+            <View style={styles.confirmActionsRow}>
+              <Pressable
+                onPress={() => setConfirmPurchase(null)}
+                style={({ pressed }) => [styles.confirmCancelBtn, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.confirmCancelText}>VAZGEÇ</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  const action = confirmPurchase?.onConfirm;
+                  setConfirmPurchase(null);
+                  action?.();
+                }}
+                style={({ pressed }) => [styles.confirmAcceptBtn, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.confirmAcceptText}>✓ SATIN AL</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.backButton}>
@@ -192,7 +311,19 @@ export function CyberStore({
                 <View style={[styles.productEmblemDot, { backgroundColor: accentColor }]} />
               </View>
               <View style={styles.productInfo}>
-                <Text style={styles.productName}>{item.name}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.productName}>{item.name}</Text>
+                  {isShield && (
+                    <View style={styles.inventoryCountBadge}>
+                      <Text style={styles.inventoryCountText}>Sahip: {progress?.streakShields ?? 1}</Text>
+                    </View>
+                  )}
+                  {isRadar && (
+                    <View style={[styles.inventoryCountBadge, { borderColor: "#00F5D460" }]}>
+                      <Text style={[styles.inventoryCountText, { color: "#00F5D4" }]}>Bonus: +{progress?.radarChargesBonus ?? 0}</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.productDesc}>{item.description}</Text>
               </View>
               <Pressable
@@ -238,7 +369,7 @@ export function CyberStore({
               return (
                 <Pressable
                   key={id}
-                  onPress={() => (owned ? onSelectFrame?.(id) : onBuyCosmetic?.("frame", id, cost))}
+                  onPress={() => handleCosmeticPress("frame", id, label, color, cost, owned, onSelectFrame)}
                   style={({ pressed }) => [
                     styles.cosmeticCard,
                     { borderColor: isSelected ? color : "rgba(255,255,255,0.12)" },
@@ -289,7 +420,7 @@ export function CyberStore({
               return (
                 <Pressable
                   key={id}
-                  onPress={() => (owned ? onSelectVictoryEffect?.(id) : onBuyCosmetic?.("effect", id, cost))}
+                  onPress={() => handleCosmeticPress("effect", id, label, themeColor, cost, owned, onSelectVictoryEffect)}
                   style={({ pressed }) => [
                     styles.cosmeticCard,
                     { borderColor: isSelected ? themeColor : "rgba(255,255,255,0.12)" },
@@ -341,9 +472,9 @@ export function CyberStore({
               return (
                 <Pressable
                   key={id}
-                  onPress={() => (owned ? onSelectBoardSkin?.(id) : onBuyCosmetic?.("board", id, cost))}
+                  onPress={() => handleCosmeticPress("board", id, label, color, cost, owned, onSelectBoardSkin)}
                   style={({ pressed }) => [
-                    styles.frameCard,
+                    styles.cosmeticCard,
                     {
                       backgroundColor: isSelected ? "rgba(35, 26, 65, 0.95)" : "rgba(27, 21, 51, 0.9)",
                       borderColor: isSelected ? color : "rgba(255, 255, 255, 0.12)",
@@ -410,7 +541,8 @@ export function CyberStore({
         ))}
         </>}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
 
@@ -503,187 +635,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  /* Yeni: Profil Çerçeve Satır Kartları */
-  frameListCol: { flexDirection: "column", gap: 10 },
-  frameRowCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    borderWidth: 1.5,
-    backgroundColor: "#16102B",
-    padding: 12,
-    gap: 0,
-  },
-  framePreviewRing: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    borderWidth: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 5,
-    flexShrink: 0,
-  },
-  framePreviewInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  frameCornerDot: {
-    position: "absolute",
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  frameRowName: { fontSize: 13, fontWeight: "900", letterSpacing: 0.5 },
-  frameRowDesc: { color: "#8B82A4", fontSize: 9.5, lineHeight: 14, flexShrink: 1 },
-  frameGlyphChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  frameActionBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 68,
-    marginLeft: 8,
-    flexShrink: 0,
-  },
-  frameActionText: { fontSize: 10, fontWeight: "900", letterSpacing: 0.3 },
-  selectedPill: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 5,
-  },
-  selectedPillText: { color: "#0B132B", fontSize: 7.5, fontWeight: "900" },
 
-  /* Yeni: Zafer Efekti Satır Kartları */
-  effectGridCol: { flexDirection: "column", gap: 10 },
-  effectRowCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 18,
-    borderWidth: 1.5,
-    backgroundColor: "#16102B",
-    padding: 12,
-  },
-  effectPreviewBox: {
-    width: 62,
-    height: 62,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
-    flexShrink: 0,
-  },
-  effectPreviewGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    width: 46,
-    height: 46,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 1,
-  },
-  effectPreviewChar: { fontSize: 11, textAlign: "center", width: 14, height: 14, lineHeight: 14 },
-  effectGlowRing: {
-    position: "absolute",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-  },
-  effectTypePill: {
-    marginTop: 7,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignSelf: "flex-start",
-  },
-  effectTypePillText: { fontSize: 7.5, fontWeight: "900", letterSpacing: 0.4 },
-
-  /* Eski stiller — hâlâ tahta görünümü için kullanılıyor */
-  frameCard: {
-    width: "31.8%",
-    minHeight: 124,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    padding: 10,
-    backgroundColor: "rgba(27, 21, 51, 0.9)",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  realisticFrameWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2.5,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    marginBottom: 6,
-  },
-  frameWrapSignal: { borderColor: "#00F5D4" },
-  frameWrapNeon: { borderColor: "#A78BFA" },
-  frameWrapChrome: { borderColor: "#E2E8F0" },
-  innerAvatarCore: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  innerAvatarGlyph: { fontSize: 16, fontWeight: "900" },
-  frameAccentDot: { position: "absolute", width: 6, height: 6, borderRadius: 3 },
-
-  effectRow: { flexDirection: "row", gap: 8 },
-  effectCard: {
-    flex: 1,
-    minHeight: 124,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    padding: 10,
-    backgroundColor: "rgba(27, 21, 51, 0.9)",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  realisticEffectWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    marginBottom: 6,
-  },
-  effectWrapPulse: { borderColor: "#00F5D4" },
-  effectWrapGlitch: { borderColor: "#A78BFA" },
-  effectWrapFlare: { borderColor: "#FFC24A" },
-  realisticEffectGlyph: { fontSize: 22, fontWeight: "900" },
-  effectAuraRing: {
-    position: "absolute",
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderStyle: "dashed",
-  },
 
   /* Tahta Görünümleri */
   realisticBoardWrap: {
@@ -766,6 +718,19 @@ const styles = StyleSheet.create({
   productIcon: { fontSize: 24 },
   productInfo: { flex: 1, marginRight: 10 },
   productName: { color: "#FFF", fontSize: 13, fontWeight: "900" },
+  inventoryCountBadge: {
+    backgroundColor: "rgba(96, 165, 250, 0.12)",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(96, 165, 250, 0.35)",
+  },
+  inventoryCountText: {
+    color: "#60A5FA",
+    fontSize: 8.5,
+    fontWeight: "900",
+  },
   productDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2, lineHeight: 14 },
 
   chipBuyButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72, shadowColor: "#00F5D4", shadowOpacity: 0.35, shadowRadius: 6, elevation: 3 },
@@ -775,4 +740,134 @@ const styles = StyleSheet.create({
 
   buyButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72 },
   buyButtonText: { color: "#121025", fontSize: 12, fontWeight: "900" },
+
+  /* Satın Alma Onay Modalı Stilleri */
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(8, 5, 20, 0.86)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  confirmCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#16112C",
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1.5,
+    borderColor: "#4A3B75",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  confirmBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(0, 245, 212, 0.12)",
+    borderWidth: 2,
+    borderColor: "#00F5D4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    shadowColor: "#00F5D4",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  confirmBadgeIcon: { fontSize: 28 },
+  confirmKicker: {
+    color: "#A78BFA",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textAlign: "center",
+  },
+  confirmTitle: {
+    color: "#FFF9FC",
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  confirmCostPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255, 194, 74, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 194, 74, 0.4)",
+    marginBottom: 12,
+  },
+  confirmCostLabel: { color: "#C4B5FD", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
+  confirmCostValue: { color: "#FFD000", fontSize: 13, fontWeight: "900" },
+  confirmDesc: {
+    color: "#CBD5E1",
+    fontSize: 11.5,
+    lineHeight: 17,
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  confirmBalanceInfo: {
+    width: "100%",
+    backgroundColor: "rgba(23, 17, 44, 0.8)",
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(124, 92, 246, 0.25)",
+    marginBottom: 18,
+    alignItems: "center",
+  },
+  confirmBalanceText: {
+    color: "#CBD5E1",
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+  confirmActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "#241B42",
+    borderWidth: 1,
+    borderColor: "#4A3B75",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmCancelText: {
+    color: "#CBD5E1",
+    fontSize: 11.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  confirmAcceptBtn: {
+    flex: 1.2,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: "#00F5D4",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#00F5D4",
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  confirmAcceptText: {
+    color: "#0F172A",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
 });

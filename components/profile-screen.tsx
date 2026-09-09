@@ -18,8 +18,6 @@ import {
   badgesFor,
   getActiveCyberTitle,
   getPlayerLevel,
-  isAvatarUnlocked,
-  THEME_PACKS,
   type AvatarId,
   type GenderType,
   type PlayerProgress,
@@ -52,7 +50,7 @@ export function ProfileScreen({
   playerName: string;
   onUpdatePlayerName: (name: string) => void;
   progress: PlayerProgress;
-  onSelectAvatar: (avatar: AvatarId) => void;
+  onSelectAvatar?: (avatar: AvatarId) => void;
   onSelectTheme?: (theme: ThemePackId) => void;
   onSelectTitle?: (titleBadge: string) => void;
   onUpdateGender?: (gender: GenderType) => void;
@@ -66,6 +64,7 @@ export function ProfileScreen({
   onDeleteAccount?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"overview" | "settings">("overview");
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -81,6 +80,7 @@ export function ProfileScreen({
   const activeTitle = getActiveCyberTitle(progress);
   const badges = badgesFor(progress);
   const unlockedBadgesCount = badges.filter((b) => b.unlocked).length;
+  const unlockedTitlesCount = CYBER_TITLES.filter((t) => t.unlocked(progress)).length;
 
   const longestWord =
     progress.history && progress.history.length
@@ -124,46 +124,55 @@ export function ProfileScreen({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Top Header */}
+      {/* Top Bar Header */}
       <View style={styles.header}>
         {onBack && (
           <Pressable onPress={onBack} style={styles.back}>
             <Text style={styles.backText}>‹</Text>
           </Pressable>
         )}
-        <View>
-          <Text style={styles.overline}>OPERATÖR PROFİLİ</Text>
-          <Text style={styles.title}>KULLANICI VE AYARLAR</Text>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.overline}>OPERATÖR MERKEZİ</Text>
+          <Text style={styles.title}>KİMLİK & AYARLAR</Text>
+        </View>
+        <View style={styles.headerChipsBadge}>
+          <Text style={styles.headerChipsIcon}>🪙</Text>
+          <Text style={styles.headerChipsVal}>{progress.coins ?? 0}</Text>
         </View>
       </View>
 
-      {/* 1. HERO OYUNCU KARTI (Full Width Player Identity) */}
+      {/* 1. HERO OPERATÖR KARTI (Futuristic Cyber ID) */}
       <View style={styles.heroCard}>
         <View style={styles.heroTopRow}>
-          {/* Avatar with Level Badge & Camera Edit */}
+          {/* Avatar Ring with Camera & Level Badge */}
           <View style={styles.avatarWrapper}>
             <Pressable
               onPress={handlePickPhoto}
               style={({ pressed }) => [
                 styles.avatarRing,
                 {
-                  backgroundColor: activeAvatar.surface,
-                  borderColor: activeAvatar.color,
+                  borderColor: activeAvatar.color || "#00F5D4",
                 },
-                pressed && { opacity: 0.8 },
+                pressed && { opacity: 0.85 },
               ]}
             >
               {progress.avatarPhoto ? (
                 <Image source={{ uri: progress.avatarPhoto }} style={styles.avatarImage} />
               ) : (
-                <Text style={[styles.avatarGlyph, { color: activeAvatar.color }]}>
-                  {activeAvatar.icon}
-                </Text>
+                <View style={[styles.avatarInnerFallback, { backgroundColor: activeAvatar.surface || "#153E3A" }]}>
+                  <Text style={[styles.avatarGlyph, { color: activeAvatar.color || "#50E3C2" }]}>
+                    {activeAvatar.icon}
+                  </Text>
+                </View>
               )}
-              <View style={styles.cameraIconBtn}>
-                <Text style={styles.cameraIconText}>📷</Text>
-              </View>
             </Pressable>
+
+            {/* Change Photo Pill */}
+            <Pressable onPress={handlePickPhoto} style={styles.cameraIconBtn}>
+              <Text style={styles.cameraIconText}>📷 DEĞİŞTİR</Text>
+            </Pressable>
+
+            {/* Level Badge in a clean corner */}
             <View style={styles.levelBadge}>
               <Text style={styles.levelBadgeText}>LV.{currentLevel}</Text>
             </View>
@@ -199,38 +208,19 @@ export function ProfileScreen({
                   <Text numberOfLines={1} style={styles.heroName}>
                     {safeName}
                   </Text>
-                  <Text style={styles.editPen}>✏️</Text>
+                  <View style={styles.editPenBox}>
+                    <Text style={styles.editPen}>✏️</Text>
+                  </View>
                 </Pressable>
               )}
             </View>
 
-            {/* Cyber Title & Gender Badge */}
+            {/* Cyber Hologram Title */}
             <View style={styles.titleBadgeRow}>
               <View style={styles.titleBadge}>
+                <Text style={styles.titleBadgeIcon}>🎖️</Text>
                 <Text style={styles.titleBadgeText}>{activeTitle}</Text>
               </View>
-              <Pressable
-                onPress={() => {
-                  triggerHapticSelection();
-                  const nextGender = progress.gender === "male" ? "female" : progress.gender === "female" ? "unspecified" : "male";
-                  onUpdateGender?.(nextGender);
-                }}
-                style={[
-                  styles.genderBadge,
-                  progress.gender === "male" && styles.genderBadgeMale,
-                  progress.gender === "female" && styles.genderBadgeFemale,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.genderBadgeText,
-                    progress.gender === "male" && { color: "#38BDF8" },
-                    progress.gender === "female" && { color: "#F472B6" },
-                  ]}
-                >
-                  {progress.gender === "male" ? "♂ ERKEK" : progress.gender === "female" ? "♀ KADIN" : "🧑 BELİRTİLMEDİ"}
-                </Text>
-              </Pressable>
             </View>
           </View>
         </View>
@@ -238,417 +228,427 @@ export function ProfileScreen({
         {/* Level XP Progress Bar */}
         <View style={styles.xpSection}>
           <View style={styles.xpHeaderRow}>
-            <Text style={styles.xpLabel}>SEVİYE İLERLEMESİ</Text>
+            <View style={styles.xpTagWrap}>
+              <Text style={styles.xpTagIcon}>⚡</Text>
+              <Text style={styles.xpLabel}>SEVİYE DENEYİMİ</Text>
+            </View>
             <Text style={styles.xpValues}>
-              <Text style={styles.xpCurrent}>{currentLevelXp}</Text> / {nextLevelXp} XP
+              <Text style={styles.xpCurrent}>{currentLevelXp}</Text>
+              <Text style={styles.xpTotal}> / {nextLevelXp} XP</Text>
             </Text>
           </View>
           <View style={styles.xpTrack}>
             <View style={[styles.xpFill, { width: `${progressRatio * 100}%` }]} />
           </View>
-          <Text style={styles.xpNextHint}>
-            Seviye {currentLevel + 1}&apos;e {nextLevelXp - currentLevelXp} XP kaldı
-          </Text>
+          <View style={styles.xpFooterRow}>
+            <Text style={styles.xpPercentText}>%{Math.round(progressRatio * 100)} Tamamlandı</Text>
+            <Text style={styles.xpNextHint}>
+              Lv.{currentLevel + 1}&apos;e son {nextLevelXp - currentLevelXp} XP
+            </Text>
+          </View>
         </View>
+      </View>
 
-        {/* Quick Gender Picker Buttons */}
-        {onUpdateGender && (
-          <View style={styles.genderQuickRow}>
-            {(["male", "female", "unspecified"] as const).map((g) => {
-              const active = progress.gender === g || (!progress.gender && g === "unspecified");
-              const isM = g === "male";
-              const isF = g === "female";
+      {/* TABS SELECTOR (Genel Bakış vs Ayarlar) */}
+      <View style={styles.tabBar}>
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            setActiveTab("overview");
+          }}
+          style={[styles.tabBtn, activeTab === "overview" && styles.tabBtnActive]}
+        >
+          <Text style={[styles.tabBtnText, activeTab === "overview" && styles.tabBtnTextActive]}>
+            📊 GENEL BAKIŞ & ÜNVANLAR
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            setActiveTab("settings");
+          }}
+          style={[styles.tabBtn, activeTab === "settings" && styles.tabBtnActive]}
+        >
+          <Text style={[styles.tabBtnText, activeTab === "settings" && styles.tabBtnTextActive]}>
+            ⚙️ SİSTEM VE AYARLAR
+          </Text>
+        </Pressable>
+      </View>
+
+      {activeTab === "overview" ? (
+        <>
+          {/* 2. KARİYER İSTATİSTİKLERİ (2x2 Balanced Futuristic Grid) */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📊 OPERATÖR KARİYER VERİLERİ</Text>
+            <Text style={styles.sectionMeta}>CANLI KAYITLAR</Text>
+          </View>
+
+          <View style={styles.statsGrid}>
+            <View style={[styles.statTile, styles.statTileWins]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(255, 194, 74, 0.12)", borderColor: "#FFC24A" }]}>
+                <Text style={styles.statIcon}>🏆</Text>
+              </View>
+              <View style={styles.statDataWrap}>
+                <Text style={styles.statNumber}>{progress.wins}</Text>
+                <Text style={styles.statCaption}>GALİBİYET</Text>
+              </View>
+            </View>
+
+            <View style={[styles.statTile, styles.statTileScore]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(0, 245, 212, 0.12)", borderColor: "#00F5D4" }]}>
+                <Text style={styles.statIcon}>⚡</Text>
+              </View>
+              <View style={styles.statDataWrap}>
+                <Text style={styles.statNumber}>{progress.bestScore}</Text>
+                <Text style={styles.statCaption}>EN İYİ SKOR</Text>
+              </View>
+            </View>
+
+            <View style={[styles.statTile, styles.statTileWords]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(167, 139, 250, 0.12)", borderColor: "#A78BFA" }]}>
+                <Text style={styles.statIcon}>📚</Text>
+              </View>
+              <View style={styles.statDataWrap}>
+                <Text style={styles.statNumber}>
+                  {progress.history ? progress.history.length : 0}
+                </Text>
+                <Text style={styles.statCaption}>KELİME</Text>
+              </View>
+            </View>
+
+            <View style={[styles.statTile, styles.statTileStreak]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(244, 114, 182, 0.12)", borderColor: "#F472B6" }]}>
+                <Text style={styles.statIcon}>🔥</Text>
+              </View>
+              <View style={styles.statDataWrap}>
+                <Text style={styles.statNumber}>{progress.streak} <Text style={styles.statUnit}>GÜN</Text></Text>
+                <Text style={styles.statCaption}>SERİ</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Mini Intel HUD Strip */}
+          <View style={styles.intelStrip}>
+            <View style={styles.intelCell}>
+              <Text style={styles.intelLabel}>⚡ EN İYİ TEMPO</Text>
+              <Text style={styles.intelValue}>{progress.bestTempo || "—"} <Text style={styles.intelSub}>K/DK</Text></Text>
+            </View>
+            <View style={styles.intelDivider} />
+            <View style={styles.intelCell}>
+              <Text style={styles.intelLabel}>🎯 EN UZUN ROTA</Text>
+              <Text numberOfLines={1} style={[styles.intelValue, { color: "#FFC24A" }]}>{longestWord}</Text>
+            </View>
+            <View style={styles.intelDivider} />
+            <View style={styles.intelCell}>
+              <Text style={styles.intelLabel}>🌟 TOPLAM XP</Text>
+              <Text style={[styles.intelValue, { color: "#00F5D4" }]}>{progress.xp}</Text>
+            </View>
+          </View>
+
+          {/* 3. OYUNCU UNVANLARI */}
+          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
+            <Text style={styles.sectionTitle}>🎖️ OYUNCU UNVANLARI</Text>
+            <View style={styles.badgeCounterWrap}>
+              <Text style={styles.sectionMeta}>{unlockedTitlesCount} / {CYBER_TITLES.length} KAZANILDI</Text>
+            </View>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+            {[...CYBER_TITLES.filter((t) => t.unlocked(progress)), ...CYBER_TITLES.filter((t) => !t.unlocked(progress))].map((title) => {
+              const unlocked = title.unlocked(progress);
+              const isSelected = activeTitle === title.badge;
               return (
                 <Pressable
-                  key={g}
+                  key={title.id}
                   onPress={() => {
-                    triggerHapticSelection();
-                    onUpdateGender(g);
+                    if (!unlocked) {
+                      if (onShowToast) {
+                        onShowToast(`🔒 ${title.name.toUpperCase()} KİLİTLİ`, title.unlockHint, "🔒", "#EF4444");
+                      } else {
+                        Alert.alert(`🔒 ${title.name} KİLİTLİ`, title.unlockHint);
+                      }
+                    } else {
+                      triggerHapticSuccess();
+                      onSelectTitle?.(title.badge);
+                    }
                   }}
-                  style={[
-                    styles.genderQuickBtn,
-                    active && (isM ? styles.genderQuickBtnM : isF ? styles.genderQuickBtnF : styles.genderQuickBtnU),
+                  style={({ pressed }) => [
+                    styles.titleTile,
+                    unlocked ? styles.titleTileUnlocked : styles.titleTileLocked,
+                    isSelected && styles.titleTileSelected,
+                    pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={styles.genderQuickIcon}>{isM ? "♂" : isF ? "♀" : "✦"}</Text>
-                  <Text style={[styles.genderQuickLabel, active && { color: "#FFF", fontWeight: "900" }]}>
-                    {isM ? "Erkek" : isF ? "Kadın" : "Gizli"}
+                  <View style={[
+                    styles.badgeIconBubble,
+                    isSelected
+                      ? { backgroundColor: "rgba(0, 245, 212, 0.15)", borderColor: "#00F5D4" }
+                      : unlocked
+                      ? { backgroundColor: "rgba(255, 255, 255, 0.08)", borderColor: title.accent || "rgba(167, 139, 250, 0.4)" }
+                      : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
+                  ]}>
+                    <Text style={[styles.badgeIconText, { color: isSelected ? "#00F5D4" : unlocked ? (title.accent || "#A78BFA") : "#766D89" }]}>
+                      {unlocked ? (title.icon || "🎖️") : "🔒"}
+                    </Text>
+                  </View>
+
+                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: "#00F5D4" }, !unlocked && { color: "#8E889C" }]}>
+                    {title.badge}
                   </Text>
+
+                  <View style={[
+                    styles.titleMiniStatusPill,
+                    isSelected && styles.titleMiniStatusSelected,
+                    (!unlocked) && styles.titleMiniStatusLocked,
+                  ]}>
+                    <Text style={[
+                      styles.titleMiniStatusText,
+                      isSelected && { color: "#00F5D4" },
+                      (!unlocked) && { color: "#7B748C" },
+                    ]}>
+                      {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
+                    </Text>
+                  </View>
                 </Pressable>
               );
             })}
-          </View>
-        )}
-      </View>
+          </ScrollView>
 
-      {/* 2. KARİYER İSTATİSTİKLERİ (2x2 Balanced Grid) */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>📊 KARİYER İSTATİSTİKLERİ</Text>
-      </View>
-
-      <View style={styles.statsGrid}>
-        <View style={styles.statTile}>
-          <View style={styles.statIconBox}>
-            <Text style={styles.statIcon}>🏆</Text>
-          </View>
-          <Text style={styles.statNumber}>{progress.wins}</Text>
-          <Text style={styles.statCaption}>GALİBİYET</Text>
-        </View>
-
-        <View style={styles.statTile}>
-          <View style={styles.statIconBox}>
-            <Text style={styles.statIcon}>⚡</Text>
-          </View>
-          <Text style={styles.statNumber}>{progress.bestScore}</Text>
-          <Text style={styles.statCaption}>EN İYİ SKOR</Text>
-        </View>
-
-        <View style={styles.statTile}>
-          <View style={styles.statIconBox}>
-            <Text style={styles.statIcon}>📚</Text>
-          </View>
-          <Text style={styles.statNumber}>
-            {progress.history ? progress.history.length : 0}
-          </Text>
-          <Text style={styles.statCaption}>ÇÖZÜLEN KELİME</Text>
-        </View>
-
-        <View style={styles.statTile}>
-          <View style={styles.statIconBox}>
-            <Text style={styles.statIcon}>🔥</Text>
-          </View>
-          <Text style={styles.statNumber}>{progress.streak} GÜN</Text>
-          <Text style={styles.statCaption}>GÜNLÜK SERİ</Text>
-        </View>
-      </View>
-
-      {/* Mini Intel Strip */}
-      <View style={styles.intelStrip}>
-        <View style={styles.intelCell}>
-          <Text style={styles.intelLabel}>En İyi Tempo</Text>
-          <Text style={styles.intelValue}>{progress.bestTempo || "—"} K/DK</Text>
-        </View>
-        <View style={styles.intelDivider} />
-        <View style={styles.intelCell}>
-          <Text style={styles.intelLabel}>En Uzun Rota</Text>
-          <Text style={[styles.intelValue, { color: "#FFC24A" }]}>{longestWord}</Text>
-        </View>
-        <View style={styles.intelDivider} />
-        <View style={styles.intelCell}>
-          <Text style={styles.intelLabel}>Toplam XP</Text>
-          <Text style={[styles.intelValue, { color: "#50E3C2" }]}>{progress.xp}</Text>
-        </View>
-      </View>
-
-      {/* 4. KİMLİK KASASI: AVATARLAR */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>🎭 KİMLİK KASASI (AVATARLAR)</Text>
-        <Text style={styles.sectionMeta}>DOKUN VE SEÇ</Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-        {[...AVATARS.filter((a) => isAvatarUnlocked(a.id, progress)), ...AVATARS.filter((a) => !isAvatarUnlocked(a.id, progress))].map((avatar) => {
-          const isSelected = avatar.id === progress.selectedAvatar;
-          const unlocked = isAvatarUnlocked(avatar.id, progress);
-          return (
-            <Pressable
-              key={avatar.id}
-              onPress={() => {
-                if (!unlocked) {
-                  if (onShowToast) {
-                    onShowToast(`🔒 ${avatar.label.toUpperCase()} KİLİTLİ`, avatar.unlockHint, "🔒", "#EF4444");
-                  } else {
-                    Alert.alert(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint);
-                  }
-                } else {
-                  triggerHapticSuccess();
-                  onSelectAvatar(avatar.id);
-                }
-              }}
-              style={({ pressed }) => [
-                styles.avatarTile,
-                {
-                  backgroundColor: isSelected
-                    ? "rgba(35, 26, 65, 0.95)"
-                    : unlocked
-                    ? "rgba(22, 16, 42, 0.75)"
-                    : "rgba(16, 12, 30, 0.55)",
-                  borderColor: isSelected ? avatar.color : unlocked ? "rgba(124, 92, 246, 0.25)" : "rgba(50, 40, 75, 0.5)",
-                },
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={[
-                styles.avatarIconWrapper,
-                isSelected && { backgroundColor: `${avatar.color}25`, borderColor: avatar.color }
-              ]}>
-                <Text style={[styles.avatarTileGlyph, { color: unlocked ? (isSelected ? avatar.color : "#DDD6FE") : "#665E77" }]}>
-                  {unlocked ? avatar.icon : "🔒"}
-                </Text>
-              </View>
-              <Text numberOfLines={1} style={[styles.avatarTileLabel, isSelected && { color: avatar.color, fontWeight: "900" }, !unlocked && { color: "#7B748C" }]}>
-                {avatar.label}
-              </Text>
-              {isSelected && (
-                <View style={[styles.activePillBadge, { backgroundColor: `${avatar.color}25`, borderColor: avatar.color }]}>
-                  <Text style={[styles.activePillText, { color: avatar.color }]}>✓ AKTİF</Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* 5. SİBER UNVANLAR */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>🏷️ SİBER UNVANLAR</Text>
-        <Text style={styles.sectionMeta}>DOKUN VE KUŞAN</Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-        {[...CYBER_TITLES.filter((t) => t.unlocked(progress)), ...CYBER_TITLES.filter((t) => !t.unlocked(progress))].map((title) => {
-          const unlocked = title.unlocked(progress);
-          const isSelected = activeTitle === title.badge;
-          return (
-            <Pressable
-              key={title.id}
-              onPress={() => {
-                if (!unlocked) {
-                  if (onShowToast) {
-                    onShowToast(`🔒 ${title.name.toUpperCase()} KİLİTLİ`, title.unlockHint, "🔒", "#EF4444");
-                  } else {
-                    Alert.alert(`🔒 ${title.name} KİLİTLİ`, title.unlockHint);
-                  }
-                } else {
-                  triggerHapticSuccess();
-                  onSelectTitle?.(title.badge);
-                }
-              }}
-              style={({ pressed }) => [
-                styles.titleTile,
-                unlocked ? styles.titleTileUnlocked : styles.titleTileLocked,
-                isSelected && styles.titleTileSelected,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={styles.titleTopRow}>
-                <View style={[styles.titleIconCircle, isSelected && styles.titleIconCircleSelected, !unlocked && styles.titleIconCircleLocked]}>
-                  <Text style={styles.titleIconEmoji}>{unlocked ? (isSelected ? "⚡" : "🎖️") : "🔒"}</Text>
-                </View>
-                <View style={[
-                  styles.titleStatusChip,
-                  isSelected && styles.titleStatusChipSelected,
-                  (!unlocked) && styles.titleStatusChipLocked,
-                ]}>
-                  <Text style={[
-                    styles.titleStatusText,
-                    isSelected && { color: "#00F5D4" },
-                    (!unlocked) && { color: "#7B748C" },
-                  ]}>
-                    {isSelected ? "✓ KUŞANILDI" : unlocked ? "SEÇ" : "KİLİTLİ"}
-                  </Text>
-                </View>
-              </View>
-
-              <Text numberOfLines={1} style={[styles.titleTileBadgeText, isSelected && { color: "#00F5D4" }, !unlocked && { color: "#8E889C" }]}>
-                {title.badge}
-              </Text>
-
-              <Text numberOfLines={1} style={[styles.titleTileName, isSelected && { color: "#F1F5F9" }]}>
-                {title.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* 6. BAŞARI ROZETLERİ */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>🏆 BAŞARI ROZETLERİ</Text>
-        <Text style={styles.sectionMeta}>{unlockedBadgesCount}/{badges.length} AÇILDI</Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-        {[...badges.filter((b) => b.unlocked), ...badges.filter((b) => !b.unlocked)].map((badge) => {
-          const unlocked = badge.unlocked;
-          return (
-            <Pressable
-              key={badge.id}
-              onPress={() => Alert.alert(
-                unlocked ? `🏆 ${badge.title} (KAZANILDI)` : `🔒 ${badge.title} (KİLİTLİ)`,
-                unlocked ? `${badge.description}\n\nTebrikler, bu başarıyı kazandın!` : `${badge.description}\n\nBu rozeti kazanmak için görevi tamamla.`
-              )}
-              style={({ pressed }) => [
-                styles.badgeTile,
-                unlocked ? { borderColor: badge.accent, backgroundColor: "rgba(33, 26, 61, 0.6)" } : styles.badgeTileLocked,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={[styles.badgeIconBubble, unlocked ? { backgroundColor: "rgba(255,255,255,0.08)", borderColor: badge.accent } : { backgroundColor: "rgba(0,0,0,0.2)", borderColor: "#393151" }]}>
-                <Text style={[styles.badgeIconText, { color: unlocked ? badge.accent : "#766D89" }]}>{unlocked ? badge.icon : "🔒"}</Text>
-              </View>
-              <Text numberOfLines={1} style={[styles.badgeTileTitle, !unlocked && { color: "#8E889C" }]}>{badge.title}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* 5. OYUN AYARLARI & OTURUM */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>⚙️ OYUN VE HESAP AYARLARI</Text>
-      </View>
-
-      <View style={styles.settingsCard}>
-        <View style={styles.settingRow}>
-          <Text style={styles.settingLabel}>SES EFEKTLERİ</Text>
-          <Switch
-            value={sfxOn}
-            onValueChange={(val) => {
-              triggerHapticSelection();
-              toggleSfx(val);
-            }}
-            trackColor={{ false: "#2A214A", true: "#00F5D4" }}
-            thumbColor="#FFF"
-          />
-        </View>
-
-        <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
-          <Text style={styles.settingLabel}>TİTREŞİM (HAPTICS)</Text>
-          <Switch
-            value={hapticsOn}
-            onValueChange={(val) => {
-              triggerHapticSelection();
-              toggleHaptics(val);
-            }}
-            trackColor={{ false: "#2A214A", true: "#00F5D4" }}
-            thumbColor="#FFF"
-          />
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.footerActions}>
-        <Pressable
-          onPress={() => {
-            triggerHapticError();
-            setShowLogoutModal(true);
-          }}
-          style={styles.logoutBtn}
-        >
-          <Text style={styles.logoutBtnText}>HESAPTAN ÇIKIŞ YAP</Text>
-        </Pressable>
-
-        {/* Logout Modal */}
-        <Modal
-          visible={showLogoutModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowLogoutModal(false)}
-        >
-          <View style={styles.deleteModalOverlay}>
-            <View style={[styles.deleteModalCard, { borderColor: "#9A76ED" }]}>
-              <Text style={[styles.deleteModalTitle, { color: "#FFF" }]}>⚠️ HESAP ÇIKIŞI & SIFIRLAMA</Text>
-              <Text style={styles.deleteModalDesc}>
-                Hesabınızdan çıkış yapmak ve oturumu sıfırlamak istediğinize emin misiniz?
-              </Text>
-              <View style={styles.deleteModalActions}>
-                <Pressable
-                  onPress={() => setShowLogoutModal(false)}
-                  style={styles.deleteModalCancelBtn}
-                >
-                  <Text style={styles.deleteModalCancelText}>VAZGEÇ</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setShowLogoutModal(false);
-                    onLogout();
-                  }}
-                  style={[styles.deleteModalConfirmBtn, { backgroundColor: "#9A76ED" }]}
-                >
-                  <Text style={[styles.deleteModalConfirmText, { color: "#FFF" }]}>ÇIKIŞ YAP</Text>
-                </Pressable>
-              </View>
+          {/* 4. BAŞARI ROZETLERİ (Trophy Showcase) */}
+          <View style={[styles.sectionHeader, { marginTop: 22 }]}>
+            <Text style={styles.sectionTitle}>🏆 BAŞARI ROZETLERİ</Text>
+            <View style={styles.badgeCounterWrap}>
+              <Text style={styles.sectionMeta}>{unlockedBadgesCount} / {badges.length} KAZANILDI</Text>
             </View>
           </View>
-        </Modal>
 
-        {onDeleteAccount && (
-          <Pressable
-            onPress={() => {
-              triggerHapticError();
-              setDeleteConfirmInput("");
-              setShowDeleteModal(true);
-            }}
-            style={[styles.logoutBtn, { backgroundColor: "rgba(239, 68, 68, 0.15)", borderColor: "#EF4444", marginTop: 10 }]}
-          >
-            <Text style={[styles.logoutBtnText, { color: "#EF4444" }]}>🗑️ HESABIMI KALICI OLARAK SİL</Text>
-          </Pressable>
-        )}
-
-        {/* Text Confirmation Delete Modal */}
-        <Modal
-          visible={showDeleteModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowDeleteModal(false)}
-        >
-          <View style={styles.deleteModalOverlay}>
-            <View style={styles.deleteModalCard}>
-              <Text style={styles.deleteModalTitle}>🚨 HESAP SİLME DOĞRULAMASI</Text>
-              <Text style={styles.deleteModalDesc}>
-                Hesabınız ve tüm kayıtlı verileriniz (XP, Çip, Seviye İlerlemesi) kalıcı olarak silinecektir. Bu işlem <Text style={{ fontWeight: "900", color: "#EF4444" }}>GERİ ALINAMAZ</Text>.
-              </Text>
-              <Text style={styles.deleteModalPrompt}>
-                Onaylamak için aşağıya büyük harflerle <Text style={{ fontWeight: "900", color: "#EF4444" }}>SİL</Text> yazın:
-              </Text>
-              <TextInput
-                value={deleteConfirmInput}
-                onChangeText={setDeleteConfirmInput}
-                placeholder="SİL"
-                placeholderTextColor="rgba(239, 68, 68, 0.4)"
-                autoCapitalize="characters"
-                style={styles.deleteModalInput}
-              />
-              <View style={styles.deleteModalActions}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+            {[...badges.filter((b) => b.unlocked), ...badges.filter((b) => !b.unlocked)].map((badge) => {
+              const unlocked = badge.unlocked;
+              return (
                 <Pressable
-                  onPress={() => setShowDeleteModal(false)}
-                  style={styles.deleteModalCancelBtn}
-                >
-                  <Text style={styles.deleteModalCancelText}>VAZGEÇ</Text>
-                </Pressable>
-                <Pressable
-                  disabled={deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL"}
+                  key={badge.id}
                   onPress={() => {
-                    if (deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") === "SİL") {
-                      setShowDeleteModal(false);
-                      onDeleteAccount?.();
+                    triggerHapticSelection();
+                    if (onShowToast) {
+                      onShowToast(
+                        unlocked ? `🏆 ${badge.title}` : `🔒 ${badge.title} KİLİTLİ`,
+                        unlocked ? `${badge.description} (Kazanıldı)` : badge.description,
+                        unlocked ? "🏆" : "🔒",
+                        unlocked ? badge.accent : "#EF4444"
+                      );
+                    } else {
+                      Alert.alert(
+                        unlocked ? `🏆 ${badge.title} (KAZANILDI)` : `🔒 ${badge.title} (KİLİTLİ)`,
+                        unlocked ? `${badge.description}\n\nTebrikler, bu başarıyı kazandın!` : `${badge.description}\n\nBu rozeti kazanmak için görevi tamamla.`
+                      );
                     }
                   }}
-                  style={[
-                    styles.deleteModalConfirmBtn,
-                    deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL" && styles.deleteModalConfirmDisabled
+                  style={({ pressed }) => [
+                    styles.badgeTile,
+                    unlocked ? { borderColor: badge.accent, backgroundColor: "rgba(33, 26, 61, 0.75)" } : styles.badgeTileLocked,
+                    pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={styles.deleteModalConfirmText}>EVET, SİL</Text>
+                  <View style={[styles.badgeIconBubble, unlocked ? { backgroundColor: "rgba(255,255,255,0.08)", borderColor: badge.accent } : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }]}>
+                    <Text style={[styles.badgeIconText, { color: unlocked ? badge.accent : "#766D89" }]}>{unlocked ? badge.icon : "🔒"}</Text>
+                  </View>
+                  <Text numberOfLines={1} style={[styles.badgeTileTitle, !unlocked && { color: "#8E889C" }]}>{badge.title}</Text>
                 </Pressable>
+              );
+            })}
+          </ScrollView>
+        </>
+      ) : (
+        <>
+          {/* 5. AYARLAR & SİSTEM KONTROLLERİ */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>⚙️ SES VE GERİ BİLDİRİM</Text>
+            <Text style={styles.sectionMeta}>TERCİHLER</Text>
+          </View>
+
+          <View style={styles.settingsCard}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingLabelWrap}>
+                <View style={[styles.settingIconCircle, { backgroundColor: "rgba(0, 245, 212, 0.12)" }]}>
+                  <Text style={styles.settingRowIcon}>🔊</Text>
+                </View>
+                <View>
+                  <Text style={styles.settingLabel}>SES EFEKTLERİ</Text>
+                  <Text style={styles.settingSubLabel}>Patlama, eşleşme ve zafer sesleri</Text>
+                </View>
               </View>
+              <Switch
+                value={sfxOn}
+                onValueChange={(val) => {
+                  triggerHapticSelection();
+                  toggleSfx(val);
+                }}
+                trackColor={{ false: "#251D42", true: "#00F5D4" }}
+                thumbColor="#FFF"
+              />
+            </View>
+
+            <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+              <View style={styles.settingLabelWrap}>
+                <View style={[styles.settingIconCircle, { backgroundColor: "rgba(167, 139, 250, 0.12)" }]}>
+                  <Text style={styles.settingRowIcon}>📳</Text>
+                </View>
+                <View>
+                  <Text style={styles.settingLabel}>HAPTİK TİTREŞİM</Text>
+                  <Text style={styles.settingSubLabel}>Dokunma ve patlama titreşim tepkileri</Text>
+                </View>
+              </View>
+              <Switch
+                value={hapticsOn}
+                onValueChange={(val) => {
+                  triggerHapticSelection();
+                  toggleHaptics(val);
+                }}
+                trackColor={{ false: "#251D42", true: "#00F5D4" }}
+                thumbColor="#FFF"
+              />
             </View>
           </View>
-        </Modal>
 
-        <Pressable
-          onPress={() => {
-            Alert.alert(
-              "🔒 GİZLİLİK POLİTİKASI",
-              "Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.\n\nİletişim: destek@kelimepatlat.app",
-              [{ text: "TAMAM" }]
-            );
-          }}
-          style={styles.privacyBtn}
-        >
-          <Text style={styles.privacyBtnText}>🔒 GİZLİLİK POLİTİKASI (PRIVACY POLICY)</Text>
-        </Pressable>
-      </View>
+          {/* Danger Zone & Account Management */}
+          <View style={[styles.sectionHeader, { marginTop: 22 }]}>
+            <Text style={styles.sectionTitle}>🛡️ HESAP VE GÜVENLİK</Text>
+            <Text style={[styles.sectionMeta, { color: "#F87171" }]}>GÜVENLİ BÖLGE</Text>
+          </View>
+
+          <View style={styles.dangerZoneCard}>
+            <Pressable
+              onPress={() => {
+                triggerHapticError();
+                setShowLogoutModal(true);
+              }}
+              style={({ pressed }) => [styles.actionButtonSecondary, pressed && styles.pressed]}
+            >
+              <Text style={styles.actionBtnIcon}>🚪</Text>
+              <Text style={styles.actionBtnSecondaryText}>HESAPTAN ÇIKIŞ YAP</Text>
+            </Pressable>
+
+            {onDeleteAccount && (
+              <Pressable
+                onPress={() => {
+                  triggerHapticError();
+                  setDeleteConfirmInput("");
+                  setShowDeleteModal(true);
+                }}
+                style={({ pressed }) => [styles.actionButtonDanger, pressed && styles.pressed]}
+              >
+                <Text style={styles.actionBtnIcon}>🗑️</Text>
+                <Text style={styles.actionBtnDangerText}>HESABIMI KALICI OLARAK SİL</Text>
+              </Pressable>
+            )}
+          </View>
+
+          <Pressable
+            onPress={() => {
+              Alert.alert(
+                "🔒 GİZLİLİK POLİTİKASI",
+                "Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.\n\nİletişim: destek@kelimepatlat.app",
+                [{ text: "TAMAM" }]
+              );
+            }}
+            style={styles.privacyBtn}
+          >
+            <Text style={styles.privacyBtnText}>🔒 GİZLİLİK POLİTİKASI (PRIVACY POLICY)</Text>
+          </Pressable>
+        </>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={[styles.deleteModalCard, { borderColor: "#A78BFA" }]}>
+            <View style={styles.modalIconTopWrap}>
+              <Text style={styles.modalIconTop}>🚪</Text>
+            </View>
+            <Text style={[styles.deleteModalTitle, { color: "#FFF" }]}>HESAP ÇIKIŞI</Text>
+            <Text style={styles.deleteModalDesc}>
+              Hesabınızdan çıkış yapmak ve oturumu sıfırlamak istediğinize emin misiniz? Tekrar giriş yaparak verilerinize erişebilirsiniz.
+            </Text>
+            <View style={styles.deleteModalActions}>
+              <Pressable
+                onPress={() => setShowLogoutModal(false)}
+                style={styles.deleteModalCancelBtn}
+              >
+                <Text style={styles.deleteModalCancelText}>VAZGEÇ</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowLogoutModal(false);
+                  onLogout();
+                }}
+                style={[styles.deleteModalConfirmBtn, { backgroundColor: "#7C3AED" }]}
+              >
+                <Text style={[styles.deleteModalConfirmText, { color: "#FFF" }]}>ÇIKIŞ YAP</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalCard}>
+            <View style={[styles.modalIconTopWrap, { backgroundColor: "rgba(239, 68, 68, 0.15)", borderColor: "#EF4444" }]}>
+              <Text style={styles.modalIconTop}>🚨</Text>
+            </View>
+            <Text style={styles.deleteModalTitle}>HESAP SİLME İŞLEMİ</Text>
+            <Text style={styles.deleteModalDesc}>
+              Hesabınız ve tüm kayıtlı ilerlemeniz (XP, Çip, Seviye, Başarılar) kalıcı olarak silinecektir. Bu işlem <Text style={{ fontWeight: "900", color: "#EF4444" }}>GERİ ALINAMAZ</Text>.
+            </Text>
+            <Text style={styles.deleteModalPrompt}>
+              Onaylamak için aşağıya büyük harflerle <Text style={{ fontWeight: "900", color: "#EF4444" }}>SİL</Text> yazın:
+            </Text>
+            <TextInput
+              value={deleteConfirmInput}
+              onChangeText={setDeleteConfirmInput}
+              placeholder="SİL"
+              placeholderTextColor="rgba(239, 68, 68, 0.4)"
+              autoCapitalize="characters"
+              style={styles.deleteModalInput}
+            />
+            <View style={styles.deleteModalActions}>
+              <Pressable
+                onPress={() => setShowDeleteModal(false)}
+                style={styles.deleteModalCancelBtn}
+              >
+                <Text style={styles.deleteModalCancelText}>VAZGEÇ</Text>
+              </Pressable>
+              <Pressable
+                disabled={deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL"}
+                onPress={() => {
+                  if (deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") === "SİL") {
+                    setShowDeleteModal(false);
+                    onDeleteAccount?.();
+                  }
+                }}
+                style={[
+                  styles.deleteModalConfirmBtn,
+                  deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL" && styles.deleteModalConfirmDisabled
+                ]}
+              >
+                <Text style={styles.deleteModalConfirmText}>EVET, SİL</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -657,23 +657,84 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingTop: 4,
-    paddingBottom: 130,
+    paddingBottom: 160,
+    paddingHorizontal: 2,
   },
 
-  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 },
-  back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1E1838", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", alignItems: "center", justifyContent: "center" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  back: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: "#1E1838",
+    borderWidth: 1,
+    borderColor: "rgba(124, 92, 246, 0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
-  overline: { color: "#A78BFA", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  headerTextWrap: { flex: 1, marginLeft: 10 },
+  overline: { color: "#A78BFA", fontSize: 8.5, fontWeight: "900", letterSpacing: 1 },
   title: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.3 },
-
-  /* 1. HERO OYUNCU KARTI */
-  heroCard: {
-    backgroundColor: "rgba(23, 17, 44, 0.95)",
-    borderRadius: 24,
-    padding: 18,
+  headerChipsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(35, 27, 62, 0.95)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.35)",
-    marginBottom: 16,
+    borderColor: "#FFC24A",
+    gap: 4,
+  },
+  headerChipsIcon: { fontSize: 13 },
+  headerChipsVal: { color: "#FFC24A", fontSize: 13, fontWeight: "900" },
+
+  /* Tab Navigation */
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#16112C",
+    borderRadius: 14,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: "#2B2046",
+    marginBottom: 12,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 11,
+  },
+  tabBtnActive: {
+    backgroundColor: "#2B2150",
+    borderWidth: 1,
+    borderColor: "#00F5D4",
+  },
+  tabBtnText: {
+    color: "#8E82A8",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  tabBtnTextActive: {
+    color: "#00F5D4",
+  },
+
+  /* 1. HERO OPERATÖR KARTI */
+  heroCard: {
+    backgroundColor: "#16112C",
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: "#2C2250",
+    marginBottom: 12,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -682,35 +743,73 @@ const styles = StyleSheet.create({
   avatarWrapper: {
     position: "relative",
     marginRight: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    borderWidth: 2.5,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    backgroundColor: "#16102B",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 34,
+    resizeMode: "cover",
+  },
+  avatarInnerFallback: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarGlyph: {
-    fontSize: 30,
+    fontSize: 32,
+    fontWeight: "900",
   },
   levelBadge: {
     position: "absolute",
-    bottom: -6,
-    right: -6,
+    top: -4,
+    left: -4,
     backgroundColor: "#7C3AED",
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
     borderWidth: 1.5,
-    borderColor: "#FFF",
+    borderColor: "#16112C",
   },
   levelBadgeText: {
     color: "#FFF",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,
+  },
+  cameraIconBtn: {
+    position: "absolute",
+    bottom: -6,
+    backgroundColor: "#120D24",
+    borderWidth: 1,
+    borderColor: "#00F5D4",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cameraIconText: {
+    color: "#00F5D4",
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.4,
   },
   heroInfo: {
     flex: 1,
@@ -730,8 +829,16 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.8,
   },
+  editPenBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: "rgba(124, 92, 246, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   editPen: {
-    fontSize: 14,
+    fontSize: 11,
   },
   nameEditWrap: {
     flexDirection: "row",
@@ -741,14 +848,14 @@ const styles = StyleSheet.create({
   },
   nameTextInput: {
     flex: 1,
-    backgroundColor: "#1D1636",
+    backgroundColor: "#120D24",
     color: "#00F5D4",
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "900",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#00F5D4",
   },
   saveNameBtn: {
@@ -768,33 +875,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 6,
+    marginTop: 5,
   },
   titleBadge: {
-    backgroundColor: "rgba(124, 92, 246, 0.2)",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(124, 92, 246, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#7C3AED",
+    gap: 4,
   },
+  titleBadgeIcon: { fontSize: 10 },
   titleBadgeText: {
-    color: "#C4B5FD",
-    fontSize: 10,
+    color: "#D8B4FE",
+    fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.6,
-  },
-  heroSubtitle: {
-    color: "#8E82A8",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8,
   },
 
   /* XP Progress */
   xpSection: {
-    marginTop: 14,
-    paddingTop: 12,
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "rgba(124, 92, 246, 0.15)",
   },
@@ -802,86 +907,58 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 5,
   },
+  xpTagWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  xpTagIcon: { fontSize: 11 },
   xpLabel: {
     color: "#8E82A8",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.8,
   },
   xpValues: {
-    color: "#A78BFA",
-    fontSize: 11,
-    fontWeight: "800",
+    fontSize: 10.5,
+    fontWeight: "900",
   },
   xpCurrent: {
     color: "#00F5D4",
-    fontWeight: "900",
+  },
+  xpTotal: {
+    color: "#64748B",
   },
   xpTrack: {
-    height: 8,
-    backgroundColor: "#16112C",
+    height: 7,
+    backgroundColor: "#100B20",
     borderRadius: 6,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#2B214D",
+    borderColor: "#2B2046",
   },
   xpFill: {
     height: "100%",
     backgroundColor: "#00F5D4",
     borderRadius: 6,
   },
-  xpNextHint: {
-    color: "#6F638A",
-    fontSize: 9,
-    fontWeight: "700",
-    marginTop: 4,
-    textAlign: "right",
-  },
-
-  /* Quick Gender Switcher */
-  genderQuickRow: {
+  xpFooterRow: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(124, 92, 246, 0.15)",
-  },
-  genderQuickBtn: {
-    flex: 1,
-    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(16, 11, 34, 0.7)",
-    borderWidth: 1,
-    borderColor: "#2B214D",
+    marginTop: 4,
   },
-  genderQuickBtnM: {
-    borderColor: "#38BDF8",
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
-  },
-  genderQuickBtnF: {
-    borderColor: "#F472B6",
-    backgroundColor: "rgba(244, 114, 182, 0.15)",
-  },
-  genderQuickBtnU: {
-    borderColor: "#A78BFA",
-    backgroundColor: "rgba(167, 139, 250, 0.15)",
-  },
-  genderQuickIcon: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  genderQuickLabel: {
-    color: "#8E82A8",
-    fontSize: 10,
+  xpPercentText: {
+    color: "#00F5D4",
+    fontSize: 8.5,
     fontWeight: "800",
+  },
+  xpNextHint: {
+    color: "#6B6084",
+    fontSize: 8.5,
+    fontWeight: "700",
   },
 
   /* Section Headers */
@@ -889,73 +966,95 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 14,
     marginBottom: 8,
   },
   sectionTitle: {
-    color: "#94A3B8",
+    color: "#CBD5E1",
     fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   sectionMeta: {
-    color: "#7C3AED",
-    fontSize: 9,
+    color: "#A78BFA",
+    fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.6,
   },
+  badgeCounterWrap: {
+    backgroundColor: "rgba(124, 92, 246, 0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(124, 92, 246, 0.3)",
+  },
 
-  /* 2. STATS GRID (2x2) */
+  /* 2. STATS GRID (Compact 2x2 with horizontal content) */
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 10,
+    gap: 8,
   },
   statTile: {
-    width: "48%",
-    backgroundColor: "rgba(23, 17, 44, 0.85)",
-    borderRadius: 18,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#2C2250",
+    width: "48.5%",
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#16112C",
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#2B2046",
+    gap: 8,
   },
+  statTileWins: { borderColor: "rgba(255, 194, 74, 0.25)" },
+  statTileScore: { borderColor: "rgba(0, 245, 212, 0.25)" },
+  statTileWords: { borderColor: "rgba(167, 139, 250, 0.25)" },
+  statTileStreak: { borderColor: "rgba(244, 114, 182, 0.25)" },
   statIconBox: {
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: "rgba(124, 92, 246, 0.15)",
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    flexShrink: 0,
   },
   statIcon: {
-    fontSize: 16,
+    fontSize: 15,
+  },
+  statDataWrap: {
+    flex: 1,
   },
   statNumber: {
     color: "#FFF",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+  },
+  statUnit: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#F472B6",
   },
   statCaption: {
-    color: "#8E82A8",
-    fontSize: 9,
+    color: "#7E7597",
+    fontSize: 8,
     fontWeight: "800",
-    letterSpacing: 0.6,
-    marginTop: 2,
+    letterSpacing: 0.5,
+    marginTop: 1,
   },
 
-  /* Mini Intel Strip */
+  /* Mini Intel HUD Strip */
   intelStrip: {
     flexDirection: "row",
-    backgroundColor: "rgba(19, 14, 38, 0.9)",
-    borderRadius: 14,
-    paddingVertical: 10,
+    backgroundColor: "rgba(19, 14, 38, 0.95)",
+    borderRadius: 16,
+    paddingVertical: 12,
     paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: "#2A204B",
+    borderWidth: 1.5,
+    borderColor: "#2B214D",
     marginTop: 10,
     alignItems: "center",
   },
@@ -965,20 +1064,24 @@ const styles = StyleSheet.create({
   },
   intelLabel: {
     color: "#7C7094",
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.6,
   },
   intelValue: {
     color: "#FFF",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "900",
-    marginTop: 2,
+    marginTop: 3,
+  },
+  intelSub: {
+    fontSize: 8,
+    color: "#8E82A8",
   },
   intelDivider: {
     width: 1,
-    height: 22,
-    backgroundColor: "#2B214D",
+    height: 24,
+    backgroundColor: "#2E2452",
   },
 
   /* Horizontal Row (Carousels) */
@@ -987,203 +1090,59 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 
-  /* Grid Layout (açık/kilitli yan yana dizim) */
-  tileGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 6,
-  },
-  lockedSubLabel: {
-    color: "#665E77",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-    marginTop: 10,
-    marginBottom: 8,
-  },
-
-  /* 3. AVATARS */
-  avatarTile: {
-    width: 82,
-    height: 98,
+  /* 3. OYUNCU UNVANLARI (Square Tiles) */
+  titleTile: {
+    width: 88,
+    height: 92,
     borderRadius: 18,
     borderWidth: 1.5,
+    borderColor: "#2B2046",
+    backgroundColor: "#16112C",
     alignItems: "center",
     justifyContent: "center",
     padding: 6,
-    position: "relative",
-  },
-  avatarTileLocked: {
-    backgroundColor: "rgba(22, 17, 40, 0.6)",
-    borderColor: "#2A2146",
-  },
-  avatarIconWrapper: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    marginBottom: 6,
-  },
-  avatarTileGlyph: {
-    fontSize: 20,
-  },
-  avatarTileLabel: {
-    color: "#A79BBF",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    marginBottom: 4,
-  },
-  activePillBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginTop: 2,
-  },
-  activePillText: {
-    fontSize: 7.5,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-
-  /* THEME TILES */
-  themeTile: {
-    width: 104,
-    height: 104,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 8,
-    position: "relative",
-  },
-  themeIconWrapper: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    marginBottom: 5,
-  },
-  themeTileIcon: {
-    fontSize: 18,
-  },
-  themeTileTitle: {
-    color: "#E2D9F3",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  themeTileSub: {
-    color: "#8E82A8",
-    fontSize: 7.5,
-    fontWeight: "700",
-    marginTop: 1,
-    marginBottom: 2,
-    textAlign: "center",
-  },
-
-  /* TITLE TILES - MODERN CYBER BADGE */
-  titleTile: {
-    width: 148,
-    height: 100,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.2)",
-    backgroundColor: "rgba(19, 14, 38, 0.75)",
-    padding: 12,
-    justifyContent: "space-between",
-    position: "relative",
   },
   titleTileUnlocked: {
-    borderColor: "rgba(124, 92, 246, 0.35)",
-    backgroundColor: "rgba(24, 18, 46, 0.85)",
+    borderColor: "rgba(124, 92, 246, 0.4)",
+    backgroundColor: "#1A1333",
   },
   titleTileLocked: {
-    borderColor: "rgba(50, 40, 75, 0.5)",
-    backgroundColor: "rgba(16, 12, 30, 0.55)",
-    opacity: 0.75,
+    borderColor: "#281F42",
+    backgroundColor: "rgba(18, 14, 34, 0.5)",
+    opacity: 0.6,
   },
   titleTileSelected: {
     borderColor: "#00F5D4",
     backgroundColor: "rgba(0, 245, 212, 0.08)",
   },
-  titleTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  titleIconCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(124, 92, 246, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(167, 139, 250, 0.3)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titleIconCircleSelected: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
-    borderColor: "#00F5D4",
-  },
-  titleIconCircleLocked: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    borderColor: "rgba(80, 70, 105, 0.4)",
-  },
-  titleIconEmoji: {
-    fontSize: 12,
-  },
-  titleStatusChip: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 7,
+  titleMiniStatusPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
     backgroundColor: "rgba(124, 92, 246, 0.15)",
     borderWidth: 1,
     borderColor: "rgba(124, 92, 246, 0.3)",
+    marginTop: 3,
   },
-  titleStatusChipSelected: {
-    backgroundColor: "rgba(0, 245, 212, 0.12)",
-    borderColor: "rgba(0, 245, 212, 0.4)",
+  titleMiniStatusSelected: {
+    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    borderColor: "#00F5D4",
   },
-  titleStatusChipLocked: {
+  titleMiniStatusLocked: {
     backgroundColor: "rgba(0, 0, 0, 0.25)",
     borderColor: "rgba(60, 50, 85, 0.4)",
   },
-  titleStatusText: {
-    color: "#C4B5FD",
-    fontSize: 8,
+  titleMiniStatusText: {
+    fontSize: 7,
     fontWeight: "900",
-    letterSpacing: 0.6,
-  },
-  titleTileBadgeText: {
-    color: "#E2D9F3",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-    marginTop: 4,
-  },
-  titleTileName: {
-    color: "#8E82A8",
-    fontSize: 9.5,
-    fontWeight: "700",
     letterSpacing: 0.4,
+    color: "#C4B5FD",
   },
 
-  /* 5. BADGES */
+  /* 4. TROPHY BADGES */
   badgeTile: {
-    width: 84,
-    height: 86,
+    width: 88,
+    height: 90,
     borderRadius: 18,
     borderWidth: 1.5,
     alignItems: "center",
@@ -1193,11 +1152,11 @@ const styles = StyleSheet.create({
   badgeTileLocked: {
     backgroundColor: "rgba(18, 14, 34, 0.5)",
     borderColor: "#281F42",
-    opacity: 0.65,
+    opacity: 0.6,
   },
   badgeIconBubble: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
@@ -1217,19 +1176,37 @@ const styles = StyleSheet.create({
 
   /* 5. SETTINGS & DANGER ZONE */
   settingsCard: {
-    backgroundColor: "rgba(22, 16, 42, 0.85)",
+    backgroundColor: "rgba(22, 16, 42, 0.9)",
     borderRadius: 20,
     padding: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#2C2250",
   },
   settingRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#281E48",
+  },
+  settingLabelWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  settingIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  settingRowIcon: {
+    fontSize: 16,
   },
   settingLabel: {
     color: "#FFF",
@@ -1237,25 +1214,58 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.6,
   },
-  footerActions: {
-    marginTop: 18,
+  settingSubLabel: {
+    color: "#7E7597",
+    fontSize: 9,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  dangerZoneCard: {
+    backgroundColor: "rgba(22, 16, 42, 0.9)",
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: "#2C2250",
     gap: 10,
   },
-  logoutBtn: {
+  actionButtonSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(124, 92, 246, 0.1)",
+    borderWidth: 1.5,
+    borderColor: "rgba(124, 92, 246, 0.3)",
+    paddingVertical: 13,
+    borderRadius: 16,
+    gap: 8,
+  },
+  actionBtnSecondaryText: {
+    color: "#C4B5FD",
+    fontSize: 11.5,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  actionButtonDanger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "rgba(239, 68, 68, 0.1)",
     borderWidth: 1.5,
     borderColor: "rgba(239, 68, 68, 0.4)",
     paddingVertical: 13,
     borderRadius: 16,
-    alignItems: "center",
+    gap: 8,
   },
-  logoutBtnText: {
+  actionBtnDangerText: {
     color: "#F87171",
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "900",
     letterSpacing: 0.8,
   },
+  actionBtnIcon: { fontSize: 13 },
   privacyBtn: {
+    marginTop: 14,
     paddingVertical: 8,
     alignItems: "center",
   },
@@ -1270,55 +1280,22 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
 
-  /* Camera edit badge on Hero avatar */
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 33,
-    resizeMode: "cover",
-  },
-  cameraIconBtn: {
-    position: "absolute",
-    bottom: -4,
-    right: -4,
-    backgroundColor: "#0F0B1E",
+  /* Modals */
+  modalIconTopWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(124, 92, 246, 0.15)",
     borderWidth: 1.5,
-    borderColor: "#00F5D4",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    borderColor: "#7C3AED",
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 10,
   },
-  cameraIconText: {
-    fontSize: 11,
+  modalIconTop: {
+    fontSize: 20,
   },
-
-  /* Gender Badge on Hero Card */
-  genderBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: "rgba(167, 139, 250, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(167, 139, 250, 0.3)",
-  },
-  genderBadgeMale: {
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
-    borderColor: "rgba(56, 189, 248, 0.4)",
-  },
-  genderBadgeFemale: {
-    backgroundColor: "rgba(244, 114, 182, 0.15)",
-    borderColor: "rgba(244, 114, 182, 0.4)",
-  },
-  genderBadgeText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#A78BFA",
-    letterSpacing: 0.5,
-  },
-
-  /* Delete Confirmation Modal Styles */
   deleteModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(10, 6, 22, 0.85)",
@@ -1345,20 +1322,20 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   deleteModalDesc: {
     color: "#E2E8F0",
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12.5,
+    lineHeight: 18,
     textAlign: "center",
     marginBottom: 12,
   },
   deleteModalPrompt: {
     color: "#94A3B8",
-    fontSize: 12,
+    fontSize: 11.5,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   deleteModalInput: {
     backgroundColor: "rgba(15, 11, 30, 0.9)",
@@ -1371,7 +1348,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: 10,
     letterSpacing: 4,
-    marginBottom: 18,
+    marginBottom: 16,
   },
   deleteModalActions: {
     flexDirection: "row",

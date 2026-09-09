@@ -15,34 +15,27 @@ export function getSoundEnabled() {
   return getSfxEnabled();
 }
 
-let hapticsEnabled = true;
-
-export function setHapticsEnabled(enabled: boolean) {
-  hapticsEnabled = enabled;
-}
-
-export function getHapticsEnabled() {
-  return hapticsEnabled;
-}
+import { getHapticsEnabled, setHapticsEnabled } from "../lib/haptics";
+export { getHapticsEnabled, setHapticsEnabled };
 
 // Haptics
 export function triggerHapticSelection() {
-  if (!hapticsEnabled || Platform.OS === "web") return;
+  if (!getHapticsEnabled() || Platform.OS === "web") return;
   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
 }
 
 export function triggerHapticSuccess() {
-  if (!hapticsEnabled || Platform.OS === "web") return;
+  if (!getHapticsEnabled() || Platform.OS === "web") return;
   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
 }
 
 export function triggerHapticError() {
-  if (!hapticsEnabled || Platform.OS === "web") return;
+  if (!getHapticsEnabled() || Platform.OS === "web") return;
   void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
 }
 
 export function triggerHapticLongWord() {
-  if (!hapticsEnabled || Platform.OS === "web") return;
+  if (!getHapticsEnabled() || Platform.OS === "web") return;
   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined);
 }
 

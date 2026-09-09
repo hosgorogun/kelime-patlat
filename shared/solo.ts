@@ -304,18 +304,29 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
   if (sum < targetSum) {
     const allWords = catalogWordsForTheme(config.size, "general", 12);
     let rem = targetSum - sum;
-    while (rem > 0) {
+    let guard = 0;
+    while (rem > 0 && guard++ < 50) {
       const exact = allWords.find((e) => e.word.length === rem && !fallbackList.some((f) => f.word === e.word));
       if (exact) {
         fallbackList.push(exact);
-        rem -= exact.word.length;
+        sum += exact.word.length;
+        rem = 0;
         break;
       }
       const smaller = allWords.filter((e) => e.word.length <= rem && e.word.length >= 2 && !fallbackList.some((f) => f.word === e.word));
       if (smaller.length > 0) {
-        const picked = shuffled(smaller, random)[0]!;
-        fallbackList.push(picked);
-        rem -= picked.word.length;
+        const picked = shuffled(smaller, random)[0];
+        if (picked) {
+          fallbackList.push(picked);
+          sum += picked.word.length;
+          rem -= picked.word.length;
+          continue;
+        }
+      }
+      if (fallbackList.length > 0) {
+        const removed = fallbackList.pop()!;
+        sum -= removed.word.length;
+        rem = targetSum - sum;
       } else {
         break;
       }
@@ -395,12 +406,20 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
     }));
     if (!words.every((word) => {
       const requiredTurns = Math.min(config.size === 4 ? config.minTurns : 1, word.length - 2);
-      return countTurns(routes[word]!) >= requiredTurns;
+      const route = routes[word];
+      return route ? countTurns(route) >= requiredTurns : false;
     })) continue;
     const board = Array.from({ length: config.size * config.size }, () => "");
-    words.forEach((word) => routes[word]!.forEach((cell, index) => { board[cell] = word[index]!; }));
+    words.forEach((word) => {
+      const route = routes[word];
+      if (route) {
+        route.forEach((cell, index) => {
+          board[cell] = word[index] || "";
+        });
+      }
+    });
     for (let i = 0; i < board.length; i++) {
-      if (!board[i]) board[i] = TURKISH_LETTERS[Math.floor(random() * TURKISH_LETTERS.length)]!;
+      if (!board[i]) board[i] = TURKISH_LETTERS[Math.floor(random() * TURKISH_LETTERS.length)] || "A";
     }
     return {
       ...config,
@@ -422,9 +441,16 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
     return [word, route];
   }));
   const board = Array.from({ length: config.size * config.size }, () => "");
-  words.forEach((word) => routes[word]!.forEach((cell, index) => { board[cell] = word[index]!; }));
+  words.forEach((word) => {
+    const route = routes[word];
+    if (route) {
+      route.forEach((cell, index) => {
+        board[cell] = word[index] || "";
+      });
+    }
+  });
   for (let i = 0; i < board.length; i++) {
-    if (!board[i]) board[i] = TURKISH_LETTERS[Math.floor(random() * TURKISH_LETTERS.length)]!;
+    if (!board[i]) board[i] = TURKISH_LETTERS[Math.floor(random() * TURKISH_LETTERS.length)] || "A";
   }
   return {
     ...config,

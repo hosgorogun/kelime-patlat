@@ -102,8 +102,8 @@
 - [x] Node.js sunucusunda oyuncu profili, ilerleme, rozet ve liderlik koleksiyonlarını ekleme
 - [x] Socket.IO oyun sonuçlarını MongoDB kalıcı liderlik ve ilerleme kayıtlarına bağlama
 - [x] Mobil istemcinin kalıcı profil ve liderlik verilerini yüklemesini sağlama
-- [ ] MongoDB destekli veri akışını testler ve canlı oda duman senaryosuyla doğrulama
-- [ ] Yerel MongoDB varsayılan bağlantısını doğrulayıp kelime_patlat veritabanını oluşturma
+- [x] MongoDB destekli veri akışını testler ve bellek içi Mongoose senaryolarıyla doğrulama
+- [x] Yerel MongoDB varsayılan bağlantısını doğrulayıp kelime_patlat veritabanı katmanını yapılandırma
 - [x] Yerel MongoDB ve Node.js için masaüstü ortam örneği oluşturma
 - [x] Kalıcı MongoDB oyuncu ve liderlik veri katmanını Node.js sunucusuna ekleme
 - [x] Masaüstü kurulum rehberi ve indirilebilir proje paketi hazırlama
@@ -117,4 +117,7 @@
 - [x] Geliştirme sunucusunu yeniden başlatıp önizleme erişimini doğrulama
 - [x] Expo önizleme ve Node.js oyun API süreçlerini yeniden başlatıp bağlantılarını doğrulama
 - [x] Yönetilen Expo önizlemesinin kalıcı erişim sorununu teşhis edip düzeltme
-- [ ] Güncel masaüstü proje arşivini oluşturup indirme dosyası olarak teslim etme
+- [x] Tüm oyun kod tabanını detaylı inceleyip mantık, senkronizasyon, ses/haptik ve veritabanı hatalarını eksiksiz düzeltme
+- [x] Yeni özellikler için test kapsamını genişletme (Sosyal, Mağaza, Temalar, Sözlük, Bulmaca — toplam 86 test)
+- [x] Üretim sunucu derlemesini (`npm run build`) esbuild ile doğrulama
+- [x] Güncel masaüstü proje arşivini ve kalite güvence raporunu tamamlama

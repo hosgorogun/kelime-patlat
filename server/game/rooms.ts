@@ -55,20 +55,42 @@ type Room = {
   disconnectExpiresAt?: number | null;
 };
 
+type QueueEntry = {
+  playerId: string;
+  playerName: string;
+  socketId: string;
+  profile?: z.infer<typeof playerProfileSchema>;
+};
+
 const rooms = new Map<string, Room>();
-const matchmakingQueue = new Map<BoardSize, { playerId: string; playerName: string; socketId: string }[]>();
+const matchmakingQueue = new Map<BoardSize, QueueEntry[]>();
+const matchmakingTimers = new Map<string, NodeJS.Timeout>();
 const leaderboard = new Map<string, LeaderboardEntry>();
 const ROOM_TTL_MS = 15 * 60 * 1000;
 const playerIdSchema = z.string().trim().min(1).max(128);
 const playerNameSchema = z.string().max(100);
 const codeSchema = z.string().trim().min(1).max(16);
 const sizeSchema = z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]);
-const matchmakingJoinSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema });
+const playerProfileSchema = z.object({
+  avatar: z.string().optional(),
+  avatarPhoto: z.string().optional(),
+  selectedTitle: z.string().optional(),
+  level: z.number().optional(),
+  tier: z.string().optional(),
+  lp: z.number().optional(),
+  wins: z.number().optional(),
+  matches: z.number().optional(),
+  streak: z.number().optional(),
+  bestScore: z.number().optional(),
+  bestTempo: z.number().optional(),
+}).optional();
+
+const matchmakingJoinSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema, profile: playerProfileSchema });
 const matchmakingLeaveSchema = z.object({ playerId: playerIdSchema, size: sizeSchema });
-const roomCreateSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema, immediateBot: z.boolean().optional() });
-const roomJoinSchema = z.object({ code: codeSchema, playerId: playerIdSchema, playerName: playerNameSchema });
+const roomCreateSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema, immediateBot: z.boolean().optional(), profile: playerProfileSchema });
+const roomJoinSchema = z.object({ code: codeSchema, playerId: playerIdSchema, playerName: playerNameSchema, profile: playerProfileSchema });
 const roomPlayerActionSchema = z.object({ code: codeSchema, playerId: playerIdSchema });
-const wordSubmitSchema = z.object({ code: codeSchema, playerId: playerIdSchema, selection: z.array(z.number().int()).max(100) });
+const wordSubmitSchema = z.object({ code: codeSchema, playerId: playerIdSchema, selection: z.array(z.number().int().min(0).max(99)).min(2).max(100) });
 
 function isValidPayload<T>(schema: z.ZodType<T>, payload: unknown): payload is T {
   return schema.safeParse(payload).success;
@@ -239,6 +261,17 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
     connected: player!.connected,
     ready: player!.ready,
     rematch: player!.rematch,
+    avatar: player!.avatar,
+    avatarPhoto: player!.avatarPhoto,
+    selectedTitle: player!.selectedTitle,
+    level: player!.level,
+    tier: player!.tier,
+    lp: player!.lp,
+    wins: player!.wins,
+    matches: player!.matches,
+    streak: player!.streak,
+    bestScore: player!.bestScore,
+    bestTempo: player!.bestTempo,
   }));
   const viewerFoundSet = new Set(room.foundWords.filter((e) => e.playerId === viewerId).map((e) => e.word));
   // Oyuncuya kendi kelimeleri açık, rakip/bot kelimeleri ise sadece skor/sayaç hesabı için gizli/boş gönderilir
@@ -323,24 +356,30 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
         if (dbUser) {
           const prevProgress = dbUser.progress || {};
           const prevLp = typeof prevProgress.lp === "number" ? prevProgress.lp : 0;
-          const prevXp = typeof prevProgress.xp === "number" ? prevProgress.xp : 0;
           const nextLp = Math.max(0, prevLp + lpDelta);
-          const nextXp = prevXp + xpDelta;
 
-          dbUser.progress = {
-            ...prevProgress,
-            lp: nextLp,
-            xp: nextXp,
-            wins: (prevProgress.wins || 0) + (won ? 1 : 0),
-            matches: (prevProgress.matches || 0) + 1,
-            bestScore: Math.max(prevProgress.bestScore || 0, roundScore),
-          };
-          dbUser.updatedAt = new Date();
-          await dbUser.save();
+          const updatedUser = await UserModel.findOneAndUpdate(
+            { openId: player.id },
+            {
+              $set: {
+                "progress.lp": nextLp,
+                updatedAt: new Date(),
+              },
+              $inc: {
+                "progress.xp": xpDelta,
+                "progress.wins": won ? 1 : 0,
+                "progress.matches": 1,
+              },
+              $max: {
+                "progress.bestScore": roundScore,
+              },
+            },
+            { new: true }
+          );
 
           currentLp = nextLp;
           currentTier = getLeagueTier(nextLp).tier;
-          userAvatar = prevProgress.selectedAvatar;
+          userAvatar = updatedUser?.progress?.selectedAvatar || prevProgress.selectedAvatar;
         } else {
           currentTier = getLeagueTier(0).tier;
         }
@@ -539,6 +578,16 @@ function scheduleBotFill(io: Server, room: Room) {
       connected: true,
       ready: true,
       rematch: false,
+      avatar: "🤖",
+      selectedTitle: "[SİBER İZCİ]",
+      level: 10,
+      tier: "GÜMÜŞ",
+      lp: 950,
+      wins: 14,
+      matches: 26,
+      streak: 4,
+      bestScore: 120,
+      bestTempo: 3.5,
     };
     room.status = "lobby";
     room.message = "Rakip bulunamadı — KELİME BOT düelloya hazır.";
@@ -567,13 +616,26 @@ function startRound(io: Server, room: Room) {
   scheduleBotTurn(io, room, token, true);
 }
 
+function destroyRoom(code: string, room?: Room | null) {
+  const target = room || rooms.get(code);
+  if (target) {
+    if (target.disconnectTimer) {
+      clearTimeout(target.disconnectTimer);
+      target.disconnectTimer = null;
+    }
+    target.roundToken = -1;
+    target.botFillToken = -1;
+  }
+  rooms.delete(code);
+}
+
 function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
   const player = roomForPlayer(room, playerId);
   if (!player) return;
   socket.leave(`room:${room.code}`);
   if (room.host.id === playerId) {
     if (!room.guest || room.guest.isBot) {
-      rooms.delete(room.code);
+      destroyRoom(room.code, room);
       return;
     }
     room.host = room.guest;
@@ -597,7 +659,7 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
 export function registerGameRooms(io: Server) {
   io.use(async (socket, next) => {
     const token = typeof socket.handshake.auth?.token === "string" ? socket.handshake.auth.token : undefined;
-    if (!token) {
+    if (!token || token === "guest") {
       socket.data.userId = null;
       next();
       return;
@@ -615,7 +677,7 @@ export function registerGameRooms(io: Server) {
   setInterval(() => {
     const now = Date.now();
     for (const [code, room] of rooms) {
-      if (now - room.touchedAt > ROOM_TTL_MS) rooms.delete(code);
+      if (now - room.touchedAt > ROOM_TTL_MS) destroyRoom(code, room);
     }
   }, 60_000);
 
@@ -645,6 +707,16 @@ export function registerGameRooms(io: Server) {
       if (queue.length > 0) {
         const opponent = queue.shift()!;
         matchmakingQueue.set(payload.size, queue);
+        const opponentTimer = matchmakingTimers.get(opponent.socketId);
+        if (opponentTimer) {
+          clearTimeout(opponentTimer);
+          matchmakingTimers.delete(opponent.socketId);
+        }
+        const existingSelfTimer = matchmakingTimers.get(socket.id);
+        if (existingSelfTimer) {
+          clearTimeout(existingSelfTimer);
+          matchmakingTimers.delete(socket.id);
+        }
         const code = makeCode();
         const room: Room = {
           code,
@@ -655,8 +727,26 @@ export function registerGameRooms(io: Server) {
           routes: {},
           foundWords: [],
           scores: {},
-          host: { id: opponent.playerId, name: opponent.playerName.trim().slice(0, 16) || "OYUNCU 1", isBot: false, socketId: opponent.socketId, connected: true, ready: false, rematch: false },
-          guest: { id: payload.playerId, name: payload.playerName.trim().slice(0, 16) || "OYUNCU 2", isBot: false, socketId: socket.id, connected: true, ready: false, rematch: false },
+          host: {
+            id: opponent.playerId,
+            name: opponent.playerName.trim().slice(0, 16) || "OYUNCU 1",
+            isBot: false,
+            socketId: opponent.socketId,
+            connected: true,
+            ready: false,
+            rematch: false,
+            ...(opponent.profile || {}),
+          },
+          guest: {
+            id: payload.playerId,
+            name: payload.playerName.trim().slice(0, 16) || "OYUNCU 2",
+            isBot: false,
+            socketId: socket.id,
+            connected: true,
+            ready: false,
+            rematch: false,
+            ...(payload.profile || {}),
+          },
           winnerId: null,
           startedAt: null,
           message: "Rakip bulundu! Maç başlamak üzere...",
@@ -670,15 +760,22 @@ export function registerGameRooms(io: Server) {
         socket.join(`room:${code}`);
         emitRoom(io, room);
       } else {
-        queue.push({ playerId: payload.playerId, playerName: payload.playerName, socketId: socket.id });
+        const existingSelfTimer = matchmakingTimers.get(socket.id);
+        if (existingSelfTimer) {
+          clearTimeout(existingSelfTimer);
+          matchmakingTimers.delete(socket.id);
+        }
+        queue.push({ playerId: payload.playerId, playerName: payload.playerName, socketId: socket.id, profile: payload.profile });
         matchmakingQueue.set(payload.size, queue);
         socket.emit("matchmaking:status", { status: "searching" });
-        setTimeout(() => {
+        const timer = setTimeout(() => {
+          matchmakingTimers.delete(socket.id);
           // If socket disconnected during the 5s wait, skip room creation
           if (!io.sockets.sockets.get(socket.id)?.connected) return;
           const currentQueue = matchmakingQueue.get(payload.size) || [];
           const idx = currentQueue.findIndex(p => p.playerId === payload.playerId && p.socketId === socket.id);
           if (idx !== -1) {
+            const queueEntry = currentQueue[idx]!;
             currentQueue.splice(idx, 1);
             matchmakingQueue.set(payload.size, currentQueue);
             const code = makeCode();
@@ -691,7 +788,16 @@ export function registerGameRooms(io: Server) {
               routes: {},
               foundWords: [],
               scores: {},
-              host: { id: payload.playerId, name: payload.playerName.trim().slice(0, 16) || "OYUNCU 1", isBot: false, socketId: socket.id, connected: true, ready: false, rematch: false },
+              host: {
+                id: payload.playerId,
+                name: payload.playerName.trim().slice(0, 16) || "OYUNCU 1",
+                isBot: false,
+                socketId: socket.id,
+                connected: true,
+                ready: false,
+                rematch: false,
+                ...(queueEntry.profile || payload.profile || {}),
+              },
               guest: null,
               winnerId: null,
               startedAt: null,
@@ -706,12 +812,18 @@ export function registerGameRooms(io: Server) {
             scheduleBotFill(io, room);
           }
         }, 5000);
+        matchmakingTimers.set(socket.id, timer);
       }
     });
 
     socket.on("matchmaking:leave", (payload: { playerId: string; size: BoardSize }) => {
       if (!isValidPayload(matchmakingLeaveSchema, payload)) return fail(socket, "Geçersiz eşleştirme isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
+      const existingTimer = matchmakingTimers.get(socket.id);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        matchmakingTimers.delete(socket.id);
+      }
       let queue = matchmakingQueue.get(payload.size);
       if (queue) {
         queue = queue.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id);
@@ -720,7 +832,7 @@ export function registerGameRooms(io: Server) {
       socket.emit("matchmaking:status", { status: "idle" });
     });
 
-    socket.on("room:create", (payload: { playerId: string; playerName: string; size: BoardSize; immediateBot?: boolean }) => {
+    socket.on("room:create", (payload: { playerId: string; playerName: string; size: BoardSize; immediateBot?: boolean; profile?: z.infer<typeof playerProfileSchema> }) => {
       if (!isValidPayload(roomCreateSchema, payload)) return fail(socket, "Geçersiz oda isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
@@ -734,7 +846,16 @@ export function registerGameRooms(io: Server) {
         routes: {},
         foundWords: [],
         scores: {},
-        host: { id: payload.playerId, name: payload.playerName.trim().slice(0, 16) || "OYUNCU 1", isBot: false, socketId: socket.id, connected: true, ready: false, rematch: false },
+        host: {
+          id: payload.playerId,
+          name: payload.playerName.trim().slice(0, 16) || "OYUNCU 1",
+          isBot: false,
+          socketId: socket.id,
+          connected: true,
+          ready: false,
+          rematch: false,
+          ...(payload.profile || {}),
+        },
         guest: null,
         winnerId: null,
         startedAt: null,
@@ -748,7 +869,7 @@ export function registerGameRooms(io: Server) {
       emitRoom(io, room);
     });
 
-    socket.on("room:join", (payload: { code: string; playerId: string; playerName: string }) => {
+    socket.on("room:join", (payload: { code: string; playerId: string; playerName: string; profile?: z.infer<typeof playerProfileSchema> }) => {
       if (!isValidPayload(roomJoinSchema, payload)) return fail(socket, "Geçersiz oda katılımı.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
@@ -757,11 +878,21 @@ export function registerGameRooms(io: Server) {
       if (room.host.id === payload.playerId) {
         room.host.socketId = socket.id;
         room.host.connected = true;
+        if (payload.profile) Object.assign(room.host, payload.profile);
         socket.join(`room:${room.code}`);
         return emitRoom(io, room);
       }
       if (room.guest && room.guest.id !== payload.playerId && !room.guest.isBot) return fail(socket, "Bu oda zaten dolu.");
-      room.guest = { id: payload.playerId, name: payload.playerName.trim().slice(0, 16) || "OYUNCU 2", isBot: false, socketId: socket.id, connected: true, ready: false, rematch: false };
+      room.guest = {
+        id: payload.playerId,
+        name: payload.playerName.trim().slice(0, 16) || "OYUNCU 2",
+        isBot: false,
+        socketId: socket.id,
+        connected: true,
+        ready: false,
+        rematch: false,
+        ...(payload.profile || {}),
+      };
       room.status = "lobby";
       room.message = "İki oyuncu da hazır olduğunda kelime avı başlar.";
       socket.join(`room:${room.code}`);
@@ -864,6 +995,11 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("disconnect", () => {
+      const pendingMatchmakingTimer = matchmakingTimers.get(socket.id);
+      if (pendingMatchmakingTimer) {
+        clearTimeout(pendingMatchmakingTimer);
+        matchmakingTimers.delete(socket.id);
+      }
       for (const [size, queue] of matchmakingQueue.entries()) {
         const filtered = queue.filter(p => p.socketId !== socket.id);
         matchmakingQueue.set(size, filtered);

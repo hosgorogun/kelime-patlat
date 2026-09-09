@@ -1,9 +1,39 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { SEASON_MISSIONS, type PlayerProgress, type SeasonMission } from "@/shared/progression";
+import {
+  type PlayerProgress,
+  getDailyMissions,
+  getWeeklyMissions,
+  getDayId,
+  getWeekId,
+  type CatalogMission,
+} from "@/shared/progression";
 import { haptics } from "@/lib/haptics";
 import { gameSfx } from "@/lib/game-sfx";
+
+const DIFFICULTY_CONFIG = {
+  easy: { label: "KOLAY", color: "#50E3C2", bg: "rgba(80, 227, 194, 0.15)", border: "#50E3C2" },
+  medium: { label: "ORTA", color: "#FFC24A", bg: "rgba(255, 194, 74, 0.15)", border: "#FFC24A" },
+  hard: { label: "ZOR", color: "#FF647C", bg: "rgba(255, 100, 124, 0.15)", border: "#FF647C" },
+  epic: { label: "DESTANSI", color: "#D946EF", bg: "rgba(217, 70, 239, 0.2)", border: "#D946EF" },
+};
+
+function getMissionIcon(actionType: string): string {
+  switch (actionType) {
+    case "daily_route": return "☀";
+    case "duel_play": return "⚔️";
+    case "duel_win": return "♕";
+    case "word_length": return "✦";
+    case "word_count": return "📝";
+    case "arcade_score": return "⚡";
+    case "vintage_solve": return "📰";
+    case "combo_count": return "🔥";
+    case "solo_progress": return "🎯";
+    case "earn_chips": return "🪙";
+    default: return "◈";
+  }
+}
 
 export function MissionsScreen({
   progress,
@@ -15,8 +45,8 @@ export function MissionsScreen({
   progress: PlayerProgress;
   onBack: () => void;
   onPlayDaily: () => void;
-  onClaimDaily?: (missionId: SeasonMission["id"], xp: number, coins: number) => void;
-  onClaimWeekly?: (missionId: "victoryStreak" | "speedDemon", xp: number, shield?: number, coins?: number) => void;
+  onClaimDaily?: (missionId: string, xp: number, coins: number) => void;
+  onClaimWeekly?: (missionId: string, xp: number, shield?: number, coins?: number) => void;
 }) {
   const [toast, setToast] = useState<{
     title: string;
@@ -31,57 +61,124 @@ export function MissionsScreen({
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const completedCount = SEASON_MISSIONS.filter((m) => (progress.missions[m.id] ?? 0) >= m.target).length;
-  const totalXp = SEASON_MISSIONS.reduce((sum, m) => sum + ((progress.missions[m.id] ?? 0) >= m.target ? m.rewardXp : 0), 0);
+  const todayId = useMemo(() => getDayId(), []);
+  const weekId = useMemo(() => getWeekId(), []);
+
+  const dailyMissions = useMemo(() => getDailyMissions(todayId), [todayId]);
+  const weeklyMissions = useMemo(() => getWeeklyMissions(weekId), [weekId]);
+
+  const allActiveMissions = useMemo(() => [...dailyMissions, ...weeklyMissions], [dailyMissions, weeklyMissions]);
+
+  const completedCount = allActiveMissions.filter((m) => {
+    const isDaily = m.period === "daily";
+    const current = progress.missions?.[m.id] ?? 0;
+    return current >= m.target;
+  }).length;
+
+  const totalPossibleXp = allActiveMissions.reduce((sum, m) => sum + m.rewardXp, 0);
   const claimingRef = useRef<Set<string>>(new Set());
 
-  const handleClaimDaily = (mission: SeasonMission) => {
+  const handleClaimMission = (mission: CatalogMission) => {
     if (claimingRef.current.has(mission.id)) return;
     claimingRef.current.add(mission.id);
     haptics.success();
     gameSfx.victory();
-    const coinsReward = 25;
-    onClaimDaily?.(mission.id, mission.rewardXp, coinsReward);
+
+    const isDaily = mission.period === "daily";
+    if (isDaily) {
+      onClaimDaily?.(mission.id, mission.rewardXp, mission.rewardCoins);
+    } else {
+      onClaimWeekly?.(mission.id, mission.rewardXp, mission.rewardShields ?? 0, mission.rewardCoins);
+    }
+
+    const rewardsList: string[] = [`+${mission.rewardXp} XP`, `+${mission.rewardCoins} Siber Çip 🪙`];
+    if (mission.rewardShields && mission.rewardShields > 0) {
+      rewardsList.push(`+${mission.rewardShields} Seri Kalkanı 🛡️`);
+    }
 
     setToast({
-      title: "GÖREV ÖDÜLÜ ALINDI!",
+      title: isDaily ? "GÜNLÜK GÖREV ÖDÜLÜ ALINDI!" : "HAFTALIK GÖREV ÖDÜLÜ ALINDI!",
       desc: `"${mission.title}" görevi başarıyla tamamlandı!`,
-      rewards: [`+${mission.rewardXp} XP`, `+${coinsReward} Siber Çip 🪙`],
+      rewards: rewardsList,
     });
 
     Alert.alert(
       "🎉 Görev Ödülü Alındı!",
-      `Tebrikler! "${mission.title}" görevini tamamladın.\n\nKazanılan Ödüller:\n• +${mission.rewardXp} XP\n• +${coinsReward} Siber Çip 🪙\n\nÖdüller profilinize başarıyla eklendi!`
+      `Tebrikler! "${mission.title}" görevini tamamladın.\n\nKazanılan Ödüller:\n` +
+      rewardsList.map((r) => `• ${r}`).join("\n") +
+      `\n\nÖdüller profilinize başarıyla eklendi!`
     );
   };
 
-  const handleClaimWeekly = (
-    missionId: "victoryStreak" | "speedDemon",
-    missionTitle: string,
-    xp: number,
-    shield = 0,
-    coins = 0
-  ) => {
-    if (claimingRef.current.has(missionId)) return;
-    claimingRef.current.add(missionId);
-    haptics.success();
-    gameSfx.victory();
-    onClaimWeekly?.(missionId, xp, shield, coins);
+  const renderMissionCard = (mission: CatalogMission) => {
+    const isDaily = mission.period === "daily";
+    const current = progress.missions?.[mission.id] ?? 0;
+    const isDone = current >= mission.target;
+    const isClaimed = isDaily
+      ? Boolean(progress.dailyClaimed?.[mission.id])
+      : Boolean(progress.weeklyClaimed?.[mission.id]);
+    const pct = Math.min(100, Math.round((current / mission.target) * 100));
+    const diffConfig = DIFFICULTY_CONFIG[mission.difficulty] || DIFFICULTY_CONFIG.easy;
+    const icon = getMissionIcon(mission.actionType);
 
-    const rewardsList: string[] = [`+${xp} XP`];
-    if (shield > 0) rewardsList.push(`+${shield} Seri Kalkanı 🛡️`);
-    if (coins > 0) rewardsList.push(`+${coins} Siber Çip 🪙`);
+    return (
+      <View key={mission.id} style={[styles.missionCard, isDone && styles.missionDone]}>
+        <View style={[styles.iconBox, isDone && styles.iconBoxDone]}>
+          <Text style={[styles.iconText, isDone && { color: "#00F5D4" }]}>{isDone ? "✓" : icon}</Text>
+        </View>
 
-    setToast({
-      title: "HAFTALIK ÖDÜL ALINDI!",
-      desc: `"${missionTitle}" görevi başarıyla tamamlandı!`,
-      rewards: rewardsList,
-    });
+        <View style={styles.infoBox}>
+          <View style={styles.cardTopRow}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+              <Text style={[styles.missionTitle, isDone && { color: "#00F5D4" }]}>{mission.title}</Text>
+              <View style={[styles.diffBadge, { backgroundColor: diffConfig.bg, borderColor: diffConfig.border }]}>
+                <Text style={[styles.diffBadgeText, { color: diffConfig.color }]}>{diffConfig.label}</Text>
+              </View>
+            </View>
+            <Text style={styles.rewardTag}>
+              +{mission.rewardXp} XP · 🪙 {mission.rewardCoins}
+              {mission.rewardShields ? ` · 🛡️ ${mission.rewardShields}` : ""}
+            </Text>
+          </View>
+          <Text style={styles.missionDesc}>{mission.desc}</Text>
 
-    const alertDetails = rewardsList.map((r) => `• ${r}`).join("\n");
-    Alert.alert(
-      "🎉 Haftalık Görev Ödülü Alındı!",
-      `Tebrikler! "${missionTitle}" görevini tamamladın.\n\nKazanılan Ödüller:\n${alertDetails}\n\nÖdüller profilinize başarıyla eklendi!`
+          {/* Progress bar */}
+          <View style={styles.cardTrack}>
+            <View
+              style={[
+                styles.cardFill,
+                { width: `${pct}%`, backgroundColor: diffConfig.color },
+                isDone && { backgroundColor: "#00F5D4" },
+              ]}
+            />
+          </View>
+
+          <View style={styles.cardFooter}>
+            <Text style={styles.statusText}>
+              {current}/{mission.target} ({pct}%)
+            </Text>
+
+            {isClaimed ? (
+              <View style={styles.claimedBadge}>
+                <Text style={styles.claimedText}>✓ ALINDI</Text>
+              </View>
+            ) : isDone ? (
+              <Pressable
+                onPress={() => handleClaimMission(mission)}
+                style={({ pressed }) => [styles.actionButton, styles.claimButtonGold, pressed && { opacity: 0.8 }]}
+              >
+                <Text style={[styles.actionText, { color: "#121025" }]}>ÖDÜLÜ AL 🎁</Text>
+              </Pressable>
+            ) : mission.actionType === "daily_route" ? (
+              <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.8 }]}>
+                <Text style={styles.actionText}>OYNAT →</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.inProgressText}>DEVAM EDİYOR</Text>
+            )}
+          </View>
+        </View>
+      </View>
     );
   };
 
@@ -94,10 +191,10 @@ export function MissionsScreen({
         </Pressable>
         <View>
           <Text style={styles.overline}>SİBER GÖREV MERKEZİ</Text>
-          <Text style={styles.title}>GÖREV PANOSU</Text>
+          <Text style={styles.title}>DİNAMİK GÖREV PANOSU</Text>
         </View>
         <View style={styles.totalBadge}>
-          <Text style={styles.totalBadgeText}>+{totalXp} XP</Text>
+          <Text style={styles.totalBadgeText}>+{totalPossibleXp} XP</Text>
         </View>
       </View>
 
@@ -127,9 +224,9 @@ export function MissionsScreen({
       {/* Mission Summary Banner */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryHead}>
-          <Text style={styles.summaryKicker}>SEZON 01 İLERLEMESİ</Text>
+          <Text style={styles.summaryKicker}>AKTİF DÖNGÜ İLERLEMESİ</Text>
           <Text style={styles.summaryTitle}>
-            {completedCount + (progress.wins >= 3 ? 1 : 0) + ((progress.bestArcadeScore || 0) >= 400 ? 1 : 0)}/{SEASON_MISSIONS.length + 2} GÖREV TAMAMLANDI
+            {completedCount}/{allActiveMissions.length} GÖREV TAMAMLANDI
           </Text>
         </View>
         <View style={styles.progressTrack}>
@@ -137,153 +234,34 @@ export function MissionsScreen({
             style={[
               styles.progressFill,
               {
-                width: `${Math.round(
-                  ((completedCount + (progress.wins >= 3 ? 1 : 0) + ((progress.bestArcadeScore || 0) >= 400 ? 1 : 0)) /
-                    (SEASON_MISSIONS.length + 2)) *
-                    100
-                )}%`,
+                width: `${Math.round((completedCount / (allActiveMissions.length || 1)) * 100)}%`,
               },
             ]}
           />
         </View>
-        <Text style={styles.summaryHint}>💡 Görevleri tamamlayarak ekstra XP ve Çip kazanın, rozetlerin kilidini açın!</Text>
+        <Text style={styles.summaryHint}>
+          💡 90 Günlük ve 30 Haftalık devasa havuzdan her gün ve her pazartesi yepyeni görevler ve zorluk dereceleri seni bekliyor!
+        </Text>
       </View>
 
       {/* Daily Missions Section */}
       <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>⚡ GÜNLÜK GÖREVLER</Text>
-        <Text style={styles.sectionMeta}>HER GÜN YENİLENİR</Text>
+        <Text style={styles.sectionTitle}>⚡ GÜNLÜK GÖREVLER (3 ADET)</Text>
+        <Text style={styles.sectionMeta}>HER GÜN 00:00'DA YENİLENİR</Text>
       </View>
 
       <View style={styles.missionList}>
-        {SEASON_MISSIONS.map((mission) => {
-          const current = progress.missions[mission.id] ?? 0;
-          const isDone = current >= mission.target;
-          const isClaimed = Boolean(progress.dailyClaimed?.[mission.id]);
-          const pct = Math.min(100, Math.round((current / mission.target) * 100));
-
-          return (
-            <View key={mission.id} style={[styles.missionCard, isDone && styles.missionDone]}>
-              <View style={[styles.iconBox, isDone && styles.iconBoxDone]}>
-                <Text style={[styles.iconText, isDone && { color: "#00F5D4" }]}>{isDone ? "✓" : mission.icon}</Text>
-              </View>
-
-              <View style={styles.infoBox}>
-                <View style={styles.cardTopRow}>
-                  <Text style={[styles.missionTitle, isDone && { color: "#00F5D4" }]}>{mission.title}</Text>
-                  <Text style={styles.rewardTag}>+{mission.rewardXp} XP · 🪙 25 ÇİP</Text>
-                </View>
-                <Text style={styles.missionDesc}>{mission.description}</Text>
-
-                {/* Progress bar */}
-                <View style={styles.cardTrack}>
-                  <View style={[styles.cardFill, { width: `${pct}%` }, isDone && { backgroundColor: "#00F5D4" }]} />
-                </View>
-
-                <View style={styles.cardFooter}>
-                  <Text style={styles.statusText}>
-                    {current}/{mission.target} ({pct}%)
-                  </Text>
-
-                  {isClaimed ? (
-                    <View style={styles.claimedBadge}>
-                      <Text style={styles.claimedText}>✓ ALINDI</Text>
-                    </View>
-                  ) : isDone ? (
-                    <Pressable
-                      onPress={() => handleClaimDaily(mission)}
-                      style={({ pressed }) => [styles.actionButton, styles.claimButtonGold, pressed && { opacity: 0.8 }]}
-                    >
-                      <Text style={[styles.actionText, { color: "#121025" }]}>ÖDÜLÜ AL 🎁</Text>
-                    </Pressable>
-                  ) : mission.id === "daily" ? (
-                    <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.8 }]}>
-                      <Text style={styles.actionText}>OYNAT →</Text>
-                    </Pressable>
-                  ) : (
-                    <Text style={styles.inProgressText}>DEVAM EDİYOR</Text>
-                  )}
-                </View>
-              </View>
-            </View>
-          );
-        })}
+        {dailyMissions.map((m) => renderMissionCard(m))}
       </View>
 
       {/* Weekly Season Missions Section */}
       <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>🏆 HAFTALIK MİSYONLAR</Text>
-        <Text style={styles.sectionMeta}>ÖZEL ÖDÜLLER</Text>
+        <Text style={styles.sectionTitle}>🏆 HAFTALIK MİSYONLAR (3 ADET)</Text>
+        <Text style={styles.sectionMeta}>HER PAZARTESİ YENİLENİR</Text>
       </View>
 
       <View style={styles.missionList}>
-        {/* Victory Streak */}
-        <View style={[styles.missionCard, progress.wins >= 3 && styles.missionDone]}>
-          <View style={[styles.iconBox, progress.wins >= 3 && styles.iconBoxDone]}>
-            <Text style={[styles.iconText, progress.wins >= 3 && { color: "#00F5D4" }]}>{progress.wins >= 3 ? "✓" : "♕"}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <View style={styles.cardTopRow}>
-              <Text style={[styles.missionTitle, progress.wins >= 3 && { color: "#00F5D4" }]}>ZAFER SERİSİ</Text>
-              <Text style={styles.rewardTag}>+250 XP · 🛡️ 1 KALKAN</Text>
-            </View>
-            <Text style={styles.missionDesc}>Canlı düellolarda 3 galibiyet elde et.</Text>
-            <View style={styles.cardTrack}>
-              <View style={[styles.cardFill, { width: `${Math.min(100, Math.round((progress.wins / 3) * 100))}%` }, progress.wins >= 3 && { backgroundColor: "#00F5D4" }]} />
-            </View>
-            <View style={styles.cardFooter}>
-              <Text style={styles.statusText}>{progress.wins}/3 Galibiyet</Text>
-              {progress.weeklyClaimed?.victoryStreak ? (
-                <View style={styles.claimedBadge}>
-                  <Text style={styles.claimedText}>✓ ALINDI</Text>
-                </View>
-              ) : progress.wins >= 3 ? (
-                <Pressable
-                  onPress={() => handleClaimWeekly("victoryStreak", "ZAFER SERİSİ", 250, 1)}
-                  style={({ pressed }) => [styles.actionButton, styles.claimButtonGold, pressed && { opacity: 0.8 }]}
-                >
-                  <Text style={[styles.actionText, { color: "#121025" }]}>ÖDÜLÜ AL 🎁</Text>
-                </Pressable>
-              ) : (
-                <Text style={styles.inProgressText}>DEVAM EDİYOR</Text>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {/* Speed Demon */}
-        <View style={[styles.missionCard, (progress.bestArcadeScore || 0) >= 400 && styles.missionDone]}>
-          <View style={[styles.iconBox, (progress.bestArcadeScore || 0) >= 400 && styles.iconBoxDone]}>
-            <Text style={[styles.iconText, (progress.bestArcadeScore || 0) >= 400 && { color: "#00F5D4" }]}>{(progress.bestArcadeScore || 0) >= 400 ? "✓" : "⚡"}</Text>
-          </View>
-          <View style={styles.infoBox}>
-            <View style={styles.cardTopRow}>
-              <Text style={[styles.missionTitle, (progress.bestArcadeScore || 0) >= 400 && { color: "#00F5D4" }]}>HIZ CANAVARI</Text>
-              <Text style={styles.rewardTag}>+200 XP · 🪙 50 ÇİP</Text>
-            </View>
-            <Text style={styles.missionDesc}>Zamana Karşı (Arcade) modunda 400 skoru aş.</Text>
-            <View style={styles.cardTrack}>
-              <View style={[styles.cardFill, { width: `${Math.min(100, Math.round(((progress.bestArcadeScore || 0) / 400) * 100))}%` }, (progress.bestArcadeScore || 0) >= 400 && { backgroundColor: "#00F5D4" }]} />
-            </View>
-            <View style={styles.cardFooter}>
-              <Text style={styles.statusText}>{progress.bestArcadeScore || 0}/400 Puan</Text>
-              {progress.weeklyClaimed?.speedDemon ? (
-                <View style={styles.claimedBadge}>
-                  <Text style={styles.claimedText}>✓ ALINDI</Text>
-                </View>
-              ) : (progress.bestArcadeScore || 0) >= 400 ? (
-                <Pressable
-                  onPress={() => handleClaimWeekly("speedDemon", "HIZ CANAVARI", 200, 0, 50)}
-                  style={({ pressed }) => [styles.actionButton, styles.claimButtonCyan, pressed && { opacity: 0.8 }]}
-                >
-                  <Text style={[styles.actionText, { color: "#121025" }]}>ÖDÜLÜ AL 🎁</Text>
-                </Pressable>
-              ) : (
-                <Text style={styles.inProgressText}>DEVAM EDİYOR</Text>
-              )}
-            </View>
-          </View>
-        </View>
+        {weeklyMissions.map((m) => renderMissionCard(m))}
       </View>
     </ScrollView>
   );
@@ -360,6 +338,8 @@ const styles = StyleSheet.create({
   infoBox: { flex: 1 },
   cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
   missionTitle: { color: "#FFF9FC", fontSize: 13, fontWeight: "900" },
+  diffBadge: { paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1 },
+  diffBadgeText: { fontSize: 7.5, fontWeight: "900", letterSpacing: 0.5 },
   rewardTag: { color: "#00F5D4", fontSize: 9.5, fontWeight: "900" },
   missionDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2, marginBottom: 8, lineHeight: 14 },
 
@@ -388,4 +368,3 @@ const styles = StyleSheet.create({
   },
   actionText: { color: "#FFFFFF", fontSize: 9, fontWeight: "900" },
 });
-

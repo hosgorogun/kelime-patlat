@@ -35,7 +35,7 @@ import { getGameSocket } from "./lib/game-socket";
 import { OnboardingGuide } from "./components/onboarding-guide";
 import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
-import { setHapticsEnabled as setSoloHapticsEnabled } from "./shared/audio-haptics";
+import { setHapticsEnabled as setSoloHapticsEnabled, triggerHapticSelection, triggerHapticSuccess } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
 import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
@@ -50,6 +50,8 @@ import { TermsModal } from "./components/terms-modal";
 import { consentManager, notificationManager, reviewManager } from "./lib/engagement";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 import { VintagePuzzle } from "./components/vintage-puzzle";
+import { socialManager } from "./shared/social";
+import { UserProfileModal, type InspectableUser } from "./components/user-profile-modal";
 
 type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -163,6 +165,7 @@ function HomeScreen() {
     setSfxOn(val);
     setSfxEnabled(val);
     AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(val)).catch(() => undefined);
+    setProgress((curr) => ({ ...curr, sfxEnabled: val }));
   };
   
   const toggleHaptics = (val: boolean) => {
@@ -170,6 +173,7 @@ function HomeScreen() {
     setHapticsEnabled(val);
     setSoloHapticsEnabled(val);
     AsyncStorage.setItem("kelime-patlat:haptics-enabled", String(val)).catch(() => undefined);
+    setProgress((curr) => ({ ...curr, hapticsEnabled: val }));
   };
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]>([]);
 
@@ -224,6 +228,7 @@ function HomeScreen() {
   const [globalToast, setGlobalToast] = useState<ToastData | null>(null);
   const prevLevelRef = useRef<number | null>(null);
   const prevTierRef = useRef<string | null>(null);
+  const lastTouchedIndexRef = useRef<number | null>(null);
   const incomingUrl = Linking.useURL();
   const recordedRoundRef = useRef<string | null>(null);
   const victoryCueRef = useRef<string | null>(null);
@@ -232,7 +237,45 @@ function HomeScreen() {
   const gameScrollRef = useRef<ScrollView>(null);
   const [arcadeStarted, setArcadeStarted] = useState(false);
   const [gameCountdown, setGameCountdown] = useState<number | null>(null);
+  const [inspectedUser, setInspectedUser] = useState<InspectableUser | null>(null);
   const prevStartedAtRef = useRef<number | null>(null);
+
+  const openUserProfile = useCallback(async (target: Partial<InspectableUser> & { id: string; name: string }) => {
+    // Önce eldeki hazır bilgileri anında göster
+    const base: InspectableUser = {
+      id: target.id,
+      name: target.name,
+      username: target.username || target.name,
+      isBot: target.isBot ?? target.id.startsWith("bot:"),
+      avatar: target.avatar,
+      avatarPhoto: target.avatarPhoto,
+      selectedTitle: target.selectedTitle || "[ÇAYLAK]",
+      level: target.level || 1,
+      tier: target.tier || "DEMİR",
+      lp: target.lp ?? 0,
+      wins: target.wins ?? 0,
+      matches: target.matches ?? 0,
+      streak: target.streak ?? 0,
+      bestScore: target.bestScore ?? 0,
+      bestTempo: target.bestTempo ?? 0,
+      xp: target.xp ?? 0,
+      historyCount: target.historyCount ?? (target.matches ? target.matches * 3 : 0),
+    };
+    setInspectedUser(base);
+
+    // Eğer bot değilse sunucudan en güncel detayları arka planda çek
+    if (!base.isBot) {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/user/profile/${encodeURIComponent(target.id || target.name)}`);
+        if (res.ok) {
+          const fresh = await res.json();
+          setInspectedUser((current) => current && current.id === target.id ? { ...current, ...fresh } : current);
+        }
+      } catch {
+        // Çevrimdışı veya hata durumunda base bilgiler görünmeye devam eder
+      }
+    }
+  }, []);
 
   const watchAd = (onReward: () => void) => {
     Alert.alert(
@@ -327,7 +370,7 @@ function HomeScreen() {
   const isBotMatch = Boolean(room?.players.some((p) => p.isBot));
   const matchXpEarned = progress.lastMatchReward?.xp ?? (iWon ? (isBotMatch ? 35 : 60) : isDraw ? (isBotMatch ? 20 : 40) : (isBotMatch ? 20 : 35));
   const matchLpEarned = progress.lastMatchReward?.lp ?? (iWon ? (isBotMatch ? 15 : 25) : isDraw ? 0 : (isBotMatch ? -10 : -20));
-  const matchCoinsEarned = progress.lastMatchReward?.coins ?? (iWon ? (isBotMatch ? 15 : 25) : 5);
+  const matchCoinsEarned = progress.lastMatchReward?.coins ?? (iWon ? (isBotMatch ? 4 : 10) : 1);
 
   useEffect(() => {
     if (room?.status !== "playing" || !room.startedAt) return;
@@ -371,6 +414,7 @@ function HomeScreen() {
 
   const clearSelection = useCallback(() => {
     selectionRef.current = [];
+    lastTouchedIndexRef.current = null;
     setSelectedCells([]);
   }, []);
 
@@ -436,6 +480,10 @@ function HomeScreen() {
       if (token) {
         if (token === "guest") {
           setAuthToken("guest");
+          const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
+          const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
+          setPlayerId(cachedId || `guest_${Math.random().toString(36).slice(2, 10)}`);
+          setPlayerName(cachedName || "Misafir");
           setAuthLoading(false);
           return;
         }
@@ -555,22 +603,86 @@ function HomeScreen() {
 
   useEffect(() => {
     let active = true;
-    AsyncStorage.getItem(PROGRESS_KEY).then((stored) => {
+    Promise.all([
+      AsyncStorage.getItem(PROGRESS_KEY),
+      AsyncStorage.getItem(SOLO_UNLOCK_KEY),
+    ]).then(([storedProgress, storedSolo]) => {
       if (!active) return;
-      if (stored) {
+      let localSolo = storedSolo ? parseInt(storedSolo, 10) : 1;
+      if (isNaN(localSolo) || localSolo < 1) localSolo = 1;
+
+      if (storedProgress) {
         try {
-          const parsed = JSON.parse(stored) as Partial<PlayerProgress>;
-          setProgress((current) => mergePlayerProgress(current, {
-            ...DEFAULT_PROGRESS,
+          const parsed = JSON.parse(storedProgress) as Partial<PlayerProgress>;
+          const merged = mergePlayerProgress(DEFAULT_PROGRESS, {
             ...parsed,
+            soloUnlockedLevel: Math.max(localSolo, parsed.soloUnlockedLevel ?? 1),
             missions: { ...DEFAULT_PROGRESS.missions, ...parsed.missions },
-          }));
-        } catch { setProgress(DEFAULT_PROGRESS); }
+          });
+          setProgress(merged);
+          setSoloUnlockedLevel(merged.soloUnlockedLevel ?? 1);
+        } catch {
+          setProgress({ ...DEFAULT_PROGRESS, soloUnlockedLevel: localSolo });
+          setSoloUnlockedLevel(localSolo);
+        }
+      } else {
+        setProgress((curr) => ({ ...curr, soloUnlockedLevel: localSolo }));
+        setSoloUnlockedLevel(localSolo);
       }
       setProgressReady(true);
     }).catch(() => { if (active) setProgressReady(true); });
+
+    // Fetch real-time leaderboard from backend
+    fetch(`${getApiBaseUrl()}/api/game/leaderboard`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && Array.isArray(data?.leaderboard) && data.leaderboard.length > 0) {
+          setLeaderboard(data.leaderboard);
+        }
+      })
+      .catch(() => undefined);
+
     return () => { active = false; };
   }, []);
+
+  // Fetch / refresh real-time leaderboard when navigating to season or league screens
+  useEffect(() => {
+    if (screen !== "season" && screen !== "league") return;
+    let active = true;
+    fetch(`${getApiBaseUrl()}/api/game/leaderboard`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && Array.isArray(data?.leaderboard) && data.leaderboard.length > 0) {
+          setLeaderboard(data.leaderboard);
+        }
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [screen]);
+
+  useEffect(() => {
+    if (!progressReady) return;
+    if (typeof progress.soloUnlockedLevel === "number" && progress.soloUnlockedLevel > soloUnlockedLevel) {
+      setSoloUnlockedLevel(progress.soloUnlockedLevel);
+      AsyncStorage.setItem(SOLO_UNLOCK_KEY, String(progress.soloUnlockedLevel)).catch(() => undefined);
+    }
+  }, [progress.soloUnlockedLevel, progressReady]);
+
+  useEffect(() => {
+    if (!progressReady) return;
+    if (typeof progress.sfxEnabled === "boolean") {
+      setSfxOn(progress.sfxEnabled);
+      setSfxEnabled(progress.sfxEnabled);
+    }
+    if (typeof progress.hapticsEnabled === "boolean") {
+      setHapticsOn(progress.hapticsEnabled);
+      setHapticsEnabled(progress.hapticsEnabled);
+      setSoloHapticsEnabled(progress.hapticsEnabled);
+    }
+    if (Array.isArray(progress.friends) && progress.friends.length > 0) {
+      socialManager.syncFromCloud(progress.friends);
+    }
+  }, [progress.sfxEnabled, progress.hapticsEnabled, progress.friends, progressReady]);
 
   useEffect(() => {
     if (!progressReady) return;
@@ -788,31 +900,76 @@ function HomeScreen() {
     };
   }, [clearFeedbackLater, setRoomFromServer, playerId]);
 
-  const createRoom = (size = selectedSize) => {
-    haptics.light();
+  const ensureConnectedSocket = async (): Promise<any> => {
     const socket = getGameSocket();
-    if (!socket.connected) {
+    if (socket.connected) return socket;
+    socket.connect();
+    // 2 saniye boyunca bağlantının kurulmasını bekle
+    return new Promise((resolve) => {
+      if (socket.connected) return resolve(socket);
+      const timer = setTimeout(() => {
+        socket.off("connect", onConnect);
+        resolve(socket.connected ? socket : null);
+      }, 2000);
+      const onConnect = () => {
+        clearTimeout(timer);
+        resolve(socket);
+      };
+      socket.once("connect", onConnect);
+    });
+  };
+
+  const createRoom = async (size = selectedSize) => {
+    haptics.light();
+    const socket = await ensureConnectedSocket();
+    if (!socket || !socket.connected) {
       setNotice("Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.");
       Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et veya tekrar dene.");
       haptics.error();
       return;
     }
-    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: false });
+    const myProfile = {
+      avatar: progress.selectedAvatar,
+      avatarPhoto: progress.avatarPhoto,
+      selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      level: getPlayerLevel(progress.xp),
+      tier: getLeagueTier(progress).tier,
+      lp: progress.lp || 0,
+      wins: progress.wins || 0,
+      matches: progress.matches || 0,
+      streak: progress.streak || 0,
+      bestScore: progress.bestScore || 0,
+      bestTempo: progress.bestTempo || 0,
+    };
+    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: false, profile: myProfile });
     setNotice("Odan hazırlanıyor…");
   };
 
-  const startBotDuel = (size: BoardSize) => {
+  const startBotDuel = async (size: BoardSize) => {
     setSelectedSize(size);
     setScreen("online");
     haptics.light();
-    const socket = getGameSocket();
-    if (!socket.connected) {
+    const socket = await ensureConnectedSocket();
+    if (!socket || !socket.connected) {
       setNotice("Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.");
       Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et veya tekrar dene.");
       haptics.error();
       return;
     }
-    socket.emit("matchmaking:join", { playerId, playerName: safeName, size });
+    const myProfile = {
+      avatar: progress.selectedAvatar,
+      avatarPhoto: progress.avatarPhoto,
+      selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      level: getPlayerLevel(progress.xp),
+      tier: getLeagueTier(progress).tier,
+      lp: progress.lp || 0,
+      wins: progress.wins || 0,
+      matches: progress.matches || 0,
+      streak: progress.streak || 0,
+      bestScore: progress.bestScore || 0,
+      bestTempo: progress.bestTempo || 0,
+    };
+    socket.emit("matchmaking:join", { playerId, playerName: safeName, size, profile: myProfile });
     setNotice("Rakip aranıyor...");
   };
 
@@ -827,22 +984,35 @@ function HomeScreen() {
     }
   };
 
-  const joinRoom = () => {
+  const joinRoom = async () => {
     const code = roomCodeInput.trim().toUpperCase();
     if (code.length < 5) {
       haptics.error();
       setNotice("5 karakterli oda kodunu yaz.");
       return;
     }
-    const socket = getGameSocket();
-    if (!socket.connected) {
+    const socket = await ensureConnectedSocket();
+    if (!socket || !socket.connected) {
       setNotice("Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.");
       Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et veya tekrar dene.");
       haptics.error();
       return;
     }
     haptics.light();
-    socket.emit("room:join", { code, playerId, playerName: safeName });
+    const myProfile = {
+      avatar: progress.selectedAvatar,
+      avatarPhoto: progress.avatarPhoto,
+      selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      level: getPlayerLevel(progress.xp),
+      tier: getLeagueTier(progress).tier,
+      lp: progress.lp || 0,
+      wins: progress.wins || 0,
+      matches: progress.matches || 0,
+      streak: progress.streak || 0,
+      bestScore: progress.bestScore || 0,
+      bestTempo: progress.bestTempo || 0,
+    };
+    socket.emit("room:join", { code, playerId, playerName: safeName, profile: myProfile });
     setNotice("Odaya katılıyorsun…");
   };
 
@@ -963,6 +1133,8 @@ function HomeScreen() {
     const row = Math.floor(oy / cellSize);
     if (col >= 0 && col < room.size && row >= 0 && row < room.size) {
       const index = row * room.size + col;
+      if (lastTouchedIndexRef.current === index) return;
+      lastTouchedIndexRef.current = index;
       const isFound = room.foundWords.some(entry => entry.playerId === playerId && entry.path.includes(index));
       if (isFound) return;
       if (!selectionActiveRef.current) {
@@ -1036,14 +1208,20 @@ function HomeScreen() {
   };
 
   const completeSoloLevel = (level: number, foundWords: string[] = []) => {
-    setSoloUnlockedLevel((current) => {
-      const next = Math.min(MAX_SOLO_LEVEL + 1, Math.max(current, level + 1));
-      AsyncStorage.setItem(SOLO_UNLOCK_KEY, String(next)).catch(() => undefined);
-      return next;
+    const next = Math.min(MAX_SOLO_LEVEL + 1, Math.max(soloUnlockedLevel, level + 1));
+    setSoloUnlockedLevel(next);
+    AsyncStorage.setItem(SOLO_UNLOCK_KEY, String(next)).catch(() => undefined);
+    setProgress((curr) => {
+      const updated = { ...curr, soloUnlockedLevel: next };
+      void syncProgressToCloud(updated);
+      return updated;
     });
     void awardProgressOnServer(
       { kind: "solo", level, foundWords },
-      (current) => applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"),
+      (current) => ({
+        ...applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"),
+        soloUnlockedLevel: Math.min(MAX_SOLO_LEVEL + 1, Math.max(current.soloUnlockedLevel ?? 1, next)),
+      }),
     );
   };
 
@@ -1107,9 +1285,6 @@ function HomeScreen() {
   const handleCloseGuide = () => {
     setShowGuide(false);
     AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
-    setTimeout(() => {
-      setShowWelcomeModal(true);
-    }, 250);
   };
 
   if (screen === "home") {
@@ -1338,9 +1513,52 @@ function HomeScreen() {
           progress={progress}
           leaderboard={leaderboard}
           onBack={() => setScreen("home")}
-          onChallengeFriend={(friendName) => {
+          onChallengeFriend={(friendName, size) => {
+            createRoom(size || 4);
+            setNotice(`${friendName} ile ${size}×${size} düellosu için oda oluşturuldu! Davet kodunu paylaş.`);
+          }}
+          onUpdateFriends={(updatedFriends) => {
+            setProgress((current) => ({
+              ...current,
+              friends: updatedFriends,
+            }));
+          }}
+          onInspectUser={openUserProfile}
+        />
+        <UserProfileModal
+          visible={inspectedUser !== null}
+          user={inspectedUser}
+          isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLowerCase() === (inspectedUser.username || inspectedUser.name).toLowerCase()) : false}
+          onClose={() => setInspectedUser(null)}
+          onAddFriend={(target) => {
+            const res = socialManager.addFriend({
+              id: target.id,
+              name: target.name,
+              username: target.username || target.name,
+              avatar: target.avatar,
+              avatarPhoto: target.avatarPhoto,
+              selectedTitle: target.selectedTitle,
+              level: target.level,
+              tier: target.tier,
+              lp: target.lp,
+              wins: target.wins,
+              matches: target.matches,
+              streak: target.streak,
+              bestScore: target.bestScore,
+              bestTempo: target.bestTempo,
+            });
+            setGlobalToast({
+              id: `friend-${Date.now()}`,
+              title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+              subtitle: res.message,
+              icon: res.success ? "👥" : "ℹ️",
+              accentColor: res.success ? "#00F5D4" : "#FFC24A",
+            });
+          }}
+          onChallenge={(target) => {
+            setInspectedUser(null);
             createRoom(4);
-            setNotice(`${friendName} ile düello için oda oluşturuldu! Davet kodunu paylaş.`);
+            setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
           }}
         />
       </MainShell>
@@ -1816,10 +2034,26 @@ function HomeScreen() {
         <StatusBar style="light" />
         <VintagePuzzle
           onBack={() => setScreen("home")}
-          onRewardXp={(amount: number) => {
+          vintageProgress={progress.vintageProgress}
+          onSaveProgress={(newProgress) => {
+            setProgress((current) => {
+              const updated = { ...current, vintageProgress: newProgress };
+              void syncProgressToCloud(updated);
+              return updated;
+            });
+          }}
+          onRewardXp={(amount: number, level: number) => {
             void awardProgressOnServer(
-              { kind: "vintage", score: amount },
-              (current) => ({ ...current, xp: current.xp + amount })
+              { kind: "vintage", score: amount, level },
+              (current) => ({
+                ...current,
+                xp: current.xp + amount,
+                vintageProgress: {
+                  maxUnlockedLevel: Math.min(20, Math.max(current.vintageProgress?.maxUnlockedLevel ?? 1, level + 1)),
+                  completedLevels: Array.from(new Set([...(current.vintageProgress?.completedLevels ?? []), level])),
+                  score: (current.vintageProgress?.score ?? 0) + amount,
+                },
+              })
             );
             setGlobalToast({
               id: `vintage-${Date.now()}`,
@@ -1830,6 +2064,7 @@ function HomeScreen() {
             });
           }}
         />
+        {globalToast && <GlobalGameToast toast={globalToast} onDismiss={() => setGlobalToast(null)} />}
       </ScreenContainer>
     );
   }
@@ -1979,7 +2214,18 @@ function HomeScreen() {
           <Pressable onPress={shareRoomInvite} style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}><Text style={styles.inviteButtonText}>DAVET BAĞLANTISINI PAYLAŞ</Text><Text style={styles.inviteButtonIcon}>↗</Text></Pressable>
         </View>
         <View style={styles.playerList}>
-          {room.players.map((player, index) => <PlayerRow key={player.id} player={player} isMe={player.id === playerId} accent={index === 0 ? "#2DD4BF" : "#FB7185"} />)}
+          {room.players.map((player, index) => (
+            <PlayerRow
+              key={player.id}
+              player={player}
+              isMe={player.id === playerId}
+              accent={index === 0 ? "#2DD4BF" : "#FB7185"}
+              onPress={player.id !== playerId ? () => {
+                triggerHapticSelection();
+                openUserProfile(player);
+              } : undefined}
+            />
+          ))}
           {!bothPlayers && <View style={styles.waitPlayer}><View style={styles.waitAvatar}><Text style={styles.waitAvatarText}>?</Text></View><View><Text style={styles.waitTitle}>RAKİP BEKLENİYOR</Text><Text style={styles.waitSub}>Oda kodunu paylaş</Text></View></View>}
         </View>
         <View style={styles.ruleCard}><Text style={styles.ruleIcon}>✦</Text><View style={styles.ruleTextWrap}><Text style={styles.ruleTitle}>{room.size}×{room.size} TAHTA · {room.wordsTotal} KELİME</Text><Text style={styles.ruleCopy}>Aynı tahtadaki tüm kelimeleri bul. Sadece yatay ve dikey komşu harfleri bağla.</Text></View></View>
@@ -1988,6 +2234,37 @@ function HomeScreen() {
         </Pressable>
         <Text style={styles.notice}>{notice}</Text>
         </ScrollView>
+        <UserProfileModal
+          visible={inspectedUser !== null}
+          user={inspectedUser}
+          isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLowerCase() === (inspectedUser.username || inspectedUser.name).toLowerCase()) : false}
+          onClose={() => setInspectedUser(null)}
+          onAddFriend={(target) => {
+            const res = socialManager.addFriend({
+              id: target.id,
+              name: target.name,
+              username: target.username || target.name,
+              avatar: target.avatar,
+              avatarPhoto: target.avatarPhoto,
+              selectedTitle: target.selectedTitle,
+              level: target.level,
+              tier: target.tier,
+              lp: target.lp,
+              wins: target.wins,
+              matches: target.matches,
+              streak: target.streak,
+              bestScore: target.bestScore,
+              bestTempo: target.bestTempo,
+            });
+            setGlobalToast({
+              id: `friend-${Date.now()}`,
+              title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+              subtitle: res.message,
+              icon: res.success ? "👥" : "ℹ️",
+              accentColor: res.success ? "#00F5D4" : "#FFC24A",
+            });
+          }}
+        />
       </ScreenContainer>
     );
   }
@@ -2055,7 +2332,20 @@ function HomeScreen() {
         <View style={styles.scoreRow}>
           <ScoreBadge name={me?.name ?? safeName} score={myScore} words={myWordCount} total={room.wordsTotal} active={!room.winnerId || iWon} won={iWon} accent="#2DD4BF" combo={room.combos?.[playerId]} />
           <View style={styles.vsMark}><Text style={styles.vsText}>VS</Text></View>
-          <ScoreBadge name={opponent?.name ?? "RAKİP"} score={opponentScore} words={opponentWordCount} total={room.wordsTotal} active={!room.winnerId || !iWon} won={Boolean(room.winnerId && !iWon)} accent="#FB7185" combo={opponent ? room.combos?.[opponent.id] : undefined} />
+          <ScoreBadge
+            name={opponent?.name ?? "RAKİP"}
+            score={opponentScore}
+            words={opponentWordCount}
+            total={room.wordsTotal}
+            active={!room.winnerId || !iWon}
+            won={Boolean(room.winnerId && !iWon)}
+            accent="#FB7185"
+            combo={opponent ? room.combos?.[opponent.id] : undefined}
+            onPress={opponent ? () => {
+              triggerHapticSelection();
+              openUserProfile(opponent);
+            } : undefined}
+          />
         </View>
         <View style={battleStyles.statsRow}><View style={battleStyles.statCell}><Text style={battleStyles.statLabel}>PUAN FARKI</Text><Text style={[battleStyles.statValue, scoreDifference > 0 && battleStyles.statValuePositive, scoreDifference < 0 && battleStyles.statValueNegative]}>{scoreLeadLabel}</Text></View><View style={battleStyles.statDivider} /><View style={battleStyles.statCell}><Text style={battleStyles.statLabel}>TEMPO</Text><Text style={battleStyles.statValue}>{myTempo} · {opponentTempo} K/DK</Text></View></View>
         <View style={styles.targetCard}>
@@ -2320,6 +2610,58 @@ function HomeScreen() {
                     <Text style={styles.resultScorePlayerName}>{opponent?.name ?? "RAKİP"}</Text>
                     <Text style={[styles.resultScoreNumber, { color: "#FB7185" }]}>{opponentScore}</Text>
                     <Text style={styles.resultScoreWords}>{opponentWordCount}/{room.wordsTotal} Kelime</Text>
+                    {opponent && (
+                      <View style={{ flexDirection: "row", gap: 6, marginTop: 6, justifyContent: "center" }}>
+                        <Pressable
+                          onPress={() => {
+                            triggerHapticSelection();
+                            openUserProfile(opponent);
+                          }}
+                          style={({ pressed }) => [
+                            { backgroundColor: "rgba(124, 92, 246, 0.2)", borderColor: "#7C5CF6", borderWidth: 1, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
+                            pressed && { opacity: 0.7 }
+                          ]}
+                        >
+                          <Text style={{ color: "#C4B5FD", fontSize: 9, fontWeight: "900" }}>👤 PROFİL</Text>
+                        </Pressable>
+                        {!socialManager.getFriends().some((f) => f.username.toLowerCase() === opponent.name.toLowerCase()) && (
+                          <Pressable
+                            onPress={() => {
+                              triggerHapticSuccess();
+                              const res = socialManager.addFriend({
+                                id: opponent.id,
+                                name: opponent.name,
+                                username: opponent.name,
+                                avatar: opponent.avatar || (opponent.isBot ? "🤖" : "🎮"),
+                                avatarPhoto: opponent.avatarPhoto,
+                                selectedTitle: opponent.selectedTitle,
+                                level: opponent.level,
+                                tier: opponent.tier,
+                                lp: opponent.lp,
+                                wins: opponent.wins,
+                                matches: opponent.matches,
+                                streak: opponent.streak,
+                                bestScore: opponent.bestScore,
+                                bestTempo: opponent.bestTempo,
+                              });
+                              setGlobalToast({
+                                id: `friend-${Date.now()}`,
+                                title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+                                subtitle: res.message,
+                                icon: res.success ? "👥" : "ℹ️",
+                                accentColor: res.success ? "#00F5D4" : "#FFC24A",
+                              });
+                            }}
+                            style={({ pressed }) => [
+                              { backgroundColor: "rgba(0, 245, 212, 0.2)", borderColor: "#00F5D4", borderWidth: 1, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
+                              pressed && { opacity: 0.7 }
+                            ]}
+                          >
+                            <Text style={{ color: "#00F5D4", fontSize: 9, fontWeight: "900" }}>➕ EKLE</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -2407,6 +2749,38 @@ function HomeScreen() {
           </View>
         </View>
       )}
+
+      <UserProfileModal
+        visible={inspectedUser !== null}
+        user={inspectedUser}
+        isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLowerCase() === (inspectedUser.username || inspectedUser.name).toLowerCase()) : false}
+        onClose={() => setInspectedUser(null)}
+        onAddFriend={(target) => {
+          const res = socialManager.addFriend({
+            id: target.id,
+            name: target.name,
+            username: target.username || target.name,
+            avatar: target.avatar,
+            avatarPhoto: target.avatarPhoto,
+            selectedTitle: target.selectedTitle,
+            level: target.level,
+            tier: target.tier,
+            lp: target.lp,
+            wins: target.wins,
+            matches: target.matches,
+            streak: target.streak,
+            bestScore: target.bestScore,
+            bestTempo: target.bestTempo,
+          });
+          setGlobalToast({
+            id: `friend-${Date.now()}`,
+            title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+            subtitle: res.message,
+            icon: res.success ? "👥" : "ℹ️",
+            accentColor: res.success ? "#00F5D4" : "#FFC24A",
+          });
+        }}
+      />
     </ScreenContainer>
   );
 }
@@ -2555,21 +2929,56 @@ const BoardCell = React.memo(({
 
 
 
-function PlayerRow({ player, isMe, accent }: { player: { name: string; connected: boolean; ready: boolean; isBot?: boolean }; isMe: boolean; accent: string }) {
-  return <View style={styles.playerRow}><View style={[styles.playerAvatar, { borderColor: accent }]}><Text style={styles.playerAvatarText}>{player.isBot ? "BOT" : initials(player.name)}</Text></View><View style={styles.playerInfo}><Text style={styles.playerName}>{player.name}{isMe ? "  (SEN)" : ""}</Text><Text style={styles.playerState}>{player.isBot ? "YAPAY RAKİP HAZIR" : player.connected ? (player.ready ? "HAZIR" : "TAHTAYI İNCELİYOR") : "BAĞLANTI YENİLENİYOR"}</Text></View><View style={[styles.readyDot, { backgroundColor: player.ready ? "#A3E635" : "#466279" }]} /></View>;
+function PlayerRow({ player, isMe, accent, onPress }: { player: { name: string; connected: boolean; ready: boolean; isBot?: boolean }; isMe: boolean; accent: string; onPress?: () => void }) {
+  const rowContent = (
+    <View style={styles.playerRow}>
+      <View style={[styles.playerAvatar, { borderColor: accent }]}>
+        <Text style={styles.playerAvatarText}>{player.isBot ? "BOT" : initials(player.name)}</Text>
+      </View>
+      <View style={styles.playerInfo}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text style={styles.playerName}>{player.name}{isMe ? "  (SEN)" : ""}</Text>
+          {onPress && <Text style={{ fontSize: 9, opacity: 0.8 }}>👤</Text>}
+        </View>
+        <Text style={styles.playerState}>{player.isBot ? "YAPAY RAKİP HAZIR" : player.connected ? (player.ready ? "HAZIR" : "TAHTAYI İNCELİYOR") : "BAĞLANTI YENİLENİYOR"}</Text>
+      </View>
+      <View style={[styles.readyDot, { backgroundColor: player.ready ? "#A3E635" : "#466279" }]} />
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
+        {rowContent}
+      </Pressable>
+    );
+  }
+
+  return rowContent;
 }
 
-function ScoreBadge({ name, score, words, total, active, won, accent, combo }: { name: string; score: number; words: number; total: number; active: boolean; won: boolean; accent: string; combo?: number }) {
-  return (
+function ScoreBadge({ name, score, words, total, active, won, accent, combo, onPress }: { name: string; score: number; words: number; total: number; active: boolean; won: boolean; accent: string; combo?: number; onPress?: () => void }) {
+  const content = (
     <View style={[styles.scoreBadge, won && { borderColor: accent }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
         <Text numberOfLines={1} style={[styles.scoreName, { flexShrink: 1 }]}>{name}</Text>
+        {onPress && <Text style={{ fontSize: 9, opacity: 0.8 }}>👤</Text>}
         {combo && combo >= 2 ? <Text style={{ fontSize: 9, fontWeight: "900", color: "#FF9B62" }}>🔥 x{combo}</Text> : null}
       </View>
       <Text style={[styles.scoreValue, active && { color: accent }]}>{score}</Text>
       <Text style={[styles.scoreStatus, won && { color: accent }]}>{words} / {total} KELİME</Text>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && styles.pressed]}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
 }
 
 const RANK_IMAGES: Record<string, any> = {

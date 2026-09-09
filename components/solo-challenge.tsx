@@ -124,10 +124,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   // Radar cooldown timer
   useEffect(() => {
     if (radarCooldown <= 0) return;
-    const timer = setInterval(() => {
-      setRadarCooldown((prev) => prev - 1);
+    const timer = setTimeout(() => {
+      setRadarCooldown((prev) => Math.max(0, prev - 1));
     }, 1000);
-    return () => clearInterval(timer);
+    return () => clearTimeout(timer);
   }, [radarCooldown]);
   
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]>([]);
@@ -141,6 +141,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
   const lastWordTimeRef = useRef<number>(0);
+  const lastTouchedIndexRef = useRef<number | null>(null);
 
   useEffect(() => {
     initAudio().catch(() => undefined);
@@ -151,8 +152,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   const measureBoard = () => {
     boardRef.current?.measure((x: any, y: any, width: any, height: any, pageX: any, pageY: any) => {
-      if (pageX !== undefined) boardPageX.current = pageX;
-      if (pageY !== undefined) boardPageY.current = pageY;
+      if (pageX !== undefined && !isNaN(pageX)) boardPageX.current = pageX;
+      if (pageY !== undefined && !isNaN(pageY)) boardPageY.current = pageY;
     });
   };
 
@@ -217,7 +218,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     if (resetTimer.current) clearTimeout(resetTimer.current);
   }, []);
 
-  const clearSelection = () => { selectionRef.current = []; setSelected([]); };
+  const clearSelection = () => { selectionRef.current = []; lastTouchedIndexRef.current = null; setSelected([]); };
   
   const triggerShake = () => {
     Animated.sequence([
@@ -436,6 +437,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     const row = Math.floor(oy / cellSize);
     if (col >= 0 && col < challenge.size && row >= 0 && row < challenge.size) {
       const index = row * challenge.size + col;
+      if (lastTouchedIndexRef.current === index) return;
+      lastTouchedIndexRef.current = index;
       const isFound = foundCells.has(index);
       const solutionColor = solutionColors.get(index);
       const isSolution = solutionColor !== undefined;

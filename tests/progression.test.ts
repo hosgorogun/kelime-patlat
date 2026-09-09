@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, getWeekId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, checkDailyLoginReward, getDailyMissions, getWeeklyMissions, ALL_MISSIONS, findMissionById } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
@@ -92,14 +92,18 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
   it("başarı rozetlerinin kilit açılma şartlarını doğru değerlendirir", () => {
     const fresh = badgesFor(DEFAULT_PROGRESS);
     expect(fresh.every((b) => !b.unlocked)).toBe(true);
+    expect(fresh.length).toBe(18);
 
     const advanced = badgesFor({
       ...DEFAULT_PROGRESS,
-      matches: 6,
-      wins: 1,
-      streak: 7,
-      bestArcadeScore: 550,
-      xp: 650,
+      matches: 25,
+      wins: 25,
+      streak: 14,
+      bestArcadeScore: 1000,
+      xp: 2000,
+      bestTempo: 4.2,
+      coins: 250,
+      history: new Array(50).fill("TEST"),
       missions: { daily: 1, duels: 2, wordsmith: 1 },
     });
     expect(advanced.every((b) => b.unlocked)).toBe(true);
@@ -120,7 +124,18 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(AVATARS.some((avatar) => avatar.id === DEFAULT_PROGRESS.selectedAvatar)).toBe(true);
     const rookieBadges = badgesFor(DEFAULT_PROGRESS);
     expect(rookieBadges.every((badge) => !badge.unlocked)).toBe(true);
-    const seasoned = { ...DEFAULT_PROGRESS, xp: 600, bestArcadeScore: 500, matches: 6, wins: 1, streak: 7, missions: { daily: 1, duels: 2, wordsmith: 1 } };
+    const seasoned = {
+      ...DEFAULT_PROGRESS,
+      xp: 2000,
+      bestArcadeScore: 1000,
+      matches: 25,
+      wins: 25,
+      streak: 14,
+      bestTempo: 4,
+      coins: 200,
+      history: new Array(50).fill("TEST"),
+      missions: { daily: 1, duels: 2, wordsmith: 1 },
+    };
     expect(badgesFor(seasoned).every((badge) => badge.unlocked)).toBe(true);
   });
 
@@ -360,7 +375,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const initial = { ...DEFAULT_PROGRESS, coins: 50, xp: 0 };
     const res = applyArcadeProgress(initial, 200);
     expect(res.xp).toBe(20);
-    expect(res.coins).toBe(52); // 50 + Math.floor(200 / 80) = 52
+    expect(res.coins).toBe(55); // 50 + Math.floor(200 / 40) = 55
   });
 
   it("günün gizemli kelimesini Türkçe harf duyarlılığıyla (İ/i, I/ı) doğru tanır ve bonus XP verir", () => {
@@ -471,6 +486,21 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     };
     expect(getActiveCyberTitle(customEquipped)).toBe("[ÇAYLAK]");
 
+    // Yüksek seviye unvanlar (ör. [SİBER HAKİM]) kazanıldığında kuşanılabilir
+    const overlordProgress = {
+      ...DEFAULT_PROGRESS,
+      xp: 2100,
+      selectedTitle: "[SİBER HAKİM]",
+    };
+    expect(getActiveCyberTitle(overlordProgress)).toBe("[SİBER HAKİM]");
+
+    // Kilitli bir unvan kuşanılmaya çalışılırsa fallback olarak en son açılan unvan döner
+    const lockedAttempt = {
+      ...DEFAULT_PROGRESS,
+      selectedTitle: "[SİBER HAKİM]", // 0 XP ile kilitlidir
+    };
+    expect(getActiveCyberTitle(lockedAttempt)).toBe("[ÇAYLAK]");
+
     // mergePlayerProgress selectedTitle'ı korur
     const merged = mergePlayerProgress(DEFAULT_PROGRESS, customEquipped);
     expect(merged.selectedTitle).toBe("[ÇAYLAK]");
@@ -502,5 +532,113 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     // 4. Aynı 2 aylık periyot içinde tekrar çalıştırıldığında sıfırlama yapılmaz
     const sameMonth = reconcileSeasonReset(topRes.updatedProgress, new Date("2026-09-05"));
     expect(sameMonth.resetResult.seasonResetPerformed).toBe(false);
+  });
+
+  it("mergePlayerProgress solo ve vintage bulmaca ilerlemelerini veritabanından en yüksek değerleri alarak birleştirir", () => {
+    const local = {
+      ...DEFAULT_PROGRESS,
+      soloUnlockedLevel: 12,
+      vintageProgress: {
+        maxUnlockedLevel: 8,
+        completedLevels: [1, 2, 3],
+        score: 300,
+      },
+    };
+
+    const remote = {
+      soloUnlockedLevel: 15,
+      vintageProgress: {
+        maxUnlockedLevel: 10,
+        completedLevels: [3, 4, 5],
+        score: 500,
+      },
+    };
+
+    const merged = mergePlayerProgress(local, remote);
+    expect(merged.soloUnlockedLevel).toBe(15);
+    expect(merged.vintageProgress?.maxUnlockedLevel).toBe(10);
+    expect(merged.vintageProgress?.completedLevels).toEqual([1, 2, 3, 4, 5]);
+    expect(merged.vintageProgress?.score).toBe(500);
+  });
+
+  it("checkDailyLoginReward 7 günlük döngüde doğru ödülleri verir ve mükerrer alımı engeller", () => {
+    const today = "2026-09-09";
+    const initial = { ...DEFAULT_PROGRESS, coins: 50, xp: 0, loginDaysCount: 0 };
+
+    // 1. Gün ödülü alımı
+    const day1 = checkDailyLoginReward(initial, today);
+    expect(day1).not.toBeNull();
+    expect(day1!.reward.day).toBe(1);
+    expect(day1!.reward.rewardType).toBe("coins");
+    expect(day1!.reward.amount).toBe(15);
+    expect(day1!.updatedProgress.coins).toBe(65);
+    expect(day1!.updatedProgress.lastLoginDay).toBe(today);
+    expect(day1!.updatedProgress.loginDaysCount).toBe(1);
+
+    // Aynı gün tekrar ödül alınamaz
+    const duplicate = checkDailyLoginReward(day1!.updatedProgress, today);
+    expect(duplicate).toBeNull();
+
+    // 2. Gün ödülü (XP)
+    const day2 = checkDailyLoginReward(day1!.updatedProgress, "2026-09-10");
+    expect(day2).not.toBeNull();
+    expect(day2!.reward.day).toBe(2);
+    expect(day2!.reward.rewardType).toBe("xp");
+    expect(day2!.reward.amount).toBe(100);
+    expect(day2!.updatedProgress.xp).toBe(100);
+    expect(day2!.updatedProgress.loginDaysCount).toBe(2);
+
+    // 7. Gün Epik Ödülü (Seri Kalkanı)
+    const day6Prog = { ...day2!.updatedProgress, loginDaysCount: 6 };
+    const day7 = checkDailyLoginReward(day6Prog, "2026-09-15");
+    expect(day7).not.toBeNull();
+    expect(day7!.reward.day).toBe(7);
+    expect(day7!.reward.rewardType).toBe("shield");
+    expect(day7!.reward.amount).toBe(2);
+    expect(day7!.updatedProgress.streakShields).toBe((day6Prog.streakShields || 0) + 2);
+    expect(day7!.updatedProgress.loginDaysCount).toBe(7);
+
+    // 8. Günde döngü 1. güne sıfırlanır
+    const day8 = checkDailyLoginReward(day7!.updatedProgress, "2026-09-16");
+    expect(day8).not.toBeNull();
+    expect(day8!.reward.day).toBe(1);
+  });
+
+  it("90 günlük ve 30 haftalık görev kataloğu deterministik döner ve ödülleri doğrular", () => {
+    // Toplam 120 görev olmalıdır
+    expect(ALL_MISSIONS.length).toBe(120);
+
+    // Aynı gün için her zaman aynı 3 günlük görev (1 kolay, 1 orta, 1 zor)
+    const dailyDay1 = getDailyMissions("2026-09-09");
+    const dailyDay1Repeat = getDailyMissions("2026-09-09");
+    expect(dailyDay1).toEqual(dailyDay1Repeat);
+    expect(dailyDay1.length).toBe(3);
+    expect(dailyDay1[0].difficulty).toBe("easy");
+    expect(dailyDay1[1].difficulty).toBe("medium");
+    expect(dailyDay1[2].difficulty).toBe("hard");
+
+    // Farklı bir günde rotasyon değişmelidir
+    const dailyDay2 = getDailyMissions("2026-09-10");
+    expect(dailyDay2.length).toBe(3);
+
+    // Haftalık rotasyon: her hafta 3 benzersiz haftalık görev
+    const weeklyWeek1 = getWeeklyMissions("2026-W37");
+    const weeklyWeek1Repeat = getWeeklyMissions("2026-W37");
+    expect(weeklyWeek1).toEqual(weeklyWeek1Repeat);
+    expect(weeklyWeek1.length).toBe(3);
+    const uniqueIds = new Set(weeklyWeek1.map((w) => w.id));
+    expect(uniqueIds.size).toBe(3);
+
+    // findMissionById kataloğu başarıyla sorgular
+    const firstDaily = findMissionById("d_easy_01");
+    expect(firstDaily).toBeDefined();
+    expect(firstDaily?.title).toBe("Güne Merhaba");
+    expect(firstDaily?.rewardXp).toBe(20);
+    expect(firstDaily?.rewardCoins).toBe(8);
+
+    const epicWeekly = findMissionById("w_30");
+    expect(epicWeekly).toBeDefined();
+    expect(epicWeekly?.difficulty).toBe("epic");
+    expect(epicWeekly?.rewardShields).toBe(3);
   });
 });
