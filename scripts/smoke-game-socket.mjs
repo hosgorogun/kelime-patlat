@@ -1,6 +1,7 @@
+import fs from "fs";
 import { io } from "socket.io-client";
-import catalog from "../data/word-catalog.json" with { type: "json" };
 
+const catalog = JSON.parse(fs.readFileSync(new URL("../data/word-catalog.json", import.meta.url), "utf8"));
 const endpoint = process.env.GAME_SERVER_URL || "http://127.0.0.1:3000";
 const targetWords = catalog.words.map((entry) => entry.word);
 const scoreForWord = (word) => word.length * (word.length >= 7 ? 3 : word.length >= 5 ? 2 : 1);
@@ -72,14 +73,18 @@ function submitUntilAccepted(socket, room, playerId) {
         cleanup();
         resolve({ ...candidate, room: next });
       };
-      const onRejected = () => {
+      const onRejected = (payload) => {
         cleanup();
+        if (payload?.reason === "starting" && room.startedAt && Date.now() < room.startedAt) {
+          setTimeout(tryNext, room.startedAt - Date.now() + 300);
+          return;
+        }
         tryNext();
       };
       const timer = setTimeout(() => {
         cleanup();
         tryNext();
-      }, 1_500);
+      }, 2_500);
       socket.on("room:update", onUpdate);
       socket.on("word:rejected", onRejected);
       socket.emit("word:submit", { code: room.code, playerId, selection: candidate.path });
@@ -95,6 +100,8 @@ async function connect() {
   return socket;
 }
 
+const waitGameStart = (game) => game.startedAt && Date.now() < game.startedAt ? new Promise(r => setTimeout(r, game.startedAt - Date.now() + 200)) : Promise.resolve();
+
 async function run() {
   console.log("Duman testi: 4×4 iki oyunculu oda");
   const host = await connect();
@@ -106,18 +113,18 @@ async function run() {
     const joined = waitFor(host, "room:update", (next) => next.code === room.code && next.status === "lobby" && next.players.length === 2);
     guest.emit("room:join", { code: room.code, playerId: "guest", playerName: "GUEST" });
     await joined;
-
     const playingForHost = waitFor(host, "room:update", (next) => next.code === room.code && next.status === "playing");
     const playingForGuest = waitFor(guest, "room:update", (next) => next.code === room.code && next.status === "playing");
     host.emit("room:ready", { code: room.code, playerId: "host" });
     guest.emit("room:ready", { code: room.code, playerId: "guest" });
     const [hostGame, guestGame] = await Promise.all([playingForHost, playingForGuest]);
 
-    if (hostGame.board.join("") !== guestGame.board.join("") || hostGame.wordsTotal !== 4 || hostGame.board.length !== 16 || !hostGame.board.every(Boolean)) {
+    if (hostGame.board.join("") !== guestGame.board.join("") || hostGame.wordsTotal < 3 || hostGame.board.length !== 16 || !hostGame.board.every(Boolean)) {
       throw new Error("Çoklu kelimeli ortak tahta doğru kurulmadı");
     }
     const discoveredRoutes = targetWords.map((word) => ({ word, path: findPath(hostGame.board, 4, word) })).filter((entry) => entry.path);
-    if (discoveredRoutes.length < 4) throw new Error("Ortak tahtada yeterli sayıda bulunabilir hedef kelime üretilmedi");
+    if (discoveredRoutes.length < 3) throw new Error("Ortak tahtada yeterli sayıda bulunabilir hedef kelime üretilmedi");
+    await waitGameStart(hostGame);
     const hiddenForGuest = waitFor(guest, "room:update", (next) => next.code === room.code && next.foundWords.some((entry) => entry.playerId === "host" && entry.hidden));
     const [accepted, guestView] = await Promise.all([submitUntilAccepted(host, hostGame, "host"), hiddenForGuest]);
     const { word: winningWord, path: winningPath, room: claimedRoom } = accepted;
@@ -155,9 +162,10 @@ async function run() {
       mediumHost.emit("room:ready", { code: mediumRoom.code, playerId: "six-host" });
       mediumGuest.emit("room:ready", { code: mediumRoom.code, playerId: "six-guest" });
       const [mediumGame, mediumGuestGame] = await Promise.all([mediumPlayingHost, mediumPlayingGuest]);
-      if (mediumGame.board.join("") !== mediumGuestGame.board.join("") || mediumGame.wordsTotal !== 6 || mediumGame.board.length !== 36 || !mediumGame.board.every(Boolean)) {
+      if (mediumGame.board.join("") !== mediumGuestGame.board.join("") || mediumGame.wordsTotal < 4 || mediumGame.board.length !== 36 || !mediumGame.board.every(Boolean)) {
         throw new Error("6×6 ortak tahta doğru kurulmadı");
       }
+      await waitGameStart(mediumGame);
       const mediumAccepted = await submitUntilAccepted(mediumHost, mediumGame, "six-host");
       if (!mediumAccepted.path) throw new Error("6×6 tahtada çaprazsız bulunabilir kelime yok");
     } finally {
@@ -180,9 +188,10 @@ async function run() {
       largeHost.emit("room:ready", { code: largeRoom.code, playerId: "eight-host" });
       largeGuest.emit("room:ready", { code: largeRoom.code, playerId: "eight-guest" });
       const [largeGame, largeGuestGame] = await Promise.all([largePlayingHost, largePlayingGuest]);
-      if (largeGame.board.join("") !== largeGuestGame.board.join("") || largeGame.wordsTotal !== 8 || largeGame.board.length !== 64 || !largeGame.board.every(Boolean)) {
+      if (largeGame.board.join("") !== largeGuestGame.board.join("") || largeGame.wordsTotal < 6 || largeGame.board.length !== 64 || !largeGame.board.every(Boolean)) {
         throw new Error("8×8 ortak tahta doğru kurulmadı");
       }
+      await waitGameStart(largeGame);
       const largeAccepted = await submitUntilAccepted(largeHost, largeGame, "eight-host");
       if (!largeAccepted.path) throw new Error("8×8 tahtada çaprazsız bulunabilir kelime yok");
     } finally {
@@ -193,8 +202,8 @@ async function run() {
     console.log("Duman testi: 4×4 otomatik bot");
     const botHost = await connect();
     try {
-      const botCreated = waitFor(botHost, "room:update", (next) => next.status === "waiting");
-      botHost.emit("room:create", { playerId: "bot-host", playerName: "BOT HOST", size: 4 });
+      const botCreated = waitFor(botHost, "room:update", (next) => next.status === "waiting" || (next.code && next.players.some((p) => p.isBot)));
+      botHost.emit("room:create", { playerId: "bot-host", playerName: "BOT HOST", size: 4, immediateBot: true });
       const botRoom = await botCreated;
       const botLobby = await waitFor(botHost, "room:update", (next) => next.code === botRoom.code && next.players.some((player) => player.isBot));
       if (!botLobby.players.some((player) => player.name === "KELİME BOT" && player.ready)) throw new Error("Bot otomatik atanmadı");

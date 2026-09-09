@@ -23,6 +23,7 @@ type CommandCenterProps = {
   unclaimedMilestonesCount?: number;
   onClaimDailyReward?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
+  onOpenModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo") => void;
 };
 
 export function CommandCenter({
@@ -41,6 +42,7 @@ export function CommandCenter({
   unclaimedMilestonesCount = 0,
   onClaimDailyReward,
   onShowToast,
+  onOpenModeInfo,
 }: CommandCenterProps) {
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
@@ -242,7 +244,7 @@ export function CommandCenter({
           <Text style={styles.resourceIcon}>👁️</Text>
           <Text style={styles.resourceLabel}>RADAR</Text>
           <Text style={[styles.resourceValue, { color: "#00F5D4" }]}>
-            {3 + (progress.radarChargesBonus ?? 0)}
+            {progress.radarChargesBonus ?? 0}
           </Text>
           <View style={[styles.infoDot, { borderColor: "#00F5D480", backgroundColor: "#00F5D420" }]}>
             <Text style={[styles.infoDotText, { color: "#00F5D4" }]}>i</Text>
@@ -290,7 +292,29 @@ export function CommandCenter({
         }
       ]} />
       <Animated.View style={[styles.glow, { opacity: shimmer }]} />
-      <Text style={styles.deckEyebrow}>CANLI KELİME AĞI · SEZON 01</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Text style={styles.deckEyebrow}>CANLI KELİME AĞI · SEZON 01</Text>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            triggerHapticSelection();
+            onOpenModeInfo?.("pvp");
+          }}
+          style={({ pressed }) => ({
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            backgroundColor: "rgba(0, 245, 212, 0.15)",
+            borderWidth: 1,
+            borderColor: "#00F5D4",
+            justifyContent: "center",
+            alignItems: "center",
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text style={{ color: "#00F5D4", fontSize: 13, fontWeight: "900" }}>ⓘ</Text>
+        </Pressable>
+      </View>
       <Text style={styles.deckTitle}>ROTANI{`\n`}ATEŞLE</Text>
       <Text style={styles.deckBody}>Hızlı bir düello seç, günün sabit tahtasını bitir veya liderlik hattına çık.</Text>
       
@@ -421,8 +445,30 @@ export function CommandCenter({
 
     <View style={styles.cardsRow}>
       <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.columnCard, { borderColor: dailyDone ? "#332653" : activeTheme.accent }, pressed && styles.pressed]}>
-        <View style={[styles.cardIconCircle, { borderColor: dailyDone ? "#524376" : activeTheme.accent, backgroundColor: dailyDone ? "#201838" : activeTheme.glow }]}>
-          <Text style={[styles.cardIconText, { color: dailyDone ? "#82759F" : activeTheme.accent }]}>{activeTheme.icon}</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+          <View style={[styles.cardIconCircle, { borderColor: dailyDone ? "#524376" : activeTheme.accent, backgroundColor: dailyDone ? "#201838" : activeTheme.glow }]}>
+            <Text style={[styles.cardIconText, { color: dailyDone ? "#82759F" : activeTheme.accent }]}>{activeTheme.icon}</Text>
+          </View>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              triggerHapticSelection();
+              onOpenModeInfo?.("daily");
+            }}
+            style={({ pressed }) => ({
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: "rgba(0, 245, 212, 0.12)",
+              borderWidth: 1,
+              borderColor: activeTheme.accent,
+              justifyContent: "center",
+              alignItems: "center",
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text style={{ color: activeTheme.accent, fontSize: 12, fontWeight: "900" }}>ⓘ</Text>
+          </Pressable>
         </View>
         <Text style={[styles.cardKicker, { color: dailyDone ? "#82759F" : activeTheme.accent }]}>{dailyDone ? "SABİT ROTA" : "BUGÜNÜN ROTASI"}</Text>
         <Text style={styles.cardTitle}>{dailyDone ? "TAMAMLANDI" : daily.title.toLocaleUpperCase("tr-TR")}</Text>
@@ -430,8 +476,30 @@ export function CommandCenter({
       </Pressable>
 
       <Pressable onPress={() => onNavigate("arcade")} style={({ pressed }) => [styles.columnCard, { borderColor: "#FFD000" }, pressed && styles.pressed]}>
-        <View style={[styles.cardIconCircle, { borderColor: "#FFD000", backgroundColor: "rgba(255, 208, 0, 0.12)" }]}>
-          <Text style={[styles.cardIconText, { color: "#FFD000" }]}>⚡</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+          <View style={[styles.cardIconCircle, { borderColor: "#FFD000", backgroundColor: "rgba(255, 208, 0, 0.12)" }]}>
+            <Text style={[styles.cardIconText, { color: "#FFD000" }]}>⚡</Text>
+          </View>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              triggerHapticSelection();
+              onOpenModeInfo?.("arcade");
+            }}
+            style={({ pressed }) => ({
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: "rgba(255, 208, 0, 0.15)",
+              borderWidth: 1,
+              borderColor: "#FFD000",
+              justifyContent: "center",
+              alignItems: "center",
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Text style={{ color: "#FFD000", fontSize: 12, fontWeight: "900" }}>ⓘ</Text>
+          </Pressable>
         </View>
         <Text style={[styles.cardKicker, { color: "#FFD000" }]}>ARCADE</Text>
         <Text style={styles.cardTitle}>SKOR YARIŞI</Text>
@@ -445,13 +513,35 @@ export function CommandCenter({
       <View style={styles.soloSkin}>
         <Text style={styles.soloTrophy}>🏆</Text>
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={styles.soloEyebrow}>KLASİK MOD</Text>
-            {unclaimedMilestonesCount > 0 && (
-              <View style={styles.milestoneBadgePill}>
-                <Text style={styles.milestoneBadgeText}>🎁 {unclaimedMilestonesCount} SANDIK HAZIR</Text>
-              </View>
-            )}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginRight: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={styles.soloEyebrow}>KLASİK MOD</Text>
+              {unclaimedMilestonesCount > 0 && (
+                <View style={styles.milestoneBadgePill}>
+                  <Text style={styles.milestoneBadgeText}>🎁 {unclaimedMilestonesCount} SANDIK HAZIR</Text>
+                </View>
+              )}
+            </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                triggerHapticSelection();
+                onOpenModeInfo?.("solo");
+              }}
+              style={({ pressed }) => ({
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: "rgba(0, 245, 212, 0.12)",
+                borderWidth: 1,
+                borderColor: "#00F5D4",
+                justifyContent: "center",
+                alignItems: "center",
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ color: "#00F5D4", fontSize: 12, fontWeight: "900" }}>ⓘ</Text>
+            </Pressable>
           </View>
           <Text style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
           <Text style={styles.soloDesc}>
@@ -470,11 +560,33 @@ export function CommandCenter({
       <View style={styles.soloSkin}>
         <Text style={styles.soloTrophy}>🗞️</Text>
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={[styles.soloEyebrow, { color: "#FFC24A" }]}>NOSTALJİ KARE BULMACA</Text>
-            <View style={[styles.milestoneBadgePill, { backgroundColor: "rgba(255, 194, 74, 0.2)" }]}>
-              <Text style={[styles.milestoneBadgeText, { color: "#FFC24A" }]}>20 ÖZEL BÖLÜM</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginRight: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={[styles.soloEyebrow, { color: "#FFC24A" }]}>NOSTALJİ KARE BULMACA</Text>
+              <View style={[styles.milestoneBadgePill, { backgroundColor: "rgba(255, 194, 74, 0.2)" }]}>
+                <Text style={[styles.milestoneBadgeText, { color: "#FFC24A" }]}>20 ÖZEL BÖLÜM</Text>
+              </View>
             </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                triggerHapticSelection();
+                onOpenModeInfo?.("vintage");
+              }}
+              style={({ pressed }) => ({
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: "rgba(255, 194, 74, 0.15)",
+                borderWidth: 1,
+                borderColor: "#FFC24A",
+                justifyContent: "center",
+                alignItems: "center",
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Text style={{ color: "#FFC24A", fontSize: 12, fontWeight: "900" }}>ⓘ</Text>
+            </Pressable>
           </View>
           <Text style={styles.soloHeading}>GAZETE BULMACASI</Text>
           <Text style={styles.soloDesc}>

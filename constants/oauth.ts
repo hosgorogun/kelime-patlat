@@ -37,13 +37,12 @@ export function getApiBaseUrl(): string {
     return API_BASE_URL.replace(/\/$/, "");
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("EXPO_PUBLIC_API_BASE_URL must be configured for production builds.");
-  }
-
-  // On web, derive from current hostname by replacing port 8081 with 3000
+  // On web, derive from current window location
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
-    const { protocol, hostname } = window.location;
+    const { protocol, hostname, origin } = window.location;
+    if (process.env.NODE_ENV === "production") {
+      return origin;
+    }
     // Pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
     const apiHostname = hostname.replace(/^8081-/, "3000-");
     if (apiHostname !== hostname) {
@@ -51,6 +50,10 @@ export function getApiBaseUrl(): string {
     }
     // Local dev on web: same host, port 3000
     return `${protocol}//${hostname}:3000`;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("EXPO_PUBLIC_API_BASE_URL must be configured for production mobile builds.");
   }
 
   // Check Expo Metro host IP if available (dynamically resolves Metro host for Android emulator or physical device)

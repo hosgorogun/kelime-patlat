@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createSoloBoard, getSoloLevel, solutionColorByCell } from "../shared/solo";
 import { WORD_CATALOG } from "../shared/game";
+import { catalogWordsForTheme } from "../shared/word-catalog";
 import { getDifficultyProfile } from "../shared/difficulty";
 
 function hasPath(board: string[], size: number, word: string) {
@@ -190,6 +191,30 @@ describe("Tek oyunculu seviye yolculuğu", () => {
     const spaceOnly = ["METEOR", "KOZMOZ", "UZAY"];
     const isOnlySpace = level4.words.every((w) => spaceOnly.includes(w));
     expect(isOnlySpace).toBe(false);
+
+    for (let l = 1; l <= 5; l++) {
+      const b = createSoloBoard(l, 0, "general");
+      expect(b.words.length).toBe(3);
+    }
+  });
+
+  it("ardışık seviyeler arasında kelime tekrarı kesinlikle olmaz (kesişim sıfırdır)", () => {
+    let prevWords: string[] = [];
+    for (let level = 1; level <= 15; level++) {
+      const board = createSoloBoard(level, 0, "general");
+      for (const word of board.words) {
+        expect(prevWords).not.toContain(word);
+      }
+      prevWords = board.words;
+    }
+  });
+
+  it("excludeWords parametresine verilen kelimeler tahtaya kesinlikle dahil edilmez", () => {
+    const excluded = ["MARKET", "ZEKA", "SEÇMEK", "OTEL", "VARLIK", "NESİL"];
+    const board = createSoloBoard(1, 0, "general", excluded);
+    for (const word of board.words) {
+      expect(excluded).not.toContain(word);
+    }
   });
 });
 

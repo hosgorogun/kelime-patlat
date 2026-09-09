@@ -200,19 +200,6 @@
       "weight": 3
     },
     {
-      "word": "FANYA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KALAKALMAK",
       "difficulty": "easy",
       "boards": [
@@ -665,19 +652,6 @@
       "weight": 3
     },
     {
-      "word": "İSTİDA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "GİDİCİ",
       "difficulty": "hard",
       "boards": [
@@ -826,19 +800,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ALBATR",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -1108,34 +1069,8 @@
       "weight": 3
     },
     {
-      "word": "EHEM",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KEMANE",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DÜRZİ",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -1626,19 +1561,6 @@
       "weight": 3
     },
     {
-      "word": "BEZİK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KAZIMIK",
       "difficulty": "easy",
       "boards": [
@@ -1655,19 +1577,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "KEMRE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -2197,19 +2106,6 @@
     {
       "word": "GEÇ",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "CAİZE",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -3552,19 +3448,6 @@
       "weight": 3
     },
     {
-      "word": "GASİL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DÖNÜŞÜM",
       "difficulty": "easy",
       "boards": [
@@ -3626,19 +3509,6 @@
       "word": "DULDALANMA",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MATUH",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -3936,19 +3806,6 @@
       "weight": 3
     },
     {
-      "word": "ARGIN",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KUNGFU",
       "difficulty": "hard",
       "boards": [
@@ -3976,19 +3833,6 @@
       "word": "ERGİNLİK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ERGİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -4208,19 +4052,6 @@
       "weight": 3
     },
     {
-      "word": "HAMEL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KATETMEK",
       "difficulty": "medium",
       "boards": [
@@ -4346,19 +4177,6 @@
       "word": "KARTPOSTAL",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "HATİF",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -4638,19 +4456,6 @@
       "weight": 3
     },
     {
-      "word": "BIKIŞ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DÖŞEMEK",
       "difficulty": "medium",
       "boards": [
@@ -4702,19 +4507,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇOLPA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -5162,35 +4954,9 @@
       "weight": 3
     },
     {
-      "word": "EPOPE",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DİZLEMEK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DÜRÜ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -5561,19 +5327,6 @@
       "weight": 3
     },
     {
-      "word": "GARAMİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "AKINKAYASI",
       "difficulty": "easy",
       "boards": [
@@ -5753,19 +5506,6 @@
       "weight": 3
     },
     {
-      "word": "DERÇ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "GÖLGELİ",
       "difficulty": "hard",
       "boards": [
@@ -5881,19 +5621,6 @@
       "weight": 3
     },
     {
-      "word": "MİMLİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "CİHARISE",
       "difficulty": "hard",
       "boards": [
@@ -5974,19 +5701,6 @@
       "word": "CİHANŞÜMUL",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "BABAÇ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -6888,19 +6602,6 @@
       "word": "BİRLEMEK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YEDME",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -8200,19 +7901,6 @@
       "weight": 3
     },
     {
-      "word": "HÜRLE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BIKMAK",
       "difficulty": "hard",
       "boards": [
@@ -9117,19 +8805,6 @@
       "weight": 3
     },
     {
-      "word": "KAKA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KALSİT",
       "difficulty": "easy",
       "boards": [
@@ -9146,19 +8821,6 @@
       "word": "ERDENLİK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇELEN",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -9241,18 +8903,6 @@
       "weight": 3
     },
     {
-      "word": "İLTİHAP",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MUHACERET",
       "difficulty": "medium",
       "boards": [
@@ -9301,19 +8951,6 @@
       "word": "GÖRÜŞÜLMEK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "GÖVEK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -9653,19 +9290,6 @@
       "weight": 3
     },
     {
-      "word": "SPERM",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "YUNAN",
       "difficulty": "hard",
       "boards": [
@@ -9730,19 +9354,6 @@
       "word": "CÜLUSİYE",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "CEMAN",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -9904,19 +9515,6 @@
       "weight": 3
     },
     {
-      "word": "YANGI",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "OMUZLUK",
       "difficulty": "easy",
       "boards": [
@@ -9989,19 +9587,6 @@
     {
       "word": "EBE",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YALAK",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -10523,19 +10108,6 @@
       "weight": 3
     },
     {
-      "word": "YÜKÜN",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DİZİCİ",
       "difficulty": "easy",
       "boards": [
@@ -10566,19 +10138,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MOLAS",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -10764,19 +10323,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "EMMEÇ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -11346,19 +10892,6 @@
       "weight": 3
     },
     {
-      "word": "MARİZ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BEZEKLEME",
       "difficulty": "easy",
       "boards": [
@@ -11520,19 +11053,6 @@
       "weight": 3
     },
     {
-      "word": "CİHET",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KESİŞ",
       "difficulty": "hard",
       "boards": [
@@ -11606,19 +11126,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YELVE",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -11704,19 +11211,6 @@
       "word": "GEÇİMLİLİK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MARAZİ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -11994,19 +11488,6 @@
     {
       "word": "MÜFTÜ",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YAVE",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -12631,19 +12112,6 @@
       "word": "ÇAĞRILMAK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SÜFLİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -13726,19 +13194,6 @@
       "weight": 3
     },
     {
-      "word": "YANIŞ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KRAVAT",
       "difficulty": "medium",
       "boards": [
@@ -13975,19 +13430,6 @@
       "word": "MOLOZLUK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "İLENİŞ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -14318,19 +13760,6 @@
       "weight": 3
     },
     {
-      "word": "ÖRFİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "LAİKLEŞMEK",
       "difficulty": "easy",
       "boards": [
@@ -14417,19 +13846,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MÜHRE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -14860,19 +14276,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TELKİH",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -15804,19 +15207,6 @@
       "weight": 3
     },
     {
-      "word": "GAMBA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "NALINCI",
       "difficulty": "easy",
       "boards": [
@@ -15913,19 +15303,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇALTI",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -17169,19 +16546,6 @@
       "weight": 3
     },
     {
-      "word": "TELSİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "HURDACI",
       "difficulty": "hard",
       "boards": [
@@ -17254,19 +16618,6 @@
       "word": "SENDELEMEK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "CAMİT",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -17352,19 +16703,6 @@
     {
       "word": "YAYA",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "AGUŞ",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -18108,19 +17446,6 @@
       "weight": 3
     },
     {
-      "word": "TEPİR",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MÜNTEHABAT",
       "difficulty": "medium",
       "boards": [
@@ -18440,19 +17765,6 @@
       "word": "PERDECİLİK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TENVİR",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -19114,19 +18426,6 @@
       "weight": 3
     },
     {
-      "word": "SÖĞÜŞ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SİLİKON",
       "difficulty": "easy",
       "boards": [
@@ -19760,19 +19059,6 @@
       "weight": 3
     },
     {
-      "word": "LAHURİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MANİŞKA",
       "difficulty": "easy",
       "boards": [
@@ -19897,19 +19183,6 @@
       "weight": 3
     },
     {
-      "word": "GENZEL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MALYA",
       "difficulty": "easy",
       "boards": [
@@ -19964,19 +19237,6 @@
     {
       "word": "BAYİ",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MUTAF",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -21785,19 +21045,6 @@
       "weight": 3
     },
     {
-      "word": "DURAL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KAYISI",
       "difficulty": "hard",
       "boards": [
@@ -22534,19 +21781,6 @@
     {
       "word": "DONUK",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "KOVUŞ",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -23650,32 +22884,6 @@
       "weight": 3
     },
     {
-      "word": "KUSMA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YAMÇI",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TENTELİ",
       "difficulty": "hard",
       "boards": [
@@ -24202,19 +23410,6 @@
       "weight": 3
     },
     {
-      "word": "İBDA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "GÜRLEME",
       "difficulty": "medium",
       "boards": [
@@ -24678,19 +23873,6 @@
       "weight": 3
     },
     {
-      "word": "TEVKİL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "PIRLANTALI",
       "difficulty": "hard",
       "boards": [
@@ -25043,19 +24225,6 @@
       "weight": 3
     },
     {
-      "word": "YAYIŞ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KAYMELİK",
       "difficulty": "hard",
       "boards": [
@@ -25208,19 +24377,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ARŞE",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -25816,19 +24972,6 @@
       "weight": 3
     },
     {
-      "word": "MEME",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "LAFORİZMA",
       "difficulty": "hard",
       "boards": [
@@ -26103,19 +25246,6 @@
       "weight": 3
     },
     {
-      "word": "GALİZ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DOMANİÇ",
       "difficulty": "easy",
       "boards": [
@@ -26132,19 +25262,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YARDA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -26863,19 +25980,6 @@
       "weight": 3
     },
     {
-      "word": "ÖZALP",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DEKSTROZ",
       "difficulty": "easy",
       "boards": [
@@ -27046,19 +26150,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TALİKA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -27504,34 +26595,10 @@
       "weight": 3
     },
     {
-      "word": "ÜRGÜP",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÖNLEYİŞ",
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "PEZEVENK",
-      "difficulty": "medium",
-      "boards": [
         8
       ],
       "tags": [
@@ -27928,19 +26995,6 @@
       "weight": 3
     },
     {
-      "word": "GAŞİY",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "İHLAS",
       "difficulty": "easy",
       "boards": [
@@ -28145,19 +27199,6 @@
       "weight": 3
     },
     {
-      "word": "TÜMÜR",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "PEÇENEK",
       "difficulty": "easy",
       "boards": [
@@ -28185,19 +27226,6 @@
       "word": "TOKURDATMA",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "İLGEÇ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -28489,19 +27517,6 @@
     },
     {
       "word": "BÜHTAN",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "CÜZİ",
       "difficulty": "easy",
       "boards": [
         4,
@@ -28830,19 +27845,6 @@
       "word": "BATIVERMEK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YAPAK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -29441,19 +28443,6 @@
       "weight": 3
     },
     {
-      "word": "ULAH",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "YEDİNCİ",
       "difficulty": "medium",
       "boards": [
@@ -29495,32 +28484,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "GÜRE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "AYAŞ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -29726,19 +28689,6 @@
       "weight": 3
     },
     {
-      "word": "MİSO",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "HAZAKAT",
       "difficulty": "easy",
       "boards": [
@@ -29901,19 +28851,6 @@
     },
     {
       "word": "MIHLI",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TINMA",
       "difficulty": "hard",
       "boards": [
         4,
@@ -30134,19 +29071,6 @@
       "word": "GERDANLIK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "BASTIK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -30540,19 +29464,6 @@
       "weight": 3
     },
     {
-      "word": "KİST",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ARPAÇAY",
       "difficulty": "easy",
       "boards": [
@@ -30755,19 +29666,6 @@
       "word": "YENİÇAĞA",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MUTİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -31369,19 +30267,6 @@
       "weight": 3
     },
     {
-      "word": "CİFE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SALAMANDRA",
       "difficulty": "medium",
       "boards": [
@@ -31960,19 +30845,6 @@
       "weight": 3
     },
     {
-      "word": "MAL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "GÖKDOĞAN",
       "difficulty": "easy",
       "boards": [
@@ -31998,19 +30870,6 @@
       "word": "NALINSIZ",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VECİH",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -32173,19 +31032,6 @@
     },
     {
       "word": "DÖLÜT",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ORAL",
       "difficulty": "hard",
       "boards": [
         4,
@@ -33014,19 +31860,6 @@
       "weight": 3
     },
     {
-      "word": "TOPUR",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KALINLIK",
       "difficulty": "easy",
       "boards": [
@@ -33343,32 +32176,6 @@
     },
     {
       "word": "ARHAVİ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VİDO",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VAİZ",
       "difficulty": "hard",
       "boards": [
         4,
@@ -33938,19 +32745,6 @@
       "word": "RESİMLİK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SIYGA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -34637,19 +33431,6 @@
       "weight": 3
     },
     {
-      "word": "CART",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÜSKÜDAR",
       "difficulty": "easy",
       "boards": [
@@ -34688,19 +33469,6 @@
     {
       "word": "KAKAO",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "UĞRU",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -35508,19 +34276,6 @@
       "weight": 3
     },
     {
-      "word": "BARI",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SUSAKLIK",
       "difficulty": "easy",
       "boards": [
@@ -35735,19 +34490,6 @@
     {
       "word": "BÖĞÜR",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "RAŞİ",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -36504,19 +35246,6 @@
       "weight": 3
     },
     {
-      "word": "APRE",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MİNECİ",
       "difficulty": "hard",
       "boards": [
@@ -36605,19 +35334,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MAHCUR",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -39229,19 +37945,6 @@
       "weight": 3
     },
     {
-      "word": "ÜMMİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DAMGASIZ",
       "difficulty": "medium",
       "boards": [
@@ -39352,19 +38055,6 @@
     {
       "word": "ARŞIN",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "HABEŞ",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -39599,19 +38289,6 @@
       "weight": 3
     },
     {
-      "word": "ALPU",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TARAFTAR",
       "difficulty": "easy",
       "boards": [
@@ -39682,19 +38359,6 @@
     {
       "word": "FLÜT",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "İPTİDA",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -40556,19 +39220,6 @@
     {
       "word": "KOFÇAZ",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇİRİŞ",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -41536,19 +40187,6 @@
       "weight": 3
     },
     {
-      "word": "ÜLFET",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "VAKİ",
       "difficulty": "hard",
       "boards": [
@@ -41914,19 +40552,6 @@
       "word": "FLİTLEME",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YIRIK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -43008,19 +41633,6 @@
       "weight": 3
     },
     {
-      "word": "MABLAK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DOLUŞMA",
       "difficulty": "hard",
       "boards": [
@@ -43746,19 +42358,6 @@
       "word": "TÖSKÜRME",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DERK",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -45409,19 +44008,6 @@
       "weight": 3
     },
     {
-      "word": "ÇİPİL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SENATO",
       "difficulty": "hard",
       "boards": [
@@ -45887,19 +44473,6 @@
       "weight": 3
     },
     {
-      "word": "ÜRAT",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TRİTYUM",
       "difficulty": "medium",
       "boards": [
@@ -46108,19 +44681,6 @@
       "weight": 3
     },
     {
-      "word": "ÇİŞİK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MAYASIL",
       "difficulty": "easy",
       "boards": [
@@ -46291,19 +44851,6 @@
       "word": "DOKUYUCU",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "CÜNÜP",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -46607,19 +45154,6 @@
       "weight": 3
     },
     {
-      "word": "DAYANÇ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MAHBUBE",
       "difficulty": "hard",
       "boards": [
@@ -46766,19 +45300,6 @@
       "weight": 3
     },
     {
-      "word": "FAÇALI",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "JURNAL",
       "difficulty": "medium",
       "boards": [
@@ -46914,19 +45435,6 @@
       "weight": 3
     },
     {
-      "word": "ERDİŞİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TENZİH",
       "difficulty": "medium",
       "boards": [
@@ -46988,19 +45496,6 @@
       "word": "KAFASIZLIK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÜÇTAŞ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -47759,19 +46254,6 @@
       "weight": 3
     },
     {
-      "word": "SEKEL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SEFİHANE",
       "difficulty": "easy",
       "boards": [
@@ -47877,19 +46359,6 @@
       "weight": 3
     },
     {
-      "word": "VELUR",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "RİMELLEME",
       "difficulty": "hard",
       "boards": [
@@ -47983,19 +46452,6 @@
       "weight": 3
     },
     {
-      "word": "DENYO",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "RİMELLİ",
       "difficulty": "medium",
       "boards": [
@@ -48010,19 +46466,6 @@
     {
       "word": "CÜBBE",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZİNA",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -48345,19 +46788,6 @@
       "weight": 3
     },
     {
-      "word": "YUNMA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÇETECİLİK",
       "difficulty": "hard",
       "boards": [
@@ -48385,19 +46815,6 @@
       "word": "DEREBEYİ",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TEDİP",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -48705,19 +47122,6 @@
       "word": "LEFFÜNEŞİR",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇERÇİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -51063,19 +49467,6 @@
       "weight": 3
     },
     {
-      "word": "ÇAMAŞ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MÜFESSİR",
       "difficulty": "medium",
       "boards": [
@@ -51361,19 +49752,6 @@
       "weight": 3
     },
     {
-      "word": "PİÇ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "VEFAT",
       "difficulty": "hard",
       "boards": [
@@ -51576,19 +49954,6 @@
       "weight": 3
     },
     {
-      "word": "SAGU",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÖTLEĞİ",
       "difficulty": "medium",
       "boards": [
@@ -51629,19 +49994,6 @@
       "word": "TARANMAK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "REVAN",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -51724,19 +50076,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "GARPLI",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -52202,19 +50541,6 @@
       "weight": 3
     },
     {
-      "word": "HELİK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KUTSUZLUK",
       "difficulty": "easy",
       "boards": [
@@ -52621,19 +50947,6 @@
       "word": "VİCDANEN",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "NAKIS",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -53298,19 +51611,6 @@
       "weight": 3
     },
     {
-      "word": "ÖTÜCÜ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "GEÇİNİŞ",
       "difficulty": "medium",
       "boards": [
@@ -53525,19 +51825,6 @@
       "weight": 3
     },
     {
-      "word": "YOSMA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BAKLALI",
       "difficulty": "medium",
       "boards": [
@@ -53601,19 +51888,6 @@
       "word": "KALIMSIZ",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YERME",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -53963,19 +52237,6 @@
     {
       "word": "BÖRTÜK",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TERHİN",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -54511,19 +52772,6 @@
       "word": "TEKERLEK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VACİP",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -55259,19 +53507,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇİĞİL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -57181,19 +55416,6 @@
       "weight": 3
     },
     {
-      "word": "NAKİP",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MEYMENETLİ",
       "difficulty": "hard",
       "boards": [
@@ -57325,19 +55547,6 @@
       "word": "YARMALAMAK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MUHAT",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -58285,19 +56494,6 @@
       "weight": 3
     },
     {
-      "word": "ZİYALI",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "YASAKLATMA",
       "difficulty": "easy",
       "boards": [
@@ -58913,19 +57109,6 @@
       "weight": 3
     },
     {
-      "word": "TARAŞ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "OKULLAŞMA",
       "difficulty": "easy",
       "boards": [
@@ -59351,19 +57534,6 @@
       "weight": 3
     },
     {
-      "word": "TEŞT",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SİNERAMA",
       "difficulty": "medium",
       "boards": [
@@ -59629,19 +57799,6 @@
     },
     {
       "word": "ESEF",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MAHUR",
       "difficulty": "easy",
       "boards": [
         4,
@@ -60847,19 +59004,6 @@
       "weight": 3
     },
     {
-      "word": "SİRKAT",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BEŞLİ",
       "difficulty": "medium",
       "boards": [
@@ -61377,19 +59521,6 @@
       "weight": 3
     },
     {
-      "word": "YAZIŞ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "RÖTUŞLAMAK",
       "difficulty": "easy",
       "boards": [
@@ -61494,19 +59625,6 @@
       "word": "PERFORJE",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "İBZAL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -61730,49 +59848,10 @@
       "weight": 3
     },
     {
-      "word": "SEHİV",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ŞAKLAMA",
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "KAZAĞI",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VÜSAT",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -62260,18 +60339,6 @@
     {
       "word": "HUSUMET",
       "difficulty": "easy",
-      "boards": [
-        4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DEBAGAT",
-      "difficulty": "hard",
       "boards": [
         4,
         8
@@ -63298,19 +61365,6 @@
       "weight": 3
     },
     {
-      "word": "YOLMA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KAZDIRMAK",
       "difficulty": "medium",
       "boards": [
@@ -64123,19 +62177,6 @@
       "weight": 3
     },
     {
-      "word": "BASAK",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ALKIŞLAMA",
       "difficulty": "medium",
       "boards": [
@@ -64199,19 +62240,6 @@
       "word": "FİSTANLI",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TIRKAZ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -64877,19 +62905,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YATÇI",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -66186,19 +64201,6 @@
       "weight": 3
     },
     {
-      "word": "REKİZ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "CÜSSELİLİK",
       "difficulty": "medium",
       "boards": [
@@ -66236,19 +64238,6 @@
       "word": "BURGULANMA",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÜMÜK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -66402,19 +64391,6 @@
       "word": "SIZLAYIŞ",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TEDAİ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -67246,19 +65222,6 @@
       "weight": 3
     },
     {
-      "word": "TEKST",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SÖZLÜ",
       "difficulty": "hard",
       "boards": [
@@ -67475,19 +65438,6 @@
       "word": "AĞALANMA",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "BASYA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -68812,32 +66762,7 @@
       "weight": 3
     },
     {
-      "word": "MABEYİN",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ADANMA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "BOMBOK",
       "difficulty": "medium",
       "boards": [
         4,
@@ -68863,19 +66788,6 @@
     },
     {
       "word": "BAL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SELEK",
       "difficulty": "easy",
       "boards": [
         4,
@@ -69074,19 +66986,6 @@
       "word": "ANLAMSIZ",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇERGE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -70440,19 +68339,6 @@
       "weight": 3
     },
     {
-      "word": "SERGİN",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BULGARİ",
       "difficulty": "hard",
       "boards": [
@@ -70469,19 +68355,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZEHAP",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -71014,19 +68887,6 @@
     {
       "word": "BEKAR",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YUVAK",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -72255,19 +70115,6 @@
       "word": "PAÇAVRACI",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TİMBAL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -73513,19 +71360,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZORGU",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -74959,19 +72793,6 @@
       "weight": 3
     },
     {
-      "word": "CÜCÜK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "PANDÜL",
       "difficulty": "hard",
       "boards": [
@@ -75209,19 +73030,6 @@
       "weight": 3
     },
     {
-      "word": "TESRİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ŞOFBEN",
       "difficulty": "medium",
       "boards": [
@@ -75384,18 +73192,6 @@
       "boards": [
         4,
         6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DEFATEN",
-      "difficulty": "hard",
-      "boards": [
-        4,
         8
       ],
       "tags": [
@@ -76260,19 +74056,6 @@
       "weight": 3
     },
     {
-      "word": "VUZUH",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TATBİKATÇI",
       "difficulty": "medium",
       "boards": [
@@ -76762,19 +74545,6 @@
       "word": "SEYDİŞEHİR",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TERBİ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -78226,19 +75996,6 @@
       "weight": 3
     },
     {
-      "word": "ÜLÜŞ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DÜŞÜKLÜK",
       "difficulty": "hard",
       "boards": [
@@ -78521,19 +76278,6 @@
       "word": "MİDYELİK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DEBBOY",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -80005,19 +77749,6 @@
       "weight": 3
     },
     {
-      "word": "BASUR",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "İNİLDEYİŞ",
       "difficulty": "medium",
       "boards": [
@@ -80113,19 +77844,6 @@
     {
       "word": "ENZİM",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YILKI",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -81178,19 +78896,6 @@
       "weight": 3
     },
     {
-      "word": "VECİZ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "EĞİMLİLİK",
       "difficulty": "hard",
       "boards": [
@@ -81448,19 +79153,6 @@
       "weight": 3
     },
     {
-      "word": "İHAM",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "NOHUDİ",
       "difficulty": "hard",
       "boards": [
@@ -81476,19 +79168,6 @@
     {
       "word": "GÜMÜŞİ",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YÜLÜK",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -82702,19 +80381,6 @@
       "weight": 3
     },
     {
-      "word": "SÜVME",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "HACZETME",
       "difficulty": "hard",
       "boards": [
@@ -83771,19 +81437,6 @@
       "weight": 3
     },
     {
-      "word": "ENİK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "AKROBATLIK",
       "difficulty": "hard",
       "boards": [
@@ -83834,19 +81487,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇAVLI",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -83987,33 +81627,9 @@
       "weight": 3
     },
     {
-      "word": "RAŞİTİZM",
-      "difficulty": "easy",
-      "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SIRALAMAK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DİNK",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -84050,19 +81666,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TIKIZ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -84181,19 +81784,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "İCAR",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -85396,19 +82986,6 @@
       "weight": 3
     },
     {
-      "word": "BADAS",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÜMRANLI",
       "difficulty": "hard",
       "boards": [
@@ -85717,19 +83294,6 @@
     {
       "word": "ÖVMEK",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TROMP",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -86129,19 +83693,6 @@
       "weight": 3
     },
     {
-      "word": "İZOBAR",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "GÜNEŞLEMEK",
       "difficulty": "hard",
       "boards": [
@@ -86358,19 +83909,6 @@
       "word": "MEDYACILIK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇEKÜL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -87554,19 +85092,6 @@
     {
       "word": "İCATÇI",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZINDIK",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -88895,19 +86420,6 @@
       "weight": 3
     },
     {
-      "word": "SÜLÜK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KOLOMBİYUM",
       "difficulty": "hard",
       "boards": [
@@ -89833,19 +87345,6 @@
       "weight": 3
     },
     {
-      "word": "KASIK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "GİTARCILIK",
       "difficulty": "medium",
       "boards": [
@@ -90613,19 +88112,6 @@
       "weight": 3
     },
     {
-      "word": "SÜVEN",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÖRGÜTSÜZ",
       "difficulty": "hard",
       "boards": [
@@ -91057,32 +88543,6 @@
       "weight": 3
     },
     {
-      "word": "MUHİL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MEREK",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ŞURACIKTA",
       "difficulty": "medium",
       "boards": [
@@ -91407,19 +88867,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TAPON",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -92288,19 +89735,6 @@
       "weight": 3
     },
     {
-      "word": "UMRE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "YAĞIŞSIZ",
       "difficulty": "hard",
       "boards": [
@@ -92376,19 +89810,6 @@
       "word": "İŞTEŞLİK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZAİL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -93251,19 +90672,6 @@
       "word": "ÇETİNLİK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "İFRAĞ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -94220,19 +91628,6 @@
       "weight": 3
     },
     {
-      "word": "YEZİT",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TINGADAK",
       "difficulty": "easy",
       "boards": [
@@ -95177,19 +92572,6 @@
       "weight": 3
     },
     {
-      "word": "GABRO",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "İKİNDİ",
       "difficulty": "hard",
       "boards": [
@@ -95251,19 +92633,6 @@
     {
       "word": "İKRAZ",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SÜTYEN",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -95691,19 +93060,6 @@
       "weight": 3
     },
     {
-      "word": "TAHRA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SENDELETME",
       "difficulty": "medium",
       "boards": [
@@ -96043,19 +93399,6 @@
       "weight": 3
     },
     {
-      "word": "BOALAR",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "FİLİZ",
       "difficulty": "medium",
       "boards": [
@@ -96177,19 +93520,6 @@
       "word": "OZOKERİT",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YORTU",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -96355,19 +93685,6 @@
       "word": "TAYİNSİZ",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VİTİR",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -96846,19 +94163,6 @@
       "word": "BOYLATMA",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YAĞAR",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -97529,19 +94833,6 @@
       "word": "KÜKÜRDÜMSÜ",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "URBAN",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -98437,19 +95728,6 @@
       "weight": 3
     },
     {
-      "word": "TADAT",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "OLAGELME",
       "difficulty": "easy",
       "boards": [
@@ -98581,19 +95859,6 @@
       "weight": 3
     },
     {
-      "word": "MUHİP",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TANIMLAMA",
       "difficulty": "easy",
       "boards": [
@@ -98667,19 +95932,6 @@
       "word": "KIMILTILI",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TAVAF",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -99350,19 +96602,6 @@
       "weight": 3
     },
     {
-      "word": "RAŞE",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TAVZİH",
       "difficulty": "hard",
       "boards": [
@@ -99642,19 +96881,6 @@
     {
       "word": "FAULLÜ",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "URUP",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -100108,19 +97334,6 @@
       "weight": 3
     },
     {
-      "word": "SEMAH",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KOYMAK",
       "difficulty": "medium",
       "boards": [
@@ -100207,19 +97420,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TÖREL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -101135,19 +98335,6 @@
       "weight": 3
     },
     {
-      "word": "DANK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "EGLOG",
       "difficulty": "easy",
       "boards": [
@@ -101820,19 +99007,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TRÖST",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -103183,19 +100357,6 @@
       "weight": 3
     },
     {
-      "word": "MANZUM",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BAĞ",
       "difficulty": "easy",
       "boards": [
@@ -103245,19 +100406,6 @@
       "word": "BİLDİRİM",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SOBE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -103593,19 +100741,6 @@
     {
       "word": "MESUL",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TEVİL",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -104873,19 +102008,6 @@
       "weight": 3
     },
     {
-      "word": "SARİG",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "İSTENMEK",
       "difficulty": "hard",
       "boards": [
@@ -104980,19 +102102,6 @@
       "word": "HORASANİ",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZÜLÜF",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -106134,19 +103243,6 @@
       "weight": 3
     },
     {
-      "word": "SÜBEK",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TAHTIREVAN",
       "difficulty": "hard",
       "boards": [
@@ -106740,19 +103836,6 @@
       "weight": 3
     },
     {
-      "word": "RUHÇA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÖZETLEME",
       "difficulty": "medium",
       "boards": [
@@ -107128,19 +104211,6 @@
       "word": "ARTİSTÇE",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "KÖTEK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -107565,19 +104635,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÖRGE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -108042,19 +105099,6 @@
       "word": "STRESSİZ",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MENİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -108730,19 +105774,6 @@
       "weight": 3
     },
     {
-      "word": "ÇİŞ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MERMERŞAHİ",
       "difficulty": "hard",
       "boards": [
@@ -108791,19 +105822,6 @@
     {
       "word": "ÜZME",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇEKÇE",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -109091,19 +106109,6 @@
     {
       "word": "ZEMZEM",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "APAZ",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -109923,19 +106928,6 @@
       "weight": 3
     },
     {
-      "word": "RİCAL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KUTSALLIK",
       "difficulty": "hard",
       "boards": [
@@ -110549,19 +107541,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "RÜKÜN",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -111736,19 +108715,6 @@
       "weight": 3
     },
     {
-      "word": "CEMŞAT",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "HAYHUY",
       "difficulty": "medium",
       "boards": [
@@ -112404,19 +109370,6 @@
       "word": "DENKLEŞME",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SARAT",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -115721,19 +112674,6 @@
       "weight": 3
     },
     {
-      "word": "SÜYEK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ANDROSEFAL",
       "difficulty": "easy",
       "boards": [
@@ -115795,19 +112735,6 @@
       "word": "DEMİRLEME",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "RÜYET",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -115918,19 +112845,6 @@
       "word": "KATILTMA",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZİFİR",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -116873,19 +113787,6 @@
       "weight": 3
     },
     {
-      "word": "HALVET",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "VICIKLAMAK",
       "difficulty": "easy",
       "boards": [
@@ -117193,19 +114094,6 @@
       "word": "TEKLEŞME",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TALİK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -117653,19 +114541,6 @@
       "weight": 3
     },
     {
-      "word": "YAVAŞA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ADLAŞMAK",
       "difficulty": "medium",
       "boards": [
@@ -117937,19 +114812,6 @@
     {
       "word": "TAVİZ",
       "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MUNZAM",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -118267,35 +115129,9 @@
       "weight": 3
     },
     {
-      "word": "TEŞRİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TAMAMLANIŞ",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "HİTAM",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -120248,35 +117084,9 @@
       "weight": 3
     },
     {
-      "word": "TÖZEL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KEÇELEMEK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SİFİN",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -120386,19 +117196,6 @@
       "weight": 3
     },
     {
-      "word": "ÇAPMA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "DÜŞÇÜ",
       "difficulty": "medium",
       "boards": [
@@ -120415,19 +117212,6 @@
       "word": "TAŞAYAZMA",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TANİN",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -120546,19 +117330,6 @@
       "word": "ÖLÇÜSÜZLÜK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TARİZ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -120826,19 +117597,6 @@
     },
     {
       "word": "EVRİK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YEĞNİ",
       "difficulty": "medium",
       "boards": [
         4,
@@ -121418,19 +118176,6 @@
       "weight": 3
     },
     {
-      "word": "ÖBÜRÜ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "LENF",
       "difficulty": "hard",
       "boards": [
@@ -121542,19 +118287,6 @@
     },
     {
       "word": "BADE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇAYAN",
       "difficulty": "medium",
       "boards": [
         4,
@@ -122192,19 +118924,6 @@
       "word": "KESELEME",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "BÜGDÜZ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -123252,19 +119971,6 @@
       "weight": 3
     },
     {
-      "word": "ÇAMAT",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BAĞLAR",
       "difficulty": "medium",
       "boards": [
@@ -123295,19 +120001,6 @@
       "difficulty": "easy",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YEDİZ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -123481,19 +120174,6 @@
       "weight": 3
     },
     {
-      "word": "APOLET",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BETERLEŞME",
       "difficulty": "easy",
       "boards": [
@@ -123602,19 +120282,6 @@
       "word": "TÜRKÇÜLÜK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "CÖNK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -124444,19 +121111,6 @@
       "word": "KARAKUCAK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "FRENGİ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -125460,19 +122114,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "RİYA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -126977,19 +123618,6 @@
       "weight": 3
     },
     {
-      "word": "TESİT",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "İPLİĞİMSİ",
       "difficulty": "easy",
       "boards": [
@@ -127347,19 +123975,6 @@
       "word": "ŞARTLANMA",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "PASTAL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -128529,19 +125144,6 @@
       "weight": 3
     },
     {
-      "word": "TOKUZ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "SUSMAK",
       "difficulty": "easy",
       "boards": [
@@ -129168,19 +125770,6 @@
       "weight": 3
     },
     {
-      "word": "KESENE",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KURALLI",
       "difficulty": "medium",
       "boards": [
@@ -129336,19 +125925,6 @@
     {
       "word": "ONUNKİ",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MEVUT",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -129767,19 +126343,6 @@
       "word": "SERPTİRMEK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇOKAL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -131103,19 +127666,6 @@
       "weight": 3
     },
     {
-      "word": "NÜKS",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "UYUYUVERME",
       "difficulty": "easy",
       "boards": [
@@ -131665,19 +128215,6 @@
       "word": "UYDURMACI",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÖRÜK",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -132295,34 +128832,8 @@
       "weight": 3
     },
     {
-      "word": "VUKU",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ATFEN",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇOKÇU",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -132544,19 +129055,6 @@
       "weight": 3
     },
     {
-      "word": "DEBİL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KİTAPÇILIK",
       "difficulty": "easy",
       "boards": [
@@ -132605,19 +129103,6 @@
       "word": "STERİLİZE",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "FODRA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -132888,19 +129373,6 @@
     {
       "word": "HİBE",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TRAKE",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -133423,19 +129895,6 @@
       "weight": 3
     },
     {
-      "word": "AHŞA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "İŞTİHA",
       "difficulty": "easy",
       "boards": [
@@ -133720,19 +130179,6 @@
       "word": "ALAKASIZCA",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YIVA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -134551,19 +130997,6 @@
       "weight": 3
     },
     {
-      "word": "ZÜHAL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MUŞTUCU",
       "difficulty": "hard",
       "boards": [
@@ -134625,19 +131058,6 @@
       "word": "KIYASLAMAK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "USSAL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -136068,19 +132488,6 @@
       "weight": 3
     },
     {
-      "word": "KOKOT",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ARAKA",
       "difficulty": "medium",
       "boards": [
@@ -136908,19 +133315,6 @@
       "weight": 3
     },
     {
-      "word": "HAYBE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "NARİNCE",
       "difficulty": "hard",
       "boards": [
@@ -137055,19 +133449,6 @@
       "word": "HAPSOLMAK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "HASPA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -137803,19 +134184,6 @@
       "weight": 3
     },
     {
-      "word": "SELEF",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MAYASIZLIK",
       "difficulty": "medium",
       "boards": [
@@ -138019,19 +134387,6 @@
       "word": "AYRIMCILIK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TATMA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -139327,19 +135682,6 @@
       "weight": 3
     },
     {
-      "word": "KARİNA",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÇİPO",
       "difficulty": "hard",
       "boards": [
@@ -139510,19 +135852,6 @@
       "word": "PANİKLEME",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "CARLI",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -140127,19 +136456,6 @@
       "weight": 3
     },
     {
-      "word": "SARALI",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ADALETSİZ",
       "difficulty": "medium",
       "boards": [
@@ -140593,19 +136909,6 @@
       "word": "DİNDİRME",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VİSAL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -141981,19 +138284,6 @@
       "word": "MEFRUŞATÇI",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "GABİN",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -143468,19 +139758,6 @@
       "weight": 3
     },
     {
-      "word": "EKİT",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BULGURLU",
       "difficulty": "hard",
       "boards": [
@@ -143858,19 +140135,6 @@
       "weight": 3
     },
     {
-      "word": "BÜVE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MÜSLİM",
       "difficulty": "easy",
       "boards": [
@@ -144121,19 +140385,6 @@
       "difficulty": "medium",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YAĞSI",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -144705,19 +140956,6 @@
       "weight": 3
     },
     {
-      "word": "UĞUT",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KUTSAL",
       "difficulty": "easy",
       "boards": [
@@ -144758,19 +140996,6 @@
       "word": "KOKMUŞLUK",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "FAHTE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -146017,19 +142242,6 @@
       "weight": 3
     },
     {
-      "word": "HÜSÜN",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MORSGİLLER",
       "difficulty": "easy",
       "boards": [
@@ -146197,19 +142409,6 @@
     },
     {
       "word": "SEÇİŞ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YİTİŞ",
       "difficulty": "easy",
       "boards": [
         4,
@@ -147087,19 +143286,6 @@
       "weight": 3
     },
     {
-      "word": "UTÇU",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÖKSE",
       "difficulty": "easy",
       "boards": [
@@ -147519,19 +143705,6 @@
       "weight": 3
     },
     {
-      "word": "PİSLİK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "AZLEDİLİŞ",
       "difficulty": "medium",
       "boards": [
@@ -147558,19 +143731,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "BARUDİ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -149043,19 +145203,6 @@
       "word": "ÇEMENLENME",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DEBBAĞ",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -150995,19 +147142,6 @@
       "weight": 3
     },
     {
-      "word": "TINAZ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TERSLEME",
       "difficulty": "easy",
       "boards": [
@@ -151239,19 +147373,6 @@
     {
       "word": "BURKUK",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇENEK",
-      "difficulty": "medium",
       "boards": [
         4,
         6,
@@ -151696,19 +147817,6 @@
     {
       "word": "STOR",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÇARKA",
-      "difficulty": "easy",
       "boards": [
         4,
         6,
@@ -152372,19 +148480,6 @@
       "weight": 3
     },
     {
-      "word": "RESEN",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BANALLİK",
       "difficulty": "medium",
       "boards": [
@@ -152506,19 +148601,6 @@
     },
     {
       "word": "ZEBANİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TOYCA",
       "difficulty": "easy",
       "boards": [
         4,
@@ -152778,19 +148860,6 @@
       "word": "YİNELEMELİ",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ZAAF",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -153070,19 +149139,6 @@
       "word": "ENTEROGRAF",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "VEDİA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -153589,19 +149645,6 @@
       "word": "ÖRNEKLİK",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TİRİZ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -154888,32 +150931,6 @@
       "weight": 3
     },
     {
-      "word": "ZEBUN",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "ÜFLEÇ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "BAŞKALAŞIM",
       "difficulty": "hard",
       "boards": [
@@ -155081,19 +151098,6 @@
       "word": "DÜŞÜRTMEK",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YUVGU",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -155832,19 +151836,6 @@
       "word": "KIPIRDAMA",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "REMİZ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -156710,19 +152701,6 @@
       "weight": 3
     },
     {
-      "word": "ZİMMİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ŞAD",
       "difficulty": "easy",
       "boards": [
@@ -156820,19 +152798,6 @@
     {
       "word": "BEZ",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TRATA",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -156966,33 +152931,7 @@
       "weight": 3
     },
     {
-      "word": "TEMEK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KESER",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SİĞİL",
       "difficulty": "easy",
       "boards": [
         4,
@@ -157339,19 +153278,6 @@
       "word": "FİGÜRASYON",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "RECİM",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -158983,19 +154909,6 @@
       "weight": 3
     },
     {
-      "word": "UYUNTU",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÇAĞRI",
       "difficulty": "easy",
       "boards": [
@@ -159482,19 +155395,6 @@
       "weight": 3
     },
     {
-      "word": "ÇAPUL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "FALLUS",
       "difficulty": "hard",
       "boards": [
@@ -159571,19 +155471,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SANGI",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -160167,19 +156054,6 @@
       "weight": 3
     },
     {
-      "word": "RÜSUM",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "FERASET",
       "difficulty": "easy",
       "boards": [
@@ -160195,19 +156069,6 @@
       "word": "AZGINLAŞMA",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "APTAL",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -160687,19 +156548,6 @@
       "weight": 3
     },
     {
-      "word": "REVAK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ÖZDEŞ",
       "difficulty": "hard",
       "boards": [
@@ -160727,19 +156575,6 @@
       "word": "DOĞRULTMAÇ",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MİLEL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -164009,19 +159844,6 @@
       "weight": 3
     },
     {
-      "word": "UKDE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TRİBOLOJİ",
       "difficulty": "hard",
       "boards": [
@@ -164085,19 +159907,6 @@
       "weight": 3
     },
     {
-      "word": "VOYVO",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KANTİTATİF",
       "difficulty": "medium",
       "boards": [
@@ -164113,19 +159922,6 @@
       "difficulty": "hard",
       "boards": [
         4,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YILMA",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -164443,19 +160239,6 @@
       "word": "SIFIRLATMA",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SÜCUT",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -165843,19 +161626,6 @@
       "weight": 3
     },
     {
-      "word": "YÜSRÜ",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "YEKİNMEK",
       "difficulty": "hard",
       "boards": [
@@ -166248,19 +162018,6 @@
       "weight": 3
     },
     {
-      "word": "ÇEKEL",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ALEVİLİK",
       "difficulty": "hard",
       "boards": [
@@ -166421,19 +162178,6 @@
     },
     {
       "word": "HAJE",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "HAİLE",
       "difficulty": "medium",
       "boards": [
         4,
@@ -166961,19 +162705,6 @@
       "weight": 3
     },
     {
-      "word": "TAYLAK",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "MOTORLU",
       "difficulty": "medium",
       "boards": [
@@ -167084,19 +162815,6 @@
     {
       "word": "BAŞODA",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "SÜYÜM",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -169162,19 +164880,6 @@
       "weight": 3
     },
     {
-      "word": "BASİL",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KANLANMA",
       "difficulty": "easy",
       "boards": [
@@ -169328,19 +165033,6 @@
     {
       "word": "BENDİR",
       "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YİTME",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -169658,19 +165350,6 @@
       "word": "CEZAYİRLİ",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YUNAK",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -171074,19 +166753,6 @@
       "weight": 3
     },
     {
-      "word": "İLLET",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TORNACILIK",
       "difficulty": "hard",
       "boards": [
@@ -172163,19 +167829,6 @@
       "weight": 3
     },
     {
-      "word": "ÇENET",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "TUZLANMAK",
       "difficulty": "hard",
       "boards": [
@@ -172326,19 +167979,6 @@
     {
       "word": "KOZLUK",
       "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TARAZ",
-      "difficulty": "hard",
       "boards": [
         4,
         6,
@@ -173904,19 +169544,6 @@
       "weight": 3
     },
     {
-      "word": "ASRİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "ZORLU",
       "difficulty": "medium",
       "boards": [
@@ -173993,19 +169620,6 @@
       "word": "OZANLAŞMA",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "MUTAT",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -174293,19 +169907,6 @@
       "weight": 3
     },
     {
-      "word": "ZELVE",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
       "word": "KLAVSEN",
       "difficulty": "medium",
       "boards": [
@@ -174354,19 +169955,6 @@
       "word": "ATKILAMA",
       "difficulty": "medium",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "YASMA",
-      "difficulty": "medium",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -174780,19 +170368,6 @@
       "word": "FİLKULAĞI",
       "difficulty": "easy",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "DEBİ",
-      "difficulty": "easy",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [
@@ -176582,19 +172157,6 @@
       "word": "YELKENLİ",
       "difficulty": "hard",
       "boards": [
-        8
-      ],
-      "tags": [
-        "general"
-      ],
-      "weight": 3
-    },
-    {
-      "word": "TOYCU",
-      "difficulty": "hard",
-      "boards": [
-        4,
-        6,
         8
       ],
       "tags": [

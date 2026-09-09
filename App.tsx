@@ -37,7 +37,7 @@ import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
 import { setHapticsEnabled as setSoloHapticsEnabled, triggerHapticSelection, triggerHapticSuccess } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
-import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "./shared/progression";
+import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "./shared/solo";
 import { getWordDefinition } from "./shared/dictionary";
@@ -146,6 +146,7 @@ function HomeScreen() {
   const [selectedCells, setSelectedCells] = useState<number[]>([]);
   const [sfxOn, setSfxOn] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
+  const [isSocketConnected, setIsSocketConnected] = useState(() => getGameSocket().connected);
 
   useEffect(() => {
     AsyncStorage.getItem("kelime-patlat:sfx-enabled").then((val) => {
@@ -210,6 +211,7 @@ function HomeScreen() {
   const [selectionFeedback, setSelectionFeedback] = useState<"idle" | "invalid" | "accepted">("idle");
   const [soloLevel, setSoloLevel] = useState(1);
   const [soloUnlockedLevel, setSoloUnlockedLevel] = useState(1);
+  const [recentSoloWords, setRecentSoloWords] = useState<string[]>([]);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [progress, setProgress] = useState<PlayerProgress>(DEFAULT_PROGRESS);
   const [progressReady, setProgressReady] = useState(false);
@@ -234,6 +236,8 @@ function HomeScreen() {
   const recordedRoundRef = useRef<string | null>(null);
   const victoryCueRef = useRef<string | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [showLeaveDuelModal, setShowLeaveDuelModal] = useState(false);
+  const [selectedModeInfo, setSelectedModeInfo] = useState<"pvp" | "daily" | "vintage" | "arcade" | "solo" | null>(null);
   const prevRoomStatusRef = useRef<string | null>(null);
   const gameScrollRef = useRef<ScrollView>(null);
   const [arcadeStarted, setArcadeStarted] = useState(false);
@@ -511,24 +515,8 @@ function HomeScreen() {
               setPlayerId(cachedId || `user-${Math.random().toString(36).slice(2, 10)}`);
               setPlayerName(cachedName || "OYUNCU");
             }
-          } else if (response.status === 401 || response.status === 403) {
-            const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
-            const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
-            const isGuestSession = cachedId?.startsWith("guest_") || cachedName?.startsWith("Misafir");
-            
-            if (isGuestSession) {
-              // Keep guest session active on reload
-              setAuthToken(token);
-              setPlayerId(cachedId || `guest_${Math.random().toString(36).slice(2, 10)}`);
-              setPlayerName(cachedName || "Misafir");
-            } else {
-              // Registered account invalid/expired credentials, force open AuthScreen
-              await AsyncStorage.removeItem(SESSION_TOKEN_KEY).catch(() => undefined);
-              setAuthToken(null);
-              setScreen("auth");
-            }
           } else {
-            // Server temporary offline, allow cached offline session
+            // Hot refresh / temporary server reconnect: keep cached session active
             const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
             const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
             setAuthToken(token);
@@ -884,15 +872,20 @@ function HomeScreen() {
     };
     const onLeaderboardUpdate = (next: LeaderboardEntry[]) => setLeaderboard(next);
     const onReconnect = () => {
+      setIsSocketConnected(true);
       if (activeRoomCodeRef.current) {
         socket.emit("room:reconnect", { code: activeRoomCodeRef.current, playerId });
       }
+    };
+    const onDisconnect = () => {
+      setIsSocketConnected(false);
     };
 
     socket.on("room:update", onRoomUpdate);
     socket.on("room:error", onRoomError);
     socket.on("word:rejected", onRejected);
     socket.on("connect", onReconnect);
+    socket.on("disconnect", onDisconnect);
     socket.on("leaderboard:update", onLeaderboardUpdate);
     socket.emit("leaderboard:request");
     return () => {
@@ -900,6 +893,7 @@ function HomeScreen() {
       socket.off("room:error", onRoomError);
       socket.off("word:rejected", onRejected);
       socket.off("connect", onReconnect);
+      socket.off("disconnect", onDisconnect);
       socket.off("leaderboard:update", onLeaderboardUpdate);
       if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
     };
@@ -1050,14 +1044,8 @@ function HomeScreen() {
 
   const handleLiveGameExitPress = () => {
     if (room?.status === "playing") {
-      Alert.alert(
-        "Düellodan Ayrıl",
-        "Mevcut maç devam ediyor. Ayrılmak istediğinize emin misiniz?",
-        [
-          { text: "Vazgeç", style: "cancel" },
-          { text: "Ayrıl", style: "destructive", onPress: leaveRoom },
-        ]
-      );
+      haptics.light();
+      setShowLeaveDuelModal(true);
     } else {
       leaveRoom();
     }
@@ -1227,6 +1215,9 @@ function HomeScreen() {
   };
 
   const completeSoloLevel = (level: number, foundWords: string[] = []) => {
+    if (foundWords && foundWords.length > 0) {
+      setRecentSoloWords((prev) => Array.from(new Set([...foundWords, ...prev])).slice(0, 80));
+    }
     const next = Math.min(MAX_SOLO_LEVEL + 1, Math.max(soloUnlockedLevel, level + 1));
     setSoloUnlockedLevel(next);
     AsyncStorage.setItem(SOLO_UNLOCK_KEY, String(next)).catch(() => undefined);
@@ -1321,6 +1312,7 @@ function HomeScreen() {
           onNavigate={setScreen}
           onLeaderboard={() => setScreen("season")}
           onShowGuide={() => setShowGuide(true)}
+          onOpenModeInfo={(mode) => setSelectedModeInfo(mode)}
           onSelectTheme={(selectedTheme) => {
             setProgress((current) => ({ ...current, selectedTheme }));
           }}
@@ -1337,6 +1329,112 @@ function HomeScreen() {
             });
           }}
         />
+        {/* Game Mode Info Modal */}
+        <Modal
+          visible={selectedModeInfo !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedModeInfo(null)}
+        >
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)", justifyContent: "center", alignItems: "center", padding: 24 }}
+            onPress={() => setSelectedModeInfo(null)}
+          >
+            <Pressable
+              style={{
+                width: "100%",
+                maxWidth: 360,
+                backgroundColor: "#130E26",
+                borderRadius: 24,
+                borderWidth: 1.5,
+                borderColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                padding: 24,
+                alignItems: "center",
+                shadowColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 12,
+              }}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <View
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  backgroundColor: selectedModeInfo === "arcade" ? "rgba(255, 208, 0, 0.15)" : selectedModeInfo === "vintage" ? "rgba(255, 194, 74, 0.15)" : selectedModeInfo === "solo" ? "rgba(56, 189, 248, 0.15)" : selectedModeInfo === "daily" ? "rgba(167, 139, 250, 0.15)" : "rgba(0, 245, 212, 0.15)",
+                  borderWidth: 1.5,
+                  borderColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>
+                  {selectedModeInfo === "pvp" ? "⚔️" : selectedModeInfo === "daily" ? "🗓️" : selectedModeInfo === "solo" ? "🏆" : selectedModeInfo === "vintage" ? "🗞️" : "⚡"}
+                </Text>
+              </View>
+
+              <Text style={{ color: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 4, textAlign: "center" }}>
+                {selectedModeInfo === "pvp" ? "ÇOK OYUNCULU DÜELLO" : selectedModeInfo === "daily" ? "ETKİNLİK MODU" : selectedModeInfo === "solo" ? "KLASİK TEK OYUNCU" : selectedModeInfo === "vintage" ? "NOSTALJİ MİNİ OYUN" : "ZAMANA KARŞI YARIŞ"}
+              </Text>
+              
+              <Text style={{ color: "#FFF", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginBottom: 12, textAlign: "center" }}>
+                {selectedModeInfo === "pvp" ? "Canlı Kelime Düellosu" : selectedModeInfo === "daily" ? "Günün Sabit Rotası" : selectedModeInfo === "solo" ? "Seviye Yolculuğu" : selectedModeInfo === "vintage" ? "Gazete Kare Bulmacası" : "Zamanda Yarış Arcade"}
+              </Text>
+
+              <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255, 255, 255, 0.05)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginBottom: 16, gap: 6 }}>
+                <Text style={{ color: "#94A3B8", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>OYUN TİPİ:</Text>
+                <Text style={{ color: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4", fontSize: 12, fontWeight: "900" }}>
+                  {selectedModeInfo === "pvp" ? "1v1 Canlı Rakip" : selectedModeInfo === "daily" ? "Günlük Özel Tahta" : selectedModeInfo === "solo" ? "Bölüm İlerleme Sistemi" : selectedModeInfo === "vintage" ? "10×10 Gazete Matrisi" : "Süreli Rekor Modu"}
+                </Text>
+              </View>
+
+              <Text style={{ color: "#CBD5E1", fontSize: 13, textAlign: "center", lineHeight: 20, marginBottom: 18 }}>
+                {selectedModeInfo === "pvp"
+                  ? "Gerçek bir rakiple aynı anda yarışırsın. Izgaradaki harfleri parmağınla bağlayarak geçerli kelimeler üret. Ne kadar uzun kelime bulursan puan çarpanın o kadar katlanır!"
+                  : selectedModeInfo === "daily"
+                  ? "Her gün yenilenen sabit bulmaca rotasında kelimeleri tamamla. Günlük rotayı bitirmek galibiyet serini (Streak) korur ve ekstra seri puanı kazandırır."
+                  : selectedModeInfo === "solo"
+                  ? "1. seviyeden başlayarak Seviye Yolculuğu'nda ilerle! Izgaradaki hedef kelimeleri bularak seviyeleri tamamla, ustalık kazan ve kilitli ızgara boyutlarını aç."
+                  : selectedModeInfo === "vintage"
+                  ? "Nostaljik gazete bulmacası keyfi! İpuçlarını çözerek harf taşlarını 10×10 matrise yerleştir, kare bulmacayı tamamla ve nostalji bonus XP'lerini topla."
+                  : "Zamansız akış! Belirlenen süre bitmeden olabildiğince çok kelime bul, kombo puanlarını katla ve liderlik tablosundaki rekorunu kır."}
+              </Text>
+
+              <View style={{ width: "100%", backgroundColor: "rgba(255, 255, 255, 0.04)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.08)", padding: 14, marginBottom: 20 }}>
+                <Text style={{ color: "#F1F5F9", fontSize: 11, fontWeight: "900", letterSpacing: 0.5, marginBottom: 6 }}>💡 STRATEJİ VE İPUCU</Text>
+                <Text style={{ color: "#94A3B8", fontSize: 12, lineHeight: 18 }}>
+                  {selectedModeInfo === "pvp"
+                    ? "• 5 harfli kelimeler 1.5×, 7+ harfli kelimeler 2.0× puan verir.\n• Siber Radar jokeri ile harf rotalarını anında gör."
+                    : selectedModeInfo === "daily"
+                    ? "• Her gün 1 defa oynama hakkın vardır.\n• Tamamlayamadığın günlerde Seri Kalkanı otomatik devreye girer."
+                    : selectedModeInfo === "solo"
+                    ? "• Seviye atladıkça 6×6, 8×8 ve 10×10 düello modları açılır.\n• Belirli seviyelerde sürpriz ödül sandıkları kazanırsın.\n• Sıkıştığın anlarda Siber Radar jokeri kullan."
+                    : selectedModeInfo === "vintage"
+                    ? "• 20 özel nostaljik bulmaca bölümü içerir.\n• Kesişen harfler doğru kelimeleri bulmayı kolaylaştırır.\n• Günlük girişlerde ekstra ipucu hakkı kazanabilirsin."
+                    : "• Hızlı kombolar süre bonusu kazandırır.\n• Sıkıştığında Siber Radar jokeri ile gizli rotaları aç."}
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => setSelectedModeInfo(null)}
+                style={({ pressed }) => ({
+                  width: "100%",
+                  height: 46,
+                  borderRadius: 14,
+                  backgroundColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <Text style={{ color: "#0B071E", fontSize: 14, fontWeight: "900", letterSpacing: 0.8 }}>ANLADIM</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
         <TermsModal
           visible={showConsentModal}
           onAccept={async () => {
@@ -1683,7 +1781,7 @@ function HomeScreen() {
           theme={dailySession ? dailySession.themeId : "general"}
           variationSeed={dailySession?.variation}
           daily={Boolean(dailySession)}
-          excludeWords={progress.history || []}
+          excludeWords={recentSoloWords}
           radarChargesBonus={progress.radarChargesBonus || 0}
           onExit={() => {
             const destination = dailySession ? "home" : "levels";
@@ -2392,12 +2490,31 @@ function HomeScreen() {
       <StatusBar style="light" />
       <ScrollView ref={gameScrollRef} contentContainerStyle={battleStyles.gameScroll} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
       <View style={styles.gameHeader}><Pressable onPress={handleLiveGameExitPress} style={styles.exitButton}><Text style={styles.exitText}>×</Text></Pressable><View><Text style={styles.gameMode}>CANLI KELİME DÜELLOSU</Text><Text style={styles.gameCode}>ODA {room.code}</Text></View><View style={styles.liveChip}><View style={styles.liveDot} /><Text style={styles.liveText}>{room.status === "playing" ? "CANLI" : "SONUÇ"}</Text></View></View>
+        {!isSocketConnected && room.status === "playing" && (
+          <View style={{ marginTop: 6, marginBottom: 8, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: "rgba(239, 68, 68, 0.25)", borderRadius: 8, borderWidth: 1, borderColor: "#EF4444", flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator size="small" color="#EF4444" style={{ marginRight: 8 }} />
+            <Text style={{ color: "#FCA5A5", fontSize: 11, fontWeight: "900" }}>
+              📡 Bağlantın kesildi, tekrar bağlanılıyor...
+            </Text>
+          </View>
+        )}
         <View style={[battleStyles.statusRail, isFinalPush && battleStyles.statusRailFinal]}>
           <View><Text style={battleStyles.railLabel}>{isFinalPush ? "SON HAMLE" : "TUR SÜRESİ"}</Text><Text style={[battleStyles.timerValue, isFinalPush && battleStyles.timerValueFinal]}>{room.status === "playing" ? `00:${String(remainingSeconds).padStart(2, "0")}` : "00:00"}</Text></View>
           <View style={battleStyles.battleBadges}>{myMultiplier > 1 && <View style={battleStyles.multiplierBadge}><Text style={battleStyles.multiplierText}>×{myMultiplier} UZUN KELİME</Text></View>}{myWordCount >= 2 && <View style={battleStyles.streakBadge}><Text style={battleStyles.streakText}>{myWordCount} SERİ</Text></View>}</View>
         </View>
         <View style={styles.scoreRow}>
-          <ScoreBadge name={me?.name ?? safeName} score={myScore} words={myWordCount} total={room.wordsTotal} active={!room.winnerId || iWon} won={iWon} accent="#2DD4BF" combo={room.combos?.[playerId]} />
+          <ScoreBadge
+            name={me?.name ?? safeName}
+            score={myScore}
+            words={myWordCount}
+            total={room.wordsTotal}
+            active={!room.winnerId || iWon}
+            won={iWon}
+            accent="#2DD4BF"
+            combo={room.combos?.[playerId]}
+            avatar={me?.avatar || (progress.selectedAvatar ? String(progress.selectedAvatar) : "🎮")}
+            avatarPhoto={me?.avatarPhoto || progress.avatarPhoto}
+          />
           <View style={styles.vsMark}><Text style={styles.vsText}>VS</Text></View>
           <ScoreBadge
             name={opponent?.name ?? "RAKİP"}
@@ -2408,6 +2525,8 @@ function HomeScreen() {
             won={Boolean(room.winnerId && !iWon)}
             accent="#FB7185"
             combo={opponent ? room.combos?.[opponent.id] : undefined}
+            avatar={opponent?.avatar || (opponent?.isBot ? "🤖" : "👤")}
+            avatarPhoto={opponent?.avatarPhoto}
             onPress={opponent ? () => {
               triggerHapticSelection();
               openUserProfile(opponent);
@@ -2421,7 +2540,7 @@ function HomeScreen() {
           {disconnectRemainingSeconds > 0 ? (
             <View style={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 8, backgroundColor: "rgba(239, 68, 68, 0.2)", borderRadius: 8, borderWidth: 1, borderColor: "#EF4444", alignItems: "center" }}>
               <Text style={{ color: "#EF4444", fontSize: 11, fontWeight: "900" }}>
-                ⚠️ RAKİBİN BAĞLANTISI KOPDU ({disconnectRemainingSeconds}s)
+                ⚠️ RAKİBİN BAĞLANTISI KOPTU ({disconnectRemainingSeconds}s)
               </Text>
               <Text style={{ color: "#FCA5A5", fontSize: 9, fontWeight: "800", marginTop: 2 }}>
                 Geri dönmezse hükmen galip sayılacaksın.
@@ -2652,9 +2771,31 @@ function HomeScreen() {
       {/* Game Over / Match Result Modal */}
       {room.status === "finished" && showResultModal && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowResultModal(false)}>
-          <Pressable style={styles.modalOverlay} onPress={() => setShowResultModal(false)}>
-            <Pressable style={[styles.modalContent, styles.resultModalCard, { borderColor: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185" }]} onPress={(e) => e.stopPropagation()}>
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ alignItems: "stretch", width: "100%", paddingBottom: 6 }}>
+          <Pressable style={[styles.modalOverlay, { flex: 1, width: "100%", height: "100%", paddingHorizontal: 14, paddingVertical: 20 }]} onPress={() => setShowResultModal(false)}>
+            <Pressable
+              style={{
+                width: "100%",
+                maxWidth: 440,
+                height: "88%",
+                maxHeight: 740,
+                backgroundColor: "#130E26",
+                borderRadius: 24,
+                borderWidth: 2,
+                borderColor: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185",
+                overflow: "hidden",
+                shadowColor: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185",
+                shadowOpacity: 0.35,
+                shadowRadius: 18,
+                elevation: 16,
+              }}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <ScrollView
+                style={{ flex: 1, width: "100%" }}
+                contentContainerStyle={{ alignItems: "stretch", width: "100%", paddingHorizontal: 14, paddingTop: 16, paddingBottom: 24 }}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
                 <View style={styles.resultModalHeader}>
                   <Text style={styles.resultModalIcon}>{isDraw ? "⚔️" : iWon ? "🏆" : "💔"}</Text>
                   <Text style={[styles.resultModalTitle, { color: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185" }]}>
@@ -2766,12 +2907,23 @@ function HomeScreen() {
                       });
                     })}
                     style={({ pressed }) => [
-                      styles.primaryButton,
-                      { backgroundColor: "rgba(255, 208, 0, 0.2)", borderColor: "#FFD000", borderWidth: 1.5, marginTop: 10 },
+                      {
+                        width: "100%",
+                        minHeight: 46,
+                        borderRadius: 14,
+                        backgroundColor: "rgba(255, 208, 0, 0.15)",
+                        borderColor: "#FFD000",
+                        borderWidth: 1.5,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        paddingHorizontal: 12,
+                        marginTop: 10,
+                      },
                       pressed && styles.pressed,
                     ]}
                   >
-                    <Text style={[styles.primaryButtonText, { color: "#FFD000", fontSize: 12 }]}>
+                    <Text style={{ color: "#FFD000", fontSize: 12, fontWeight: "900", letterSpacing: 0.5, textAlign: "center" }}>
                       🎬 REKLAM İZLE: GÜNLÜK SERİNİ KORU 🔥
                     </Text>
                   </Pressable>
@@ -2781,29 +2933,228 @@ function HomeScreen() {
                   onPress={() => {
                     requestRematch();
                   }}
-                  style={({ pressed }) => [styles.primaryButton, styles.rematchButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    {
+                      width: "100%",
+                      height: 48,
+                      borderRadius: 14,
+                      backgroundColor: "#00F5D4",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: 8,
+                      shadowColor: "#00F5D4",
+                      shadowOpacity: 0.3,
+                      shadowRadius: 10,
+                      elevation: 4,
+                    },
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <Text style={styles.primaryButtonText}>{me?.rematch ? "RAKİP BEKLENİYOR..." : "↻ RÖVANŞ İSTE"}</Text>
+                  <Text style={{ color: "#0B071E", fontSize: 13, fontWeight: "900", letterSpacing: 0.8 }}>
+                    {me?.rematch ? "RAKİP BEKLENİYOR..." : "↻ RÖVANŞ İSTE"}
+                  </Text>
                 </Pressable>
 
                 <Pressable
                   onPress={leaveRoom}
-                  style={({ pressed }) => [styles.returnHomeButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    {
+                      width: "100%",
+                      height: 42,
+                      borderRadius: 14,
+                      backgroundColor: "rgba(255, 255, 255, 0.08)",
+                      borderWidth: 1,
+                      borderColor: "rgba(255, 255, 255, 0.18)",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: 8,
+                    },
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <Text style={styles.returnHomeButtonText}>🏠 ANA MENÜYE DÖN</Text>
+                  <Text style={{ color: "#E2E8F0", fontSize: 12, fontWeight: "900", letterSpacing: 0.6 }}>
+                    🏠 ANA MENÜYE DÖN
+                  </Text>
                 </Pressable>
 
                 <Pressable
                   onPress={() => setShowResultModal(false)}
-                  style={({ pressed }) => [styles.inspectBoardButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    {
+                      width: "100%",
+                      paddingVertical: 10,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: 4,
+                    },
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <Text style={styles.inspectBoardButtonText}>🔍 TAHTAYI VE KELİMELERİ İNCELE</Text>
+                  <Text style={{ color: "#00F5D4", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>
+                    🔍 TAHTAYI VE KELİMELERİ İNCELE
+                  </Text>
                 </Pressable>
               </ScrollView>
             </Pressable>
           </Pressable>
         </Modal>
       )}
+
+      {/* Düellodan Ayrılma Siber Modalı */}
+      <Modal
+        visible={showLeaveDuelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLeaveDuelModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLeaveDuelModal(false)}>
+          <Pressable style={[styles.modalContent, { backgroundColor: "#130E26", borderColor: "#FF007F", borderWidth: 2, width: "90%", maxWidth: 360, paddingVertical: 24, paddingHorizontal: 20, borderRadius: 28 }]} onPress={(e) => e.stopPropagation()}>
+            <Text style={{ fontSize: 36, textAlign: "center", marginBottom: 6 }}>⚔️</Text>
+            <Text style={{ color: "#FF007F", fontSize: 18, fontWeight: "900", letterSpacing: 1.2, textAlign: "center", marginBottom: 6 }}>
+              DÜELLODAN AYRIL?
+            </Text>
+            <Text style={{ color: "#B5A9CD", fontSize: 12, textAlign: "center", marginBottom: 22, lineHeight: 18, fontWeight: "600" }}>
+              Canlı düello henüz devam ediyor! Şimdi ayrılırsan maç mağlubiyet sayılabilir ve lig puanı kaybedebilirsin.
+            </Text>
+
+            <View style={{ gap: 10 }}>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setShowLeaveDuelModal(false);
+                }}
+                style={({ pressed }) => ({
+                  backgroundColor: "#00F5D4",
+                  borderRadius: 16,
+                  paddingVertical: 14,
+                  alignItems: "center",
+                  opacity: pressed ? 0.85 : 1,
+                  shadowColor: "#00F5D4",
+                  shadowOpacity: 0.4,
+                  shadowRadius: 8,
+                  elevation: 4,
+                })}
+              >
+                <Text style={{ color: "#0B132B", fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>⚔️ SAVAŞA DEVAM ET</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  haptics.error();
+                  setShowLeaveDuelModal(false);
+                  leaveRoom();
+                }}
+                style={({ pressed }) => ({
+                  backgroundColor: "rgba(255, 0, 127, 0.12)",
+                  borderWidth: 1.5,
+                  borderColor: "rgba(255, 0, 127, 0.5)",
+                  borderRadius: 16,
+                  paddingVertical: 12,
+                  alignItems: "center",
+                  opacity: pressed ? 0.8 : 1,
+                })}
+              >
+                <Text style={{ color: "#FF007F", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 }}>🏃‍♂️ MAÇI TERK ET VE AYRIL</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Oyun Modları Bilgi Modalı */}
+      <Modal
+        visible={selectedModeInfo !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedModeInfo(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedModeInfo(null)}>
+          <Pressable
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: "#130E26",
+                borderColor: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F",
+                borderWidth: 2,
+                width: "90%",
+                maxWidth: 370,
+                paddingVertical: 24,
+                paddingHorizontal: 22,
+                borderRadius: 28,
+              },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={{ alignItems: "center", marginBottom: 12 }}>
+              <View
+                style={{
+                  width: 54,
+                  height: 54,
+                  borderRadius: 27,
+                  backgroundColor: selectedModeInfo === "pvp" ? "rgba(0,245,212,0.12)" : selectedModeInfo === "daily" ? "rgba(255,194,74,0.12)" : selectedModeInfo === "vintage" ? "rgba(167,139,250,0.12)" : "rgba(255,0,127,0.12)",
+                  borderWidth: 1.5,
+                  borderColor: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginBottom: 10,
+                }}
+              >
+                <Text style={{ fontSize: 26 }}>
+                  {selectedModeInfo === "pvp" ? "⚔️" : selectedModeInfo === "daily" ? "🗓️" : selectedModeInfo === "vintage" ? "📜" : "⚡"}
+                </Text>
+              </View>
+
+              <Text style={{ color: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F", fontSize: 11, fontWeight: "900", letterSpacing: 1.2, marginBottom: 2 }}>
+                {selectedModeInfo === "pvp" ? "ÇOK OYUNCULU SİBER MOD" : selectedModeInfo === "daily" ? "ETKİNLİK MODU" : selectedModeInfo === "vintage" ? "KLASİK MACERA MODU" : "TEMPO HÜCUM MODU"}
+              </Text>
+              <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900", textAlign: "center" }}>
+                {selectedModeInfo === "pvp" ? "Canlı Kelime Düellosu" : selectedModeInfo === "daily" ? "Günlük Sabit Tahta" : selectedModeInfo === "vintage" ? "Nostalji Bulmaca" : "Zamana Karşı Arcade"}
+              </Text>
+            </View>
+
+            <Text style={{ color: "#B5A9CD", fontSize: 12, textAlign: "center", marginBottom: 16, lineHeight: 18 }}>
+              {selectedModeInfo === "pvp"
+                ? "Gerçek zamanlı olarak bir rakiple veya botla kapış! Süre dolmadan harita üzerindeki gizli kelimeleri bağlayarak en yüksek puanı topla. Kazanan lig puanı (LP) ve çip ödülü alır."
+                : selectedModeInfo === "daily"
+                ? "Her gün 24 saatte bir tüm oyuncular için özel olarak üretilen sabit gizli harita! Günün kelimelerini bul, rotanı tamamla ve seri kalkanı/çip ödüllerini topla."
+                : selectedModeInfo === "vintage"
+                ? "Gazete çengel bulmaca hissiyatlı klasik kelime yolu! Bölümleri sırayla tamamlayarak kilitli seviyeleri aç, zihnini tazele ve harita yolculuğunu tamamla."
+                : "Zaman daralıyor! Hızlı kelimeler buldukça zamana ekstra saniyeler ekle, çarpanlarını katla ve son saniyeye kadar en yüksek skoru yapıp liderlik tablosunun zirvesine oyna."}
+            </Text>
+
+            <View style={{ backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 14, padding: 12, marginBottom: 18, gap: 4 }}>
+              <Text style={{ color: "#E2E8F0", fontSize: 11, fontWeight: "800" }}>💡 STRATEJİ İPUÇLARI:</Text>
+              <Text style={{ color: "#94A3B8", fontSize: 11, lineHeight: 16 }}>
+                {selectedModeInfo === "pvp"
+                  ? "• 5+ harfli uzun kelimeler ×2/×3 bonus puan verir.\n• Seri kelime patlatmak rakibe tempo üstünlüğü sağlar."
+                  : selectedModeInfo === "daily"
+                  ? "• Günde sadece 1 kez oynama hakkın vardır.\n• Seri Kalkanın varsa mağlubiyette günlük serin korunur."
+                  : selectedModeInfo === "vintage"
+                  ? "• Seviye ilerledikçe harita boyutları ve kelime çeşitliliği zorlaşır.\n• Takıldığın yerde joker ipuçlarını kullanabilirsin."
+                  : "• Kombo serini bozmadan seri kelime patlat.\n• Çarpanlar aktifken uzun kelimeleri önce patlat."}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setSelectedModeInfo(null);
+              }}
+              style={({ pressed }) => ({
+                backgroundColor: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F",
+                borderRadius: 16,
+                paddingVertical: 14,
+                alignItems: "center",
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              <Text style={{ color: "#0B132B", fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>ANLADIM, BAŞLA! 🚀</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {gameCountdown !== null && (
         <View style={styles.countdownOverlay} pointerEvents="auto">
@@ -3024,28 +3375,78 @@ function PlayerRow({ player, isMe, accent, onPress }: { player: { name: string; 
   return rowContent;
 }
 
-function ScoreBadge({ name, score, words, total, active, won, accent, combo, onPress }: { name: string; score: number; words: number; total: number; active: boolean; won: boolean; accent: string; combo?: number; onPress?: () => void }) {
-  const content = (
-    <View style={[styles.scoreBadge, won && { borderColor: accent }]}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-        <Text numberOfLines={1} style={[styles.scoreName, { flexShrink: 1 }]}>{name}</Text>
-        {onPress && <Text style={{ fontSize: 9, opacity: 0.8 }}>👤</Text>}
-        {combo && combo >= 2 ? <Text style={{ fontSize: 9, fontWeight: "900", color: "#FF9B62" }}>🔥 x{combo}</Text> : null}
+function ScoreBadge({
+  name,
+  score,
+  words,
+  total,
+  active,
+  won,
+  accent,
+  combo,
+  avatar,
+  avatarPhoto,
+  onPress,
+}: {
+  name: string;
+  score: number;
+  words: number;
+  total: number;
+  active: boolean;
+  won: boolean;
+  accent: string;
+  combo?: number;
+  avatar?: string;
+  avatarPhoto?: string;
+  onPress?: () => void;
+}) {
+  const activeAvatarObj = AVATARS.find((a) => a.id === avatar);
+  const displayIcon = activeAvatarObj ? activeAvatarObj.icon : (avatar && avatar.length <= 3 ? avatar : (name.toLowerCase().includes("bot") ? "🤖" : "👤"));
+  const avatarBorderColor = activeAvatarObj ? activeAvatarObj.color : accent;
+  const avatarBgColor = activeAvatarObj ? activeAvatarObj.surface : `${accent}25`;
+
+  return (
+    <Pressable
+      disabled={!onPress}
+      onPress={onPress}
+      style={({ pressed }) => [{ flex: 1 }, onPress && pressed && styles.pressed]}
+    >
+      <View style={[styles.scoreBadge, { width: "100%", height: 88 }, won && { borderColor: accent, shadowColor: accent, shadowOpacity: 0.4, shadowRadius: 8 }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginBottom: 4 }}>
+          {/* Profil Fotoğrafı / Avatar Dairesi */}
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: avatarBgColor,
+              borderWidth: 1.5,
+              borderColor: avatarBorderColor,
+              justifyContent: "center",
+              alignItems: "center",
+              overflow: "hidden",
+            }}
+          >
+            {avatarPhoto ? (
+              <Image source={{ uri: avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 18, resizeMode: "cover" }} />
+            ) : (
+              <Text style={{ fontSize: 17, color: activeAvatarObj ? activeAvatarObj.color : "#FFF", fontWeight: "900" }}>{displayIcon}</Text>
+            )}
+          </View>
+
+          <View style={{ justifyContent: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Text numberOfLines={1} style={[styles.scoreName, { flexShrink: 1 }]}>{name}</Text>
+              {combo && combo >= 2 ? <Text style={{ fontSize: 9, fontWeight: "900", color: "#FF9B62" }}>🔥x{combo}</Text> : null}
+            </View>
+            <Text style={[styles.scoreStatus, won && { color: accent }]}>{words} / {total} KELİME</Text>
+          </View>
+        </View>
+
+        <Text style={[styles.scoreValue, active && { color: accent }, { textAlign: "center", marginTop: 0 }]}>{score}</Text>
       </View>
-      <Text style={[styles.scoreValue, active && { color: accent }]}>{score}</Text>
-      <Text style={[styles.scoreStatus, won && { color: accent }]}>{words} / {total} KELİME</Text>
-    </View>
+    </Pressable>
   );
-
-  if (onPress) {
-    return (
-      <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && styles.pressed]}>
-        {content}
-      </Pressable>
-    );
-  }
-
-  return content;
 }
 
 const RANK_IMAGES: Record<string, any> = {
@@ -3290,10 +3691,10 @@ const styles = StyleSheet.create({
   liveDot: { width: 6, height: 6, borderRadius: 5, backgroundColor: "#10B981" },
   liveText: { color: "#22D3EE", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   scoreRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 7 },
-  scoreBadge: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, alignItems: "center", paddingVertical: 9 },
-  scoreName: { color: "#E2E8F0", maxWidth: 105, fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
-  scoreValue: { color: "#FFFFFF", fontSize: 25, lineHeight: 29, fontWeight: "900", marginTop: 1 },
-  scoreStatus: { color: "#94A3B8", fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
+  scoreBadge: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, alignItems: "center", justifyContent: "center", paddingVertical: 10, paddingHorizontal: 8 },
+  scoreName: { color: "#E2E8F0", maxWidth: 105, fontSize: 11, fontWeight: "900", letterSpacing: 0.4 },
+  scoreValue: { color: "#FFFFFF", fontSize: 26, lineHeight: 28, fontWeight: "900", marginTop: 2 },
+  scoreStatus: { color: "#94A3B8", fontSize: 9.5, fontWeight: "800", letterSpacing: 0.6, marginTop: 1 },
   vsMark: { width: 28, alignItems: "center" },
   vsText: { color: "#64748B", fontSize: 10, fontWeight: "900" },
   targetCard: { alignItems: "center", paddingTop: 15, paddingBottom: 11 },
@@ -3371,7 +3772,7 @@ const styles = StyleSheet.create({
   roomScroll: { flexGrow: 1, paddingBottom: 8 },
   eyebrow: { color: "#06B6D4", fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", alignItems: "center", zIndex: 100 },
-  modalContent: { width: "86%", borderRadius: 24, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 20, elevation: 12 },
+  modalContent: { width: "92%", maxWidth: 420, maxHeight: "90%", borderRadius: 24, borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 18, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 20, elevation: 12 },
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },
   modalBody: { color: "#FFFFFF", fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20, fontWeight: "600" },
   modalCloseButton: { borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.4, shadowRadius: 5, elevation: 4 },

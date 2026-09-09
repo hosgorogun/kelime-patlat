@@ -109,9 +109,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#CBD5E1",
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   coinsBadge: {
     backgroundColor: "rgba(245, 158, 11, 0.15)",

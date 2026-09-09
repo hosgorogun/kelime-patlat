@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { getRank, getLeagueTier, getDailyMysteryWord, type PlayerProgress } from "@/shared/progression";
+import { getRank, getLeagueTier, type PlayerProgress } from "@/shared/progression";
 import { type LeaderboardEntry, BOARD_SIZES, type BoardSize } from "@/shared/game";
 import { socialManager, type FriendUser } from "@/shared/social";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";

@@ -246,14 +246,17 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
   const maxWords = config.size === 4 ? 3 : config.size === 6 ? 9 : config.size === 8 ? 12 : 14;
 
   const adjustedMinLen = Math.max(profile.minWordLength, Math.floor(targetSum / maxWords) - 1);
-  const themedFiltered = themed.filter((entry) => entry.word.length >= adjustedMinLen && !excludeWords.includes(entry.word));
-  const themedAll = themed.filter((entry) => entry.word.length >= adjustedMinLen);
-  const generalAll = general.filter((entry) => entry.word.length >= adjustedMinLen);
+  const excludeSet = new Set(excludeWords);
+
+  const themedFiltered = themed.filter((entry) => entry.word.length >= adjustedMinLen && !excludeSet.has(entry.word));
+  const generalFiltered = general.filter((entry) => entry.word.length >= adjustedMinLen && !excludeSet.has(entry.word));
+  const generalAllFiltered = general.filter((entry) => !excludeSet.has(entry.word));
 
   const pools = [
     themedFiltered,
-    themedAll,
-    generalAll,
+    generalFiltered,
+    generalAllFiltered,
+    themed.filter((entry) => entry.word.length >= adjustedMinLen),
     general
   ];
 
@@ -275,7 +278,7 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
         }
         if (currentSum === targetSum) {
           const diffs = new Set(selected.map((e) => e.difficulty));
-          const passesDiversity = config.size !== 4 || diffs.size >= 2;
+          const passesDiversity = diffs.size >= 2;
           if (selected.length >= minWords && selected.length <= maxWords && passesDiversity) {
             return selected;
           }
@@ -288,7 +291,9 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
   // Absolute fallback: try to get exact sum using general pool with standard minWordLength to guarantee completion
   const fallbackList: WordEntry[] = [];
   let sum = 0;
-  const shuffledGeneral = shuffled(general, random);
+  const generalCandidates = general.filter((e) => !excludeSet.has(e.word));
+  const poolToUse = generalCandidates.length >= minWords ? generalCandidates : general;
+  const shuffledGeneral = shuffled(poolToUse, random);
   for (const entry of shuffledGeneral) {
     if (sum + entry.word.length <= targetSum) {
       const remaining = targetSum - (sum + entry.word.length);
@@ -302,7 +307,9 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
 
   // Deficit fill: if sum is still less than targetSum, pick exact length matching words to guarantee 100% cell coverage
   if (sum < targetSum) {
-    const allWords = catalogWordsForTheme(config.size, "general", 12);
+    const rawAll = catalogWordsForTheme(config.size, "general", 12);
+    const filteredAll = rawAll.filter((e) => !excludeSet.has(e.word));
+    const allWords = filteredAll.length >= 10 ? filteredAll : rawAll;
     let rem = targetSum - sum;
     let guard = 0;
     while (rem > 0 && guard++ < 50) {
@@ -392,7 +399,22 @@ function fullBoardPath(size: BoardSize, random: () => number) {
 
 export function createSoloBoard(level: number, variation = 0, theme: WordTheme = "general", excludeWords: string[] = []): SoloBoard {
   const config = getSoloLevel(level);
-  const entries = selectWords(config, variation, seededRandom(config.level * 23_917 + variation * 433), theme, excludeWords);
+
+  // Guarantee consecutive levels never repeat words:
+  // If adjacent levels exist (level - 1, level - 2, level - 3), exclude their generated words
+  const rollingExcludes = new Set(excludeWords);
+  if (level > 1) {
+    for (let prevLevel = Math.max(1, level - 3); prevLevel < level; prevLevel++) {
+      const prevConfig = getSoloLevel(prevLevel);
+      const prevRandom = seededRandom(prevConfig.level * 23_917 + variation * 433);
+      const prevWords = selectWords(prevConfig, variation, prevRandom, theme, []);
+      for (const entry of prevWords) {
+        rollingExcludes.add(entry.word);
+      }
+    }
+  }
+
+  const entries = selectWords(config, variation, seededRandom(config.level * 23_917 + variation * 433), theme, Array.from(rollingExcludes));
   const words = entries.map((entry) => entry.word);
   
   for (let attempt = 0; attempt < 200; attempt += 1) {

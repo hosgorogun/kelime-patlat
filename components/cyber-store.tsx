@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { DIGITAL_STORE_PRODUCTS, monetizationManager, type ProductItem } from "@/shared/monetization";
 import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { type PlayerProgress } from "@/shared/progression";
@@ -8,22 +8,36 @@ import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS } from "@/shared/store-ite
 export type { ChipEquipmentItem };
 export { CHIP_EQUIPMENT_ITEMS };
 
+const FRAME_IMAGES: Record<string, any> = {
+  signal: require("../assets/frames/signal.jpg"),
+  neon: require("../assets/frames/neon.jpg"),
+  chrome: require("../assets/frames/chrome.jpg"),
+  gold: require("../assets/frames/gold.jpg"),
+  cyber: require("../assets/frames/cyber.jpg"),
+};
+
 type StoreTab = "equipment" | "cosmetics" | "chips";
 
 const PROFILE_FRAMES = [
   ["signal", "SİNYAL", "#00F5D4", 0],
-  ["neon", "NEON", "#A78BFA", 140],
-  ["chrome", "KROM", "#CBD5E1", 220],
+  ["neon", "NEON MOR", "#A78BFA", 140],
+  ["chrome", "KROM GÜMÜŞ", "#CBD5E1", 220],
+  ["gold", "ALTIN KRAL", "#FFC24A", 350],
+  ["cyber", "SİBERPUNK", "#FF2A85", 500],
 ] as const;
 const VICTORY_EFFECTS = [
   ["pulse", "PULSE", "✦", 0],
   ["glitch", "GLITCH", "▦", 160],
   ["flare", "FLARE", "✹", 240],
+  ["lightning", "ŞİMŞEK", "⚡", 380],
+  ["fireworks", "KAVRAMA", "🎆", 450],
 ] as const;
 const BOARD_SKINS = [
   ["grid", "MATRİS", "#00F5D4", 0],
   ["night", "GECE SİNYALİ", "#818CF8", 120],
   ["ember", "KOR HATTI", "#FB7185", 180],
+  ["gold_grid", "ALTIN IZGARA", "#FFC24A", 300],
+  ["cyber_pink", "NEON PEMBE", "#FF2A85", 420],
 ] as const;
 
 export function CyberStore({
@@ -362,8 +376,10 @@ export function CyberStore({
               const isSelected = progress?.selectedFrame === id;
               const isSignal = id === "signal";
               const isNeon = id === "neon";
-              const avatarEmoji = isSignal ? "📡" : isNeon ? "🔮" : "💎";
-              const avatarBg = isSignal ? "#071E1A" : isNeon ? "#1A0F35" : "#0F1A2B";
+              const isChrome = id === "chrome";
+              const isGold = id === "gold";
+              const avatarEmoji = isSignal ? "📡" : isNeon ? "🔮" : isChrome ? "💎" : isGold ? "👑" : "💖";
+              const avatarBg = isSignal ? "#071E1A" : isNeon ? "#1A0F35" : isChrome ? "#0F1A2B" : isGold ? "#2A1F05" : "#2A071B";
 
               return (
                 <Pressable
@@ -376,15 +392,15 @@ export function CyberStore({
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  {/* Avatar halka önizleme */}
-                  <View style={[styles.cosmeticRing, { borderColor: color, shadowColor: color }]}>
-                    <View style={[styles.cosmeticRingInner, { backgroundColor: avatarBg }]}>
-                      <Text style={{ fontSize: 22 }}>{avatarEmoji}</Text>
-                    </View>
-                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, top: 2, left: 2 }]} />
-                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, top: 2, right: 2 }]} />
-                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, bottom: 2, left: 2 }]} />
-                    <View style={[styles.cosmeticCornerDot, { backgroundColor: color, bottom: 2, right: 2 }]} />
+                  {/* Avatar halka önizleme (Üretilen Görsel) */}
+                  <View style={[styles.cosmeticRing, { borderColor: color, shadowColor: color, overflow: "hidden" }]}>
+                    {FRAME_IMAGES[id] ? (
+                      <Image source={FRAME_IMAGES[id]} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.cosmeticRingInner, { backgroundColor: avatarBg }]}>
+                        <Text style={{ fontSize: 22 }}>{avatarEmoji}</Text>
+                      </View>
+                    )}
                   </View>
 
                   <Text numberOfLines={1} style={[styles.cosmeticCardName, { color }]}>{label}</Text>
@@ -466,7 +482,6 @@ export function CyberStore({
               const isSelected = progress?.selectedBoardSkin === id;
               const isGrid = id === "grid";
               const isNight = id === "night";
-              const isEmber = id === "ember";
 
               return (
                 <Pressable

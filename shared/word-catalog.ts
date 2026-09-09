@@ -14,6 +14,19 @@ export type WordEntry = {
 type CatalogPayload = { version: number; words: WordEntry[] };
 
 const WORD_BLACKLIST = new Set([
+  // --- Kullanıcı tarafından bildirilen ve filtrelenen saçma / argo / tıbbi / küfür kelimeler ---
+  "MABLAK", "DEBİL", "BASUR", "PEZEVENK", "DÜRZİ", "KAKA", "ÇİŞ", "MENİ", "ENİK", "DENYO", "APTAL", "SÜRTÜK", "DÖL", "KAHPE",
+  "BASAK", "BASYA", "BASTIK", "BASİL", "DEBAGAT", "DEBBOY", "DEBBAĞ", "MABEYİN", "MABAT",
+  "CÜZZAM", "FRENGİ", "TİFÜS", "KOLERA", "VEREM", "APANDİS", "KUDUZ", "VEBA", "GAYTA", "DIŞKI",
+  "İSTİDA", "GARAMİ", "GAMBA", "TELKİH", "TEPİR", "TENVİR", "TEVKİL", "GALİZ", "TALİKA", "GAŞİY",
+  "SUOKU", "MUTKİ", "KARGIN", "KAÇLI", "TEAMÜL", "OYDAŞ", "SPERM", "CİFE", "ORAL", "KİST", "YALAK",
+  "CART", "CURT", "GÖVEK", "CEMAN", "YÜKÜN", "MOLAS", "EMMEÇ", "MARİZ", "CİHET", "GÜRE", "AYAŞ",
+  "MİSO", "MUTİ", "VİDO", "UĞRU", "BARI", "İLGEÇ", "BÜGDÜZ", "TARAŞ", "MANZUM", "APOLET", "MARAZİ", "TAYF",
+  "CÜNÜP", "ZİNA", "LİVATA", "GUSÜL", "ŞEHVET", "HADIM", "CİNSİ", "TENASÜL", "MECUSİ", "ZINDIK",
+  "KAFİR", "MÜNAFIK", "MÜRTED", "HALVET", "LAHURİ", "UYUNTU", "SARALI", "TAYLAK", "BADAS", "ZİYALI",
+  "İPTİDA", "BARUDİ", "HİTAM", "CEMŞAT", "TERHİN", "PASTAL", "NAKIS", "KAZAĞI", "KÖTEK", "DURAL",
+  "KOKOT", "FODRA", "HABEŞ", "ERDİŞİ", "HAİLE", "İZOBAR", "MUNZAM", "HAYBE", "GARPLI", "KOVUŞ", "İLENİŞ", "CÜCÜK", "DAYANÇ", "KARİNA",
+  "BOMBOK", "TIRKAZ", "ALBATR", "HÜRLE", "TİMBAL", "GENZEL", "BOALAR", "SERGİN", "KESENE",
   // --- Daha önce eklenenler ---
   "NAM", "LAK", "PRUVA", "MEME", "PISMA", "TONLUK", "EKSERİ", "EKSERİYA", "ÖZENİ", "ÖRMELİ", "DİTMEK",
   "BAV", "RUF", "DUN", "FEL", "SEM", "NOM", "POG", "ALG", "HAV", "CUP", "PIR", "DEH", "BED",
@@ -122,8 +135,12 @@ const WORD_BLACKLIST = new Set([
   "ALMUS", "ALTIZ", "ALİZE", "AMADE", "AMPİR", "ANACA", "ANDIK", "ANDIÇ", "ANLAK",
   "ANZAK", "ANÜRİ", "APOTR", "APOŞİ", "APSİS", "APİKO", "ARAKA", "ARDIL", "ARGAÇ",
   "ARSİN", "ARİZA", "ASKAT", "ASKLI", "ASİDE", "AVAZE", "AVLAK", "AYNAZ", "AZVAY",
-  "AĞCIK", "AĞILI", "AĞLAK", "AĞRAZ", "AĞYAR", "BADAS", "BADIÇ",
-  "MEREK", "MUHİL", "MERES", "MEZRU", "MENUS", "MEHLE"
+  "MEREK", "MUHİL", "MERES", "MEZRU", "MENUS", "MEHLE",
+  "YAVAŞA", "YAVAŞAK", "YAVŞA", "YAVŞAK",
+  "CAMİT", "FAHTE", "FAÇALI", "CARLI", "MAHCUR", "NAKİP", "MUHAT", "MAHUR", "REKİZ",
+  "GABRO", "MUHİP", "RUHÇA", "RİCAL", "RÜKÜN", "RÜYET", "MEVUT", "GABİN", "REMİZ",
+  "RECİM", "RÜSUM", "REVAK", "MİLEL", "MUTAT", "MÜHRE", "MUTAF", "FAÇUNA", "FAGOT",
+  "FANYA", "FASIK", "FASİT", "FİRAK", "FÜCUR", "FÜTUR", "CAĞLI", "CANFEZ", "CAVLAN"
 ]);
 
 
@@ -158,7 +175,7 @@ const THEME_WORDS: Record<Exclude<WordTheme, "general">, readonly string[]> = {
     "GÖKKUŞAĞI", "BİYOÇEŞİTLİLİK", "YANARDAĞ", "KUTUPAYISI", "BUZULLAR"
   ],
   city: [
-    "EVİM", "ODA", "KAPI", "KENT", "YOLU", "PARK", "BİNA", "KULE", "YAYA", "ÇATI", "OTEL",
+    "EV", "ODA", "KAPI", "KENT", "YOL", "PARK", "BİNA", "KULE", "YAYA", "ÇATI", "OTEL",
     "ŞEHİR", "YOLCU", "SEFER", "SOKAK", "CADDE", "KÖPRÜ", "PAZAR", "METRO", "ARABA", "LAMBA", "LİMAN", "SİTE",
     "HARİTA", "PUSULA", "MACERA", "TİYATRO", "SİNEMA", "MARKET", "DÜKKAN", "OTOBÜS", "TRAFİK", "BALKON", "MEYDAN", "OTOGAR", "BULVAR", "KAVŞAK", "VİYADÜK", "SANAYİ",
     "MAHALLE", "TRAMVAY", "BİSİKLET", "ASANSÖR", "PENCERE", "RESTORAN", "İSTASYON", "GÖKDELEN", "BELEDİYE", "OTOPARK", "KAMUSAL",
@@ -169,10 +186,10 @@ const THEME_WORDS: Record<Exclude<WordTheme, "general">, readonly string[]> = {
     "BİLGİ", "ÇÖZÜM", "DENGE", "GİZEM", "FİKİR", "BEYİN", "KİTAP", "SINAV", "CEVAP", "TEORİ", "SANAT", "MERAK", "DENEY", "BİLİM", "ŞUUR", "İDRAK", "KAVRAM",
     "KELİME", "HAFIZA", "EĞİTİM", "DEFTER", "MANTIK", "FORMÜL", "SÖZLÜK", "DİKKAT", "SEZGİ", "ANALİZ", "HİPOTEZ", "BİLİNÇ",
     "BİLMECE", "BULMACA", "GİZEMLİ", "ANLAMLI", "BİLİNMEZ", "HATIRLA", "DÜŞÜNCE", "ÖĞRENME", "FELSEFE", "EDEBİYAT", "MANTIKLI", "ÇIKARIM", "AKADEMİK",
-    "ALGORİTMA", "KOGNİTİF", "PSİKOLOJİ", "METODOLOJİ", "BİLİNÇALTI", "MUHAKEME", "ENSEKLOPEDİ"
+    "ALGORİTMA", "KOGNİTİF", "PSİKOLOJİ", "METODOLOJİ", "BİLİNÇALTI", "MUHAKEME", "ANSİKLOPEDİ"
   ],
   space: [
-    "GÖK", "UZAY", "MARS", "TAYF", "FÜZE", "UYDU", "IŞIK",
+    "GÖK", "UZAY", "MARS", "FÜZE", "UYDU", "IŞIK",
     "GÜNEŞ", "EVREN", "MEKİK", "ROKET", "KÜTLE", "ÇEKİM", "FOTON", "VENÜS", "BOŞLUK", "KUŞAK", "SONDA", "ROVER",
     "YILDIZ", "GEZEGEN", "METEOR", "KOZMOZ", "NEBULA", "KRATER", "SİSTEM", "PULSAR", "KUAZAR", "MERKÜR", "SATÜRN", "NEPTÜN", "URANÜS", "PLÜTON", "JÜPİTER", "MODÜL", "KAPSÜL", "IŞIMAK",
     "GALAKSİ", "YÖRÜNGE", "ASTRONOM", "KOZMONOT", "IŞIKHIZI", "GÖKTAŞI", "KIZILÖTE", "RADYASYON", "İSTASYON",
@@ -206,7 +223,7 @@ for (const [theme, list] of Object.entries(THEME_WORDS)) {
       difficulty: word.length <= 5 ? "easy" : word.length <= 7 ? "medium" : "hard",
       boards: [4, 6, 8, 10],
       tags: [theme as WordTheme, "general"],
-      weight: 4,
+      weight: 3,
     });
   }
 }
@@ -255,7 +272,7 @@ for (const verb of NATURAL_INFINITIVES) {
       difficulty: verb.length <= 6 ? "easy" : "medium",
       boards: getBoardsForLength(verb.length),
       tags: ["general"],
-      weight: 4,
+      weight: 3,
     });
   }
 }

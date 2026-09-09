@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Image } from "react-native";
 
 export function GoogleLogo({ size = 24 }: { size?: number }) {

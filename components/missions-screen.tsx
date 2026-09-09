@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
@@ -70,7 +70,6 @@ export function MissionsScreen({
   const allActiveMissions = useMemo(() => [...dailyMissions, ...weeklyMissions], [dailyMissions, weeklyMissions]);
 
   const completedCount = allActiveMissions.filter((m) => {
-    const isDaily = m.period === "daily";
     const current = progress.missions?.[m.id] ?? 0;
     return current >= m.target;
   }).length;
@@ -247,7 +246,7 @@ export function MissionsScreen({
       {/* Daily Missions Section */}
       <View style={styles.sectionHead}>
         <Text style={styles.sectionTitle}>⚡ GÜNLÜK GÖREVLER (3 ADET)</Text>
-        <Text style={styles.sectionMeta}>HER GÜN 00:00'DA YENİLENİR</Text>
+        <Text style={styles.sectionMeta}>HER GÜN 00:00&apos;DA YENİLENİR</Text>
       </View>
 
       <View style={styles.missionList}>

@@ -287,6 +287,14 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
         .map((w) => ({ word: w, path: room.routes[w] ?? [] }))
     : undefined;
 
+  let viewerMessage = room.message;
+  if (room.status === "playing") {
+    const lastFound = room.foundWords[room.foundWords.length - 1];
+    if (lastFound && lastFound.playerId !== viewerId && lastFound.word) {
+      viewerMessage = viewerMessage.replace(`“${lastFound.word}”`, "bir kelime");
+    }
+  }
+
   return {
     code: room.code,
     size: room.size,
@@ -299,7 +307,7 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
     players,
     winnerId: room.winnerId,
     startedAt: room.startedAt,
-    message: room.message,
+    message: viewerMessage,
     botSelection: undefined, // Bot seçimi oyuncu ekranında gösterilmez
     combos: room.comboCount,
     disconnectExpiresAt: room.disconnectExpiresAt ?? null,
@@ -872,6 +880,9 @@ export function registerGameRooms(io: Server) {
       rooms.set(code, room);
       socket.join(`room:${code}`);
       emitRoom(io, room);
+      if (payload.immediateBot) {
+        scheduleBotFill(io, room);
+      }
     });
 
     socket.on("room:join", (payload: { code: string; playerId: string; playerName: string; profile?: z.infer<typeof playerProfileSchema> }) => {
