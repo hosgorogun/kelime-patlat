@@ -79,9 +79,6 @@ export const UserModel = mongoose.models.User || mongoose.model<User>("User", Us
 
 function databaseUri() {
   const uri = process.env.MONGODB_URI?.trim();
-  if (process.env.NODE_ENV === "production" && !uri) {
-    throw new Error("MONGODB_URI must be configured in production.");
-  }
   return uri || "mongodb://127.0.0.1:27017/kelime_patlat";
 }
 

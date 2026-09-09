@@ -293,13 +293,12 @@ export function CyberStore({
         </View>
 
         {CHIP_EQUIPMENT_ITEMS.map((item) => {
-          const isOwned = item.rewardType === "avatar" && Boolean(progress?.purchasedAvatars?.crown || (progress?.wins && progress.wins >= 5) || progress?.selectedAvatar === "crown");
+          const isOwned = false;
           const canAfford = coins >= item.cost;
-          const isDisabled = isOwned || !canAfford;
+          const isDisabled = !canAfford;
           const isRadar = item.rewardType === "radar";
           const isShield = item.rewardType === "shield";
           const isXp = item.rewardType === "xp";
-          const isCrown = item.rewardType === "avatar";
 
           const accentColor = isRadar ? "#00F5D4" : isShield ? "#60A5FA" : isXp ? "#F59E0B" : "#EC4899";
 

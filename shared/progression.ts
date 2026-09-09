@@ -1,5 +1,5 @@
 export type ThemePackId = "nature" | "city" | "mind" | "space" | "sports" | "food";
-export type AvatarId = "spark" | "orbit" | "sage" | "comet" | "crown" | "ember";
+export type AvatarId = "spark" | "orbit" | "sage" | "comet" | "ember";
 
 export type ThemePack = {
   id: ThemePackId;
@@ -49,6 +49,7 @@ export type PlayerProgress = {
   coins?: number;
   streakShields?: number;
   radarChargesBonus?: number;
+  welcomeRewardClaimed?: boolean;
   lastMatchReward?: {
     xp: number;
     lp: number;
@@ -128,7 +129,6 @@ export const AVATARS: AvatarOption[] = [
   { id: "orbit", label: "YÖRÜNGE", icon: "◌", color: "#9A76ED", surface: "#332456", unlockHint: "Seviye 3 olduğunda açılır." },
   { id: "sage", label: "BİLGE", icon: "◇", color: "#FFC24A", surface: "#4E3A1D", unlockHint: "Seviye 6 olduğunda açılır." },
   { id: "comet", label: "KUYRUKLU", icon: "☄", color: "#79C8FF", surface: "#18375A", unlockHint: "Arcade modda 400 puanı aş." },
-  { id: "crown", label: "TAÇ", icon: "♕", color: "#FF83A4", surface: "#55233B", unlockHint: "Canlı düellolarda 5 galibiyet al." },
   { id: "ember", label: "KOR", icon: "✺", color: "#FF9B62", surface: "#513024", unlockHint: "Günlük serini 5 güne çıkar." },
 ];
 
@@ -168,9 +168,9 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   selectedTheme: "nature",
   selectedAvatar: "spark",
   history: [],
-  streakShields: 1,
-  coins: 50,
-  radarChargesBonus: 2,
+  streakShields: 0,
+  coins: 0,
+  radarChargesBonus: 0,
   claimedMilestones: {},
   dailyClaimed: {},
   gender: "unspecified",
@@ -440,7 +440,7 @@ export function applyMatchProgress(
     ...progress,
     xp: progress.xp + xpGain,
     lp: nextLp,
-    coins: (progress.coins ?? 50) + coinsEarned,
+    coins: (progress.coins ?? 0) + coinsEarned,
     wins: progress.wins + (result.won ? 1 : 0),
     matches: progress.matches + (type !== "solo" ? 1 : 0),
     bestScore: Math.max(progress.bestScore, result.score),
@@ -470,7 +470,7 @@ export function applyArcadeProgress(progress: PlayerProgress, score: number) {
   return {
     ...progress,
     xp: progress.xp + xpGain,
-    coins: (progress.coins ?? 50) + coinsGain,
+    coins: (progress.coins ?? 0) + coinsGain,
     bestArcadeScore: newBest,
     missions: nextMissions,
   };
@@ -493,11 +493,12 @@ export function mergePlayerProgress(
     ...DEFAULT_PROGRESS,
     ...local,
     ...remote,
+    welcomeRewardClaimed: Boolean(local.welcomeRewardClaimed || remote.welcomeRewardClaimed),
     xp: safeNum(Math.max(local.xp, remote.xp ?? 0), local.xp),
     lp: safeNum(Math.max(local.lp ?? 0, remote.lp ?? 0), local.lp ?? 0),
     coins: useRemoteBalances && remote.coins !== undefined
-      ? safeNum(remote.coins, local.coins ?? 50)
-      : safeNum(Math.max(local.coins ?? 50, remote.coins ?? 50), local.coins ?? 50),
+      ? safeNum(remote.coins, local.coins ?? 0)
+      : safeNum(Math.max(local.coins ?? 0, remote.coins ?? 0), local.coins ?? 0),
     streakShields: useRemoteBalances && remote.streakShields !== undefined
       ? safeNum(remote.streakShields, local.streakShields ?? 0, 99)
       : safeNum(Math.max(local.streakShields ?? 0, remote.streakShields ?? 0), local.streakShields ?? 0, 99),
@@ -600,7 +601,6 @@ export function isAvatarUnlocked(avatarId: AvatarId, progress: PlayerProgress): 
   if (avatarId === "orbit") return currentLevel >= 3;
   if (avatarId === "sage") return currentLevel >= 6;
   if (avatarId === "comet") return (progress.bestArcadeScore || 0) >= 400;
-  if (avatarId === "crown") return progress.wins >= 5;
   if (avatarId === "ember") return progress.streak >= 5;
   return true;
 }
@@ -731,7 +731,7 @@ export function checkDailyLoginReward(progress: PlayerProgress, todayId: string)
   const updatedProgress: PlayerProgress = {
     ...progress,
     xp: progress.xp + xpBonus,
-    coins: (progress.coins ?? 50) + coinsBonus,
+    coins: (progress.coins ?? 0) + coinsBonus,
     streakShields: (progress.streakShields || 0) + shieldBonus,
     lastLoginDay: todayId,
     loginDaysCount: (progress.loginDaysCount || 0) + 1,

@@ -34,12 +34,4 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
     icon: "⚡",
     rewardType: "xp",
   },
-  {
-    id: "avatar_crown",
-    name: "Taç Avatar Kilidini Aç",
-    description: "TAÇ avatarını çip ile satın al, galibiyet sayısına bakmaksızın kullan.",
-    cost: 300,
-    icon: "👑",
-    rewardType: "avatar",
-  },
 ];

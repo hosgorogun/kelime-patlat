@@ -69,7 +69,6 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "radar_5")?.cost).toBe(75);
     expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "shield_1")?.cost).toBe(120);
     expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "xp_250")?.cost).toBe(150);
-    expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "avatar_crown")?.cost).toBe(300);
   });
 
   it("dokuz lig kademesini LP eşiklerine göre seçer", () => {
@@ -120,7 +119,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
   });
 
   it("avatar koleksiyonu seçilebilir kimlikler sunar ve rozetler ilerlemeye göre açılır", () => {
-    expect(AVATARS).toHaveLength(6);
+    expect(AVATARS).toHaveLength(5);
     expect(AVATARS.some((avatar) => avatar.id === DEFAULT_PROGRESS.selectedAvatar)).toBe(true);
     const rookieBadges = badgesFor(DEFAULT_PROGRESS);
     expect(rookieBadges.every((badge) => !badge.unlocked)).toBe(true);
@@ -162,12 +161,6 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(isAvatarUnlocked("comet", DEFAULT_PROGRESS)).toBe(false);
     expect(isAvatarUnlocked("comet", { ...DEFAULT_PROGRESS, bestArcadeScore: 400 })).toBe(true);
 
-    // TAÇ (crown) galibiyet 5 veya satın alma gerektirir
-    expect(isAvatarUnlocked("crown", DEFAULT_PROGRESS)).toBe(false);
-    expect(isAvatarUnlocked("crown", { ...DEFAULT_PROGRESS, wins: 5 })).toBe(true);
-    expect(isAvatarUnlocked("crown", { ...DEFAULT_PROGRESS, purchasedAvatars: { crown: true } })).toBe(true);
-    expect(isAvatarUnlocked("crown", { ...DEFAULT_PROGRESS, selectedAvatar: "crown" })).toBe(true);
-
     // KOR (ember) seri 5 gerektirir
     expect(isAvatarUnlocked("ember", DEFAULT_PROGRESS)).toBe(false);
     expect(isAvatarUnlocked("ember", { ...DEFAULT_PROGRESS, streak: 5 })).toBe(true);
@@ -195,7 +188,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(mystery.word).toBeTruthy();
     expect(mystery.definition).toBeTruthy();
     expect(mystery.rewardXp).toBe(150);
-    expect(DEFAULT_PROGRESS.streakShields).toBe(1);
+    expect(DEFAULT_PROGRESS.streakShields).toBe(0);
   });
 
   it("günün gizemli kelimesi ve görev tamamlamaları için ekstra XP ve çip ödülü verir", () => {
@@ -209,7 +202,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     }, "pvp");
 
     expect(resultWithMystery.xp).toBeGreaterThanOrEqual(100 + 35);
-    expect(resultWithMystery.coins).toBe((DEFAULT_PROGRESS.coins ?? 50) + 10);
+    expect(resultWithMystery.coins).toBe((DEFAULT_PROGRESS.coins ?? 0) + 10);
     // Completing duels mission (2/2) gives +50 XP bonus
     const duel2 = applyMatchProgress({ ...DEFAULT_PROGRESS, missions: { daily: 0, duels: 1, wordsmith: 0 } }, {
       score: 50,

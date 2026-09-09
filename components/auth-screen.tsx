@@ -5,6 +5,7 @@ import { getApiBaseUrl, SESSION_TOKEN_KEY, startOAuthLogin } from "@/constants/o
 import { ScreenContainer } from "./screen-container";
 import { haptics } from "@/lib/haptics";
 import { type GenderType } from "@/shared/progression";
+import { GoogleLogo, AppleLogo } from "./brand-logos";
 
 type AuthScreenProps = {
   onSuccess: (token: string, username: string, cloudProgress: any, openId: string) => void;
@@ -92,12 +93,21 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
   return (
     <ScreenContainer style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {isSignUp && (
+          <Pressable
+            onPress={() => { haptics.light(); setIsSignUp(false); setError(""); }}
+            style={styles.backButton}
+          >
+            <Text style={styles.backButtonText}>‹</Text>
+          </Pressable>
+        )}
         <View style={styles.card}>
           <Text style={styles.glowTitle}>KELİME PATLAT</Text>
-          <Text style={styles.subtitle}>BULUT BAĞLANTISI</Text>
+          <Text style={styles.subtitle}>{isSignUp ? "YENİ HESAP" : "BULUT BAĞLANTISI"}</Text>
 
           {isSignUp ? (
             <>
+              {/* Ad Soyad + E-posta yan yana değil, compact */}
               <Text style={styles.label}>AD SOYAD</Text>
               <TextInput
                 value={fullName}
@@ -109,7 +119,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                 placeholderTextColor="#6F879A"
               />
 
-              <Text style={styles.label}>E-POSTA ADRESİ</Text>
+              <Text style={styles.label}>E-POSTA</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
@@ -186,31 +196,34 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
             </Text>
           </Pressable>
 
-          {/* Social Logins Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>VEYA</Text>
-            <View style={styles.dividerLine} />
-          </View>
+          {/* Social login sadece giriş ekranında göster */}
+          {!isSignUp && (
+            <>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>VEYA</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-          {/* Social Login Buttons */}
-          <View style={styles.socialContainer}>
-            <Pressable
-              onPress={() => handleThirdPartyPress("Google")}
-              style={({ pressed }) => [styles.socialButton, styles.googleButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.socialIcon}>G</Text>
-              <Text style={styles.socialText}>Google ile Giriş</Text>
-            </Pressable>
+              <View style={styles.socialContainer}>
+                {/* Google */}
+                <Pressable
+                  onPress={() => handleThirdPartyPress("Google")}
+                  style={({ pressed }) => [styles.socialIconButton, styles.googleButton, pressed && styles.pressed]}
+                >
+                  <GoogleLogo size={24} />
+                </Pressable>
 
-            <Pressable
-              onPress={() => handleThirdPartyPress("Apple")}
-              style={({ pressed }) => [styles.socialButton, styles.appleButton, pressed && styles.pressed]}
-            >
-              <Text style={[styles.socialIcon, { color: "#FFFFFF" }]}></Text>
-              <Text style={[styles.socialText, { color: "#FFFFFF" }]}>Apple ile Giriş</Text>
-            </Pressable>
-          </View>
+                {/* Apple */}
+                <Pressable
+                  onPress={() => handleThirdPartyPress("Apple")}
+                  style={({ pressed }) => [styles.socialIconButton, styles.appleButton, pressed && styles.pressed]}
+                >
+                  <AppleLogo size={24} />
+                </Pressable>
+              </View>
+            </>
+          )}
 
           {onCancel && (
             <Pressable onPress={() => { haptics.light(); onCancel(); }} style={styles.guestButton}>
@@ -238,17 +251,21 @@ const styles = StyleSheet.create({
   backButton: {
     width: 38,
     height: 38,
-    borderRadius: 14,
+    borderRadius: 19,
     backgroundColor: "#1E1838",
-    borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.4)",
+    borderWidth: 1.5,
+    borderColor: "rgba(154, 118, 237, 0.5)",
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "flex-start",
+    marginBottom: 10,
   },
-  backText: {
-    color: "#FFF9FC",
+  backButtonText: {
+    color: "#9A76ED",
     fontSize: 26,
-    lineHeight: 28,
+    lineHeight: 30,
+    fontWeight: "300",
+    marginTop: -2,
   },
   guestButton: {
     marginTop: 18,
@@ -303,19 +320,19 @@ const styles = StyleSheet.create({
     color: "#FF007F",
     textAlign: "center",
     letterSpacing: 3,
-    marginTop: 6,
-    marginBottom: 20,
+    marginTop: 4,
+    marginBottom: 12,
   },
   label: {
     color: "#B5A9CD",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.2,
-    marginBottom: 8,
-    marginTop: 14,
+    marginBottom: 5,
+    marginTop: 10,
   },
   input: {
-    height: 48,
+    height: 44,
     borderRadius: 12,
     backgroundColor: "#1A1535",
     borderWidth: 1,
@@ -326,12 +343,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   submitButton: {
-    height: 48,
+    height: 46,
     borderRadius: 12,
     backgroundColor: "#00F5D4",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 24,
+    marginTop: 14,
     shadowColor: "#00F5D4",
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -344,7 +361,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   switchButton: {
-    marginTop: 18,
+    marginTop: 12,
     alignItems: "center",
   },
   switchText: {
@@ -363,7 +380,7 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 20,
+    marginVertical: 12,
     gap: 10,
   },
   dividerLine: {
@@ -378,7 +395,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   socialContainer: {
-    gap: 10,
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "center",
+  },
+  socialIconButton: {
+    width: 54,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
   },
   socialButton: {
     height: 46,
@@ -397,16 +424,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
     borderColor: "#1E1E1E",
   },
-  socialIcon: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: "#000000",
+  googleIconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#4285F4",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  socialText: {
-    fontSize: 12,
-    fontWeight: "800",
+  googleIconText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 16,
+  },
+  googleText: {
+    fontSize: 13,
+    fontWeight: "700",
     color: "#1F2937",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+  },
+  appleIconText: {
+    fontSize: 18,
+    color: "#FFFFFF",
+    lineHeight: 22,
+    fontWeight: "400",
+  },
+  appleText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.2,
   },
   pressed: {
     opacity: 0.85,
@@ -428,7 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: "rgba(122, 98, 195, 0.4)",
-    paddingVertical: 14,
+    paddingVertical: 9,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",

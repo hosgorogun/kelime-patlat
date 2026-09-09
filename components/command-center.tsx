@@ -255,7 +255,7 @@ export function CommandCenter({
         >
           <Text style={styles.resourceIcon}>🪙</Text>
           <Text style={styles.resourceLabel}>ÇİP</Text>
-          <Text style={styles.coinValue}>{progress.coins ?? 50}</Text>
+          <Text style={styles.coinValue}>{progress.coins ?? 0}</Text>
           <View style={styles.plusBadge}>
             <Text style={styles.plusText}>＋</Text>
           </View>

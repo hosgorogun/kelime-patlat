@@ -70,7 +70,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [status, setStatus] = useState<"playing" | "won" | "lost">("playing");
   const [isSelecting, setIsSelecting] = useState(false);
   const [radarCooldown, setRadarCooldown] = useState(0);
-  const [radarCharges, setRadarCharges] = useState(3 + (radarChargesBonus || 0));
+  const [radarCharges, setRadarCharges] = useState(radarChargesBonus || 0);
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);

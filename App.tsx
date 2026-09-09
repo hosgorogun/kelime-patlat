@@ -215,6 +215,7 @@ function HomeScreen() {
   const [progressReady, setProgressReady] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [isClaimingWelcomeReward, setIsClaimingWelcomeReward] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dailySession, setDailySession] = useState<DailyChallenge | null>(null);
   const daily = useMemo(() => getDailyChallenge(), []);
@@ -686,10 +687,14 @@ function HomeScreen() {
 
   useEffect(() => {
     if (!progressReady) return;
-    AsyncStorage.getItem("kelime-patlat:guide-seen").then((seen) => {
-      if (!seen) {
-        setShowGuide(true);
-      }
+    if (progress.welcomeRewardClaimed) return;
+    void AsyncStorage.getItem("kelime-patlat:player-id").then((openId) => {
+      const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
+      AsyncStorage.getItem(key).then((seen) => {
+        if (!seen) {
+          setShowWelcomeModal(true);
+        }
+      });
     });
 
     // Comprehensive daily reconciliation: streak shields, daily/weekly missions, and season resets
@@ -904,18 +909,32 @@ function HomeScreen() {
     const socket = getGameSocket();
     if (socket.connected) return socket;
     socket.connect();
-    // 2 saniye boyunca bağlantının kurulmasını bekle
+    // 7 saniye boyunca bağlantının kurulmasını bekle
     return new Promise((resolve) => {
       if (socket.connected) return resolve(socket);
-      const timer = setTimeout(() => {
-        socket.off("connect", onConnect);
-        resolve(socket.connected ? socket : null);
-      }, 2000);
+      let timer: NodeJS.Timeout;
       const onConnect = () => {
-        clearTimeout(timer);
+        cleanup();
         resolve(socket);
       };
+      const onError = (err?: any) => {
+        if (err?.message && err.message !== "Invalid session") {
+          console.warn("[Socket] Connection error:", err);
+        }
+        cleanup();
+        resolve(socket.connected ? socket : null);
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        socket.off("connect", onConnect);
+        socket.off("connect_error", onError);
+      };
+      timer = setTimeout(() => {
+        cleanup();
+        resolve(socket.connected ? socket : null);
+      }, 7000);
       socket.once("connect", onConnect);
+      socket.once("connect_error", onError);
     });
   };
 
@@ -1368,7 +1387,7 @@ function HomeScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0, 245, 212, 0.08)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.3)", padding: 14, gap: 14 }}>
                   <Text style={{ fontSize: 28 }}>👁️</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: "#00F5D4", fontSize: 20, fontWeight: "900" }}>2</Text>
+                    <Text style={{ color: "#00F5D4", fontSize: 20, fontWeight: "900" }}>5</Text>
                     <Text style={{ color: "#E2E8F0", fontSize: 13, fontWeight: "700" }}>Radar İpucu Hakkı</Text>
                   </View>
                   <Text style={{ color: "#00F5D4", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>JOKER</Text>
@@ -1385,16 +1404,53 @@ function HomeScreen() {
 
               {/* Buton */}
               <Pressable
-                onPress={() => {
+                disabled={isClaimingWelcomeReward}
+                onPress={async () => {
+                  if (isClaimingWelcomeReward) return;
+                  setIsClaimingWelcomeReward(true);
+                  haptics.success();
+
+                  // 1. Modalı kapat
                   setShowWelcomeModal(false);
-                  AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
+
+                  // 2. Atomik State Güncellemesi & Anında Senkronizasyon
+                  let updatedNext: PlayerProgress | null = null;
+                  setProgress((prev) => {
+                    if (prev.welcomeRewardClaimed) return prev;
+                    updatedNext = {
+                      ...prev,
+                      welcomeRewardClaimed: true,
+                      coins: (prev.coins || 0) + 50,
+                      streakShields: (prev.streakShields || 0) + 1,
+                      radarChargesBonus: (prev.radarChargesBonus || 0) + 5,
+                    };
+                    return updatedNext;
+                  });
+
+                  // 3. Arka plan senkronizasyonu
+                  try {
+                    const openId = await AsyncStorage.getItem("kelime-patlat:player-id");
+                    const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
+                    await AsyncStorage.setItem(key, "true");
+                    await AsyncStorage.setItem("kelime-patlat:guide-seen", "true");
+                    if (updatedNext) {
+                      await syncProgressToCloud(updatedNext);
+                    }
+                  } catch (e) {
+                    console.warn("[WelcomeReward] Async save warning:", e);
+                  } finally {
+                    setIsClaimingWelcomeReward(false);
+                    setTimeout(() => {
+                      setShowGuide(true);
+                    }, 250);
+                  }
                 }}
                 style={({ pressed }) => ({
                   backgroundColor: "#00F5D4",
                   borderRadius: 18,
                   paddingVertical: 15,
                   alignItems: "center",
-                  opacity: pressed ? 0.85 : 1,
+                  opacity: pressed || isClaimingWelcomeReward ? 0.7 : 1,
                   shadowColor: "#00F5D4",
                   shadowOpacity: 0.4,
                   shadowRadius: 10,
@@ -1588,7 +1644,7 @@ function HomeScreen() {
             haptics.success();
             setProgress((curr) => ({
               ...curr,
-              coins: (curr.coins ?? 50) + milestone.coins,
+              coins: (curr.coins ?? 0) + milestone.coins,
               streakShields: (curr.streakShields ?? 1) + milestone.shields,
               xp: curr.xp + milestone.xp,
               claimedMilestones: {
@@ -1653,84 +1709,94 @@ function HomeScreen() {
       <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <CyberStore
-          coins={progress.coins ?? 50}
+          coins={progress.coins ?? 0}
           progress={progress}
           onBuyCoins={(amount) => {
-            setProgress((current) => ({ ...current, coins: (current.coins ?? 50) + amount }));
+            setProgress((current) => {
+              const next = { ...current, coins: (current.coins ?? 0) + amount };
+              void syncProgressToCloud(next);
+              return next;
+            });
           }}
           onBuyRadar={() => {
-            setProgress((current) => ({
-              ...current,
-              xp: current.xp + 200,
-              radarChargesBonus: (current.radarChargesBonus || 0) + 10,
-            }));
+            setProgress((current) => {
+              const next = {
+                ...current,
+                xp: current.xp + 200,
+                radarChargesBonus: (current.radarChargesBonus || 0) + 10,
+              };
+              void syncProgressToCloud(next);
+              return next;
+            });
           }}
           onSpendCoins={(item) => {
             setProgress((current) => {
-              const currentCoins = current.coins ?? 50;
+              const currentCoins = current.coins ?? 0;
               if (currentCoins < item.cost) return current;
               const nextCoins = currentCoins - item.cost;
+              let next = { ...current, coins: nextCoins };
               if (item.rewardType === "radar") {
-                return {
-                  ...current,
-                  coins: nextCoins,
+                next = {
+                  ...next,
                   radarChargesBonus: (current.radarChargesBonus || 0) + 5,
                 };
-              }
-              if (item.rewardType === "shield") {
-                return {
-                  ...current,
-                  coins: nextCoins,
+              } else if (item.rewardType === "shield") {
+                next = {
+                  ...next,
                   streakShields: (current.streakShields || 0) + 1,
                 };
-              }
-              if (item.rewardType === "xp") {
-                return {
-                  ...current,
-                  coins: nextCoins,
+              } else if (item.rewardType === "xp") {
+                next = {
+                  ...next,
                   xp: current.xp + 250,
                 };
               }
-              if (item.rewardType === "avatar") {
-                return {
-                  ...current,
-                  coins: nextCoins,
-                  selectedAvatar: "crown",
-                  purchasedAvatars: {
-                    ...(current.purchasedAvatars ?? {}),
-                    crown: true,
-                  },
-                };
-              }
-              return { ...current, coins: nextCoins };
+              void syncProgressToCloud(next);
+              return next;
             });
           }}
           onSelectFrame={(selectedFrame) => {
-            setProgress((current) => ({ ...current, selectedFrame }));
+            setProgress((current) => {
+              const next = { ...current, selectedFrame };
+              void syncProgressToCloud(next);
+              return next;
+            });
             setGlobalToast({ id: `frame-${Date.now()}`, title: "ÇERÇEVE KUŞANILDI", subtitle: "Profiler sinyalin güncellendi.", icon: "✨", accentColor: "#00F5D4" });
           }}
           onSelectVictoryEffect={(selectedVictoryEffect) => {
-            setProgress((current) => ({ ...current, selectedVictoryEffect }));
+            setProgress((current) => {
+              const next = { ...current, selectedVictoryEffect };
+              void syncProgressToCloud(next);
+              return next;
+            });
             setGlobalToast({ id: `effect-${Date.now()}`, title: "ZAFER EFEKTİ SEÇİLDİ", subtitle: "Bitiriş kutlama efekti aktif.", icon: "💥", accentColor: "#A78BFA" });
           }}
           onSelectBoardSkin={(selectedBoardSkin) => {
-            setProgress((current) => ({ ...current, selectedBoardSkin }));
+            setProgress((current) => {
+              const next = { ...current, selectedBoardSkin };
+              void syncProgressToCloud(next);
+              return next;
+            });
             setGlobalToast({ id: `skin-${Date.now()}`, title: "TAHTA GÖRÜNÜMÜ DEĞİŞTİ", subtitle: "Matris arka planın güncellendi.", icon: "🎨", accentColor: "#FFC24A" });
           }}
           onBuyCosmetic={(kind, id, cost) => {
             let success = false;
             setProgress((current) => {
-              if ((current.coins ?? 50) < cost) {
+              const currentCoins = current.coins ?? 0;
+              if (currentCoins < cost) {
                 setGlobalToast({ id: `store-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
                 return current;
               }
               success = true;
               setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#00F5D4" });
-              const next = { ...current, coins: (current.coins ?? 50) - cost };
-              if (kind === "avatar") return { ...next, selectedAvatar: id as PlayerProgress["selectedAvatar"], purchasedAvatars: { ...(next.purchasedAvatars ?? {}), [id]: true } };
-              if (kind === "frame") return { ...next, selectedFrame: id, ownedFrames: { ...(next.ownedFrames ?? {}), [id]: true } };
-              if (kind === "board") return { ...next, selectedBoardSkin: id, ownedBoardSkins: { ...(next.ownedBoardSkins ?? {}), [id]: true } };
-              return { ...next, selectedVictoryEffect: id, ownedVictoryEffects: { ...(next.ownedVictoryEffects ?? {}), [id]: true } };
+              const nextCoins = currentCoins - cost;
+              let next = { ...current, coins: nextCoins };
+              if (kind === "avatar") next = { ...next, selectedAvatar: id as PlayerProgress["selectedAvatar"], purchasedAvatars: { ...(next.purchasedAvatars ?? {}), [id]: true } };
+              else if (kind === "frame") next = { ...next, selectedFrame: id, ownedFrames: { ...(next.ownedFrames ?? {}), [id]: true } };
+              else if (kind === "board") next = { ...next, selectedBoardSkin: id, ownedBoardSkins: { ...(next.ownedBoardSkins ?? {}), [id]: true } };
+              else next = { ...next, selectedVictoryEffect: id, ownedVictoryEffects: { ...(next.ownedVictoryEffects ?? {}), [id]: true } };
+              void syncProgressToCloud(next);
+              return next;
             });
             return success;
           }}
@@ -1991,8 +2057,8 @@ function HomeScreen() {
           await AsyncStorage.setItem("kelime-patlat:player-id", openId);
           await AsyncStorage.setItem("kelime-patlat:player-name", username);
           
-          // Seamless guest to registered account progress merge (Keep higher XP, wins, unlocked levels, etc.)
-          const mergedProgress = mergePlayerProgress(progress, cloudProgress);
+          // Seamless guest to registered account progress merge (prefer cloud account balances when logging in)
+          const mergedProgress = mergePlayerProgress(progress, cloudProgress, { preferRemoteBalances: true });
 
           if (guestToken && guestToken !== "guest") {
             try {
@@ -2017,10 +2083,11 @@ function HomeScreen() {
           await syncProgressToCloud(mergedProgress);
           setScreen("home");
 
-          const seen = await AsyncStorage.getItem("kelime-patlat:guide-seen");
-          if (!seen) {
+          const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
+          const seen = await AsyncStorage.getItem(key);
+          if (!seen && !mergedProgress.welcomeRewardClaimed) {
             setTimeout(() => {
-              setShowGuide(true);
+              setShowWelcomeModal(true);
             }, 300);
           }
         }}
@@ -2081,7 +2148,7 @@ function HomeScreen() {
             void claimMissionOnServer("daily", missionId, (current) => ({
               ...current,
               xp: current.xp + xp,
-              coins: (current.coins ?? 50) + coins,
+              coins: (current.coins ?? 0) + coins,
               dailyClaimed: { ...(current.dailyClaimed || {}), [missionId]: true },
             }));
           }}
@@ -2090,7 +2157,7 @@ function HomeScreen() {
               ...current,
               xp: current.xp + xp,
               streakShields: (current.streakShields || 0) + (shield || 0),
-              coins: (current.coins ?? 50) + (coins || 0),
+              coins: (current.coins ?? 0) + (coins || 0),
               weeklyClaimed: { ...(current.weeklyClaimed || {}), [missionId]: true },
             }));
           }}

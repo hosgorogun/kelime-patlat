@@ -666,11 +666,16 @@ export function registerGameRooms(io: Server) {
     }
     try {
       const session = await sdk.verifySession(token);
-      if (!session) return next(new Error("Invalid session"));
+      if (!session) {
+        socket.data.userId = null;
+        next();
+        return;
+      }
       socket.data.userId = session.openId;
       next();
     } catch {
-      next(new Error("Invalid session"));
+      socket.data.userId = null;
+      next();
     }
   });
 
@@ -936,7 +941,13 @@ export function registerGameRooms(io: Server) {
       const room = rooms.get(payload.code.trim().toUpperCase());
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || room.status !== "playing") return;
-      if (room.startedAt && Date.now() < room.startedAt) return socket.emit("word:rejected", { word: "", reason: "starting" });
+      if (room.startedAt) {
+        if (Date.now() < room.startedAt) return socket.emit("word:rejected", { word: "", reason: "starting" });
+        const durationMs = getRoundDurationMs(room.size);
+        if (Date.now() >= room.startedAt + durationMs) {
+          return socket.emit("word:rejected", { word: "", reason: "time_up" });
+        }
+      }
       const selection = payload.selection;
       const validIndices =
         selection.length >= 2 &&

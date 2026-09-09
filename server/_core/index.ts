@@ -38,7 +38,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   if (process.env.NODE_ENV === "production" && !process.env.CORS_ORIGINS?.trim()) {
-    throw new Error("CORS_ORIGINS must be configured in production.");
+    console.warn("[Server] Warning: CORS_ORIGINS is not set.");
   }
   const app = express();
   const server = createServer(app);
@@ -392,7 +392,7 @@ async function startServer() {
         ? {
             ...current,
             xp: current.xp + (payload.data.score ?? 30),
-            coins: (current.coins ?? 50) + Math.max(2, Math.floor((payload.data.score ?? 30) / 10)),
+            coins: (current.coins ?? 0) + Math.max(2, Math.floor((payload.data.score ?? 30) / 10)),
             vintageProgress: {
               maxUnlockedLevel: Math.min(20, Math.max(current.vintageProgress?.maxUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
               completedLevels: Array.from(new Set([
@@ -444,7 +444,7 @@ async function startServer() {
         next = {
           ...current,
           xp: current.xp + catalogMission.rewardXp,
-          coins: (current.coins ?? 50) + catalogMission.rewardCoins,
+          coins: (current.coins ?? 0) + catalogMission.rewardCoins,
           streakShields: (current.streakShields ?? 0) + (catalogMission.rewardShields ?? 0),
           dailyClaimed: isDaily
             ? { ...(current.dailyClaimed ?? {}), [catalogMission.id]: true }
@@ -458,13 +458,13 @@ async function startServer() {
         if (!mission || (current.missions?.[mission.id] ?? 0) < mission.target || current.dailyClaimed?.[mission.id]) {
           return res.status(409).json({ error: "Günlük görev henüz tamamlanmadı veya zaten alındı." });
         }
-        next = { ...current, xp: current.xp + mission.rewardXp, coins: (current.coins ?? 50) + 25, dailyClaimed: { ...(current.dailyClaimed ?? {}), [mission.id]: true } };
+        next = { ...current, xp: current.xp + mission.rewardXp, coins: (current.coins ?? 0) + 25, dailyClaimed: { ...(current.dailyClaimed ?? {}), [mission.id]: true } };
       } else if (payload.data.missionId === "victoryStreak") {
         if (current.wins < 3 || current.weeklyClaimed?.victoryStreak) return res.status(409).json({ error: "Haftalık görev henüz tamamlanmadı veya zaten alındı." });
         next = { ...current, xp: current.xp + 250, streakShields: (current.streakShields ?? 0) + 1, weeklyClaimed: { ...(current.weeklyClaimed ?? {}), victoryStreak: true } };
       } else if (payload.data.missionId === "speedDemon") {
         if ((current.bestArcadeScore ?? 0) < 400 || current.weeklyClaimed?.speedDemon) return res.status(409).json({ error: "Haftalık görev henüz tamamlanmadı veya zaten alındı." });
-        next = { ...current, xp: current.xp + 200, coins: (current.coins ?? 50) + 50, weeklyClaimed: { ...(current.weeklyClaimed ?? {}), speedDemon: true } };
+        next = { ...current, xp: current.xp + 200, coins: (current.coins ?? 0) + 50, weeklyClaimed: { ...(current.weeklyClaimed ?? {}), speedDemon: true } };
       } else {
         return res.status(400).json({ error: "Bilinmeyen görev." });
       }

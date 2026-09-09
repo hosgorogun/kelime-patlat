@@ -74,7 +74,7 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
 
   describe("Siber Mağaza ve Çip Ekipmanları", () => {
     it("tüm çip ekipmanlarının benzersiz kimlik, geçerli maliyet ve ödül tipine sahip olduğunu doğrular", () => {
-      expect(CHIP_EQUIPMENT_ITEMS.length).toBeGreaterThanOrEqual(4);
+      expect(CHIP_EQUIPMENT_ITEMS.length).toBeGreaterThanOrEqual(3);
       const ids = CHIP_EQUIPMENT_ITEMS.map((item) => item.id);
       expect(new Set(ids).size).toBe(ids.length);
 
@@ -82,7 +82,7 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
         expect(item.cost).toBeGreaterThan(0);
         expect(item.name).toBeTruthy();
         expect(item.description).toBeTruthy();
-        expect(["radar", "shield", "xp", "avatar"]).toContain(item.rewardType);
+        expect(["radar", "shield", "xp"]).toContain(item.rewardType);
       });
     });
 
