@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, Dimensions, FlatList } from "react-native";
 
-import { getLeagueTier, getRank, getSeasonRemainingTime, type LeagueTierInfo, type PlayerProgress } from "@/shared/progression";
+import { getLeagueTier, getSeasonRemainingTime, type LeagueTierInfo, type PlayerProgress } from "@/shared/progression";
 import { type LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 
@@ -34,7 +34,6 @@ const LEAGUES: LeagueTierInfo[] = [
 
 export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerId: string; progress: PlayerProgress; leaderboard: LeaderboardEntry[]; onBack: () => void }) {
   const current = getLeagueTier(progress);
-  const rank = getRank(progress);
   const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
   const currentIndex = LEAGUES.findIndex((league) => league.tier === current.tier);
   const [selectedLeagueIndex, setSelectedLeagueIndex] = useState(currentIndex !== -1 ? currentIndex : 0);
@@ -43,7 +42,14 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
     ? Math.min(1, current.currentTierPoints / current.targetTierPoints)
     : 1;
 
-  const remaining = getSeasonRemainingTime();
+  const [remaining, setRemaining] = useState(() => getSeasonRemainingTime());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRemaining(getSeasonRemainingTime());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   const selectedLeague = LEAGUES[selectedLeagueIndex] ?? LEAGUES[0]!;
   const isSelectedCurrent = selectedLeague.tier === current.tier;
   const isSelectedUnlocked = selectedLeagueIndex <= currentIndex;
@@ -196,7 +202,7 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
 
         <Text style={styles.detailDesc}>
           {isSelectedCurrent
-            ? "Şu an bu kademede mücadele ediyorsun. Bot maçlarını kazanarak LP biriktir ve yüksel!"
+            ? "Şu an bu kademede mücadele ediyorsun. Canlı düelloları veya bot maçlarını kazanarak LP biriktir ve yüksel!"
             : isSelectedUnlocked
             ? "Bu kademeyi başarıyla açtın. 3D kademe amblemi profilinde sergilenmeye hazır."
             : `Bu kademeyi açmak için toplam ${selectedLeague.minPoints} LP puanına ulaşman gerekmektedir.`}

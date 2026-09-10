@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { DIGITAL_STORE_PRODUCTS, monetizationManager, type ProductItem } from "@/shared/monetization";
-import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
-import { type PlayerProgress } from "@/shared/progression";
-import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS } from "@/shared/store-items";
+import { gameSfx, triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { getCalculatedLives, MAX_LIVES, type PlayerProgress } from "@/shared/progression";
+import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "@/shared/store-items";
 
 export type { ChipEquipmentItem };
-export { CHIP_EQUIPMENT_ITEMS };
+export { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS };
 
 const FRAME_IMAGES: Record<string, any> = {
   signal: require("../assets/frames/signal.jpg"),
@@ -17,28 +17,6 @@ const FRAME_IMAGES: Record<string, any> = {
 };
 
 type StoreTab = "equipment" | "cosmetics" | "chips";
-
-const PROFILE_FRAMES = [
-  ["signal", "SİNYAL", "#00F5D4", 0],
-  ["neon", "NEON MOR", "#A78BFA", 140],
-  ["chrome", "KROM GÜMÜŞ", "#CBD5E1", 220],
-  ["gold", "ALTIN KRAL", "#FFC24A", 350],
-  ["cyber", "SİBERPUNK", "#FF2A85", 500],
-] as const;
-const VICTORY_EFFECTS = [
-  ["pulse", "PULSE", "✦", 0],
-  ["glitch", "GLITCH", "▦", 160],
-  ["flare", "FLARE", "✹", 240],
-  ["lightning", "ŞİMŞEK", "⚡", 380],
-  ["fireworks", "KAVRAMA", "🎆", 450],
-] as const;
-const BOARD_SKINS = [
-  ["grid", "MATRİS", "#00F5D4", 0],
-  ["night", "GECE SİNYALİ", "#818CF8", 120],
-  ["ember", "KOR HATTI", "#FB7185", 180],
-  ["gold_grid", "ALTIN IZGARA", "#FFC24A", 300],
-  ["cyber_pink", "NEON PEMBE", "#FF2A85", 420],
-] as const;
 
 export function CyberStore({
   coins,
@@ -59,7 +37,7 @@ export function CyberStore({
   onSpendCoins?: (item: ChipEquipmentItem) => void;
   onSelectFrame?: (frameId: string) => void;
   onSelectVictoryEffect?: (effectId: string) => void;
-  onBuyCosmetic?: (kind: "avatar" | "frame" | "effect" | "board", id: string, cost: number) => boolean;
+  onBuyCosmetic?: (kind: "avatar" | "frame" | "effect" | "board", id: string, cost: number) => boolean | Promise<boolean>;
   onSelectBoardSkin?: (skinId: string) => void;
   onBack: () => void;
 }) {
@@ -94,7 +72,8 @@ export function CyberStore({
 
   const executeSpendChips = (item: ChipEquipmentItem) => {
     if (coins < item.cost) {
-      triggerHapticSelection();
+      triggerHapticError();
+      gameSfx.rejected();
       setStoreMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
       setTimeout(() => setStoreMessage(null), 3500);
       return;
@@ -107,8 +86,19 @@ export function CyberStore({
   };
 
   const handleSpendChips = (item: ChipEquipmentItem) => {
+    if (item.rewardType === "lives" && progress) {
+      const calc = getCalculatedLives(progress);
+      if (calc.lives >= MAX_LIVES) {
+        triggerHapticError();
+        gameSfx.rejected();
+        setStoreMessage("Canlarınız zaten tam kapasite dolu (5/5)!");
+        setTimeout(() => setStoreMessage(null), 3500);
+        return;
+      }
+    }
     if (coins < item.cost) {
-      triggerHapticSelection();
+      triggerHapticError();
+      gameSfx.rejected();
       setStoreMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
       setTimeout(() => setStoreMessage(null), 3500);
       return;
@@ -142,6 +132,8 @@ export function CyberStore({
       return;
     }
     if (coins < cost) {
+      triggerHapticError();
+      gameSfx.rejected();
       setStoreMessage(`Yetersiz Çip! Bu kozmetik için ${cost} siber çip gerekiyor.`);
       setTimeout(() => setStoreMessage(null), 3500);
       return;
@@ -151,10 +143,10 @@ export function CyberStore({
       description: `${cost} Siber Çip karşılığında bu kozmetiğin kilidini açıp kuşanmak istiyor musunuz?`,
       cost,
       icon: kind === "frame" ? "✨" : kind === "effect" ? "💥" : "🎨",
-      onConfirm: () => {
+      onConfirm: async () => {
         triggerHapticSuccess();
         gameSfx.victory();
-        onBuyCosmetic?.(kind, id, cost);
+        await onBuyCosmetic?.(kind, id, cost);
         setStoreMessage(`Tebrikler! ${label} açıldı ve kuşanıldı! 🎉`);
         setTimeout(() => setStoreMessage(null), 3500);
       },
@@ -308,12 +300,15 @@ export function CyberStore({
 
         {CHIP_EQUIPMENT_ITEMS.map((item) => {
           const isOwned = false;
-          const canAfford = coins >= item.cost;
-          const isDisabled = !canAfford;
           const isRadar = item.rewardType === "radar";
           const isShield = item.rewardType === "shield";
           const isXp = item.rewardType === "xp";
           const isLives = item.rewardType === "lives";
+
+          const currentLives = progress ? getCalculatedLives(progress).lives : 5;
+          const isLivesFull = isLives && currentLives >= MAX_LIVES;
+          const canAfford = coins >= item.cost;
+          const isDisabled = !canAfford || isLivesFull;
 
           const accentColor = isLives ? "#22C55E" : isRadar ? "#00F5D4" : isShield ? "#60A5FA" : isXp ? "#F59E0B" : "#EC4899";
 
@@ -329,7 +324,7 @@ export function CyberStore({
                   <Text style={styles.productName}>{item.name}</Text>
                   {isLives && (
                     <View style={[styles.inventoryCountBadge, { borderColor: "#22C55E60" }]}>
-                      <Text style={[styles.inventoryCountText, { color: "#22C55E" }]}>Can: {progress?.lives ?? 5}/5</Text>
+                      <Text style={[styles.inventoryCountText, { color: "#22C55E" }]}>Can: {currentLives}/5</Text>
                     </View>
                   )}
                   {isShield && (
@@ -351,12 +346,13 @@ export function CyberStore({
                 style={({ pressed }) => [
                   styles.chipBuyButton,
                   isOwned && styles.chipBuyButtonOwned,
-                  !isOwned && !canAfford && styles.chipBuyButtonDisabled,
+                  isLivesFull && { borderColor: "rgba(34, 197, 94, 0.4)", backgroundColor: "rgba(34, 197, 94, 0.1)" },
+                  !isOwned && !canAfford && !isLivesFull && styles.chipBuyButtonDisabled,
                   pressed && !isDisabled && { opacity: 0.8 }
                 ]}
               >
-                <Text style={[styles.chipBuyButtonText, isOwned && { color: "#00F5D4" }, !isOwned && !canAfford && { color: "#8E82A8" }]}>
-                  {isOwned ? "✓ AÇIK" : `🪙 ${item.cost}`}
+                <Text style={[styles.chipBuyButtonText, isOwned && { color: "#00F5D4" }, isLivesFull && { color: "#22C55E" }, !isOwned && !canAfford && !isLivesFull && { color: "#8E82A8" }]}>
+                  {isOwned ? "✓ AÇIK" : isLivesFull ? "✓ DOLU" : `🪙 ${item.cost}`}
                 </Text>
               </Pressable>
             </View>

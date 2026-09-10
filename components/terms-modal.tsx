@@ -17,7 +17,7 @@ export function TermsModal({
         <View style={styles.card}>
           <Text style={styles.icon}>📜</Text>
           <Text style={styles.title}>HOŞ GELDİNİZ!</Text>
-          <Text style={styles.subtitle}>KULLANIM ŞARTLARI VE GİZLİLİK ONASI</Text>
+          <Text style={styles.subtitle}>KULLANIM ŞARTLARI VE GİZLİLİK ONAYI</Text>
 
           <Text style={styles.body}>
             Kelime Patlat dünyasına katılmadan önce lütfen kullanım şartlarımızı ve gizlilik politikamızı inceleyin.

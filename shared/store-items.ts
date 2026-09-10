@@ -41,3 +41,27 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
     rewardType: "xp",
   },
 ];
+
+export const PROFILE_FRAMES = [
+  ["signal", "SİNYAL", "#00F5D4", 0],
+  ["neon", "NEON MOR", "#A78BFA", 140],
+  ["chrome", "KROM GÜMÜŞ", "#CBD5E1", 220],
+  ["gold", "ALTIN KRAL", "#FFC24A", 350],
+  ["cyber", "SİBERPUNK", "#FF2A85", 500],
+] as const;
+
+export const VICTORY_EFFECTS = [
+  ["pulse", "PULSE", "✦", 0],
+  ["glitch", "GLITCH", "▦", 160],
+  ["flare", "FLARE", "✹", 240],
+  ["lightning", "ŞİMŞEK", "⚡", 380],
+  ["fireworks", "KAVRAMA", "🎆", 450],
+] as const;
+
+export const BOARD_SKINS = [
+  ["grid", "MATRİS", "#00F5D4", 0],
+  ["night", "GECE SİNYALİ", "#818CF8", 120],
+  ["ember", "KOR HATTI", "#FB7185", 180],
+  ["gold_grid", "ALTIN IZGARA", "#FFC24A", 300],
+  ["cyber_pink", "NEON PEMBE", "#FF2A85", 420],
+] as const;

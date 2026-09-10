@@ -34,19 +34,46 @@ export const notificationManager = {
  * 2. IN-APP REVIEW PROMPT HELPER
  * Prompts user to rate the app after consecutive victories or streak achievements
  */
+const REVIEW_POSTPONED_KEY = "kelime-patlat:review-prompt-postponed";
+
 export const reviewManager = {
   async recordVictoryAndCheckPrompt(winsCount: number) {
     try {
       const alreadyPrompted = await AsyncStorage.getItem(REVIEW_PROMPT_KEY);
       if (alreadyPrompted === "true") return;
 
-      // Prompt after 3 wins or 5 wins
+      const postponedRaw = await AsyncStorage.getItem(REVIEW_POSTPONED_KEY);
+      if (postponedRaw) {
+        try {
+          const { timestamp, wins } = JSON.parse(postponedRaw);
+          const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+          // Ertelemeden sonra en az 7 gün ve en az 15 yeni galibiyet geçmeli
+          if (Date.now() - timestamp < sevenDaysMs || winsCount - wins < 15) {
+            return;
+          }
+        } catch {
+          // JSON ayrıştırma hatasında devam et
+        }
+      }
+
+      // İlk kez en az 3 galibiyette sorulur
       if (winsCount >= 3) {
+        const postpone = () => {
+          AsyncStorage.setItem(
+            REVIEW_POSTPONED_KEY,
+            JSON.stringify({ timestamp: Date.now(), wins: winsCount })
+          ).catch(() => undefined);
+        };
+
         Alert.alert(
           "⭐ KELİME PATLAT'I SEVDİN Mİ?",
           "Harika bir galibiyet serisi yakaladın! Oyunu geliştirmemize destek olmak için mağazada 5 yıldız vermek ister misin?",
           [
-            { text: "Daha Sonra", style: "cancel" },
+            {
+              text: "Daha Sonra",
+              style: "cancel",
+              onPress: postpone,
+            },
             {
               text: "5 YILDIZ VER ⭐",
               onPress: async () => {
@@ -57,7 +84,8 @@ export const reviewManager = {
                 Linking.openURL(storeUrl).catch(() => undefined);
               },
             },
-          ]
+          ],
+          { onDismiss: postpone }
         );
       }
     } catch (e) {

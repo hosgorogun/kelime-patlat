@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Alert,
   Image,
@@ -18,6 +18,7 @@ import {
   badgesFor,
   getActiveCyberTitle,
   getPlayerLevel,
+  isAvatarUnlocked,
   type AvatarId,
   type GenderType,
   type PlayerProgress,
@@ -70,6 +71,11 @@ export function ProfileScreen({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [progress.avatarPhoto]);
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
@@ -81,6 +87,7 @@ export function ProfileScreen({
   const badges = badgesFor(progress);
   const unlockedBadgesCount = badges.filter((b) => b.unlocked).length;
   const unlockedTitlesCount = CYBER_TITLES.filter((t) => t.unlocked(progress)).length;
+  const unlockedAvatarsCount = AVATARS.filter((a) => isAvatarUnlocked(a.id, progress)).length;
 
   const longestWord =
     progress.history && progress.history.length
@@ -156,8 +163,8 @@ export function ProfileScreen({
                 pressed && { opacity: 0.85 },
               ]}
             >
-              {progress.avatarPhoto ? (
-                <Image source={{ uri: progress.avatarPhoto }} style={styles.avatarImage} />
+              {progress.avatarPhoto && !imgError ? (
+                <Image source={{ uri: progress.avatarPhoto }} style={styles.avatarImage} onError={() => setImgError(true)} />
               ) : (
                 <View style={[styles.avatarInnerFallback, { backgroundColor: activeAvatar.surface || "#153E3A" }]}>
                   <Text style={[styles.avatarGlyph, { color: activeAvatar.color || "#50E3C2" }]}>
@@ -345,7 +352,83 @@ export function ProfileScreen({
             </View>
           </View>
 
-          {/* 3. OYUNCU UNVANLARI */}
+          {/* 3. SİBER AVATARLAR */}
+          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
+            <Text style={styles.sectionTitle}>🤖 SİBER AVATARLAR</Text>
+            <View style={styles.badgeCounterWrap}>
+              <Text style={styles.sectionMeta}>{unlockedAvatarsCount} / {AVATARS.length} AÇIK</Text>
+            </View>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+            {AVATARS.map((avatar) => {
+              const unlocked = isAvatarUnlocked(avatar.id, progress);
+              const isSelected = (progress.selectedAvatar ?? "spark") === avatar.id && !progress.avatarPhoto;
+              return (
+                <Pressable
+                  key={avatar.id}
+                  onPress={() => {
+                    if (!unlocked) {
+                      triggerHapticError();
+                      if (onShowToast) {
+                        onShowToast(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint, "🔒", "#EF4444");
+                      } else {
+                        Alert.alert(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint);
+                      }
+                    } else {
+                      triggerHapticSuccess();
+                      if (progress.avatarPhoto) {
+                        onUpdateAvatarPhoto?.("");
+                      }
+                      onSelectAvatar?.(avatar.id);
+                      if (onShowToast) {
+                        onShowToast(`🤖 ${avatar.label}`, "Avatar profilinde aktif edildi.", avatar.icon, avatar.color);
+                      }
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    styles.badgeTile,
+                    isSelected && { borderColor: avatar.color || "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.12)" },
+                    !unlocked && styles.badgeTileLocked,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={[
+                    styles.badgeIconBubble,
+                    isSelected
+                      ? { backgroundColor: "rgba(0, 245, 212, 0.18)", borderColor: avatar.color || "#00F5D4" }
+                      : unlocked
+                      ? { backgroundColor: avatar.surface || "rgba(255, 255, 255, 0.08)", borderColor: avatar.color || "#A78BFA" }
+                      : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
+                  ]}>
+                    <Text style={[styles.badgeIconText, { color: isSelected ? (avatar.color || "#00F5D4") : unlocked ? (avatar.color || "#A78BFA") : "#766D89" }]}>
+                      {unlocked ? avatar.icon : "🔒"}
+                    </Text>
+                  </View>
+
+                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: avatar.color || "#00F5D4" }, !unlocked && { color: "#8E889C" }]}>
+                    {avatar.label}
+                  </Text>
+
+                  <View style={[
+                    styles.titleMiniStatusPill,
+                    isSelected && styles.titleMiniStatusSelected,
+                    !unlocked && styles.titleMiniStatusLocked,
+                  ]}>
+                    <Text style={[
+                      styles.titleMiniStatusText,
+                      isSelected && { color: "#00F5D4" },
+                      !unlocked && { color: "#7B748C" },
+                    ]}>
+                      {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* 4. OYUNCU UNVANLARI */}
           <View style={[styles.sectionHeader, { marginTop: 18 }]}>
             <Text style={styles.sectionTitle}>🎖️ OYUNCU UNVANLARI</Text>
             <View style={styles.badgeCounterWrap}>

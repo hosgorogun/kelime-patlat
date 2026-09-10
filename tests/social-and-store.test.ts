@@ -11,7 +11,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 import { socialManager, MOCK_FRIENDS } from "../shared/social";
-import { CHIP_EQUIPMENT_ITEMS } from "../shared/store-items";
+import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../shared/store-items";
 import { DIGITAL_STORE_PRODUCTS, monetizationManager } from "../shared/monetization";
 
 describe("Sosyal ve Mağaza Sistemi Testleri", () => {
@@ -33,6 +33,28 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
       expect(result.success).toBe(true);
       expect(result.friend?.username).toBe(uniqueUsername);
       expect(socialManager.getFriends().some((f) => f.username === uniqueUsername)).toBe(true);
+    });
+
+    it("tam profil nesnesiyle arkadaş eklemeyi ve istatistikleri doğru bağlamayı destekler", () => {
+      const profileUser = {
+        id: `usr_${Date.now()}`,
+        name: "Neon Siber",
+        username: `neon_siber_${Date.now()}`,
+        avatar: "⚡",
+        selectedTitle: "[RADYANT]",
+        level: 42,
+        tier: "YÜCELİK" as const,
+        lp: 5400,
+        wins: 65,
+        matches: 80,
+      };
+      const result = socialManager.addFriend(profileUser);
+      expect(result.success).toBe(true);
+      expect(result.friend?.id).toBe(profileUser.id);
+      expect(result.friend?.name).toBe("Neon Siber");
+      expect(result.friend?.tier).toBe("YÜCELİK");
+      expect(result.friend?.lp).toBe(5400);
+      expect(result.friend?.level).toBe(42);
     });
 
     it("boş kullanıcı adı eklenmesini engeller", () => {
@@ -114,6 +136,32 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
         (err) => { errorReceived = err; }
       );
       expect(errorReceived).toBe("Ödüllü reklam şu anda kullanılamıyor.");
+    });
+
+    it("tüm kozmetik kataloglarının (çerçeveler, zafer efektleri, tahta temaları) geçerli ID ve fiyatlara sahip olduğunu doğrular", () => {
+      expect(PROFILE_FRAMES.length).toBeGreaterThanOrEqual(5);
+      PROFILE_FRAMES.forEach(([id, name, color, price]) => {
+        expect(id).toBeTruthy();
+        expect(name).toBeTruthy();
+        expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+        expect(price).toBeGreaterThanOrEqual(0);
+      });
+
+      expect(VICTORY_EFFECTS.length).toBeGreaterThanOrEqual(5);
+      VICTORY_EFFECTS.forEach(([id, name, glyph, price]) => {
+        expect(id).toBeTruthy();
+        expect(name).toBeTruthy();
+        expect(glyph).toBeTruthy();
+        expect(price).toBeGreaterThanOrEqual(0);
+      });
+
+      expect(BOARD_SKINS.length).toBeGreaterThanOrEqual(5);
+      BOARD_SKINS.forEach(([id, name, color, price]) => {
+        expect(id).toBeTruthy();
+        expect(name).toBeTruthy();
+        expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
+        expect(price).toBeGreaterThanOrEqual(0);
+      });
     });
   });
 });

@@ -63,8 +63,55 @@ export function MissionsScreen({
 
   const [activeTab, setActiveTab] = useState<"daily" | "weekly">("daily");
 
-  const todayId = useMemo(() => getDayId(), []);
-  const weekId = useMemo(() => getWeekId(), []);
+  const [todayId, setTodayId] = useState(() => getDayId());
+  const [weekId, setWeekId] = useState(() => getWeekId());
+  const [timeUntilDailyReset, setTimeUntilDailyReset] = useState("");
+  const [timeUntilWeeklyReset, setTimeUntilWeeklyReset] = useState("");
+
+  useEffect(() => {
+    function updateTimers() {
+      const now = new Date();
+
+      // Daily reset: next midnight local time
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+      const diffDaily = Math.max(0, tomorrow.getTime() - now.getTime());
+      const dailyHours = Math.floor(diffDaily / (1000 * 60 * 60));
+      const dailyMins = Math.floor((diffDaily % (1000 * 60 * 60)) / (1000 * 60));
+      const dailySecs = Math.floor((diffDaily % (1000 * 60)) / 1000);
+      setTimeUntilDailyReset(
+        `${String(dailyHours).padStart(2, "0")}:${String(dailyMins).padStart(2, "0")}:${String(dailySecs).padStart(2, "0")}`
+      );
+
+      const currentTodayId = getDayId(now);
+      if (currentTodayId !== todayId) {
+        setTodayId(currentTodayId);
+      }
+
+      // Weekly reset: next Monday 00:00:00 local time
+      const dayOfWeek = now.getDay();
+      const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+      const nextMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMonday, 0, 0, 0, 0);
+      const diffWeekly = Math.max(0, nextMonday.getTime() - now.getTime());
+      const weeklyDays = Math.floor(diffWeekly / (1000 * 60 * 60 * 24));
+      const weeklyHours = Math.floor((diffWeekly % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const weeklyMins = Math.floor((diffWeekly % (1000 * 60 * 60)) / (1000 * 60));
+      const weeklySecs = Math.floor((diffWeekly % (1000 * 60)) / 1000);
+      setTimeUntilWeeklyReset(
+        weeklyDays > 0
+          ? `${weeklyDays}g ${weeklyHours}sa ${weeklyMins}dk kaldı`
+          : `${String(weeklyHours).padStart(2, "0")}:${String(weeklyMins).padStart(2, "0")}:${String(weeklySecs).padStart(2, "0")} kaldı`
+      );
+
+      const currentWeekId = getWeekId(now);
+      if (currentWeekId !== weekId) {
+        setWeekId(currentWeekId);
+      }
+    }
+
+    updateTimers();
+    const interval = setInterval(updateTimers, 1000);
+    return () => clearInterval(interval);
+  }, [todayId, weekId]);
 
   const dailyMissions = useMemo(() => getDailyMissions(todayId), [todayId]);
   const weeklyMissions = useMemo(() => getWeeklyMissions(weekId), [weekId]);
@@ -263,7 +310,7 @@ export function MissionsScreen({
           />
         </View>
         <Text style={styles.summaryHint}>
-          💡 Görevleri tamamlayarak Sezon XP'si, Siber Çip ve Seri Kalkanı kazan, kademeleri daha hızlı tırman!
+          {"💡 Görevleri tamamlayarak Sezon XP'si, Siber Çip ve Seri Kalkanı kazan, kademeleri daha hızlı tırman!"}
         </Text>
       </View>
 
@@ -312,7 +359,9 @@ export function MissionsScreen({
               <Text style={styles.sectionIcon}>☀️</Text>
               <Text style={styles.sectionTitle}>GÜNLÜK GÖREVLER</Text>
             </View>
-            <Text style={styles.sectionMeta}>HER GÜN 00:00'DA YENİLENİR</Text>
+            <Text style={styles.sectionMeta}>
+              {timeUntilDailyReset ? `⏳ SIFIRLANMA: ${timeUntilDailyReset}` : "HER GÜN 00:00'DA YENİLENİR"}
+            </Text>
           </View>
 
           <View style={styles.missionList}>
@@ -326,7 +375,9 @@ export function MissionsScreen({
               <Text style={styles.sectionIcon}>🏆</Text>
               <Text style={styles.sectionTitle}>HAFTALIK MİSYONLAR</Text>
             </View>
-            <Text style={styles.sectionMeta}>HER PAZARTESİ YENİLENİR</Text>
+            <Text style={styles.sectionMeta}>
+              {timeUntilWeeklyReset ? `⏳ SIFIRLANMA: ${timeUntilWeeklyReset}` : "HER PAZARTESİ YENİLENİR"}
+            </Text>
           </View>
 
           <View style={styles.missionList}>

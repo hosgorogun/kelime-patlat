@@ -12,7 +12,7 @@ type ProfileDocument = {
 };
 
 type LeaderboardDocument = LeaderboardEntry & { updatedAt: Date };
-type RoundEntry = { id: string; name: string; score: number; won: boolean; lp?: number; tier?: string; avatar?: string };
+type RoundEntry = { id: string; name: string; score: number; won: boolean; lp?: number; tier?: string; avatar?: string; avatarPhoto?: string; selectedTitle?: string };
 
 const ProfileSchema = new Schema<ProfileDocument>({
   playerId: { type: String, required: true, unique: true },
@@ -32,8 +32,12 @@ const LeaderboardSchema = new Schema<LeaderboardDocument>({
   lp: { type: Number, default: 0 },
   tier: { type: String, default: "DEMİR" },
   avatar: { type: String, default: "spark" },
+  avatarPhoto: { type: String },
+  selectedTitle: { type: String },
   updatedAt: { type: Date, default: Date.now }
 });
+
+LeaderboardSchema.index({ score: -1, wins: -1, bestRound: -1 });
 
 export const ProfileModel = mongoose.models.PlayerProfile || mongoose.model<ProfileDocument>("PlayerProfile", ProfileSchema, "player_profiles");
 export const LeaderboardModel = mongoose.models.SeasonLeaderboard || mongoose.model<LeaderboardDocument>("SeasonLeaderboard", LeaderboardSchema, "season_leaderboard");
@@ -96,7 +100,7 @@ export async function deletePlayerProfile(playerId: string) {
 
 export async function loadLeaderboard() {
   return safely(async () => {
-    const entries = await LeaderboardModel.find({}, { _id: 0, id: 1, name: 1, score: 1, wins: 1, matches: 1, bestRound: 1, lp: 1, tier: 1, avatar: 1 })
+    const entries = await LeaderboardModel.find({}, { _id: 0, id: 1, name: 1, score: 1, wins: 1, matches: 1, bestRound: 1, lp: 1, tier: 1, avatar: 1, avatarPhoto: 1, selectedTitle: 1 })
       .sort({ score: -1, wins: -1, bestRound: -1 })
       .limit(50)
       .lean();
@@ -112,6 +116,8 @@ export async function recordLeaderboardRounds(rounds: RoundEntry[]) {
       if (round.lp !== undefined) setFields.lp = round.lp;
       if (round.tier !== undefined) setFields.tier = round.tier;
       if (round.avatar !== undefined) setFields.avatar = round.avatar;
+      if (round.avatarPhoto !== undefined) setFields.avatarPhoto = round.avatarPhoto;
+      if (round.selectedTitle !== undefined) setFields.selectedTitle = round.selectedTitle;
 
       return LeaderboardModel.updateOne(
         { id: round.id },

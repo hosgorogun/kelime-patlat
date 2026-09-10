@@ -75,6 +75,8 @@ const UserSchema = new Schema<User>({
   processedAwardIds: { type: [String], default: [] }
 });
 
+UserSchema.index({ "progress.xp": -1 });
+
 export const UserModel = mongoose.models.User || mongoose.model<User>("User", UserSchema);
 
 function databaseUri() {
@@ -85,7 +87,10 @@ function databaseUri() {
 let connectionPromise: Promise<typeof mongoose> | null = null;
 
 export async function connectDb() {
-  if (!connectionPromise) {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose;
+  }
+  if (!connectionPromise || mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
     connectionPromise = mongoose.connect(databaseUri(), {
       serverSelectionTimeoutMS: 4000
     }).catch((err) => {

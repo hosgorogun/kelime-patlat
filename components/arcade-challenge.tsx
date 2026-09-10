@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { Alert, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { createSoloBoard, APP_WORD_PALETTE } from "@/shared/solo";
@@ -147,9 +147,20 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     onCompleteRef.current = onComplete;
   }, [score, onComplete]);
 
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active" && status === "playing") {
+        setIsPaused(true);
+      }
+    });
+    return () => sub.remove();
+  }, [status]);
+
   // Time Countdown
   useEffect(() => {
-    if (status !== "playing" || countdown !== null) return;
+    if (status !== "playing" || countdown !== null || isPaused) return;
     const timer = setInterval(() => setSeconds((value) => {
       if (value <= 1) {
         clearInterval(timer);
@@ -165,7 +176,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, countdown]);
+  }, [status, countdown, isPaused]);
 
   useEffect(() => () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -218,6 +229,9 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       }).start();
     }
     setParticles((prev) => [...prev, ...newConfetti]);
+    setTimeout(() => {
+      setParticles((prev) => prev.filter((p) => !newConfetti.includes(p)));
+    }, 2600);
   };
 
   const explodeParticles = (cells: number[]) => {
@@ -334,6 +348,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
   const handleRestart = () => {
     triggerHapticSelection();
     savedRef.current = false;
+    setDoubled(false);
     setLevelSeed(() => Math.floor(Math.random() * 15) + 1);
     setVariation((v) => v + 1);
     setSelected([]);
@@ -448,32 +463,37 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 
   const handleGestureEnd = () => { finish(); };
 
-  const foundCellColors = new Map<number, { bg: string; border: string; text: string }>();
-  found.forEach((word, wordIndex) => {
-    const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
-    const path = foundPaths[wordIndex];
-    if (path) {
-      path.forEach((cell) => {
-        foundCellColors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
-      });
-    }
-  });
+  const { foundCells, foundCellColors } = useMemo(() => {
+    const cells = new Set(foundPaths.flat());
+    const colors = new Map<number, { bg: string; border: string; text: string }>();
+    found.forEach((word, wordIndex) => {
+      const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
+      const path = foundPaths[wordIndex];
+      if (path) {
+        path.forEach((cell) => {
+          colors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
+        });
+      }
+    });
+    return { foundCells: cells, foundCellColors: colors };
+  }, [foundPaths, found]);
 
-  const missedWords = status === "lost" ? challenge.words.filter((w) => !found.includes(w)) : [];
-  const missedCellColors = new Map<number, { bg: string; border: string; text: string }>();
-  if (status === "lost") {
-    missedWords.forEach((word, index) => {
+  const { missedWords, missedCellColors } = useMemo(() => {
+    if (status !== "lost") return { missedWords: [], missedCellColors: new Map<number, { bg: string; border: string; text: string }>() };
+    const missed = challenge.words.filter((w) => !found.includes(w));
+    const colors = new Map<number, { bg: string; border: string; text: string }>();
+    missed.forEach((word, index) => {
       const colorIndex = (found.length + index) % APP_WORD_PALETTE.length;
       const palette = APP_WORD_PALETTE[colorIndex]!;
       const path = challenge.routes[word] ?? [];
       path.forEach((cell) => {
-        missedCellColors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
+        colors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
       });
     });
-  }
+    return { missedWords: missed, missedCellColors: colors };
+  }, [status, challenge, found]);
 
-  const foundCells = new Set(foundPaths.flat());
-  const selectedSet = new Set(selected);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   const isUrgent = seconds <= 8;
 
   return (
@@ -486,10 +506,19 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         <Text numberOfLines={1} style={styles.title}>ZAMANA KARŞI HÜCUM</Text>
       </View>
       <View style={styles.scoreContainer}><Text style={styles.scoreLabel}>SKOR</Text><Text style={styles.scoreValue}>{score}</Text></View>
-      <View style={[styles.timer, { borderColor: "#FF647C" }, isUrgent && styles.timerUrgent]}>
+      <View style={[styles.timer, seconds <= 8 && styles.timerUrgent]}>
         <Text style={styles.timerText}>{seconds}s</Text>
         {timeBonusText && <Text style={styles.bonusText}>{timeBonusText}</Text>}
       </View>
+      <Pressable
+        onPress={() => {
+          triggerHapticSelection();
+          setIsPaused(true);
+        }}
+        style={({ pressed }) => [styles.pauseBtn, pressed && { opacity: 0.8 }]}
+      >
+        <Text style={{ fontSize: 13 }}>⏸️</Text>
+      </Pressable>
     </View>
     <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={styles.progressMeta}>Her kelime ek süre kazandırır</Text></View>
     
@@ -743,6 +772,38 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         </Modal>
       )}
 
+      {isPaused && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setIsPaused(false)}>
+          <View style={styles.pauseOverlay}>
+            <View style={styles.pauseCard}>
+              <Text style={{ fontSize: 44, marginBottom: 6 }}>⏸️</Text>
+              <Text style={styles.pauseTitle}>ARCADE DURAKLATILDI</Text>
+              <Text style={styles.pauseSub}>
+                Süren donduruldu. Skoru ve rekor serisini kaybetmeden devam edebilirsin!
+              </Text>
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  setIsPaused(false);
+                }}
+                style={styles.resumeBtn}
+              >
+                <Text style={styles.resumeBtnText}>▶️ DEVAM ET ({seconds}s)</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setIsPaused(false);
+                  handleExitPress();
+                }}
+                style={styles.pauseExitBtn}
+              >
+                <Text style={styles.pauseExitBtnText}>‹ MODDAN AYRIL</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {countdown !== null && (
         <View style={styles.countdownOverlay} pointerEvents="auto">
           <Text style={styles.countdownText}>
@@ -768,4 +829,13 @@ const styles = StyleSheet.create({
   arcadeRewardPill: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(33, 26, 61, 0.9)", borderWidth: 1.5, borderColor: "#00F5D4", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
   arcadeRewardIcon: { fontSize: 13 },
   arcadeRewardText: { color: "#00F5D4", fontSize: 11, fontWeight: "900" },
+  pauseBtn: { width: 35, height: 35, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255, 208, 0, 0.4)", backgroundColor: "rgba(255, 208, 0, 0.12)", alignItems: "center", justifyContent: "center", marginLeft: 6 },
+  pauseOverlay: { flex: 1, backgroundColor: "rgba(12, 9, 28, 0.92)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  pauseCard: { width: "100%", maxWidth: 360, backgroundColor: "#130E26", borderWidth: 1.5, borderColor: "#FFD000", borderRadius: 24, padding: 24, alignItems: "center" },
+  pauseTitle: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 1, marginBottom: 8 },
+  pauseSub: { color: "#B5A9CD", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
+  resumeBtn: { width: "100%", height: 46, borderRadius: 14, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  resumeBtnText: { color: "#0C091C", fontSize: 12, fontWeight: "900", letterSpacing: 0.6 },
+  pauseExitBtn: { width: "100%", height: 42, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.15)", backgroundColor: "rgba(255, 255, 255, 0.05)", alignItems: "center", justifyContent: "center" },
+  pauseExitBtnText: { color: "#E2E8F0", fontSize: 11, fontWeight: "800", letterSpacing: 0.4 },
 });

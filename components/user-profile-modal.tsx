@@ -47,6 +47,7 @@ export function UserProfileModal({
   visible,
   user,
   isFriend,
+  isSelf,
   onClose,
   onAddFriend,
   onChallenge,
@@ -54,10 +55,17 @@ export function UserProfileModal({
   visible: boolean;
   user: InspectableUser | null;
   isFriend?: boolean;
+  isSelf?: boolean;
   onClose: () => void;
   onAddFriend?: (user: InspectableUser) => void;
   onChallenge?: (user: InspectableUser) => void;
 }) {
+  const [imgError, setImgError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [user?.avatarPhoto]);
+
   if (!user) return null;
 
   const displayName = user.name.trim().slice(0, 16) || "OYUNCU";
@@ -94,8 +102,8 @@ export function UserProfileModal({
             {/* Top Identity Block */}
             <View style={styles.identityRow}>
               <View style={[styles.avatarBox, { borderColor: avatarColor, backgroundColor: avatarSurface }]}>
-                {user.avatarPhoto ? (
-                  <Image source={{ uri: user.avatarPhoto }} style={styles.avatarImage} />
+                {user.avatarPhoto && !imgError ? (
+                  <Image source={{ uri: user.avatarPhoto }} style={styles.avatarImage} onError={() => setImgError(true)} />
                 ) : (
                   <Text style={[styles.avatarIconText, { color: avatarColor }]}>{avatarIcon}</Text>
                 )}
@@ -193,7 +201,11 @@ export function UserProfileModal({
 
             {/* Actions Bar */}
             <View style={styles.actionsRow}>
-              {isFriend ? (
+              {isSelf ? (
+                <View style={[styles.alreadyFriendBadge, { borderColor: "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.12)" }]}>
+                  <Text style={[styles.alreadyFriendText, { color: "#00F5D4" }]}>⭐ SENİN HESABIN</Text>
+                </View>
+              ) : isFriend ? (
                 <View style={styles.alreadyFriendBadge}>
                   <Text style={styles.alreadyFriendText}>✓ ARKADAŞINIZ</Text>
                 </View>
@@ -209,7 +221,7 @@ export function UserProfileModal({
                 </Pressable>
               )}
 
-              {onChallenge && (
+              {!isSelf && onChallenge && (
                 <Pressable
                   onPress={() => {
                     triggerHapticSelection();

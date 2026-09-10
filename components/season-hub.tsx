@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { getRank, getLeagueTier, type PlayerProgress } from "@/shared/progression";
 import { type LeaderboardEntry, BOARD_SIZES, type BoardSize } from "@/shared/game";
 import { socialManager, type FriendUser } from "@/shared/social";
-import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 type SeasonTab = "leaderboard" | "friends";
 type RankingType = "lp" | "level";
@@ -85,6 +86,8 @@ export function SeasonHub({
       bestRound: progress.bestScore ?? 0,
       lp: progress.lp ?? 0,
       tier: userTier.tier,
+      avatarPhoto: progress.avatarPhoto,
+      selectedTitle: progress.selectedTitle,
       level: Math.floor((progress.xp ?? 0) / 200) + 1,
     };
     if (userIndex >= 0) {
@@ -100,11 +103,13 @@ export function SeasonHub({
     let pool = basePool;
 
     if (leaderboardFilter === "friends") {
+      const friendIds = new Set(friendsList.map((f) => f.id));
       const friendNames = new Set(friendsList.map((f) => f.name.toLocaleLowerCase("tr-TR")));
       const friendUsernames = new Set(friendsList.map((f) => f.username.toLocaleLowerCase("tr-TR")));
       pool = basePool.filter(
         (entry) =>
           entry.id === playerId ||
+          friendIds.has(entry.id) ||
           friendNames.has(entry.name.toLocaleLowerCase("tr-TR")) ||
           friendUsernames.has(entry.name.toLocaleLowerCase("tr-TR"))
       );
@@ -139,10 +144,77 @@ export function SeasonHub({
   const top3 = displayedLeaderboard[2] || null;
   const restOfLeaderboard = displayedLeaderboard.slice(3);
 
-  const handleAddFriend = () => {
-    if (!friendInput.trim()) return;
+  const handleAddFriend = async () => {
+    const cleanInput = friendInput.trim();
+    if (!cleanInput) return;
+
+    // Self-addition check
+    if (
+      cleanInput.toLocaleLowerCase("tr-TR") === (playerName || "").toLocaleLowerCase("tr-TR") ||
+      cleanInput === playerId
+    ) {
+      triggerHapticError();
+      setSocialMessage("Kendinizi arkadaş olarak ekleyemezsiniz.");
+      setTimeout(() => setSocialMessage(null), 3500);
+      return;
+    }
+
     triggerHapticSelection();
-    const res = socialManager.addFriend(friendInput);
+
+    // Check if already in friends
+    const exists = friendsList.some(
+      (f) =>
+        f.username.toLocaleLowerCase("tr-TR") === cleanInput.toLocaleLowerCase("tr-TR") ||
+        f.name.toLocaleLowerCase("tr-TR") === cleanInput.toLocaleLowerCase("tr-TR") ||
+        f.id === cleanInput
+    );
+    if (exists) {
+      triggerHapticError();
+      setSocialMessage("Bu kullanıcı zaten arkadaş listenizde.");
+      setTimeout(() => setSocialMessage(null), 3500);
+      return;
+    }
+
+    // Try finding real user profile from server
+    try {
+      const resp = await fetch(`${getApiBaseUrl()}/api/user/profile/${encodeURIComponent(cleanInput)}`);
+      if (resp.ok) {
+        const profileData = await resp.json();
+        const res = socialManager.addFriend({
+          id: profileData.id,
+          name: profileData.name,
+          username: profileData.username,
+          avatar: profileData.avatar,
+          avatarPhoto: profileData.avatarPhoto,
+          selectedTitle: profileData.selectedTitle,
+          xp: profileData.xp,
+          level: profileData.level,
+          lp: profileData.lp,
+          tier: profileData.tier,
+          wins: profileData.wins,
+          matches: profileData.matches,
+          streak: profileData.streak,
+          bestScore: profileData.bestScore,
+          bestTempo: profileData.bestTempo,
+        });
+        setSocialMessage(res.message);
+        if (res.success) {
+          triggerHapticSuccess();
+          const updated = [...socialManager.getFriends()];
+          setFriendsList(updated);
+          onUpdateFriends?.(updated);
+          setFriendInput("");
+        } else {
+          triggerHapticError();
+        }
+        setTimeout(() => setSocialMessage(null), 3500);
+        return;
+      }
+    } catch {
+      // offline or server error, fallback to local object
+    }
+
+    const res = socialManager.addFriend(cleanInput);
     setSocialMessage(res.message);
     if (res.success) {
       triggerHapticSuccess();
@@ -150,6 +222,8 @@ export function SeasonHub({
       setFriendsList(updated);
       onUpdateFriends?.(updated);
       setFriendInput("");
+    } else {
+      triggerHapticError();
     }
     setTimeout(() => setSocialMessage(null), 3500);
   };
@@ -375,7 +449,11 @@ export function SeasonHub({
                     }}
                   >
                     <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap2]}>
-                      <Text style={styles.podiumAvatarText}>{top2.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      {top2.avatarPhoto ? (
+                        <Image source={{ uri: top2.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.podiumAvatarText}>{top2.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      )}
                       <View style={[styles.podiumRankBadge, styles.podiumRankBadge2]}>
                         <Text style={styles.podiumRankNum}>2</Text>
                       </View>
@@ -408,7 +486,11 @@ export function SeasonHub({
                   >
                     <Text style={styles.crownIcon}>👑</Text>
                     <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap1]}>
-                      <Text style={styles.podiumAvatarText}>{top1.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      {top1.avatarPhoto ? (
+                        <Image source={{ uri: top1.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 28 }} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.podiumAvatarText}>{top1.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      )}
                       <View style={[styles.podiumRankBadge, styles.podiumRankBadge1]}>
                         <Text style={styles.podiumRankNum}>1</Text>
                       </View>
@@ -440,7 +522,11 @@ export function SeasonHub({
                     }}
                   >
                     <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap3]}>
-                      <Text style={styles.podiumAvatarText}>{top3.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      {top3.avatarPhoto ? (
+                        <Image source={{ uri: top3.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.podiumAvatarText}>{top3.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                      )}
                       <View style={[styles.podiumRankBadge, styles.podiumRankBadge3]}>
                         <Text style={styles.podiumRankNum}>3</Text>
                       </View>
@@ -493,9 +579,13 @@ export function SeasonHub({
                         </Text>
                       </View>
                       <View style={styles.playerMark}>
-                        <Text style={styles.playerMarkText}>
-                          {entry.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
-                        </Text>
+                        {entry.avatarPhoto ? (
+                          <Image source={{ uri: entry.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 10 }} resizeMode="cover" />
+                        ) : (
+                          <Text style={styles.playerMarkText}>
+                            {entry.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
+                          </Text>
+                        )}
                       </View>
                       <View style={styles.playerCopy}>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>

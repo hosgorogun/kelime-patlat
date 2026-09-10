@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { Alert, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
@@ -54,7 +54,7 @@ type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
-export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, lives, onExit, onComplete, onNext, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; lives?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
+export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, lives, onExit, onComplete, onNext, onAdvanceLevel, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; lives?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onAdvanceLevel?: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
   const { width } = useWindowDimensions();
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
@@ -205,8 +205,19 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     dailyRef.current = daily;
   }, [onComplete, found, level, daily]);
 
+  const [isPaused, setIsPaused] = useState(false);
+
   useEffect(() => {
-    if (status !== "playing" || countdown !== null) return;
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState !== "active" && status === "playing") {
+        setIsPaused(true);
+      }
+    });
+    return () => sub.remove();
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== "playing" || countdown !== null || isPaused) return;
     const timer = setInterval(() => setSeconds((value) => {
       if (value <= 1) {
         clearInterval(timer);
@@ -219,7 +230,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, countdown]);
+  }, [status, countdown, isPaused]);
 
   useEffect(() => () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -268,6 +279,9 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       }).start();
     }
     setParticles((prev) => [...prev, ...newConfetti]);
+    setTimeout(() => {
+      setParticles((prev) => prev.filter((p) => !newConfetti.includes(p)));
+    }, 2600);
   };
 
   const explodeParticles = (cells: number[]) => {
@@ -384,19 +398,20 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       onExit();
       return;
     }
-    if (status === "playing" && (found.length > 0 || daily)) {
+    // Geri sayım bitmiş ve oyun aktifken çıkış yapmak 1 can kaybına yol açar
+    if (status === "playing" && countdown === null) {
       Alert.alert(
-        daily ? "Günün Rotasından Ayrıl" : "Seviyeden Ayrıl",
+        daily ? "Günün Rotasından Ayrıl" : "Seviyeden Ayrıl (-1 Can)",
         daily
           ? "Günün rotasından çıkmak istediğinize emin misiniz? Günlük tek oynama hakkınızı korumak için oyunu tamamlamayı deneyin."
-          : "Mevcut seviyeden çıkmak istediğinize emin misiniz?",
+          : "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
         [
           { text: "Devam Et", style: "cancel" },
           {
-            text: "Ayrıl",
+            text: daily ? "Ayrıl" : "Ayrıl (-1 Can)",
             style: "destructive",
             onPress: () => {
-              if (daily) onCompleteRef.current(levelRef.current, foundRef.current, false);
+              onCompleteRef.current(levelRef.current, foundRef.current, false);
               onExit();
             },
           },
@@ -507,20 +522,25 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     handleGesture(x, y);
   };
   const handleGestureEnd = () => { finish(); };
-  const foundCells = new Set(foundPaths.flat());
-  const foundCellColors = new Map<number, { bg: string; border: string; letterText: string }>();
-  found.forEach((word, wordIndex) => {
-    const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
-    const path = foundPaths[wordIndex];
-    if (path) {
-      path.forEach((cell) => {
-        foundCellColors.set(cell, { bg: palette.bg, border: palette.border, letterText: palette.letterText });
-      });
-    }
-  });
+  const { foundCells, foundCellColors } = useMemo(() => {
+    const cells = new Set(foundPaths.flat());
+    const colors = new Map<number, { bg: string; border: string; letterText: string }>();
+    found.forEach((word, wordIndex) => {
+      const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
+      const path = foundPaths[wordIndex];
+      if (path) {
+        path.forEach((cell) => {
+          colors.set(cell, { bg: palette.bg, border: palette.border, letterText: palette.letterText });
+        });
+      }
+    });
+    return { foundCells: cells, foundCellColors: colors };
+  }, [foundPaths, found]);
 
-  const solutionColors = status === "lost" ? solutionColorByCell(challenge) : new Map<number, number>();
-  const selectedSet = new Set(selected);
+  const solutionColors =
+    status === "lost" ? solutionColorByCell(challenge) : new Map<number, number>();
+
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   const isUrgent = seconds <= 15 && status === "playing";
 
   return (
@@ -558,6 +578,19 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         <Text style={styles.timerText}>{seconds}s</Text>
         {timeBonusText && <Text style={styles.bonusText}>{timeBonusText}</Text>}
       </View>
+      <Pressable
+        onPress={() => {
+          triggerHapticSelection();
+          setIsPaused(true);
+        }}
+        style={({ pressed }) => [
+          styles.pauseBtn,
+          { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor },
+          pressed && { opacity: 0.8 },
+        ]}
+      >
+        <Text style={{ fontSize: 13 }}>⏸️</Text>
+      </Pressable>
     </View>
     <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={[styles.progressMeta, { color: activeTheme.headerText }]}>{challenge.subtitle}</Text></View>
     <Animated.View ref={boardRef} onLayout={measureBoard} style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative", backgroundColor: activeTheme.background, borderColor: activeTheme.cellBorder, transform: [{ translateX: shakeAnim }] }, isUrgent && styles.boardUrgent]}>
@@ -799,10 +832,48 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
           </View>
         )}
 
-        <Pressable onPress={daily ? onExit : onNext} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}>
-          <Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : (level >= MAX_SOLO_LEVEL ? "HARİTAYA DÖN (TÜM SEVİYELER TAMAMLANDI)" : "🗺️ HARİTAYA DÖN & SONRAK SEVIYEYE GEÇ")}</Text>
-          <Text style={styles.actionArrow}>→</Text>
-        </Pressable>
+        <View style={{ width: "100%", gap: 8, marginTop: 12 }}>
+          {!daily && level < MAX_SOLO_LEVEL && (
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                if (onAdvanceLevel) onAdvanceLevel();
+                else onNext();
+              }}
+              style={({ pressed }) => [
+                styles.action,
+                { backgroundColor: activeTheme.accentColor, marginTop: 0 },
+                pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <Text style={styles.actionText}>▶️ SONRAKİ BÖLÜM (BÖLÜM {level + 1})</Text>
+              <Text style={styles.actionArrow}>→</Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              if (daily) onExit();
+              else onNext();
+            }}
+            style={({ pressed }) => [
+              styles.action,
+              {
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                borderWidth: 1,
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                marginTop: 0,
+              },
+              pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+            ]}
+          >
+            <Text style={[styles.actionText, { color: "#FFF9FC" }]}>
+              {daily ? "🏠 KOMUTA MERKEZİNE DÖN" : "🗺️ SEVİYE HARİTASINA DÖN"}
+            </Text>
+            <Text style={[styles.actionArrow, { color: "#FFF9FC" }]}>‹</Text>
+          </Pressable>
+        </View>
       </View>
     )}
     {status === "lost" && (
@@ -884,6 +955,38 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         </Modal>
       )}
 
+      {isPaused && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setIsPaused(false)}>
+          <View style={styles.pauseOverlay}>
+            <View style={styles.pauseCard}>
+              <Text style={{ fontSize: 44, marginBottom: 6 }}>⏸️</Text>
+              <Text style={styles.pauseTitle}>OYUN DURAKLATILDI</Text>
+              <Text style={styles.pauseSub}>
+                Süren donduruldu. Rahatça mola verebilirsin, can kaybı yaşamadan devam edebilirsin!
+              </Text>
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  setIsPaused(false);
+                }}
+                style={[styles.resumeBtn, { backgroundColor: activeTheme.accentColor }]}
+              >
+                <Text style={styles.resumeBtnText}>▶️ DEVAM ET ({seconds}s)</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setIsPaused(false);
+                  handleExitPress();
+                }}
+                style={styles.pauseExitBtn}
+              >
+                <Text style={styles.pauseExitBtnText}>‹ SEVİYEDEN AYRIL</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {countdown !== null && (
         <View style={styles.countdownOverlay} pointerEvents="auto">
           <Text style={styles.countdownText}>
@@ -914,6 +1017,15 @@ const styles = StyleSheet.create({
   chestButtonText: { color: "#121025", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   chestProgress: { color: "#FFC24A", fontSize: 10, fontWeight: "900", fontFamily: "monospace", marginTop: 8, letterSpacing: 0.8 },
   chestSuccessReward: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4, textAlign: "center", marginTop: 6 },
+  pauseBtn: { width: 35, height: 35, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center", marginLeft: 6 },
+  pauseOverlay: { flex: 1, backgroundColor: "rgba(12, 9, 28, 0.92)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  pauseCard: { width: "100%", maxWidth: 360, backgroundColor: "#130E26", borderWidth: 1.5, borderColor: "#7C3AED", borderRadius: 24, padding: 24, alignItems: "center" },
+  pauseTitle: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 1, marginBottom: 8 },
+  pauseSub: { color: "#B5A9CD", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
+  resumeBtn: { width: "100%", height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  resumeBtnText: { color: "#0C091C", fontSize: 12, fontWeight: "900", letterSpacing: 0.6 },
+  pauseExitBtn: { width: "100%", height: 42, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.15)", backgroundColor: "rgba(255, 255, 255, 0.05)", alignItems: "center", justifyContent: "center" },
+  pauseExitBtnText: { color: "#E2E8F0", fontSize: 11, fontWeight: "800", letterSpacing: 0.4 },
   adOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#0A0816", justifyContent: "center", alignItems: "center", zIndex: 300 },
   adTitle: { color: "#7C5CF6", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 12 },
   adSpinner: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", textAlign: "center", paddingHorizontal: 28, lineHeight: 18 },

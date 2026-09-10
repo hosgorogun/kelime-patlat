@@ -204,7 +204,28 @@ const WORD_DEFINITIONS: Record<string, string> = {
   "HOKEY": "Buz veya çim üzerinde özel sopalarla diski veya topu rakip kaleye sokma sporu."
 };
 
+function deaccent(str: string): string {
+  return str
+    .replace(/ç/gi, "c")
+    .replace(/ğ/gi, "g")
+    .replace(/[ıİiI]/gi, "i")
+    .replace(/ö/gi, "o")
+    .replace(/ş/gi, "s")
+    .replace(/ü/gi, "u")
+    .toLowerCase();
+}
+
 export function getWordDefinition(word: string): string {
-  const upper = word.trim().toLocaleUpperCase("tr-TR");
-  return WORD_DEFINITIONS[upper] || `${word} - Kelime Patlat ile kelime dağarcığını zenginleştir!`;
+  const clean = word.trim();
+  const trUpper = clean.toLocaleUpperCase("tr-TR");
+  if (WORD_DEFINITIONS[trUpper]) return WORD_DEFINITIONS[trUpper];
+  const stdUpper = clean.toUpperCase();
+  if (WORD_DEFINITIONS[stdUpper]) return WORD_DEFINITIONS[stdUpper];
+
+  // Fallback: match ignoring Turkish diacritics / ASCII-typing (e.g. icecek -> İÇECEK, ruzgar -> RÜZGAR)
+  const cleanDeaccent = deaccent(clean);
+  const foundKey = Object.keys(WORD_DEFINITIONS).find((k) => deaccent(k) === cleanDeaccent);
+  if (foundKey && WORD_DEFINITIONS[foundKey]) return WORD_DEFINITIONS[foundKey];
+
+  return `${word} - Kelime Patlat ile kelime dağarcığını zenginleştir!`;
 }

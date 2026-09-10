@@ -38,7 +38,7 @@ import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
 import { setHapticsEnabled as setSoloHapticsEnabled, triggerHapticSelection, triggerHapticSuccess } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
-import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES } from "./shared/progression";
+import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "./shared/solo";
 import { getWordDefinition } from "./shared/dictionary";
@@ -54,6 +54,7 @@ import { VintagePuzzle } from "./components/vintage-puzzle";
 import { socialManager } from "./shared/social";
 import { UserProfileModal, type InspectableUser } from "./components/user-profile-modal";
 import { LivesModal } from "./components/lives-modal";
+import { ErrorBoundary } from "./components/error-boundary";
 
 type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -103,6 +104,7 @@ function HomeScreen() {
   const pendingWordRef = useRef<string | null>(null);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingWordTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const boardRef = useRef<View>(null);
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
@@ -222,14 +224,23 @@ function HomeScreen() {
   const [isClaimingWelcomeReward, setIsClaimingWelcomeReward] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dailySession, setDailySession] = useState<DailyChallenge | null>(null);
-  const daily = useMemo(() => getDailyChallenge(), []);
-  const livesCalc = useMemo(() => getCalculatedLives(progress), [progress]);
+  const [ticker, setTicker] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTicker((t) => t + 1);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const daily = useMemo(() => getDailyChallenge(), [ticker]);
+  const livesCalc = useMemo(() => getCalculatedLives(progress), [progress, ticker]);
   const unclaimedMissions = useMemo(() => getUnclaimedMissionsCount(progress), [progress]);
   const unclaimedMilestones = useMemo(() => getUnclaimedMilestonesCount(progress, soloUnlockedLevel), [progress, soloUnlockedLevel]);
   const hasClaimableDailyReward = useMemo(() => {
     const todayId = getDayId();
     return progress.lastLoginDay !== todayId;
-  }, [progress.lastLoginDay]);
+  }, [progress.lastLoginDay, ticker]);
   const [seasonResetModal, setSeasonResetModal] = useState<{ newSeasonId: string; previousRank: string; previousLp: number; newLp: number } | null>(null);
   const [globalToast, setGlobalToast] = useState<ToastData | null>(null);
   const prevLevelRef = useRef<number | null>(null);
@@ -599,6 +610,24 @@ function HomeScreen() {
     } catch { setProgress(fallback); }
   }, []);
 
+  const claimMilestoneOnServer = useCallback(async (level: number, fallback: (current: PlayerProgress) => PlayerProgress) => {
+    const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+    if (!token || token === "guest") { setProgress(fallback); return; }
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/game/milestone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ level })
+      });
+      if (!response.ok) throw new Error("Sandık ödülü alınamadı.");
+      const data = await response.json();
+      if (data.progress) setProgress(data.progress);
+      else setProgress(fallback);
+    } catch {
+      setProgress(fallback);
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -639,7 +668,7 @@ function HomeScreen() {
           .then((res) => (res.ok ? res.json() : null))
           .then((data) => {
             if (active && data?.progress) {
-              setProgress((current) => mergePlayerProgress(current, data.progress));
+              setProgress((current) => mergePlayerProgress(current, data.progress, { preferRemoteBalances: true }));
             }
           })
           .catch(() => undefined);
@@ -758,9 +787,15 @@ function HomeScreen() {
     if (!progressReady) return;
     AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)).catch(() => undefined);
     AsyncStorage.setItem("kelime-patlat:player-name", safeName).catch(() => undefined);
-    if (authToken) {
-      syncProgressToCloud(progress);
+    if (authToken && authToken !== "guest") {
+      if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
+      syncDebounceRef.current = setTimeout(() => {
+        syncProgressToCloud(progress);
+      }, 1500);
     }
+    return () => {
+      if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
+    };
   }, [progress, progressReady, safeName, authToken, syncProgressToCloud]);
 
   useEffect(() => {
@@ -777,13 +812,38 @@ function HomeScreen() {
         })
         .then(async (data) => {
           if (!active || !data?.app_session_id || !data.user?.openId) return;
+          const previousToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
           await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.app_session_id);
           await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
           await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || "OYUNCU");
           setAuthToken(data.app_session_id);
           setPlayerId(data.user.openId);
           setPlayerName(data.user.name || "OYUNCU");
-          if (data.user.progress) setProgress((current) => mergePlayerProgress(current, data.user.progress));
+
+          // Misafir oturumundan geliniyorsa misafir ilerlemesini yeni OAuth hesabına aktar
+          if (previousToken && previousToken !== "guest" && previousToken !== data.app_session_id) {
+            try {
+              const transferResponse = await fetch(`${getApiBaseUrl()}/api/auth/claim-guest`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.app_session_id}` },
+                body: JSON.stringify({ guestToken: previousToken }),
+              });
+              const transferData = await transferResponse.json();
+              if (transferResponse.ok && transferData.progress) {
+                setProgress(transferData.progress);
+                await syncProgressToCloud(transferData.progress);
+                return;
+              }
+            } catch {
+              // Fallback to local merge
+            }
+          }
+
+          if (data.user.progress) {
+            const merged = mergePlayerProgress(progress, data.user.progress, { preferRemoteBalances: true });
+            setProgress(merged);
+            await syncProgressToCloud(merged);
+          }
         })
         .catch(() => {
           if (active) setNotice("Giriş tamamlanamadı. Lütfen tekrar deneyin.");
@@ -832,7 +892,7 @@ function HomeScreen() {
       void reviewManager.recordVictoryAndCheckPrompt(progress.wins + 1);
     }
     
-    setProgress((current) => applyMatchProgress(current, { score: currentMyScore, tempo: currentTempo, won: currentIWon, isDraw: currentIsDraw, longWord: foundLongWord, foundWords: myFoundWords }, isBotMatch ? "bot" : "pvp"));
+    setProgress((current) => applyMatchProgress(current, { score: currentMyScore, tempo: currentTempo, won: currentIWon, isDraw: currentIsDraw, longWord: foundLongWord, foundWords: myFoundWords, size: room.size }, isBotMatch ? "bot" : "pvp"));
   }, [room, playerId, progress.wins]);
 
   useEffect(() => {
@@ -903,11 +963,19 @@ function HomeScreen() {
       haptics.error();
       setNotice(payload.message ?? "Odayla ilgili bir sorun oluştu.");
     };
-    const onRejected = () => {
+    const onRejected = (payload?: { word?: string; reason?: string }) => {
       if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
       pendingWordRef.current = null;
       haptics.error();
-      setNotice("Bu kelime tahtadaki gizli kelimelerden biri değil veya daha önce bulundu.");
+      let msg = "Bu kelime tahtadaki gizli kelimelerden biri değil.";
+      if (payload?.reason === "starting") {
+        msg = "Tur henüz başlamadı, geri sayımın bitmesini bekle.";
+      } else if (payload?.reason === "time_up") {
+        msg = "Süre doldu!";
+      } else if (payload?.reason === "already_found") {
+        msg = payload.word ? `“${payload.word}” daha önce bulundu.` : "Bu kelime daha önce bulundu.";
+      }
+      setNotice(msg);
       setSelectionFeedback("invalid");
       gameSfx.rejected();
       clearFeedbackLater();
@@ -1549,6 +1617,7 @@ function HomeScreen() {
     const res = checkDailyLoginReward(progress, todayId);
     if (!res) return;
     setProgress(res.updatedProgress);
+    void syncProgressToCloud(res.updatedProgress);
     haptics.success();
     gameSfx.victory();
     const rewardName = res.reward.rewardType === "coins" ? "SİBER ÇİP" : res.reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
@@ -1965,6 +2034,7 @@ function HomeScreen() {
         <UserProfileModal
           visible={inspectedUser !== null}
           user={inspectedUser}
+          isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
           isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
           onAddFriend={(target) => {
@@ -2029,7 +2099,7 @@ function HomeScreen() {
           onSelect={openSoloLevel}
           onClaimMilestone={(milestone) => {
             haptics.success();
-            setProgress((curr) => ({
+            claimMilestoneOnServer(milestone.level, (curr) => ({
               ...curr,
               coins: (curr.coins ?? 0) + milestone.coins,
               streakShields: (curr.streakShields ?? 1) + milestone.shields,
@@ -2076,6 +2146,13 @@ function HomeScreen() {
           }}
           onComplete={dailySession ? completeDailyChallenge : completeSoloLevel}
           onNext={() => setScreen("levels")}
+          onAdvanceLevel={() => {
+            if (soloLevel < MAX_SOLO_LEVEL) {
+              openSoloLevel(soloLevel + 1);
+            } else {
+              setScreen("levels");
+            }
+          }}
           onBonusReward={(xp, radar) => {
             setProgress((current) => ({
               ...current,
@@ -2113,37 +2190,63 @@ function HomeScreen() {
               return next;
             });
           }}
-          onSpendCoins={(item) => {
+          onSpendCoins={async (item) => {
+            const currentCoins = progress.coins ?? 0;
+            if (currentCoins < item.cost) {
+              setGlobalToast({ id: `store-err-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${item.cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
+              return;
+            }
+            if (item.rewardType === "lives") {
+              const calc = getCalculatedLives(progress);
+              if (calc.lives >= MAX_LIVES) {
+                setGlobalToast({
+                  id: `lives-full-${Date.now()}`,
+                  title: "CANLARIN DOLU! 💚",
+                  subtitle: "Tüm canların zaten tam kapasite dolu (5/5). Çiplerin korunuyor.",
+                  icon: "💚",
+                  accentColor: "#22C55E",
+                });
+                return;
+              }
+            }
+
+            const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+            if (token && token !== "guest") {
+              try {
+                const res = await fetch(`${getApiBaseUrl()}/api/game/shop-buy`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ itemId: item.id }),
+                });
+                const data = await res.json();
+                if (res.ok && data.progress) {
+                  setProgress(data.progress);
+                  setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#00F5D4" });
+                  return;
+                }
+              } catch {
+                // Fallback to local
+              }
+            }
+
+            // Local fallback (offline or guest)
             setProgress((current) => {
-              const currentCoins = current.coins ?? 0;
-              if (currentCoins < item.cost) return current;
-              const nextCoins = currentCoins - item.cost;
-              let next = { ...current, coins: nextCoins };
+              const curCoins = current.coins ?? 0;
+              if (curCoins < item.cost) return current;
+              let next = { ...current, coins: curCoins - item.cost };
               if (item.rewardType === "lives") {
-                next = {
-                  ...next,
-                  lives: MAX_LIVES,
-                  lastLifeRegenTimestamp: Date.now(),
-                };
+                next = { ...next, lives: MAX_LIVES, lastLifeRegenTimestamp: Date.now() };
               } else if (item.rewardType === "radar") {
-                next = {
-                  ...next,
-                  radarChargesBonus: (current.radarChargesBonus || 0) + 5,
-                };
+                next = { ...next, radarChargesBonus: (current.radarChargesBonus || 0) + 5 };
               } else if (item.rewardType === "shield") {
-                next = {
-                  ...next,
-                  streakShields: (current.streakShields || 0) + 1,
-                };
+                next = { ...next, streakShields: (current.streakShields || 0) + 1 };
               } else if (item.rewardType === "xp") {
-                next = {
-                  ...next,
-                  xp: current.xp + 250,
-                };
+                next = { ...next, xp: current.xp + 250 };
               }
               void syncProgressToCloud(next);
               return next;
             });
+            setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#00F5D4" });
           }}
           onSelectFrame={(selectedFrame) => {
             setProgress((current) => {
@@ -2169,18 +2272,36 @@ function HomeScreen() {
             });
             setGlobalToast({ id: `skin-${Date.now()}`, title: "TAHTA GÖRÜNÜMÜ DEĞİŞTİ", subtitle: "Matris arka planın güncellendi.", icon: "🎨", accentColor: "#FFC24A" });
           }}
-          onBuyCosmetic={(kind, id, cost) => {
-            let success = false;
-            setProgress((current) => {
-              const currentCoins = current.coins ?? 0;
-              if (currentCoins < cost) {
-                setGlobalToast({ id: `store-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
-                return current;
+          onBuyCosmetic={async (kind, id, cost) => {
+            const currentCoins = progress.coins ?? 0;
+            if (cost > 0 && currentCoins < cost) {
+              setGlobalToast({ id: `store-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
+              return false;
+            }
+
+            const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+            if (token && token !== "guest" && cost > 0) {
+              try {
+                const res = await fetch(`${getApiBaseUrl()}/api/game/cosmetic-buy`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ kind, id }),
+                });
+                const data = await res.json();
+                if (res.ok && data.progress) {
+                  setProgress(data.progress);
+                  setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#00F5D4" });
+                  return true;
+                }
+              } catch {
+                // Fallback to local
               }
-              success = true;
-              setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#00F5D4" });
-              const nextCoins = currentCoins - cost;
-              let next = { ...current, coins: nextCoins };
+            }
+
+            setProgress((current) => {
+              const curCoins = current.coins ?? 0;
+              if (cost > 0 && curCoins < cost) return current;
+              let next = { ...current, coins: Math.max(0, curCoins - cost) };
               if (kind === "avatar") next = { ...next, selectedAvatar: id as PlayerProgress["selectedAvatar"], purchasedAvatars: { ...(next.purchasedAvatars ?? {}), [id]: true } };
               else if (kind === "frame") next = { ...next, selectedFrame: id, ownedFrames: { ...(next.ownedFrames ?? {}), [id]: true } };
               else if (kind === "board") next = { ...next, selectedBoardSkin: id, ownedBoardSkins: { ...(next.ownedBoardSkins ?? {}), [id]: true } };
@@ -2188,7 +2309,8 @@ function HomeScreen() {
               void syncProgressToCloud(next);
               return next;
             });
-            return success;
+            setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#00F5D4" });
+            return true;
           }}
           onBack={() => setScreen("home")}
         />
@@ -2442,23 +2564,23 @@ function HomeScreen() {
           }
           setScreen("home");
         }}
-        onSuccess={async (token, username, cloudProgress, openId) => {
-          const guestToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+        onSuccess={async (token, username, cloudProgress, openId, previousGuestToken) => {
           setAuthToken(token);
           setPlayerId(openId);
           setPlayerName(username);
           await AsyncStorage.setItem("kelime-patlat:player-id", openId);
           await AsyncStorage.setItem("kelime-patlat:player-name", username);
           
-          // Seamless guest to registered account progress merge (prefer cloud account balances when logging in)
-          const mergedProgress = mergePlayerProgress(progress, cloudProgress, { preferRemoteBalances: true });
+          const guestTokenToClaim = (previousGuestToken && previousGuestToken !== "guest" && previousGuestToken !== token)
+            ? previousGuestToken
+            : (authToken && authToken !== "guest" && authToken !== token ? authToken : null);
 
-          if (guestToken && guestToken !== "guest") {
+          if (guestTokenToClaim) {
             try {
               const transferResponse = await fetch(`${getApiBaseUrl()}/api/auth/claim-guest`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ guestToken }),
+                body: JSON.stringify({ guestToken: guestTokenToClaim }),
               });
               const transferData = await transferResponse.json();
               if (transferResponse.ok && transferData.progress) {
@@ -2471,6 +2593,9 @@ function HomeScreen() {
               // Fall back to the local/cloud merge below when transfer is unavailable.
             }
           }
+
+          // Seamless guest to registered account progress merge (prefer cloud account balances when logging in)
+          const mergedProgress = mergePlayerProgress(progress, cloudProgress, { preferRemoteBalances: true });
 
           setProgress(mergedProgress);
           await syncProgressToCloud(mergedProgress);
@@ -2507,15 +2632,7 @@ function HomeScreen() {
           onRewardXp={(amount: number, level: number) => {
             void awardProgressOnServer(
               { kind: "vintage", score: amount, level },
-              (current) => ({
-                ...current,
-                xp: current.xp + amount,
-                vintageProgress: {
-                  maxUnlockedLevel: Math.min(20, Math.max(current.vintageProgress?.maxUnlockedLevel ?? 1, level + 1)),
-                  completedLevels: Array.from(new Set([...(current.vintageProgress?.completedLevels ?? []), level])),
-                  score: (current.vintageProgress?.score ?? 0) + amount,
-                },
-              })
+              (current) => applyVintageProgress(current, level, amount)
             );
             setGlobalToast({
               id: `vintage-${Date.now()}`,
@@ -2579,10 +2696,18 @@ function HomeScreen() {
             });
           }}
           onSelectAvatar={(selectedAvatar) => {
-            setProgress((current) => ({ ...current, selectedAvatar }));
+            setProgress((current) => {
+              const next = { ...current, selectedAvatar };
+              void syncProgressToCloud(next);
+              return next;
+            });
           }}
           onSelectTitle={(selectedTitle) => {
-            setProgress((current) => ({ ...current, selectedTitle }));
+            setProgress((current) => {
+              const next = { ...current, selectedTitle };
+              void syncProgressToCloud(next);
+              return next;
+            });
             setGlobalToast({
               id: `title-${Date.now()}`,
               title: "UNVAN KUŞANILDI",
@@ -2592,13 +2717,25 @@ function HomeScreen() {
             });
           }}
           onSelectTheme={(selectedTheme) => {
-            setProgress((current) => ({ ...current, selectedTheme }));
+            setProgress((current) => {
+              const next = { ...current, selectedTheme };
+              void syncProgressToCloud(next);
+              return next;
+            });
           }}
           onUpdateGender={(gender) => {
-            setProgress((current) => ({ ...current, gender }));
+            setProgress((current) => {
+              const next = { ...current, gender };
+              void syncProgressToCloud(next);
+              return next;
+            });
           }}
           onUpdateAvatarPhoto={(avatarPhoto) => {
-            setProgress((current) => ({ ...current, avatarPhoto }));
+            setProgress((current) => {
+              const next = { ...current, avatarPhoto };
+              void syncProgressToCloud(next);
+              return next;
+            });
             setGlobalToast({
               id: `photo-${Date.now()}`,
               title: avatarPhoto ? "PROFİL FOTOĞRAFI GÜNCELLENDİ" : "GLİF AVATARINA GEÇİLDİ",
@@ -2621,6 +2758,7 @@ function HomeScreen() {
             setSoloUnlockedLevel(1);
             setShowGuide(false);
             setScreen("auth");
+            await socialManager.reset().catch(() => undefined);
             await AsyncStorage.removeItem(SESSION_TOKEN_KEY).catch(() => undefined);
             await AsyncStorage.removeItem(PROGRESS_KEY).catch(() => undefined);
             await AsyncStorage.removeItem(SOLO_UNLOCK_KEY).catch(() => undefined);
@@ -2642,6 +2780,7 @@ function HomeScreen() {
                 console.warn("Delete account API failed", e);
               }
             }
+            await socialManager.reset().catch(() => undefined);
             await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
             await AsyncStorage.removeItem(PROGRESS_KEY);
             await AsyncStorage.removeItem(SOLO_UNLOCK_KEY);
@@ -2699,6 +2838,7 @@ function HomeScreen() {
         <UserProfileModal
           visible={inspectedUser !== null}
           user={inspectedUser}
+          isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
           isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
           onAddFriend={(target) => {
@@ -3477,6 +3617,7 @@ function HomeScreen() {
       <UserProfileModal
         visible={inspectedUser !== null}
         user={inspectedUser}
+        isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
         isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
         onClose={() => setInspectedUser(null)}
         onAddFriend={(target) => {
@@ -3729,6 +3870,7 @@ function ScoreBadge({
   const displayIcon = activeAvatarObj ? activeAvatarObj.icon : (avatar && avatar.length <= 3 ? avatar : (name.toLocaleLowerCase("tr-TR").includes("bot") ? "🤖" : "👤"));
   const avatarBorderColor = activeAvatarObj ? activeAvatarObj.color : accent;
   const avatarBgColor = activeAvatarObj ? activeAvatarObj.surface : `${accent}25`;
+  const [imgError, setImgError] = useState(false);
 
   return (
     <Pressable
@@ -3752,8 +3894,8 @@ function ScoreBadge({
               overflow: "hidden",
             }}
           >
-            {avatarPhoto ? (
-              <Image source={{ uri: avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 18, resizeMode: "cover" }} />
+            {avatarPhoto && !imgError ? (
+              <Image source={{ uri: avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 18, resizeMode: "cover" }} onError={() => setImgError(true)} />
             ) : (
               <Text style={{ fontSize: 17, color: activeAvatarObj ? activeAvatarObj.color : "#FFF", fontWeight: "900" }}>{displayIcon}</Text>
             )}
@@ -4136,8 +4278,10 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <HomeScreen />
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <HomeScreen />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

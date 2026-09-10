@@ -45,6 +45,9 @@ describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
       expect(getWordDefinition("ELMA")).toContain("meyve");
       expect(getWordDefinition("ORMAN")).toContain("ekosistem");
       expect(getWordDefinition("BAKLAVA")).toContain("tatlı");
+      expect(getWordDefinition("İÇECEK")).toContain("sıvı gıda");
+      expect(getWordDefinition("icecek")).toContain("sıvı gıda");
+      expect(getWordDefinition("ICECEK")).toContain("sıvı gıda");
     });
 
     it("sözlükte yer almayan kelimeler için güvenli yedek açıklama üretir", () => {

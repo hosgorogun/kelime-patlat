@@ -334,31 +334,36 @@ function publishLeaderboard(io: Server) {
 }
 
 async function recordRoundForLeaderboard(io: Server, room: Room) {
+  const finalScores = { ...room.scores };
+  const finalWinnerId = room.winnerId;
   const activeHumanPlayers = [room.host, room.guest].filter((player): player is PlayerRecord => Boolean(player && !player.isBot));
   const isBotMatch = Boolean(room.guest?.isBot);
-  const isDraw = !room.winnerId;
+  const isDraw = !finalWinnerId;
 
-  // Process and update authoritative LP/XP on DB for each player
+  // Process and update authoritative LP/XP/Coins on DB for each player
   const roundsToRecord = await Promise.all(
     activeHumanPlayers.map(async (player) => {
-      const roundScore = room.scores[player.id] ?? 0;
-      const won = room.winnerId === player.id;
+      const roundScore = finalScores[player.id] ?? 0;
+      const won = finalWinnerId === player.id;
 
       let lpDelta = 0;
       let xpDelta = 0;
+      let coinsDelta = 0;
       if (isBotMatch) {
-        if (won) { lpDelta = 15; xpDelta = 35; }
-        else if (isDraw) { lpDelta = 0; xpDelta = 20; }
-        else { lpDelta = -10; xpDelta = 20; }
+        if (won) { lpDelta = 15; xpDelta = 35; coinsDelta = 4; }
+        else if (isDraw) { lpDelta = 0; xpDelta = 20; coinsDelta = 1; }
+        else { lpDelta = -10; xpDelta = 20; coinsDelta = 1; }
       } else {
-        if (won) { lpDelta = 25; xpDelta = 60; }
-        else if (isDraw) { lpDelta = 0; xpDelta = 40; }
-        else { lpDelta = -20; xpDelta = 35; }
+        if (won) { lpDelta = 25; xpDelta = 60; coinsDelta = 10; }
+        else if (isDraw) { lpDelta = 0; xpDelta = 40; coinsDelta = 1; }
+        else { lpDelta = -20; xpDelta = 35; coinsDelta = 1; }
       }
 
       let currentLp = 0;
       let currentTier = "DEMİR";
       let userAvatar: string | undefined;
+      let userAvatarPhoto: string | undefined;
+      let userSelectedTitle: string | undefined;
 
       try {
         const dbUser = await UserModel.findOne({ openId: player.id });
@@ -376,6 +381,7 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
               },
               $inc: {
                 "progress.xp": xpDelta,
+                "progress.coins": coinsDelta,
                 "progress.wins": won ? 1 : 0,
                 "progress.matches": 1,
               },
@@ -388,9 +394,14 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
 
           currentLp = nextLp;
           currentTier = getLeagueTier(nextLp).tier;
-          userAvatar = updatedUser?.progress?.selectedAvatar || prevProgress.selectedAvatar;
+          userAvatar = updatedUser?.progress?.selectedAvatar || prevProgress.selectedAvatar || player.avatar;
+          userAvatarPhoto = updatedUser?.progress?.avatarPhoto || prevProgress.avatarPhoto || player.avatarPhoto;
+          userSelectedTitle = updatedUser?.progress?.selectedTitle || prevProgress.selectedTitle || player.selectedTitle;
         } else {
           currentTier = getLeagueTier(0).tier;
+          userAvatar = player.avatar;
+          userAvatarPhoto = player.avatarPhoto;
+          userSelectedTitle = player.selectedTitle;
         }
       } catch (err) {
         console.error(`[Leaderboard] Error updating user ${player.id} progress:`, err);
@@ -409,6 +420,8 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
         lp: currentLp,
         tier: currentTier,
         avatar: userAvatar,
+        avatarPhoto: userAvatarPhoto,
+        selectedTitle: userSelectedTitle,
         level: Math.floor(nextScore / 200) + 1,
       });
 
@@ -420,6 +433,8 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
         lp: currentLp,
         tier: currentTier,
         avatar: userAvatar,
+        avatarPhoto: userAvatarPhoto,
+        selectedTitle: userSelectedTitle,
       };
     })
   );
@@ -674,6 +689,27 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
     return;
   }
 
+  // Maç tamamlanmışken bir oyuncu odadan çıkarsa: kalan oyuncu sonuç ekranını ve tahtadaki kelimeleri rahatça inceleyebilsin
+  if (room.status === "finished") {
+    if (room.host.id === playerId) {
+      if (!room.guest || room.guest.isBot) {
+        destroyRoom(room.code, room);
+        return;
+      }
+      room.host = room.guest;
+      room.host.rematch = false;
+      room.guest = null;
+      room.message = `${player.name} ayrıldı.`;
+      emitRoom(io, room);
+      return;
+    }
+    room.guest = null;
+    room.host.rematch = false;
+    room.message = `${player.name} ayrıldı.`;
+    emitRoom(io, room);
+    return;
+  }
+
   if (room.host.id === playerId) {
     if (!room.guest || room.guest.isBot) {
       destroyRoom(room.code, room);
@@ -723,12 +759,32 @@ export function registerGameRooms(io: Server) {
   setInterval(() => {
     const now = Date.now();
     for (const [code, room] of rooms) {
-      if (now - room.touchedAt > ROOM_TTL_MS) destroyRoom(code, room);
+      if (now - room.touchedAt > ROOM_TTL_MS) {
+        destroyRoom(code, room);
+        continue;
+      }
+      if (room.status === "finished" && !room.host.connected && (!room.guest || !room.guest.connected || room.guest.isBot)) {
+        destroyRoom(code, room);
+      }
     }
   }, 60_000);
 
   io.on("connection", (socket) => {
-    const ownsPlayerId = (playerId: string) => !socket.data.userId || socket.data.userId === playerId;
+    const ownsPlayerId = (playerId: string) => {
+      if (socket.data.userId) {
+        return socket.data.userId === playerId;
+      }
+      // Anonim/misafir soketler kayıtlı kullanıcıların (usr_*) kimliğini taklit edemez
+      if (playerId.startsWith("usr_")) {
+        return false;
+      }
+      // Soketi bu bağlantıda kullandığı ilk misafir ID'sine bağla
+      if (!socket.data.boundPlayerId) {
+        socket.data.boundPlayerId = playerId;
+        return true;
+      }
+      return socket.data.boundPlayerId === playerId;
+    };
     socket.emit("leaderboard:update", leaderboardSnapshot());
     void loadLeaderboard().then((persisted) => {
       if (persisted) socket.emit("leaderboard:update", persisted);
@@ -882,6 +938,12 @@ export function registerGameRooms(io: Server) {
       if (!isValidPayload(roomCreateSchema, payload)) return fail(socket, "Geçersiz oda isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
+      // Bu sokete ait önceki boşta bekleyen odayı temizle (bellek sızıntısını ve yetim odaları önler)
+      for (const [existingCode, existingRoom] of rooms.entries()) {
+        if (existingRoom.host.socketId === socket.id && existingRoom.status === "waiting") {
+          destroyRoom(existingCode, existingRoom);
+        }
+      }
       const code = makeCode();
       const room: Room = {
         code,
@@ -953,13 +1015,23 @@ export function registerGameRooms(io: Server) {
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
       const player = room ? roomForPlayer(room, payload.playerId) : null;
-      if (!room || !player || (player.socketId && player.socketId !== socket.id)) return;
+      if (!room || !player) return;
+
+      // Önceki veya kopmuş soket varsa odadan çıkar
+      if (player.socketId && player.socketId !== socket.id) {
+        const oldSocket = io.sockets.sockets.get(player.socketId);
+        if (oldSocket && oldSocket.id !== socket.id) {
+          oldSocket.leave(`room:${room.code}`);
+        }
+      }
+
       player.socketId = socket.id;
       player.connected = true;
       if (room.disconnectTimer && room.disconnectPlayerId === player.id) {
         clearTimeout(room.disconnectTimer);
         room.disconnectTimer = null;
         room.disconnectPlayerId = null;
+        room.disconnectExpiresAt = null;
         room.message = `${player.name} maça yeniden bağlandı!`;
       }
       socket.join(`room:${room.code}`);
@@ -982,6 +1054,15 @@ export function registerGameRooms(io: Server) {
     socket.on("word:submit", (payload: { code: string; playerId: string; selection: number[] }) => {
       if (!isValidPayload(wordSubmitSchema, payload)) return fail(socket, "Geçersiz kelime seçimi.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
+      // Saniyede 12'den fazla kelime gönderimini sınırla (flood/DoS ve lag koruması)
+      const now = Date.now();
+      if (!socket.data.lastSubmitReset || now - socket.data.lastSubmitReset > 1000) {
+        socket.data.lastSubmitReset = now;
+        socket.data.submitCount = 0;
+      }
+      socket.data.submitCount = (socket.data.submitCount || 0) + 1;
+      if (socket.data.submitCount > 12) return;
+
       const room = rooms.get(payload.code.trim().toUpperCase());
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || room.status !== "playing") return;
@@ -1068,8 +1149,11 @@ export function registerGameRooms(io: Server) {
         player.connected = false;
         player.socketId = null;
         
-        if (room.status === "lobby" || room.status === "waiting" || room.status === "finished") {
+        if (room.status === "lobby" || room.status === "waiting") {
           leaveRoom(io, socket, room, player.id);
+        } else if (room.status === "finished") {
+          // Oyuncunun geçici bağlantı kopmasında odadaki sonuç ve rövanş verisini koru
+          emitRoom(io, room);
         } else if (room.status === "playing") {
           const opponent = room.host.id === player.id ? room.guest : room.host;
           room.message = `${player.name} bağlantısı koptu. (15s içinde yeniden bağlanmazsa hükmen yenilecek)`;

@@ -645,6 +645,12 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
                   key={lvl}
                   disabled={!isUnlocked}
                   onPress={() => {
+                    if (lives <= 0) {
+                      triggerHapticError();
+                      playErrorSound();
+                      onOpenLivesModal?.();
+                      return;
+                    }
                     triggerHapticSelection();
                     playSelectionNote(lvl % 7);
                     if (lvl === levelIndex) {
@@ -701,6 +707,16 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
           <Text style={styles.newspaperTitle}>{levelIndex}. BÖLÜM</Text>
         </View>
         <View style={styles.headerRightRow}>
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              onOpenLivesModal?.();
+            }}
+            style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
+          >
+            <Text style={styles.livesIcon}>💚</Text>
+            <Text style={styles.livesText}>{lives}/5</Text>
+          </Pressable>
           <Pressable onPress={handleResetLevel} style={styles.resetBtn}>
             <Text style={styles.resetBtnText}>🔄 SIFIRLA</Text>
           </Pressable>
@@ -857,8 +873,15 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
             {levelIndex < 20 ? (
               <Pressable
                 onPress={() => {
+                  if (typeof lives === "number" && lives <= 0) {
+                    triggerHapticError();
+                    playErrorSound();
+                    onOpenLivesModal?.();
+                    return;
+                  }
                   triggerHapticSelection();
                   playSuccessSound();
+                  setIsLevelComplete(false);
                   const nextLvl = levelIndex + 1;
                   setLevelIndex(nextLvl);
                 }}

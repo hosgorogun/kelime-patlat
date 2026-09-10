@@ -8,7 +8,7 @@ import { type GenderType } from "@/shared/progression";
 import { GoogleLogo, AppleLogo } from "./brand-logos";
 
 type AuthScreenProps = {
-  onSuccess: (token: string, username: string, cloudProgress: any, openId: string) => void;
+  onSuccess: (token: string, username: string, cloudProgress: any, openId: string, previousGuestToken?: string | null) => void;
   onCancel?: () => void | Promise<void>;
 };
 
@@ -56,11 +56,12 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
         throw new Error(data.error || "İşlem başarısız.");
       }
 
+      const previousGuestToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
       await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
       await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
       await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || data.user.username);
       haptics.success();
-      onSuccess(data.token, data.user.name || data.user.username, data.user.progress, data.user.openId);
+      onSuccess(data.token, data.user.name || data.user.username, data.user.progress, data.user.openId, previousGuestToken);
     } catch (err: any) {
       haptics.error();
       setError(err.message || "Giriş yapılırken bir hata oluştu.");

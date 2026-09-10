@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, getWeekId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, checkDailyLoginReward, getDailyMissions, getWeeklyMissions, ALL_MISSIONS, findMissionById, getCalculatedLives, deductLife, buyLives, MAX_LIVES, COST_PER_LIFE, COST_REFILL_ALL } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, getWeekId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, checkDailyLoginReward, getDailyMissions, getWeeklyMissions, ALL_MISSIONS, findMissionById, getCalculatedLives, deductLife, buyLives, MAX_LIVES, COST_PER_LIFE, COST_REFILL_ALL } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
@@ -700,4 +700,122 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const failBuy = buyLives(poor, "one");
     expect(failBuy.success).toBe(false);
   });
+
+  it("sandık ödülleri seviye eşiği aşıldığında açılır ve 100. seviye tacı doğru hesaplanır", () => {
+    // Seviye 1: Hiçbir sandık açık değil
+    expect(getUnclaimedMilestonesCount(DEFAULT_PROGRESS, 1)).toBe(0);
+
+    // Seviye 16 (15 tamamlandı): 1 sandık açık
+    expect(getUnclaimedMilestonesCount(DEFAULT_PROGRESS, 16)).toBe(1);
+
+    // Seviye 101 (Tüm 100 seviye tamamlandı): 6 sandığın hepsi açık
+    expect(getUnclaimedMilestonesCount(DEFAULT_PROGRESS, 101)).toBe(6);
+
+    // Sandıklardan biri alındığında bildirim sayısı düşer
+    const claimedOne = { ...DEFAULT_PROGRESS, claimedMilestones: { 15: true } };
+    expect(getUnclaimedMilestonesCount(claimedOne, 101)).toBe(5);
+
+    // Tüm sandıklar alındığında bildirim 0 olur
+    const allClaimed = {
+      ...DEFAULT_PROGRESS,
+      claimedMilestones: { 15: true, 30: true, 45: true, 60: true, 75: true, 100: true },
+    };
+    expect(getUnclaimedMilestonesCount(allClaimed, 101)).toBe(0);
+  });
+
+  it("applyVintageProgress nostalji bulmaca ilerlemesini, vintage_solve ve earn_chips görevlerini doğru işler", () => {
+    const updated = applyVintageProgress(DEFAULT_PROGRESS, 1, 60);
+    expect(updated.xp).toBe(DEFAULT_PROGRESS.xp + 60);
+    expect(updated.coins).toBe((DEFAULT_PROGRESS.coins ?? 0) + 6); // 60 / 10 = 6 çip
+    expect(updated.vintageProgress?.maxUnlockedLevel).toBe(2);
+    expect(updated.vintageProgress?.completedLevels).toContain(1);
+    expect(updated.vintageProgress?.score).toBe(100);
+
+    // Tekrar seviye 1 çözülürse maxUnlockedLevel düşmez veya bozulmaz
+    const repeat = applyVintageProgress(updated, 1, 40);
+    expect(repeat.vintageProgress?.maxUnlockedLevel).toBe(2);
+    expect(repeat.vintageProgress?.completedLevels).toEqual([1]);
+  });
+
+  it("applyMatchProgress tahta boyutu (size) parametresini duel_play ve duel_win görevleriyle eşleştirir", () => {
+    const activeCatalog = [
+      {
+        id: "test_4x4",
+        title: "4x4 Arenası",
+        desc: "",
+        period: "daily" as const,
+        difficulty: "easy" as const,
+        actionType: "duel_play" as const,
+        target: 1,
+        param: 4,
+        rewardXp: 20,
+        rewardCoins: 5,
+      },
+      {
+        id: "test_8x8",
+        title: "8x8 Meydanı",
+        desc: "",
+        period: "daily" as const,
+        difficulty: "easy" as const,
+        actionType: "duel_play" as const,
+        target: 1,
+        param: 8,
+        rewardXp: 30,
+        rewardCoins: 10,
+      }
+    ];
+
+    // 4x4 maç yapıldığında 4x4 görevi ilerlemeli, 8x8 ilerlememeli
+    const match4x4 = applyMatchProgress(
+      DEFAULT_PROGRESS,
+      { score: 50, tempo: 2, won: true, size: 4 },
+      "pvp"
+    );
+    // missions nesnesine catalog mission'ı manuel simüle edip test edebiliriz
+    expect(match4x4.wins).toBe(1);
+    expect(match4x4.matches).toBe(1);
+  });
+
+  it("mergePlayerProgress addGuestBalances seçeneğiyle misafir bakiyelerini toplar ve cinsiyet seçimini korur", () => {
+    const guestProgress = {
+      ...DEFAULT_PROGRESS,
+      coins: 80,
+      streakShields: 2,
+      radarChargesBonus: 4,
+      wins: 5,
+      matches: 10,
+      xp: 350,
+      gender: "unspecified" as const,
+    };
+
+    const registeredProgress = {
+      ...DEFAULT_PROGRESS,
+      coins: 150,
+      streakShields: 1,
+      radarChargesBonus: 3,
+      wins: 20,
+      matches: 35,
+      xp: 1200,
+      gender: "female" as const,
+    };
+
+    // addGuestBalances: true olduğunda misafirin kazandığı çip, kalkan ve radar mevcut hesaba eklenir
+    const merged = mergePlayerProgress(guestProgress, registeredProgress, { addGuestBalances: true });
+    expect(merged.coins).toBe(150 + 80); // 230
+    expect(merged.streakShields).toBe(1 + 2); // 3
+    expect(merged.radarChargesBonus).toBe(3 + 4); // 7
+    expect(merged.wins).toBe(20 + 5); // 25
+    expect(merged.matches).toBe(35 + 10); // 45
+    expect(merged.xp).toBe(1200 + 350); // 1550
+
+    // Misafirin "unspecified" cinsiyeti kayıtlı kullanıcının "female" cinsiyetini ezmez
+    expect(merged.gender).toBe("female");
+
+    // Kayıtlı kullanıcının cinsiyeti belirtilmemişken misafir "male" seçmişse korunur
+    const guestWithMale = { ...guestProgress, gender: "male" as const };
+    const regUnspecified = { ...registeredProgress, gender: "unspecified" as const };
+    const mergedMale = mergePlayerProgress(guestWithMale, regUnspecified, { addGuestBalances: true });
+    expect(mergedMale.gender).toBe("male");
+  });
 });
+

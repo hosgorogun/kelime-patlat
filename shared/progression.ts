@@ -382,7 +382,7 @@ export function getRank(progress: PlayerProgress) {
 
 export function applyMatchProgress(
   progress: PlayerProgress,
-  result: { score: number; tempo: number; won: boolean; isDraw?: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number },
+  result: { score: number; tempo: number; won: boolean; isDraw?: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number; size?: number },
   type: "pvp" | "bot" | "solo" = "pvp"
 ) {
   const previousDuels = progress.missions?.duels ?? 0;
@@ -478,7 +478,8 @@ export function applyMatchProgress(
 
   let nextMissions: Record<string, number> = {
     ...progress.missions,
-    duels: type !== "solo" ? duelProgress : (progress.missions?.duels ?? 0),
+    daily: progress.missions?.daily ?? 0,
+    duels: duelProgress,
     wordsmith: wordsmithProgress,
   };
 
@@ -488,11 +489,11 @@ export function applyMatchProgress(
 
   // Update duel_play
   if (type !== "solo") {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_play", 1);
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_play", 1, result.size);
   }
   // Update duel_win
   if (result.won && type !== "solo") {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_win", 1);
+    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_win", 1, result.size);
   }
   // Update solo_progress
   if (type === "solo" && result.won) {
@@ -563,10 +564,41 @@ export function applyArcadeProgress(progress: PlayerProgress, score: number) {
   };
 }
 
+export function applyVintageProgress(
+  progress: PlayerProgress,
+  level: number,
+  score: number = 30
+): PlayerProgress {
+  const xpGain = score;
+  const coinsGain = Math.max(2, Math.floor(score / 10));
+  const activeCatalog = [...getDailyMissions(getDayId()), ...getWeeklyMissions(getWeekId())];
+  let nextMissions = updateMissionAction(progress.missions || {}, activeCatalog, "vintage_solve", 1);
+  if (coinsGain > 0) {
+    nextMissions = updateMissionAction(nextMissions, activeCatalog, "earn_chips", coinsGain);
+  }
+
+  const currentVintage = progress.vintageProgress;
+  const nextMaxUnlocked = Math.min(20, Math.max(currentVintage?.maxUnlockedLevel ?? 1, level + 1));
+  const nextCompleted = Array.from(new Set([...(currentVintage?.completedLevels ?? []), level])).sort((a, b) => a - b);
+  const nextScore = (currentVintage?.score ?? 0) + (score >= 100 ? score : 100);
+
+  return {
+    ...progress,
+    xp: progress.xp + xpGain,
+    coins: (progress.coins ?? 0) + coinsGain,
+    missions: nextMissions,
+    vintageProgress: {
+      maxUnlockedLevel: nextMaxUnlocked,
+      completedLevels: nextCompleted,
+      score: nextScore,
+    },
+  };
+}
+
 export function mergePlayerProgress(
   local: PlayerProgress,
   remote?: Partial<PlayerProgress> | null,
-  options?: { preferRemoteBalances?: boolean }
+  options?: { preferRemoteBalances?: boolean; addGuestBalances?: boolean }
 ): PlayerProgress {
   if (!remote) return local;
   const safeNum = (val: any, fallback: number, maxCap = 2_000_000_000) => {
@@ -575,93 +607,146 @@ export function mergePlayerProgress(
   };
 
   const useRemoteBalances = Boolean(options?.preferRemoteBalances);
+  const addGuest = Boolean(options?.addGuestBalances);
+
+  // Filter out explicit undefined keys from remote so they don't overwrite local defined values
+  const cleanRemote: Record<string, any> = {};
+  for (const [k, v] of Object.entries(remote)) {
+    if (v !== undefined) cleanRemote[k] = v;
+  }
+
+  // Gender resolution: priority to explicit choices ("male" | "female") over "unspecified"
+  const resolveGender = (): GenderType => {
+    if (local.gender && local.gender !== "unspecified") return local.gender;
+    if (cleanRemote.gender && cleanRemote.gender !== "unspecified") return cleanRemote.gender;
+    return local.gender || cleanRemote.gender || "unspecified";
+  };
+
+  const nextXp = addGuest
+    ? safeNum((local.xp ?? 0) + (cleanRemote.xp ?? 0), local.xp)
+    : safeNum(Math.max(local.xp, cleanRemote.xp ?? 0), local.xp);
+
+  const nextLp = useRemoteBalances && cleanRemote.lp !== undefined
+    ? safeNum(cleanRemote.lp, local.lp ?? 0)
+    : safeNum(Math.max(local.lp ?? 0, cleanRemote.lp ?? 0), local.lp ?? 0);
+
+  const nextCoins = addGuest
+    ? safeNum((local.coins ?? 0) + (cleanRemote.coins ?? 0), local.coins ?? 0)
+    : useRemoteBalances && cleanRemote.coins !== undefined
+      ? safeNum(cleanRemote.coins, local.coins ?? 0)
+      : safeNum(Math.max(local.coins ?? 0, cleanRemote.coins ?? 0), local.coins ?? 0);
+
+  const nextShields = addGuest
+    ? safeNum((local.streakShields ?? 0) + (cleanRemote.streakShields ?? 0), local.streakShields ?? 0, 99)
+    : useRemoteBalances && cleanRemote.streakShields !== undefined
+      ? safeNum(cleanRemote.streakShields, local.streakShields ?? 0, 99)
+      : safeNum(Math.max(local.streakShields ?? 0, cleanRemote.streakShields ?? 0), local.streakShields ?? 0, 99);
+
+  const nextRadar = addGuest
+    ? safeNum((local.radarChargesBonus ?? 0) + (cleanRemote.radarChargesBonus ?? 0), local.radarChargesBonus ?? 0, 99)
+    : useRemoteBalances && cleanRemote.radarChargesBonus !== undefined
+      ? safeNum(cleanRemote.radarChargesBonus, local.radarChargesBonus ?? 0, 99)
+      : safeNum(Math.max(local.radarChargesBonus ?? 0, cleanRemote.radarChargesBonus ?? 0), local.radarChargesBonus ?? 0, 99);
+
+  const mergedSeasonHistory = (() => {
+    const map = new Map<string, { seasonId: string; rank: string; lp: number; date: string }>();
+    (local.seasonHistory ?? []).forEach((s) => map.set(s.seasonId, s));
+    (cleanRemote.seasonHistory ?? []).forEach((s: any) => {
+      const existing = map.get(s.seasonId);
+      if (!existing || s.lp > existing.lp) {
+        map.set(s.seasonId, s);
+      }
+    });
+    return Array.from(map.values());
+  })();
 
   return {
     ...DEFAULT_PROGRESS,
     ...local,
-    ...remote,
-    welcomeRewardClaimed: Boolean(local.welcomeRewardClaimed || remote.welcomeRewardClaimed),
-    xp: safeNum(Math.max(local.xp, remote.xp ?? 0), local.xp),
-    lp: useRemoteBalances && remote.lp !== undefined
-      ? safeNum(remote.lp, local.lp ?? 0)
-      : safeNum(Math.max(local.lp ?? 0, remote.lp ?? 0), local.lp ?? 0),
-    coins: useRemoteBalances && remote.coins !== undefined
-      ? safeNum(remote.coins, local.coins ?? 0)
-      : safeNum(Math.max(local.coins ?? 0, remote.coins ?? 0), local.coins ?? 0),
-    streakShields: useRemoteBalances && remote.streakShields !== undefined
-      ? safeNum(remote.streakShields, local.streakShields ?? 0, 99)
-      : safeNum(Math.max(local.streakShields ?? 0, remote.streakShields ?? 0), local.streakShields ?? 0, 99),
-    radarChargesBonus: useRemoteBalances && remote.radarChargesBonus !== undefined
-      ? safeNum(remote.radarChargesBonus, local.radarChargesBonus ?? 0, 99)
-      : safeNum(Math.max(local.radarChargesBonus ?? 0, remote.radarChargesBonus ?? 0), local.radarChargesBonus ?? 0, 99),
-    lives: useRemoteBalances && remote.lives !== undefined
-      ? safeNum(remote.lives, local.lives ?? MAX_LIVES, MAX_LIVES)
-      : safeNum(typeof remote.lives === "number" && typeof local.lives === "number" ? Math.min(local.lives, remote.lives) : (remote.lives ?? local.lives ?? MAX_LIVES), MAX_LIVES, MAX_LIVES),
-    lastLifeRegenTimestamp: typeof remote.lastLifeRegenTimestamp === "number" ? remote.lastLifeRegenTimestamp : (typeof local.lastLifeRegenTimestamp === "number" ? local.lastLifeRegenTimestamp : Date.now()),
-    streak: safeNum(Math.max(local.streak, remote.streak ?? 0), local.streak, 3650),
-    wins: safeNum(Math.max(local.wins, remote.wins ?? 0), local.wins),
-    matches: safeNum(Math.max(local.matches, remote.matches ?? 0), local.matches),
-    bestScore: safeNum(Math.max(local.bestScore, remote.bestScore ?? 0), local.bestScore),
-    bestTempo: safeNum(Math.max(local.bestTempo, remote.bestTempo ?? 0), local.bestTempo),
-    bestArcadeScore: safeNum(Math.max(local.bestArcadeScore ?? 0, remote.bestArcadeScore ?? 0), local.bestArcadeScore ?? 0),
-    dailyCompletedId: local.dailyCompletedId || remote.dailyCompletedId || null,
+    ...cleanRemote,
+    welcomeRewardClaimed: Boolean(local.welcomeRewardClaimed || cleanRemote.welcomeRewardClaimed),
+    xp: nextXp,
+    lp: nextLp,
+    coins: nextCoins,
+    streakShields: nextShields,
+    radarChargesBonus: nextRadar,
+    lives: useRemoteBalances && cleanRemote.lives !== undefined
+      ? safeNum(cleanRemote.lives, local.lives ?? MAX_LIVES, MAX_LIVES)
+      : safeNum(typeof cleanRemote.lives === "number" && typeof local.lives === "number" ? Math.min(local.lives, cleanRemote.lives) : (cleanRemote.lives ?? local.lives ?? MAX_LIVES), MAX_LIVES, MAX_LIVES),
+    lastLifeRegenTimestamp: typeof cleanRemote.lastLifeRegenTimestamp === "number" ? cleanRemote.lastLifeRegenTimestamp : (typeof local.lastLifeRegenTimestamp === "number" ? local.lastLifeRegenTimestamp : Date.now()),
+    streak: safeNum(Math.max(local.streak, cleanRemote.streak ?? 0), local.streak, 3650),
+    wins: addGuest
+      ? safeNum((local.wins ?? 0) + (cleanRemote.wins ?? 0), local.wins)
+      : safeNum(Math.max(local.wins, cleanRemote.wins ?? 0), local.wins),
+    matches: addGuest
+      ? safeNum((local.matches ?? 0) + (cleanRemote.matches ?? 0), local.matches)
+      : safeNum(Math.max(local.matches, cleanRemote.matches ?? 0), local.matches),
+    bestScore: safeNum(Math.max(local.bestScore, cleanRemote.bestScore ?? 0), local.bestScore),
+    bestTempo: safeNum(Math.max(local.bestTempo, cleanRemote.bestTempo ?? 0), local.bestTempo),
+    bestArcadeScore: safeNum(Math.max(local.bestArcadeScore ?? 0, cleanRemote.bestArcadeScore ?? 0), local.bestArcadeScore ?? 0),
+    dailyCompletedId: local.dailyCompletedId || cleanRemote.dailyCompletedId || null,
     missions: (() => {
       const mergedMissions: Record<string, number> = {
-        daily: safeNum(Math.max(local.missions?.daily ?? 0, remote.missions?.daily ?? 0), local.missions?.daily ?? 0, 100),
-        duels: safeNum(Math.max(local.missions?.duels ?? 0, remote.missions?.duels ?? 0), local.missions?.duels ?? 0, 100),
-        wordsmith: safeNum(Math.max(local.missions?.wordsmith ?? 0, remote.missions?.wordsmith ?? 0), local.missions?.wordsmith ?? 0, 100),
+        daily: safeNum(Math.max(local.missions?.daily ?? 0, cleanRemote.missions?.daily ?? 0), local.missions?.daily ?? 0, 100),
+        duels: safeNum(Math.max(local.missions?.duels ?? 0, cleanRemote.missions?.duels ?? 0), local.missions?.duels ?? 0, 100),
+        wordsmith: safeNum(Math.max(local.missions?.wordsmith ?? 0, cleanRemote.missions?.wordsmith ?? 0), local.missions?.wordsmith ?? 0, 100),
       };
-      const allKeys = new Set([...Object.keys(local.missions ?? {}), ...Object.keys(remote?.missions ?? {})]);
+      const allKeys = new Set([...Object.keys(local.missions ?? {}), ...Object.keys(cleanRemote?.missions ?? {})]);
       for (const k of allKeys) {
-        mergedMissions[k] = safeNum(Math.max(local.missions?.[k] ?? 0, remote?.missions?.[k] ?? 0), local.missions?.[k] ?? 0, 10000);
+        mergedMissions[k] = safeNum(Math.max(local.missions?.[k] ?? 0, cleanRemote?.missions?.[k] ?? 0), local.missions?.[k] ?? 0, 10000);
       }
       return mergedMissions;
     })(),
     claimedMilestones: {
-      ...(remote.claimedMilestones ?? {}),
+      ...(cleanRemote.claimedMilestones ?? {}),
       ...(local.claimedMilestones ?? {}),
     },
     purchasedAvatars: {
-      ...(remote.purchasedAvatars ?? {}),
+      ...(cleanRemote.purchasedAvatars ?? {}),
       ...(local.purchasedAvatars ?? {}),
     },
     weeklyClaimed: {
-      ...(remote.weeklyClaimed ?? {}),
+      ...(cleanRemote.weeklyClaimed ?? {}),
       ...(local.weeklyClaimed ?? {}),
     },
     dailyClaimed: {
-      ...(remote.dailyClaimed ?? {}),
+      ...(cleanRemote.dailyClaimed ?? {}),
       ...(local.dailyClaimed ?? {}),
     },
-    history: Array.from(new Set([...(local.history ?? []), ...(remote.history ?? [])])).slice(-150),
-    selectedAvatar: local.selectedAvatar || remote.selectedAvatar || "spark",
-    selectedTheme: local.selectedTheme || remote.selectedTheme || "nature",
-    selectedTitle: local.selectedTitle || remote.selectedTitle,
-    gender: remote.gender || local.gender || "unspecified",
-    avatarPhoto: remote.avatarPhoto || local.avatarPhoto,
-    selectedFrame: local.selectedFrame || remote.selectedFrame || "signal",
-    selectedVictoryEffect: local.selectedVictoryEffect || remote.selectedVictoryEffect || "pulse",
-    ownedFrames: { ...(remote.ownedFrames ?? {}), ...(local.ownedFrames ?? {}) },
-    ownedVictoryEffects: { ...(remote.ownedVictoryEffects ?? {}), ...(local.ownedVictoryEffects ?? {}) },
-    selectedBoardSkin: local.selectedBoardSkin || remote.selectedBoardSkin || "grid",
-    ownedBoardSkins: { ...(remote.ownedBoardSkins ?? {}), ...(local.ownedBoardSkins ?? {}) },
-    soloUnlockedLevel: safeNum(Math.max(local.soloUnlockedLevel ?? 1, remote.soloUnlockedLevel ?? 1), local.soloUnlockedLevel ?? 1, 101),
+    history: Array.from(new Set([...(local.history ?? []), ...(cleanRemote.history ?? [])])).slice(-150),
+    selectedAvatar: local.selectedAvatar || cleanRemote.selectedAvatar || "spark",
+    selectedTheme: local.selectedTheme || cleanRemote.selectedTheme || "nature",
+    selectedTitle: local.selectedTitle || cleanRemote.selectedTitle || "[ÇAYLAK]",
+    gender: resolveGender(),
+    avatarPhoto: local.avatarPhoto || cleanRemote.avatarPhoto,
+    selectedFrame: local.selectedFrame || cleanRemote.selectedFrame || "signal",
+    selectedVictoryEffect: local.selectedVictoryEffect || cleanRemote.selectedVictoryEffect || "pulse",
+    ownedFrames: { ...(cleanRemote.ownedFrames ?? {}), ...(local.ownedFrames ?? {}) },
+    ownedVictoryEffects: { ...(cleanRemote.ownedVictoryEffects ?? {}), ...(local.ownedVictoryEffects ?? {}) },
+    selectedBoardSkin: local.selectedBoardSkin || cleanRemote.selectedBoardSkin || "grid",
+    ownedBoardSkins: { ...(cleanRemote.ownedBoardSkins ?? {}), ...(local.ownedBoardSkins ?? {}) },
+    soloUnlockedLevel: safeNum(Math.max(local.soloUnlockedLevel ?? 1, cleanRemote.soloUnlockedLevel ?? 1), local.soloUnlockedLevel ?? 1, 101),
     vintageProgress: {
-      maxUnlockedLevel: safeNum(Math.max(local.vintageProgress?.maxUnlockedLevel ?? 1, remote.vintageProgress?.maxUnlockedLevel ?? 1), 1, 20),
+      maxUnlockedLevel: safeNum(Math.max(local.vintageProgress?.maxUnlockedLevel ?? 1, cleanRemote.vintageProgress?.maxUnlockedLevel ?? 1), 1, 20),
       completedLevels: Array.from(new Set([
         ...(local.vintageProgress?.completedLevels ?? []),
-        ...(remote.vintageProgress?.completedLevels ?? []),
+        ...(cleanRemote.vintageProgress?.completedLevels ?? []),
       ])).sort((a, b) => a - b),
-      score: safeNum(Math.max(local.vintageProgress?.score ?? 0, remote.vintageProgress?.score ?? 0), 0),
+      score: safeNum(Math.max(local.vintageProgress?.score ?? 0, cleanRemote.vintageProgress?.score ?? 0), 0),
     },
-    sfxEnabled: remote?.sfxEnabled ?? local.sfxEnabled ?? true,
-    hapticsEnabled: remote?.hapticsEnabled ?? local.hapticsEnabled ?? true,
-    lastLoginDay: local.lastLoginDay || remote?.lastLoginDay,
-    loginDaysCount: safeNum(Math.max(local.loginDaysCount ?? 0, remote?.loginDaysCount ?? 0), 0),
+    sfxEnabled: cleanRemote?.sfxEnabled ?? local.sfxEnabled ?? true,
+    hapticsEnabled: cleanRemote?.hapticsEnabled ?? local.hapticsEnabled ?? true,
+    lastLoginDay: local.lastLoginDay || cleanRemote?.lastLoginDay,
+    loginDaysCount: safeNum(Math.max(local.loginDaysCount ?? 0, cleanRemote?.loginDaysCount ?? 0), 0),
+    lastStreakCheckDate: local.lastStreakCheckDate || cleanRemote?.lastStreakCheckDate,
+    missionsDate: local.missionsDate || cleanRemote?.missionsDate,
+    weeklyMissionsWeek: local.weeklyMissionsWeek || cleanRemote?.weeklyMissionsWeek,
+    seasonHistory: mergedSeasonHistory,
+    lastSeasonResetId: local.lastSeasonResetId || cleanRemote?.lastSeasonResetId,
     friends: (() => {
       const map = new Map<string, any>();
       (local.friends ?? []).forEach((f) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
-      (remote?.friends ?? []).forEach((f) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
+      (cleanRemote?.friends ?? []).forEach((f: any) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
       return Array.from(map.values());
     })(),
   };
@@ -757,7 +842,7 @@ export function getDailyMysteryWord(date = new Date()): DailyMystery {
   const dayOfMonth = date.getDate(); // 1 - 31
   const mysteryWords: { word: string; definition: string }[] = [
     { word: "ANAFOR", definition: "Görünmez bir el gibi seni derine çekerim; suyun içinde kendi etrafımda dönen gizli bir kapıyım." },
-    { word: "SİMŞEK", definition: "Gökyüzünde saniyelerce çakan devasa bir kılıcım; arkamdan hemen gök gürültüsü yürür." },
+    { word: "ŞİMŞEK", definition: "Gökyüzünde saniyelerce çakan devasa bir kılıcım; arkamdan hemen gök gürültüsü yürür." },
     { word: "YANKI", definition: "Sesini bana verirsin, sana aynısını geri yankılatırım; yalnız kayalıklarda yaşayan gölgeyim." },
     { word: "KİMBİLİR", definition: "Bilinmezin ardındaki soruların cevapsız anahtarıyım; ne zaman gelsen sırrı korurum." },
     { word: "GÖLGE", definition: "Işık varken arkandan ayrılmam, karanlık çökünce aniden ortadan kaybolurum." },
@@ -783,7 +868,7 @@ export function getDailyMysteryWord(date = new Date()): DailyMystery {
     { word: "RESONANS", definition: "Aynı frekansta atan iki yüreğin veya telin birleşip dünyayı sarsan titreşimi." },
     { word: "DÖNÜŞÜM", definition: "Tırtılın kozadan çıkıp kanat çırpması gibi, eski halinden eser bırakmayan değişim." },
     { word: "KEŞİF", definition: "Karanlık haritalarda ayak basılmamış kara parçalarını gün ışığına çıkarma cesareti." },
-    { word: "ÖZELİK", definition: "Seni sen yapan, eşsiz kılan ve kalabalıklar arasında parlamanı sağlayan gizli imza." },
+    { word: "ÖZELLİK", definition: "Seni sen yapan, eşsiz kılan ve kalabalıklar arasında parlamanı sağlayan gizli imza." },
     { word: "SARMAL", definition: "Kendi etrafında döne döne sonsuzluğa veya merkeze doğru çekilen gizemli çizgi." },
     { word: "MÜCADELE", definition: "Düşsen de defalarca ayağa kalkıp hedefe doğru atılan kararlı adım." },
   ];
@@ -935,7 +1020,12 @@ export function updateMissionAction(
   for (const m of activeMissions) {
     if (m.actionType === actionType) {
       if (m.param !== undefined) {
-        if (param !== undefined && param >= m.param) {
+        if (actionType === "duel_play" || actionType === "duel_win") {
+          // Düello tahta boyutu (4x4, 6x6, 8x8, 10x10) tam eşleşmeli
+          if (param !== undefined && param === m.param) {
+            nextMissions[m.id] = (nextMissions[m.id] ?? 0) + increment;
+          }
+        } else if (param !== undefined && param >= m.param) {
           nextMissions[m.id] = (nextMissions[m.id] ?? 0) + increment;
         }
       } else {

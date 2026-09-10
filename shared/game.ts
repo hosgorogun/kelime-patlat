@@ -92,6 +92,8 @@ export type LeaderboardEntry = {
   lp?: number;
   tier?: string;
   avatar?: string;
+  avatarPhoto?: string;
+  selectedTitle?: string;
   level?: number;
 };
 

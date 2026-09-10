@@ -125,12 +125,12 @@ export function LivesModal({
                 }
                 onBuyOne();
               }}
-              disabled={isFull || currentCoins < COST_PER_LIFE}
+              disabled={isFull}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnOne,
                 (isFull || currentCoins < COST_PER_LIFE) && styles.btnDisabled,
-                pressed && !isFull && currentCoins >= COST_PER_LIFE && styles.pressed,
+                pressed && !isFull && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>💚</Text>
@@ -154,12 +154,12 @@ export function LivesModal({
                 }
                 onRefillAll();
               }}
-              disabled={isFull || currentCoins < COST_REFILL_ALL}
+              disabled={isFull}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnRefill,
                 (isFull || currentCoins < COST_REFILL_ALL) && styles.btnDisabled,
-                pressed && !isFull && currentCoins >= COST_REFILL_ALL && styles.pressed,
+                pressed && !isFull && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>👑</Text>

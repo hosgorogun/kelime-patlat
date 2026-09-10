@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import path from "node:path";
+import fs from "node:fs";
 import net from "net";
 import { Server as SocketIOServer } from "socket.io";
 import { registerOAuthRoutes } from "./oauth";
@@ -12,7 +14,8 @@ import { UserModel, hashPassword, verifyPassword, connectDb } from "../db";
 import { deletePlayerProfile, ProfileModel } from "../game/mongo-store";
 import { z } from "zod";
 import { randomUUID, randomInt } from "node:crypto";
-import { applyArcadeProgress, applyMatchProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, findMissionById, getLeagueTier, buyLives, deductLife, getCalculatedLives, reconcilePlayerProgress, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES, type PlayerProgress } from "../../shared/progression";
+import { AVATARS, applyArcadeProgress, applyMatchProgress, applyVintageProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, findMissionById, getLeagueTier, buyLives, deductLife, getCalculatedLives, reconcilePlayerProgress, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES, MILESTONE_REWARDS, type PlayerProgress, type GenderType } from "../../shared/progression";
+import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
 import type { LeaderboardEntry } from "../../shared/game";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -71,6 +74,10 @@ async function startServer() {
     );
     res.header("Access-Control-Allow-Credentials", "true");
 
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+
     // Handle preflight requests
     if (req.method === "OPTIONS") {
       res.sendStatus(200);
@@ -82,26 +89,46 @@ async function startServer() {
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ limit: "1mb", extended: true }));
 
-  const authAttempts = new Map<string, { startedAt: number; count: number }>();
-  app.use("/api/auth", (req, res, next) => {
-    if (!req.path.endsWith("/login") && !req.path.endsWith("/signup")) return next();
-    const key = req.ip || "unknown";
+  function checkRateLimit(storage: Map<string, { startedAt: number; count: number }>, key: string, max: number, windowMs = 60_000): boolean {
     const now = Date.now();
-    const current = authAttempts.get(key);
-    if (!current || now - current.startedAt >= 60_000) {
-      // Periodically purge stale entries to prevent unbounded memory growth
-      if (authAttempts.size > 500) {
-        for (const [k, v] of authAttempts) {
-          if (now - v.startedAt >= 60_000) authAttempts.delete(k);
+    const current = storage.get(key);
+    if (!current || now - current.startedAt >= windowMs) {
+      if (storage.size > 1000) {
+        for (const [k, v] of storage) {
+          if (now - v.startedAt >= windowMs) storage.delete(k);
         }
       }
-      authAttempts.set(key, { startedAt: now, count: 1 });
-      return next();
+      storage.set(key, { startedAt: now, count: 1 });
+      return true;
     }
     current.count += 1;
-    if (current.count > 10) {
-      res.status(429).json({ error: "Çok fazla deneme. Lütfen bir dakika sonra tekrar deneyin." });
-      return;
+    return current.count <= max;
+  }
+
+  const authAttempts = new Map<string, { startedAt: number; count: number }>();
+  const guestAttempts = new Map<string, { startedAt: number; count: number }>();
+  const gameAttempts = new Map<string, { startedAt: number; count: number }>();
+
+  app.use("/api/auth", (req, res, next) => {
+    const key = req.ip || "unknown";
+    if (req.path.endsWith("/login") || req.path.endsWith("/signup")) {
+      if (!checkRateLimit(authAttempts, key, 10)) {
+        return res.status(429).json({ error: "Çok fazla deneme. Lütfen bir dakika sonra tekrar deneyin." });
+      }
+    } else if (req.path.endsWith("/guest")) {
+      if (!checkRateLimit(guestAttempts, key, 15)) {
+        return res.status(429).json({ error: "Çok fazla misafir oturumu isteği. Lütfen bir dakika sonra tekrar deneyin." });
+      }
+    }
+    next();
+  });
+
+  app.use("/api/game", (req, res, next) => {
+    if (req.method === "POST") {
+      const key = (req.headers.authorization?.replace("Bearer ", "") || req.ip || "unknown").slice(0, 64);
+      if (!checkRateLimit(gameAttempts, key, 35)) {
+        return res.status(429).json({ error: "Çok sık oyun işlemi yapıldı. Lütfen biraz bekleyin." });
+      }
     }
     next();
   });
@@ -157,17 +184,23 @@ async function startServer() {
       }
       const { username, password, email, fullName, gender } = parsed.data;
       const lowerUsername = username.toLocaleLowerCase("tr-TR");
-      const existingUser = await UserModel.findOne({ username: lowerUsername });
+      const lowerEmail = email.trim().toLocaleLowerCase("tr-TR");
+      const existingUser = await UserModel.findOne({
+        $or: [{ username: lowerUsername }, { email: lowerEmail }]
+      });
       if (existingUser) {
-        return res.status(400).json({ error: "Bu kullanıcı adı zaten alınmış." });
+        if (existingUser.username === lowerUsername) {
+          return res.status(400).json({ error: "Bu kullanıcı adı zaten alınmış." });
+        }
+        return res.status(400).json({ error: "Bu e-posta adresi ile zaten bir hesap var." });
       }
       
       const openId = `usr_${lowerUsername}`;
       const passwordHash = hashPassword(password);
       const now = new Date();
 
-      const validGender = gender === "male" || gender === "female" ? gender : "unspecified";
-      const initialProgress = { gender: validGender };
+      const validGender: GenderType = gender === "male" || gender === "female" ? gender : "unspecified";
+      const initialProgress: PlayerProgress = { ...DEFAULT_PROGRESS, gender: validGender };
 
       const user = new UserModel({
         id: randomInt(1, 2_147_483_647),
@@ -175,7 +208,7 @@ async function startServer() {
         username: lowerUsername,
         passwordHash,
         name: fullName.trim(),
-        email: email.trim().toLocaleLowerCase("tr-TR"),
+        email: lowerEmail,
         loginMethod: "credentials",
         role: "user",
         createdAt: now,
@@ -207,7 +240,13 @@ async function startServer() {
       if (!guest) return res.status(409).json({ error: "Bu misafir ilerlemesi daha önce başka bir hesaba aktarıldı." });
       const target = await UserModel.findOne({ openId: user.openId });
       if (target) {
-        target.progress = mergePlayerProgress({ ...DEFAULT_PROGRESS, ...(target.progress ?? {}) } as PlayerProgress, guest.progress);
+        target.progress = mergePlayerProgress(
+          { ...DEFAULT_PROGRESS, ...(target.progress ?? {}) } as PlayerProgress,
+          guest.progress,
+          { addGuestBalances: true }
+        );
+        const combinedAwardIds = Array.from(new Set([...(target.processedAwardIds ?? []), ...(guest.processedAwardIds ?? [])])).slice(-200);
+        target.processedAwardIds = combinedAwardIds;
         target.updatedAt = new Date();
         await target.save();
       }
@@ -257,11 +296,66 @@ async function startServer() {
       await connectDb();
       const dbUser = await UserModel.findOne({ openId: user.openId });
       if (dbUser) {
-        dbUser.progress = mergePlayerProgress(
-          { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress,
-          progress,
-          { preferRemoteBalances: true },
-        );
+        const currentProg = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+        // Bakiye alanları istemci tarafından artırılamaz (yalnızca kozmetik harcamasında azalabilir)
+        const nextCoins = typeof progress.coins === "number" && progress.coins < (currentProg.coins ?? 0)
+          ? Math.max(0, progress.coins)
+          : (currentProg.coins ?? 0);
+        const nextShields = typeof progress.streakShields === "number" && progress.streakShields < (currentProg.streakShields ?? 0)
+          ? Math.max(0, progress.streakShields)
+          : (currentProg.streakShields ?? 0);
+        const nextRadar = typeof progress.radarChargesBonus === "number" && progress.radarChargesBonus < (currentProg.radarChargesBonus ?? 0)
+          ? Math.max(0, progress.radarChargesBonus)
+          : (currentProg.radarChargesBonus ?? 0);
+
+        const isClaimingWelcome = !currentProg.welcomeRewardClaimed && Boolean(progress.welcomeRewardClaimed);
+        const welcomeCoinsBonus = isClaimingWelcome ? 50 : 0;
+
+        dbUser.progress = {
+          ...currentProg,
+          selectedAvatar: progress.selectedAvatar || currentProg.selectedAvatar,
+          selectedFrame: progress.selectedFrame !== undefined ? progress.selectedFrame : currentProg.selectedFrame,
+          selectedBoardSkin: progress.selectedBoardSkin !== undefined ? progress.selectedBoardSkin : currentProg.selectedBoardSkin,
+          selectedVictoryEffect: progress.selectedVictoryEffect !== undefined ? progress.selectedVictoryEffect : currentProg.selectedVictoryEffect,
+          selectedTitle: progress.selectedTitle || currentProg.selectedTitle,
+          selectedTheme: progress.selectedTheme || currentProg.selectedTheme,
+          gender: progress.gender || currentProg.gender,
+          avatarPhoto: progress.avatarPhoto !== undefined ? progress.avatarPhoto : currentProg.avatarPhoto,
+          sfxEnabled: progress.sfxEnabled !== undefined ? progress.sfxEnabled : currentProg.sfxEnabled,
+          hapticsEnabled: progress.hapticsEnabled !== undefined ? progress.hapticsEnabled : currentProg.hapticsEnabled,
+          purchasedAvatars: { ...(currentProg.purchasedAvatars || {}), ...(progress.purchasedAvatars || {}) },
+          ownedFrames: { ...(currentProg.ownedFrames || {}), ...(progress.ownedFrames || {}) },
+          ownedBoardSkins: { ...(currentProg.ownedBoardSkins || {}), ...(progress.ownedBoardSkins || {}) },
+          ownedVictoryEffects: { ...(currentProg.ownedVictoryEffects || {}), ...(progress.ownedVictoryEffects || {}) },
+          friends: Array.isArray(progress.friends) ? progress.friends : currentProg.friends,
+          welcomeRewardClaimed: currentProg.welcomeRewardClaimed || Boolean(progress.welcomeRewardClaimed),
+          claimedMilestones: {
+            ...(currentProg.claimedMilestones || {}),
+            ...(progress.claimedMilestones || {}),
+          },
+          coins: nextCoins + welcomeCoinsBonus,
+          streakShields: nextShields,
+          radarChargesBonus: nextRadar,
+          lives: typeof progress.lives === "number" ? Math.min(MAX_LIVES, Math.max(0, progress.lives)) : currentProg.lives,
+          lastLifeRegenTimestamp: typeof progress.lastLifeRegenTimestamp === "number" ? progress.lastLifeRegenTimestamp : currentProg.lastLifeRegenTimestamp,
+          dailyCompletedId: progress.dailyCompletedId || currentProg.dailyCompletedId,
+          lastStreakCheckDate: progress.lastStreakCheckDate || currentProg.lastStreakCheckDate,
+          dailyClaimed: { ...(currentProg.dailyClaimed || {}), ...(progress.dailyClaimed || {}) },
+          weeklyClaimed: { ...(currentProg.weeklyClaimed || {}), ...(progress.weeklyClaimed || {}) },
+          missions: { ...(currentProg.missions || {}), ...(progress.missions || {}) },
+          missionsDate: progress.missionsDate || currentProg.missionsDate,
+          weeklyMissionsWeek: progress.weeklyMissionsWeek || currentProg.weeklyMissionsWeek,
+          seasonHistory: progress.seasonHistory || currentProg.seasonHistory,
+          lastSeasonResetId: progress.lastSeasonResetId || currentProg.lastSeasonResetId,
+          vintageProgress: progress.vintageProgress || currentProg.vintageProgress,
+          // xp, lp, wins, matches, streak, soloUnlockedLevel SUNUCU OTORİTESİNDEDİR
+          xp: currentProg.xp,
+          lp: currentProg.lp,
+          wins: currentProg.wins,
+          matches: currentProg.matches,
+          streak: currentProg.streak,
+          soloUnlockedLevel: currentProg.soloUnlockedLevel,
+        };
         dbUser.updatedAt = new Date();
         await dbUser.save();
       }
@@ -277,11 +371,18 @@ async function startServer() {
       const user = await sdk.authenticateRequest(req);
       if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
 
-      await UserModel.deleteOne({ openId: user.openId });
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (dbUser) {
+        await UserModel.deleteOne({ openId: user.openId });
+      }
+
       await deletePlayerProfile(user.openId);
+      if (dbUser?.username) {
+        await deletePlayerProfile(dbUser.username);
+      }
       res.json({ success: true, message: "Hesabınız ve verileriniz başarıyla silindi." });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || "Hesap silme başarısız." });
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err.message || "Hesap silme başarısız." });
     }
   });
 
@@ -398,27 +499,32 @@ async function startServer() {
       const user = await sdk.authenticateRequest(req);
       const dbUser = await UserModel.findOneAndUpdate(
         { openId: user.openId, processedAwardIds: { $ne: payload.data.awardId } },
-        { $addToSet: { processedAwardIds: payload.data.awardId } },
+        { $push: { processedAwardIds: { $each: [payload.data.awardId], $slice: -200 } } },
         { new: true },
       );
       if (!dbUser) return res.status(409).json({ error: "Bu ödül isteği daha önce işlendi." });
       const current = { ...DEFAULT_PROGRESS, ...(dbUser?.progress ?? {}) } as PlayerProgress;
+
+      // Güvenlik doğrulaması: Kilitli seviyeler için ödül talep edilemez
+      if (payload.data.kind === "solo" && !payload.data.daily) {
+        const currentUnlocked = current.soloUnlockedLevel ?? 1;
+        const requestedLevel = payload.data.level ?? 1;
+        if (requestedLevel > currentUnlocked) {
+          return res.status(400).json({ error: "Kilitli seviye için ödül alınamaz." });
+        }
+      }
+      if (payload.data.kind === "vintage") {
+        const maxVintageUnlocked = current.vintageProgress?.maxUnlockedLevel ?? 1;
+        const requestedLevel = payload.data.level ?? 1;
+        if (requestedLevel > maxVintageUnlocked) {
+          return res.status(400).json({ error: "Kilitli nostalji bulmacası için ödül alınamaz." });
+        }
+      }
+
       const next = payload.data.kind === "arcade"
         ? applyArcadeProgress(current, payload.data.score ?? 0)
         : payload.data.kind === "vintage"
-        ? {
-            ...current,
-            xp: current.xp + (payload.data.score ?? 30),
-            coins: (current.coins ?? 0) + Math.max(2, Math.floor((payload.data.score ?? 30) / 10)),
-            vintageProgress: {
-              maxUnlockedLevel: Math.min(20, Math.max(current.vintageProgress?.maxUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
-              completedLevels: Array.from(new Set([
-                ...(current.vintageProgress?.completedLevels ?? []),
-                ...(payload.data.level ? [payload.data.level] : []),
-              ])).sort((a, b) => a - b),
-              score: (current.vintageProgress?.score ?? 0) + (payload.data.score ?? 100),
-            },
-          }
+        ? applyVintageProgress(current, payload.data.level ?? 1, payload.data.score ?? 30)
         : {
             ...applyMatchProgress(current, {
               score: (payload.data.level ?? 1) * 14,
@@ -517,6 +623,147 @@ async function startServer() {
     }
   });
 
+  app.post("/api/game/milestone", async (req, res) => {
+    const payload = z.object({ level: z.number().int().min(1).max(100) }).safeParse(req.body);
+    if (!payload.success) return res.status(400).json({ error: "Geçersiz sandık seviyesi." });
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      const current = { ...DEFAULT_PROGRESS, ...(dbUser?.progress ?? {}) } as PlayerProgress;
+      
+      const milestone = MILESTONE_REWARDS.find((m) => m.level === payload.data.level);
+      if (!milestone) return res.status(400).json({ error: "Bu seviyede bir sandık bulunamadı." });
+      
+      const isUnlocked = (current.soloUnlockedLevel ?? 1) > milestone.level;
+      const isClaimed = Boolean(current.claimedMilestones?.[milestone.level]);
+      if (!isUnlocked) return res.status(400).json({ error: "Bu sandığın kilidi henüz açılmadı." });
+      if (isClaimed) return res.status(409).json({ error: "Bu sandık ödülü daha önce alındı." });
+      
+      const next: PlayerProgress = {
+        ...current,
+        coins: (current.coins ?? 0) + milestone.coins,
+        streakShields: (current.streakShields ?? 0) + milestone.shields,
+        xp: current.xp + milestone.xp,
+        claimedMilestones: {
+          ...(current.claimedMilestones ?? {}),
+          [milestone.level]: true,
+        },
+      };
+      
+      if (dbUser) {
+        dbUser.progress = next;
+        dbUser.updatedAt = new Date();
+        await dbUser.save();
+      }
+      res.json({ success: true, progress: next });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Sandık ödülü alınamadı." });
+    }
+  });
+
+  app.post("/api/game/shop-buy", async (req, res) => {
+    const payload = z.object({ itemId: z.string().max(32) }).safeParse(req.body);
+    if (!payload.success) return res.status(400).json({ error: "Geçersiz mağaza isteği." });
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+      const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+      const item = CHIP_EQUIPMENT_ITEMS.find((it) => it.id === payload.data.itemId);
+      if (!item) return res.status(400).json({ error: "Bilinmeyen mağaza ürünü." });
+      const currentCoins = current.coins ?? 0;
+      if (currentCoins < item.cost) {
+        return res.status(400).json({ error: `Yetersiz çip! Bu ürün için ${item.cost} siber çip gerekiyor.` });
+      }
+
+      let next = { ...current, coins: currentCoins - item.cost };
+      if (item.rewardType === "lives") {
+        const calc = getCalculatedLives(current);
+        if (calc.lives >= MAX_LIVES) {
+          return res.status(400).json({ error: "Canlarınız zaten tam kapasite dolu (5/5)!" });
+        }
+        next.lives = MAX_LIVES;
+        next.lastLifeRegenTimestamp = Date.now();
+      } else if (item.rewardType === "radar") {
+        next.radarChargesBonus = (current.radarChargesBonus || 0) + 5;
+      } else if (item.rewardType === "shield") {
+        next.streakShields = (current.streakShields || 0) + 1;
+      } else if (item.rewardType === "xp") {
+        next.xp = current.xp + 250;
+      }
+      dbUser.progress = next;
+      dbUser.updatedAt = new Date();
+      await dbUser.save();
+      res.json({ success: true, progress: next });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Satın alma işlemi başarısız." });
+    }
+  });
+
+  app.post("/api/game/cosmetic-buy", async (req, res) => {
+    const payload = z.object({
+      kind: z.enum(["avatar", "frame", "effect", "board"]),
+      id: z.string().max(32),
+    }).safeParse(req.body);
+    if (!payload.success) return res.status(400).json({ error: "Geçersiz kozmetik isteği." });
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+      const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+      const { kind, id } = payload.data;
+
+      let cost = 0;
+      if (kind === "frame") {
+        const entry = PROFILE_FRAMES.find((f) => f[0] === id);
+        if (!entry) return res.status(400).json({ error: "Geçersiz çerçeve." });
+        cost = entry[3];
+      } else if (kind === "effect") {
+        const entry = VICTORY_EFFECTS.find((e) => e[0] === id);
+        if (!entry) return res.status(400).json({ error: "Geçersiz zafer efekti." });
+        cost = entry[3];
+      } else if (kind === "board") {
+        const entry = BOARD_SKINS.find((b) => b[0] === id);
+        if (!entry) return res.status(400).json({ error: "Geçersiz tahta görünümü." });
+        cost = entry[3];
+      } else if (kind === "avatar") {
+        const entry = AVATARS.find((a) => a.id === id);
+        if (!entry) return res.status(400).json({ error: "Geçersiz avatar." });
+        cost = 0;
+      }
+
+      const currentCoins = current.coins ?? 0;
+      if (cost > 0 && currentCoins < cost) {
+        return res.status(400).json({ error: `Yetersiz çip! Bu kozmetik için ${cost} siber çip gerekiyor.` });
+      }
+
+      const nextCoins = Math.max(0, currentCoins - cost);
+      let next = { ...current, coins: nextCoins };
+      if (kind === "frame") {
+        next.selectedFrame = id;
+        next.ownedFrames = { ...(current.ownedFrames ?? {}), [id]: true };
+      } else if (kind === "effect") {
+        next.selectedVictoryEffect = id;
+        next.ownedVictoryEffects = { ...(current.ownedVictoryEffects ?? {}), [id]: true };
+      } else if (kind === "board") {
+        next.selectedBoardSkin = id;
+        next.ownedBoardSkins = { ...(current.ownedBoardSkins ?? {}), [id]: true };
+      } else if (kind === "avatar") {
+        next.selectedAvatar = id as any;
+        next.purchasedAvatars = { ...(current.purchasedAvatars ?? {}), [id]: true };
+      }
+      dbUser.progress = next;
+      dbUser.updatedAt = new Date();
+      await dbUser.save();
+      res.json({ success: true, progress: next });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Kozmetik açılamadı." });
+    }
+  });
+
   app.get("/api/auth/get-progress", async (req, res) => {
     try {
       await connectDb();
@@ -558,6 +805,8 @@ async function startServer() {
           lp: prog.lp || 0,
           tier: tier.tier,
           avatar: prog.selectedAvatar || "spark",
+          avatarPhoto: prog.avatarPhoto,
+          selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
           level: Math.floor((prog.xp || 0) / 200) + 1,
         };
       });
@@ -568,6 +817,18 @@ async function startServer() {
     }
   });
 
+
+  // Production static web export support
+  const staticDir = path.resolve(process.cwd(), "dist");
+  if (fs.existsSync(path.join(staticDir, "index.html"))) {
+    app.use(express.static(staticDir));
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api/") || req.path.startsWith("/socket.io/")) {
+        return next();
+      }
+      res.sendFile(path.join(staticDir, "index.html"));
+    });
+  }
 
   registerGameRooms(io);
 

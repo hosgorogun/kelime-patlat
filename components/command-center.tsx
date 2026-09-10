@@ -49,7 +49,20 @@ export function CommandCenter({
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
   const dailyRewardClaimingRef = useRef(false);
-  const livesCalc = getCalculatedLives(progress);
+  const [livesCalc, setLivesCalc] = useState(() => getCalculatedLives(progress));
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [progress.avatarPhoto]);
+
+  useEffect(() => {
+    setLivesCalc(getCalculatedLives(progress));
+    const interval = setInterval(() => {
+      setLivesCalc(getCalculatedLives(progress));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [progress]);
   const rank = getRank(progress);
   const league = getLeagueTier(progress);
   const leagueProgressPercent = league.tier === "RADIAN"
@@ -159,9 +172,9 @@ export function CommandCenter({
             {infoModal === "shield"
               ? "Oyuna giremediğin veya günlük rotayı tamamlayamadığın günlerde otomatik olarak 1 Seri Kalkanı tüketilir. Böylece günlük galibiyet serin sıfırlanmaz ve korunur."
               : infoModal === "radar"
-              ? "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş me son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
+              ? "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
               : infoModal === "lives"
-              ? "Dereceli bot maçlarında veya özel modlarda yenildiğinde 1 Can kaybedersin. Canların bittiğinde yeni maça girmeden önce can yenilenmesini bekleyebilir veya Çip ile yenileyebilirsin."
+              ? "Tek oyunculu solo seviyelerde veya zamana karşı denemelerde başarısız olduğunda 1 Can kaybedersin. Canların bittiğinde 15 dakikada bir otomatik dolar veya Çip ile anında yenileyebilirsin."
               : "Rotanı Ateşle güverte kartı, oyunun ana rekabet merkezidir! 4x4 ile 10x10 arası hızlı bot düellolarına girebilir, Günün Rotası sabit tahtasını çözebilir veya Lig & Kademe merdiveninde 3D amblemler kazanmak için LP biriktirebilirsin."}
           </Text>
 
@@ -217,8 +230,12 @@ export function CommandCenter({
       <View style={styles.topbarRow}>
         <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
           <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
-            {progress.avatarPhoto ? (
-              <Image source={{ uri: progress.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 22, resizeMode: "cover" }} />
+            {progress.avatarPhoto && !imgError ? (
+              <Image 
+                source={{ uri: progress.avatarPhoto }} 
+                style={{ width: "100%", height: "100%", borderRadius: 22, resizeMode: "cover" }} 
+                onError={() => setImgError(true)}
+              />
             ) : (
               <Text style={[styles.avatarText, { color: activeAvatar.color, fontSize: 18 }]}>{activeAvatar.icon}</Text>
             )}

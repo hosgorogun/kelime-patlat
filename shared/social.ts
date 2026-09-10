@@ -81,7 +81,9 @@ class SocialManager {
     const rawUsername = typeof userOrUsername === "string" ? userOrUsername : userOrUsername.username || userOrUsername.name || "";
     const cleanName = rawUsername.trim();
     if (!cleanName) return { success: false, message: "Geçerli bir kullanıcı adı girin." };
-    const exists = this.friends.some((f) => f.username.toLocaleLowerCase("tr-TR") === cleanName.toLocaleLowerCase("tr-TR"));
+    const normalizeUser = (u: string) => u.toLowerCase().replace(/ı/g, "i").replace(/İ/g, "i").replace(/I/g, "i");
+    const normalizedClean = normalizeUser(cleanName);
+    const exists = this.friends.some((f) => normalizeUser(f.username) === normalizedClean || normalizeUser(f.name) === normalizedClean);
     if (exists) return { success: false, message: "Bu kullanıcı zaten arkadaş listenizde." };
 
     const extra = typeof userOrUsername === "object" ? userOrUsername : {};
@@ -114,6 +116,16 @@ class SocialManager {
     this.friends = this.friends.filter((f) => f.id !== friendId);
     void this.persist();
     return { success: true, message: `${friend.name} arkadaş listenizden çıkarıldı.` };
+  }
+
+  async reset(): Promise<void> {
+    this.friends = [...MOCK_FRIENDS];
+    this.initialized = false;
+    try {
+      await AsyncStorage.removeItem(FRIENDS_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
   }
 
   scheduleDailyReminderNotification() {
