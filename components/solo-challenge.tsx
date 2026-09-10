@@ -392,6 +392,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     }
   };
 
+  const [showExitModal, setShowExitModal] = useState(false);
+
   const handleExitPress = () => {
     if (status === "lost" && daily) {
       onCompleteRef.current(levelRef.current, foundRef.current, false);
@@ -400,23 +402,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     }
     // Geri sayım bitmiş ve oyun aktifken çıkış yapmak 1 can kaybına yol açar
     if (status === "playing" && countdown === null) {
-      Alert.alert(
-        daily ? "Günün Rotasından Ayrıl" : "Seviyeden Ayrıl (-1 Can)",
-        daily
-          ? "Günün rotasından çıkmak istediğinize emin misiniz? Günlük tek oynama hakkınızı korumak için oyunu tamamlamayı deneyin."
-          : "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
-        [
-          { text: "Devam Et", style: "cancel" },
-          {
-            text: daily ? "Ayrıl" : "Ayrıl (-1 Can)",
-            style: "destructive",
-            onPress: () => {
-              onCompleteRef.current(levelRef.current, foundRef.current, false);
-              onExit();
-            },
-          },
-        ]
-      );
+      setShowExitModal(true);
     } else {
       onExit();
     }
@@ -981,6 +967,41 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                 style={styles.pauseExitBtn}
               >
                 <Text style={styles.pauseExitBtnText}>‹ SEVİYEDEN AYRIL</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {showExitModal && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowExitModal(false)}>
+          <View style={styles.pauseOverlay}>
+            <View style={[styles.pauseCard, { borderColor: "#FF647C" }]}>
+              <Text style={{ fontSize: 40, marginBottom: 6 }}>⚠️</Text>
+              <Text style={styles.pauseTitle}>{daily ? "GÜNÜN ROTASINDAN AYRIL" : "SEVİYEDEN AYRIL (-1 CAN)"}</Text>
+              <Text style={styles.pauseSub}>
+                {daily
+                  ? "Günün rotasından çıkmak istediğinize emin misiniz? Günlük tek oynama hakkınızı korumak için oyunu tamamlamayı deneyin."
+                  : "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz."}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  setShowExitModal(false);
+                }}
+                style={[styles.resumeBtn, { backgroundColor: activeTheme.accentColor }]}
+              >
+                <Text style={styles.resumeBtnText}>DEVAM ET</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowExitModal(false);
+                  onCompleteRef.current(levelRef.current, foundRef.current, false);
+                  onExit();
+                }}
+                style={[styles.pauseExitBtn, { borderColor: "rgba(255, 100, 124, 0.4)", backgroundColor: "rgba(255, 100, 124, 0.1)" }]}
+              >
+                <Text style={[styles.pauseExitBtnText, { color: "#FF647C" }]}>{daily ? "AYRIL" : "AYRIL (-1 CAN)"}</Text>
               </Pressable>
             </View>
           </View>
