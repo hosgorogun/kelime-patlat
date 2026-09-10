@@ -251,6 +251,7 @@ function HomeScreen() {
   const victoryCueRef = useRef<string | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [showLeaveDuelModal, setShowLeaveDuelModal] = useState(false);
+  const [pendingMatchConfirm, setPendingMatchConfirm] = useState<{ size: BoardSize; modeTitle: string; durationText: string; routesText: string } | null>(null);
   const [selectedModeInfo, setSelectedModeInfo] = useState<"pvp" | "daily" | "vintage" | "arcade" | "solo" | null>(null);
   const [showLivesModal, setShowLivesModal] = useState(false);
   const [buyingLivesLoading, setBuyingLivesLoading] = useState(false);
@@ -1108,6 +1109,19 @@ function HomeScreen() {
     setNotice("Yapay zeka rakip hazırlanıyor...");
   };
 
+  const promptBotDuel = (size: BoardSize) => {
+    const modeTitle = size === 4 ? "4×4 Nabız Hızlı Savaş" : size === 6 ? "6×6 Akış Düellosu" : size === 8 ? "8×8 Derinlik Düellosu" : "10×10 Zirve Master Savaş";
+    const durationText = size === 4 ? "55 Saniye" : size === 6 ? "75 Saniye" : size === 8 ? "90 Saniye" : "110 Saniye";
+    const routesText = size === 4 ? "4 Rota" : size === 6 ? "6 Rota" : size === 8 ? "8 Rota" : "10 Rota";
+
+    setPendingMatchConfirm({
+      size,
+      modeTitle,
+      durationText,
+      routesText,
+    });
+  };
+
   const shareRoomInvite = async () => {
     if (!room) return;
     const url = Linking.createURL("room", { queryParams: { code: room.code } });
@@ -1646,7 +1660,7 @@ function HomeScreen() {
           daily={daily}
           leaderboard={leaderboard}
           onPlayDaily={() => setScreen("daily-lobby")}
-          onPlayBot={startBotDuel}
+          onPlayBot={promptBotDuel}
           onSolo={() => setScreen("levels")}
           onNavigate={setScreen}
           onLeaderboard={() => setScreen("season")}
@@ -1771,6 +1785,120 @@ function HomeScreen() {
               >
                 <Text style={{ color: "#0B071E", fontSize: 14, fontWeight: "900", letterSpacing: 0.8 }}>ANLADIM</Text>
               </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Dereceli Mod Onay Modalı */}
+        <Modal
+          visible={pendingMatchConfirm !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPendingMatchConfirm(null)}
+        >
+          <Pressable
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "center", alignItems: "center", padding: 24 }}
+            onPress={() => setPendingMatchConfirm(null)}
+          >
+            <Pressable
+              style={{
+                width: "100%",
+                maxWidth: 360,
+                backgroundColor: "#130E26",
+                borderRadius: 24,
+                borderWidth: 2,
+                borderColor: "#00F5D4",
+                padding: 24,
+                alignItems: "center",
+                shadowColor: "#00F5D4",
+                shadowOpacity: 0.35,
+                shadowRadius: 20,
+                elevation: 14,
+              }}
+              onPress={(e) => e.stopPropagation()}
+            >
+              {/* İkon */}
+              <View
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: "rgba(0,245,212,0.12)",
+                  borderWidth: 1.5,
+                  borderColor: "#00F5D4",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginBottom: 14,
+                }}
+              >
+                <Text style={{ fontSize: 26 }}>⚔️</Text>
+              </View>
+
+              {/* Üst etiket */}
+              <Text style={{ color: "#00F5D4", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>
+                DERECELİ DÜELLO
+              </Text>
+
+              {/* Mod adı */}
+              <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginBottom: 16, textAlign: "center" }}>
+                {pendingMatchConfirm?.modeTitle}
+              </Text>
+
+              {/* İstatistik satırları */}
+              <View style={{ width: "100%", gap: 8, marginBottom: 20 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+                  <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "700" }}>⏱ SÜRE</Text>
+                  <Text style={{ color: "#00F5D4", fontSize: 12, fontWeight: "900" }}>{pendingMatchConfirm?.durationText}</Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+                  <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "700" }}>🗺 ROTA</Text>
+                  <Text style={{ color: "#A78BFA", fontSize: 12, fontWeight: "900" }}>{pendingMatchConfirm?.routesText}</Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
+                  <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "700" }}>🏅 LP</Text>
+                  <Text style={{ color: "#FFC24A", fontSize: 12, fontWeight: "900" }}>Galibiyet / Mağlubiyet</Text>
+                </View>
+              </View>
+
+              {/* Butonlar */}
+              <View style={{ width: "100%", gap: 10 }}>
+                <Pressable
+                  onPress={() => {
+                    if (pendingMatchConfirm) {
+                      const size = pendingMatchConfirm.size;
+                      setPendingMatchConfirm(null);
+                      startBotDuel(size);
+                    }
+                  }}
+                  style={({ pressed }) => ({
+                    width: "100%",
+                    height: 50,
+                    borderRadius: 14,
+                    backgroundColor: "#00F5D4",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  <Text style={{ color: "#0B071E", fontSize: 15, fontWeight: "900", letterSpacing: 1 }}>⚔️ SAVAŞI BAŞLAT</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setPendingMatchConfirm(null)}
+                  style={({ pressed }) => ({
+                    width: "100%",
+                    height: 46,
+                    borderRadius: 14,
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ color: "#94A3B8", fontSize: 14, fontWeight: "700" }}>Vazgeç</Text>
+                </Pressable>
+              </View>
             </Pressable>
           </Pressable>
         </Modal>
