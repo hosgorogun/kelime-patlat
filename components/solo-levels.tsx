@@ -12,12 +12,16 @@ export function SoloLevels({
   onBack,
   onSelect,
   onClaimMilestone,
+  lives = 5,
+  onOpenLivesModal,
 }: {
   unlockedLevel: number;
   claimedMilestones?: Record<number, boolean>;
   onBack: () => void;
   onSelect: (level: number) => void;
   onClaimMilestone?: (milestone: MilestoneReward) => void;
+  lives?: number;
+  onOpenLivesModal?: () => void;
 }) {
   const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
   const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
@@ -60,10 +64,23 @@ export function SoloLevels({
         <Pressable onPress={onBack} style={styles.back}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.overline}>TEKLİ OYUNCU · SİBER AĞ</Text>
           <Text style={styles.title}>OPERASYON MERKEZİ</Text>
         </View>
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            onOpenLivesModal?.();
+          }}
+          style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
+        >
+          <Text style={styles.livesIcon}>💚</Text>
+          <Text style={styles.livesText}>{lives}/5</Text>
+          <View style={styles.livesInfoBadge}>
+            <Text style={styles.livesInfoText}>+</Text>
+          </View>
+        </Pressable>
       </View>
 
       {/* Cyber Grid Map */}
@@ -239,7 +256,7 @@ export function SoloLevels({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0C091C" },
-  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 24, backgroundColor: "#0C091C", flexGrow: 1 },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 120, backgroundColor: "#0C091C", flexGrow: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
   back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1E1838", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
@@ -371,7 +388,7 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(124, 92, 246, 0.35)",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 24,
+    paddingBottom: 92,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     shadowColor: "#000",
@@ -584,4 +601,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "900",
   },
+
+  livesPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(34, 197, 94, 0.4)",
+  },
+  livesIcon: { fontSize: 13 },
+  livesText: { color: "#22C55E", fontSize: 12, fontWeight: "900" },
+  livesInfoBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#22C55E",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 2,
+  },
+  livesInfoText: { color: "#000000", fontSize: 10, fontWeight: "900", marginTop: -1 },
 });

@@ -1,8 +1,12 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState, useRef } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, Dimensions, FlatList } from "react-native";
 
 import { getLeagueTier, getRank, getSeasonRemainingTime, type LeagueTierInfo, type PlayerProgress } from "@/shared/progression";
 import { type LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CARD_WIDTH = SCREEN_WIDTH * 0.78;
 
 const RANK_IMAGES: Record<string, any> = {
   DEMİR: require("../assets/ranks/iron.jpg"),
@@ -33,11 +37,18 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
   const rank = getRank(progress);
   const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
   const currentIndex = LEAGUES.findIndex((league) => league.tier === current.tier);
+  const [selectedLeagueIndex, setSelectedLeagueIndex] = useState(currentIndex !== -1 ? currentIndex : 0);
+
   const progressRatio = current.targetTierPoints > 0
     ? Math.min(1, current.currentTierPoints / current.targetTierPoints)
     : 1;
 
   const remaining = getSeasonRemainingTime();
+  const selectedLeague = LEAGUES[selectedLeagueIndex] ?? LEAGUES[0]!;
+  const isSelectedCurrent = selectedLeague.tier === current.tier;
+  const isSelectedUnlocked = selectedLeagueIndex <= currentIndex;
+
+  const flatListRef = useRef<FlatList>(null);
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -59,227 +70,236 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
         </View>
       </View>
 
+      {/* Showcase Horizontal Carousel */}
+      <View style={styles.carouselContainer}>
+        <FlatList
+          ref={flatListRef}
+          data={LEAGUES}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_WIDTH + 14}
+          decelerationRate="fast"
+          initialScrollIndex={currentIndex !== -1 ? currentIndex : 0}
+          getItemLayout={(_, index) => ({ length: CARD_WIDTH + 14, offset: (CARD_WIDTH + 14) * index, index })}
+          contentContainerStyle={{ paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - 18 }}
+          onMomentumScrollEnd={(e) => {
+            const index = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + 14));
+            if (index >= 0 && index < LEAGUES.length && index !== selectedLeagueIndex) {
+              triggerHapticSelection();
+              setSelectedLeagueIndex(index);
+            }
+          }}
+          keyExtractor={(item) => item.tier}
+          renderItem={({ item, index }) => {
+            const isCurrent = item.tier === current.tier;
+            const isUnlocked = index <= currentIndex;
+            const isSelected = index === selectedLeagueIndex;
+            const imgSource = RANK_IMAGES[item.tier];
 
-
-      {/* Hero Rank Banner */}
-      <View style={[styles.heroCard, { borderColor: `${current.color}66`, shadowColor: current.color }]}>
-        <View style={styles.heroHeader}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: current.color }} />
-            <Text style={styles.heroKicker}>MEVCUT SEZON KONUMUN</Text>
-          </View>
-          <View style={[styles.heroBadge, { backgroundColor: `${current.color}20`, borderColor: `${current.color}66` }]}>
-            <Text style={[styles.heroBadgeText, { color: current.color }]}>{current.badge}</Text>
-          </View>
-        </View>
-
-        <View style={styles.heroContent}>
-          {/* Main 3D Emblem Hero Icon */}
-          <View style={[styles.heroEmblemContainer, { borderColor: current.color, shadowColor: current.color }]}>
-            {RANK_IMAGES[current.tier] ? (
-              <Image source={RANK_IMAGES[current.tier]} style={{ width: 68, height: 68, borderRadius: 20 }} resizeMode="cover" />
-            ) : (
-              <Text style={{ fontSize: 36 }}>{current.icon}</Text>
-            )}
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.heroLeagueTitle, { color: current.color }]}>{current.name}</Text>
-            <Text style={styles.heroTitle}>{rank} AVCI</Text>
-            <Text style={styles.heroBody}>
-              {progress.xp} XP · {progress.wins} galibiyet · {progress.bestScore || 0} tur rekoru
-            </Text>
-          </View>
-        </View>
-
-        {/* LP Progress Bar inside Hero */}
-        <View style={{ marginTop: 16 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <Text style={styles.progressLabel}>
-              {current.tier === "RADIAN" ? "Zirve kademedesin" : `İlerleme: ${current.currentTierPoints} / ${current.targetTierPoints} LP`}
-            </Text>
-            {current.tier !== "RADIAN" && (
-              <Text style={[styles.progressPercent, { color: current.color }]}>%{Math.round(progressRatio * 100)}</Text>
-            )}
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.max(6, progressRatio * 100)}%`, backgroundColor: current.color, shadowColor: current.color }]} />
-          </View>
-        </View>
-
-        {/* Quick Stats Grid */}
-        <View style={styles.heroStats}>
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>LİDERLİK</Text>
-            <Text style={styles.statValue}>{playerRank > 0 ? `#${playerRank}` : "—"}</Text>
-          </View>
-          <View style={styles.statRule} />
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>SERİ & KALKAN</Text>
-            <Text style={styles.statValue}>{progress.streak} GÜN 🛡️{progress.streakShields ?? 1}</Text>
-          </View>
-          <View style={styles.statRule} />
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>EN İYİ TEMPO</Text>
-            <Text style={styles.statValue}>{progress.bestTempo ? `${progress.bestTempo}/dk` : "—"}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* League Ladder Section */}
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>LİG MERDİVENİ</Text>
-          <Text style={styles.sectionSubtitle}>LP biriktir, 3D kademe amblemlerinin kilidini aç</Text>
-        </View>
-        <View style={styles.stepCounter}>
-          <Text style={styles.stepCounterValue}>{currentIndex + 1}</Text>
-          <Text style={styles.stepCounterSlash}>/</Text>
-          <Text style={styles.stepCounterTotal}>{LEAGUES.length}</Text>
-        </View>
-      </View>
-
-      {/* Ladder List */}
-      <View style={styles.list}>
-        {LEAGUES.map((league, index) => {
-          const isCurrent = league.tier === current.tier;
-          const isUnlocked = index <= currentIndex;
-          const imgSource = RANK_IMAGES[league.tier];
-          return (
-            <View key={league.tier} style={styles.leagueItem}>
-              {index < LEAGUES.length - 1 && (
-                <View style={[styles.connector, { backgroundColor: index < currentIndex ? league.color : "#271E42" }]} />
-              )}
+            return (
               <Pressable
-                onPress={() => triggerHapticSelection()}
+                onPress={() => {
+                  triggerHapticSelection();
+                  setSelectedLeagueIndex(index);
+                  flatListRef.current?.scrollToIndex({ index, animated: true });
+                }}
                 style={({ pressed }) => [
-                  styles.leagueRow,
-                  isCurrent && { borderColor: league.color, backgroundColor: `${league.color}15`, shadowColor: league.color, shadowOpacity: 0.35, shadowRadius: 10, elevation: 4 },
-                  isUnlocked && !isCurrent && { borderColor: `${league.color}44` },
+                  styles.carouselCard,
+                  { width: CARD_WIDTH },
+                  isSelected && styles.carouselCardSelected,
+                  isSelected && { borderColor: item.color, shadowColor: item.color },
+                  !isUnlocked && styles.carouselCardLocked,
                   pressed && styles.pressed,
                 ]}
               >
-                {/* 3D Rank Badge Box */}
-                <View style={[
-                  styles.leagueIcon,
-                  {
-                    borderColor: isUnlocked ? league.color : "#3A305A",
-                    backgroundColor: isUnlocked ? `${league.color}20` : "#130E26",
-                    shadowColor: isUnlocked ? league.color : "transparent",
-                    shadowOpacity: isUnlocked ? 0.3 : 0,
-                    shadowRadius: 6,
-                    elevation: isUnlocked ? 3 : 0,
-                  }
-                ]}>
-                  {imgSource ? (
-                    <Image source={imgSource} style={{ width: 44, height: 44, borderRadius: 12, opacity: isUnlocked ? 1 : 0.3 }} resizeMode="cover" />
+                {/* Status Header Badge */}
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardIndexText}>KADEME 0{index + 1}</Text>
+                  {isCurrent ? (
+                    <View style={[styles.cardPill, { backgroundColor: item.color }]}>
+                      <Text style={styles.cardPillTextCurrent}>BURADASIN</Text>
+                    </View>
+                  ) : isUnlocked ? (
+                    <View style={[styles.cardPill, { backgroundColor: `${item.color}20`, borderWidth: 1, borderColor: `${item.color}55` }]}>
+                      <Text style={[styles.cardPillTextUnlocked, { color: item.color }]}>AÇIK</Text>
+                    </View>
                   ) : (
-                    <Text style={[styles.leagueIconText, { color: isUnlocked ? league.color : "#665A80" }]}>{isUnlocked ? league.icon : "-"}</Text>
+                    <View style={[styles.cardPill, { backgroundColor: "rgba(255,255,255,0.06)" }]}>
+                      <Text style={styles.cardPillTextLocked}>🔒 KİLİTLİ</Text>
+                    </View>
                   )}
                 </View>
 
-                {/* Step Number */}
-                <View style={[styles.leagueNumber, { backgroundColor: isUnlocked ? `${league.color}25` : "#1E1836" }]}>
-                  <Text style={[styles.leagueNumberText, { color: isUnlocked ? league.color : "#665A80" }]}>{String(index + 1).padStart(2, "0")}</Text>
+                {/* 3D Rank Artwork */}
+                <View style={[styles.artworkContainer, { borderColor: isUnlocked ? item.color : "#2F2748", shadowColor: item.color }]}>
+                  {imgSource ? (
+                    <Image source={imgSource} style={[styles.artworkImage, !isUnlocked && { opacity: 0.35 }]} resizeMode="cover" />
+                  ) : (
+                    <Text style={{ fontSize: 50 }}>{item.icon}</Text>
+                  )}
+                  {!isUnlocked && (
+                    <View style={styles.artworkLockOverlay}>
+                      <Text style={{ fontSize: 24 }}>🔒</Text>
+                    </View>
+                  )}
                 </View>
 
-                {/* Info Copy */}
-                <View style={styles.leagueCopy}>
-                  <Text style={[styles.leagueName, { color: isUnlocked ? (isCurrent ? "#FFFFFF" : league.color) : "#6B5F88" }]}>{league.name}</Text>
-                  <Text style={styles.leagueRange}>
-                    {league.maxPoints === Number.POSITIVE_INFINITY ? `${league.minPoints}+ LP` : `${league.minPoints} - ${league.maxPoints} LP`}
-                  </Text>
-                </View>
+                {/* Title & LP Info */}
+                <Text style={[styles.cardLeagueTitle, { color: isUnlocked ? item.color : "#8B80A5" }]}>{item.name}</Text>
+                <Text style={styles.cardLpRange}>
+                  {item.maxPoints === Number.POSITIVE_INFINITY ? `${item.minPoints}+ LP GEREKLİ` : `${item.minPoints} - ${item.maxPoints} LP`}
+                </Text>
 
-                {/* Status Pill */}
-                {isCurrent ? (
-                  <View style={[styles.statusPill, { backgroundColor: league.color }]}>
-                    <Text style={styles.statusPillTextCurrent}>BURADASIN</Text>
-                  </View>
-                ) : isUnlocked ? (
-                  <View style={[styles.statusPill, { backgroundColor: `${league.color}20`, borderWidth: 1, borderColor: `${league.color}55` }]}>
-                    <Text style={[styles.statusPillTextUnlocked, { color: league.color }]}>AÇIK</Text>
-                  </View>
-                ) : (
-                  <View style={[styles.statusPill, { backgroundColor: "rgba(255,255,255,0.05)" }]}>
-                    <Text style={styles.statusPillTextLocked}>KİLİTLİ</Text>
+                {/* If current, show live LP status */}
+                {isCurrent && (
+                  <View style={styles.cardLiveProgress}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+                      <Text style={styles.cardLiveLabel}>Mevcut İlerleme:</Text>
+                      <Text style={[styles.cardLiveValue, { color: item.color }]}>{current.currentTierPoints} / {current.targetTierPoints} LP</Text>
+                    </View>
+                    <View style={styles.cardTrack}>
+                      <View style={[styles.cardFill, { width: `${Math.max(6, progressRatio * 100)}%`, backgroundColor: item.color }]} />
+                    </View>
                   </View>
                 )}
               </Pressable>
-            </View>
-          );
-        })}
+            );
+          }}
+        />
+      </View>
+
+      {/* Bottom Selected League Detail Card */}
+      <View style={[styles.detailCard, { borderColor: `${selectedLeague.color}55` }]}>
+        <View style={styles.detailHeader}>
+          <Text style={styles.detailKicker}>KADEME DETAYI & AVANTAJLARI</Text>
+          <Text style={[styles.detailBadge, { color: selectedLeague.color }]}>{selectedLeague.tier}</Text>
+        </View>
+
+        <View style={styles.detailGrid}>
+          <View style={styles.detailBox}>
+            <Text style={styles.detailBoxLabel}>MİNİMUM LP</Text>
+            <Text numberOfLines={1} style={styles.detailBoxValue}>{selectedLeague.minPoints} LP</Text>
+          </View>
+          <View style={styles.detailRule} />
+          <View style={styles.detailBox}>
+            <Text style={styles.detailBoxLabel}>KADEME DURUMU</Text>
+            <Text numberOfLines={1} style={[styles.detailBoxValue, { color: isSelectedUnlocked ? "#22C55E" : "#EF4444" }]}>
+              {isSelectedCurrent ? "BURADASIN" : isSelectedUnlocked ? "AÇIK" : "KİLİTLİ"}
+            </Text>
+          </View>
+          <View style={styles.detailRule} />
+          <View style={styles.detailBox}>
+            <Text style={styles.detailBoxLabel}>SEZON ÖDÜLÜ</Text>
+            <Text numberOfLines={1} style={styles.detailBoxValue}>🏆 AMBLEM</Text>
+          </View>
+        </View>
+
+        <Text style={styles.detailDesc}>
+          {isSelectedCurrent
+            ? "Şu an bu kademede mücadele ediyorsun. Bot maçlarını kazanarak LP biriktir ve yüksel!"
+            : isSelectedUnlocked
+            ? "Bu kademeyi başarıyla açtın. 3D kademe amblemi profilinde sergilenmeye hazır."
+            : `Bu kademeyi açmak için toplam ${selectedLeague.minPoints} LP puanına ulaşman gerekmektedir.`}
+        </Text>
+      </View>
+
+      {/* Season Leaderboard Quick Standings Widget */}
+      <View style={styles.standingsCard}>
+        <View style={styles.standingsHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={{ fontSize: 14 }}>🏆</Text>
+            <Text style={styles.standingsTitle}>SEZON LİDERLERİ</Text>
+          </View>
+          <View style={styles.standingsBadge}>
+            <Text style={styles.standingsBadgeText}>{playerRank > 0 ? `#${playerRank}. SIRADASIN` : "LİSTEDESİN"}</Text>
+          </View>
+        </View>
+
+        <View style={styles.top3Row}>
+          {leaderboard.slice(0, 3).map((entry, idx) => {
+            const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
+            const borderCol = idx === 0 ? "#FFD000" : idx === 1 ? "#94A3B8" : "#F97316";
+            return (
+              <View key={entry.id || idx} style={[styles.top3Item, { borderColor: borderCol }]}>
+                <Text style={styles.top3Medal}>{medal}</Text>
+                <Text numberOfLines={1} style={styles.top3Name}>{entry.name}</Text>
+                <Text style={styles.top3Lp}>{entry.score} LP</Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 18, paddingBottom: 110, backgroundColor: "#0C081A" },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
-  backButton: { width: 44, height: 44, borderRadius: 16, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", alignItems: "center", justifyContent: "center", marginRight: 12 },
-  backText: { color: "#FFF9FC", fontSize: 32, lineHeight: 34, marginTop: -3 },
+  content: { paddingVertical: 12, paddingBottom: 60, backgroundColor: "#0C081A" },
+  header: { flexDirection: "row", alignItems: "center", marginBottom: 12, paddingHorizontal: 18 },
+  backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  backText: { color: "#FFF9FC", fontSize: 28, lineHeight: 30, marginTop: -3 },
   headerCopy: { flex: 1 },
   overline: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
-  title: { color: "#FFFFFF", fontSize: 24, fontWeight: "900", letterSpacing: 0.5, marginTop: 2 },
-  timerPill: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(251, 191, 36, 0.3)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14 },
-  timerIcon: { fontSize: 13 },
-  timerLabel: { color: "#FBBF24", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
-  timerValue: { color: "#FFFFFF", fontSize: 12, fontWeight: "900" },
-  
-  heroCard: { marginTop: 10, padding: 18, borderRadius: 26, backgroundColor: "#1D163B", borderWidth: 1.5, borderColor: "#5C4B90", shadowColor: "#5C4B90", shadowOpacity: 0.2, shadowRadius: 12, elevation: 4 },
-  heroHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  heroBadge: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
-  heroBadgeText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  heroContent: { flexDirection: "row", alignItems: "center", gap: 14 },
-  heroEmblemContainer: { width: 72, height: 72, borderRadius: 22, borderWidth: 2, backgroundColor: "rgba(0,0,0,0.3)", alignItems: "center", justifyContent: "center", overflow: "hidden", shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  heroLeagueTitle: { fontSize: 13, fontWeight: "900", letterSpacing: 0.8, marginBottom: 2 },
-  heroKicker: { color: "#FFD37F", fontSize: 9, letterSpacing: 1.2, fontWeight: "900" },
-  heroTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: 0.4 },
-  heroBody: { color: "#CBD5E1", fontSize: 11, fontWeight: "700", marginTop: 2 },
-  heroStats: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  statBox: { alignItems: "center" },
-  statLabel: { color: "#94A3B8", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
-  statValue: { color: "#FFFFFF", fontSize: 13, fontWeight: "900", marginTop: 3 },
-  statRule: { width: 1, height: 26, backgroundColor: "rgba(255,255,255,0.12)" },
-  
-  currentCard: { borderWidth: 2, borderRadius: 24, padding: 18, marginTop: 14, backgroundColor: "#150F2D", shadowOpacity: 0.25, shadowRadius: 16, elevation: 6 },
-  currentCardHeader: { flexDirection: "row", alignItems: "center" },
-  currentIcon: { width: 58, height: 58, borderRadius: 18, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  currentIconText: { fontSize: 26, fontWeight: "900" },
-  currentCopy: { flex: 1, marginLeft: 14 },
-  currentKicker: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  currentName: { fontSize: 20, fontWeight: "900", marginTop: 2 },
-  currentMeta: { color: "#CBD5E1", fontSize: 11, fontWeight: "700", marginTop: 3 },
-  currentBadge: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
-  currentBadgeText: { color: "#0B132B", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-  progressTrack: { width: "100%", height: 10, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 16, overflow: "hidden" },
-  progressFill: { height: "100%", borderRadius: 5, shadowOpacity: 0.5, shadowRadius: 6 },
-  progressLabel: { color: "#94A3B8", fontSize: 11, fontWeight: "800" },
-  progressPercent: { fontSize: 11, fontWeight: "900" },
-  
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginTop: 26, marginBottom: 14 },
-  sectionTitle: { color: "#FFFFFF", fontSize: 15, fontWeight: "900", letterSpacing: 0.8 },
-  sectionSubtitle: { color: "#94A3B8", fontSize: 10, marginTop: 3, fontWeight: "700" },
-  stepCounter: { flexDirection: "row", alignItems: "baseline", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" },
-  stepCounterValue: { color: "#FFFFFF", fontSize: 15, fontWeight: "900" },
-  stepCounterSlash: { color: "#64748B", fontSize: 11, marginHorizontal: 2 },
-  stepCounterTotal: { color: "#94A3B8", fontSize: 11, fontWeight: "800" },
-  
-  list: { gap: 10 },
-  leagueItem: { position: "relative" },
-  connector: { position: "absolute", left: 34, top: 68, bottom: -10, width: 2, zIndex: 0 },
-  leagueRow: { minHeight: 74, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.08)", borderRadius: 20, backgroundColor: "#140E2A", paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", zIndex: 1 },
-  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
-  leagueIcon: { width: 48, height: 48, borderRadius: 14, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  leagueIconText: { fontSize: 22, fontWeight: "900" },
-  leagueNumber: { width: 28, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center", marginLeft: 10 },
-  leagueNumberText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-  leagueCopy: { flex: 1, marginLeft: 12 },
-  leagueName: { fontSize: 15, fontWeight: "900", letterSpacing: 0.4 },
-  leagueRange: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginTop: 3 },
-  statusPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  statusPillTextCurrent: { color: "#0B132B", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  statusPillTextUnlocked: { fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  statusPillTextLocked: { color: "#64748B", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  title: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginTop: 1 },
+  timerPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(251, 191, 36, 0.3)", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
+  timerIcon: { fontSize: 12 },
+  timerLabel: { color: "#FBBF24", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.8 },
+  timerValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
+
+  carouselContainer: { marginVertical: 8 },
+  carouselCard: { backgroundColor: "#150F2D", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", borderRadius: 24, padding: 16, marginRight: 14, alignItems: "center" },
+  carouselCardSelected: { backgroundColor: "#1D153B", borderWidth: 2, shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 },
+  carouselCardLocked: { opacity: 0.6 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: 12 },
+  cardIndexText: { color: "#94A3B8", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  cardPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  cardPillTextCurrent: { color: "#0B132B", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
+  cardPillTextUnlocked: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
+  cardPillTextLocked: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
+
+  artworkContainer: { width: 110, height: 110, borderRadius: 24, borderWidth: 2.5, backgroundColor: "#0C071C", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, position: "relative", shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 },
+  artworkImage: { width: 104, height: 104, borderRadius: 20 },
+  artworkLockOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(12, 7, 28, 0.65)", alignItems: "center", justifyContent: "center" },
+
+  cardLeagueTitle: { fontSize: 20, fontWeight: "900", letterSpacing: 0.6, marginBottom: 2 },
+  cardLpRange: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginBottom: 12 },
+
+  cardDetailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#100924", paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, width: "100%", marginBottom: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  cardDetailBox: { flex: 1, alignItems: "center" },
+  cardDetailLabel: { color: "#64748B", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  cardDetailValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900", marginTop: 2 },
+  cardDetailRule: { width: 1, height: 20, backgroundColor: "rgba(255,255,255,0.1)" },
+
+  cardLiveProgress: { width: "100%", marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" },
+  cardLiveLabel: { color: "#94A3B8", fontSize: 9.5, fontWeight: "700" },
+  cardLiveValue: { fontSize: 10.5, fontWeight: "900" },
+  cardTrack: { width: "100%", height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4, overflow: "hidden" },
+  cardFill: { height: "100%", borderRadius: 3 },
+
+  detailCard: { marginHorizontal: 18, marginTop: 6, padding: 14, borderRadius: 18, backgroundColor: "#171033", borderWidth: 1.5 },
+  detailHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  detailKicker: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 1 },
+  detailBadge: { fontSize: 10.5, fontWeight: "900", letterSpacing: 0.8 },
+
+  detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#110B26", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 12, marginBottom: 8, gap: 2 },
+  detailBox: { flex: 1, alignItems: "center", justifyContent: "center" },
+  detailBoxLabel: { color: "#64748B", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
+  detailBoxValue: { color: "#FFFFFF", fontSize: 10.5, fontWeight: "900", marginTop: 2, textAlign: "center" },
+  detailRule: { width: 1, height: 20, backgroundColor: "rgba(255,255,255,0.1)" },
+
+  detailDesc: { color: "#CBD5E1", fontSize: 10.5, fontWeight: "600", lineHeight: 15, textAlign: "center" },
+
+  standingsCard: { marginHorizontal: 18, marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#150F2B", borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.25)" },
+  standingsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  standingsTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
+  standingsBadge: { backgroundColor: "rgba(0, 245, 212, 0.15)", borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.3)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  standingsBadgeText: { color: "#00F5D4", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+
+  top3Row: { flexDirection: "row", gap: 8 },
+  top3Item: { flex: 1, backgroundColor: "#0F0A21", borderWidth: 1, borderRadius: 12, padding: 8, alignItems: "center" },
+  top3Medal: { fontSize: 14, marginBottom: 2 },
+  top3Name: { color: "#FFFFFF", fontSize: 10, fontWeight: "900", width: "100%", textAlign: "center" },
+  top3Lp: { color: "#94A3B8", fontSize: 8.5, fontWeight: "800", marginTop: 1 },
 });

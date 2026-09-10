@@ -53,6 +53,7 @@ type Room = {
   disconnectTimer?: NodeJS.Timeout | null;
   disconnectPlayerId?: string | null;
   disconnectExpiresAt?: number | null;
+  rematchTimer?: NodeJS.Timeout | null;
 };
 
 type QueueEntry = {
@@ -631,6 +632,10 @@ function destroyRoom(code: string, room?: Room | null) {
       clearTimeout(target.disconnectTimer);
       target.disconnectTimer = null;
     }
+    if (target.rematchTimer) {
+      clearTimeout(target.rematchTimer);
+      target.rematchTimer = null;
+    }
     target.roundToken = -1;
     target.botFillToken = -1;
   }
@@ -641,6 +646,34 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
   const player = roomForPlayer(room, playerId);
   if (!player) return;
   socket.leave(`room:${room.code}`);
+
+  if (room.disconnectTimer) {
+    clearTimeout(room.disconnectTimer);
+    room.disconnectTimer = null;
+    room.disconnectPlayerId = null;
+    room.disconnectExpiresAt = null;
+  }
+  if (room.rematchTimer) {
+    clearTimeout(room.rematchTimer);
+    room.rematchTimer = null;
+  }
+
+  // Eğer maç oynanırken bir oyuncu odadan çıkarsa, kalan oyuncu hükmen kazanır
+  if (room.status === "playing") {
+    const remaining = room.host.id === playerId ? room.guest : room.host;
+    if (remaining && !remaining.isBot) {
+      room.winnerId = remaining.id;
+      room.message = `${player.name} maçı terk etti. ${remaining.name} hükmen kazandı!`;
+      room.status = "finished";
+      recordRoundForLeaderboard(io, room);
+      emitRoom(io, room);
+      return;
+    }
+    // Bot kalmışsa veya kimse kalmadıysa odayı temizle
+    destroyRoom(room.code, room);
+    return;
+  }
+
   if (room.host.id === playerId) {
     if (!room.guest || room.guest.isBot) {
       destroyRoom(room.code, room);
@@ -985,11 +1018,14 @@ export function registerGameRooms(io: Server) {
       const room = rooms.get(payload.code.trim().toUpperCase());
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || !room.guest || room.status !== "finished") return;
+      if (player.rematch && room.guest.isBot && room.rematchTimer) return;
       player.rematch = true;
       if (room.guest.isBot) {
         room.message = "Yapay rakip rövanş teklifini inceliyor...";
         emitRoom(io, room);
-        setTimeout(() => {
+        if (room.rematchTimer) clearTimeout(room.rematchTimer);
+        room.rematchTimer = setTimeout(() => {
+          room.rematchTimer = null;
           const finalRoom = rooms.get(room.code);
           if (!finalRoom || finalRoom !== room || room.status !== "finished" || !player.rematch) return;
           room.guest!.rematch = true;

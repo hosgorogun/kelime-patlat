@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, getWeekId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, checkDailyLoginReward, getDailyMissions, getWeeklyMissions, ALL_MISSIONS, findMissionById } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, getWeekId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, checkDailyLoginReward, getDailyMissions, getWeeklyMissions, ALL_MISSIONS, findMissionById, getCalculatedLives, deductLife, buyLives, MAX_LIVES, COST_PER_LIFE, COST_REFILL_ALL } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
@@ -633,5 +633,71 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(epicWeekly).toBeDefined();
     expect(epicWeekly?.difficulty).toBe("epic");
     expect(epicWeekly?.rewardShields).toBe(3);
+  });
+
+  it("mergePlayerProgress preferRemoteBalances aktifken sunucudaki harcanmış bakiye ve azalan LP'yi korur", () => {
+    const local = {
+      ...DEFAULT_PROGRESS,
+      lp: 1200,
+      coins: 100,
+      streakShields: 3,
+      xp: 500,
+    };
+
+    // Sunucuda mağlubiyet sonrası LP 1180'e düşmüş, 50 coin mağazada harcanmış
+    const remote = {
+      lp: 1180,
+      coins: 50,
+      streakShields: 2,
+      xp: 535,
+    };
+
+    const mergedWithAuthority = mergePlayerProgress(local, remote, { preferRemoteBalances: true });
+    expect(mergedWithAuthority.lp).toBe(1180); // LP düşüşü korundu!
+    expect(mergedWithAuthority.coins).toBe(50); // Harcama korundu!
+    expect(mergedWithAuthority.streakShields).toBe(2);
+    expect(mergedWithAuthority.xp).toBe(535);
+
+    // preferRemoteBalances false (varsayılan) iken geriye uyumlu Math.max davranışı
+    const mergedFallback = mergePlayerProgress(local, remote);
+    expect(mergedFallback.lp).toBe(1200);
+    expect(mergedFallback.coins).toBe(100);
+  });
+
+  it("günlük rota tamamlandığında normal soloUnlockedLevel değişmez ve korunur", () => {
+    const dailyChallenge = getDailyChallenge(new Date("2026-09-10"));
+    const initial = { ...DEFAULT_PROGRESS, soloUnlockedLevel: 2 };
+    const completed = completeDailyProgress(initial, dailyChallenge);
+    expect(completed.soloUnlockedLevel).toBe(2);
+    expect(completed.dailyCompletedId).toBe(dailyChallenge.id);
+  });
+
+  it("Can (Lives) sistemi yenilenme, düşme ve çip satın alma hesaplamalarını doğru yapar", () => {
+    const initial = getCalculatedLives(DEFAULT_PROGRESS);
+    expect(initial.lives).toBe(MAX_LIVES);
+
+    // Kaybedince can düşer
+    const lost = deductLife(DEFAULT_PROGRESS);
+    const lostCalc = getCalculatedLives(lost);
+    expect(lostCalc.lives).toBe(4);
+
+    // 25 Çip ile 1 Can satın alma
+    const baseWithCoins = { ...lost, coins: 100 };
+    const buyOne = buyLives(baseWithCoins, "one");
+    expect(buyOne.success).toBe(true);
+    expect(buyOne.updatedProgress.coins).toBe(75);
+    expect(getCalculatedLives(buyOne.updatedProgress).lives).toBe(5);
+
+    // 125 Çip ile tüm canları doldurma (0 candan 5 cana)
+    const zeroLives = { ...DEFAULT_PROGRESS, lives: 0, coins: 200, lastLifeRegenTimestamp: Date.now() };
+    const buyAll = buyLives(zeroLives, "all");
+    expect(buyAll.success).toBe(true);
+    expect(buyAll.updatedProgress.coins).toBe(75); // 200 - 125 = 75
+    expect(getCalculatedLives(buyAll.updatedProgress).lives).toBe(5);
+
+    // Yetersiz bakiyede hata dönme
+    const poor = { ...zeroLives, coins: 10 };
+    const failBuy = buyLives(poor, "one");
+    expect(failBuy.success).toBe(false);
   });
 });

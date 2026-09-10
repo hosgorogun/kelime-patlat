@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Animated, Easing, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, getDailyMysteryWord, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, getDailyMysteryWord, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, getCalculatedLives, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions";
@@ -24,6 +24,7 @@ type CommandCenterProps = {
   onClaimDailyReward?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
   onOpenModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo") => void;
+  onOpenLivesModal?: () => void;
 };
 
 export function CommandCenter({
@@ -43,10 +44,12 @@ export function CommandCenter({
   onClaimDailyReward,
   onShowToast,
   onOpenModeInfo,
+  onOpenLivesModal,
 }: CommandCenterProps) {
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
   const dailyRewardClaimingRef = useRef(false);
+  const livesCalc = getCalculatedLives(progress);
   const rank = getRank(progress);
   const league = getLeagueTier(progress);
   const leagueProgressPercent = league.tier === "RADIAN"
@@ -115,10 +118,10 @@ export function CommandCenter({
 
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
 
-  const [infoModal, setInfoModal] = useState<"shield" | "radar" | null>(null);
+  const [infoModal, setInfoModal] = useState<"shield" | "radar" | "lives" | "rotani" | null>(null);
 
   return <>
-    {/* Resource Info Modal (Kalkan & Radar) */}
+    {/* Resource Info Modal (Kalkan, Radar, Can & Rotanı Ateşle) */}
     <Modal
       visible={infoModal !== null}
       transparent
@@ -127,36 +130,51 @@ export function CommandCenter({
     >
       <Pressable style={styles.modalOverlay} onPress={() => setInfoModal(null)}>
         <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-          <View style={[styles.modalIconBadge, infoModal === "shield" ? styles.modalIconBadgeShield : styles.modalIconBadgeRadar]}>
-            <Text style={styles.modalIconText}>{infoModal === "shield" ? "🛡️" : "👁️"}</Text>
+          <View style={[
+            styles.modalIconBadge, 
+            infoModal === "shield" ? styles.modalIconBadgeShield : infoModal === "radar" ? styles.modalIconBadgeRadar : infoModal === "lives" ? styles.modalIconBadgeLives : styles.modalIconBadgeRotani
+          ]}>
+            <Text style={styles.modalIconText}>
+              {infoModal === "shield" ? "🛡️" : infoModal === "radar" ? "👁️" : infoModal === "lives" ? "💚" : "🚀"}
+            </Text>
           </View>
           
           <Text style={styles.modalKicker}>
-            {infoModal === "shield" ? "SİBER SAVUNMA BİLEŞENİ" : "SİBER TARAMA BİLEŞENİ"}
+            {infoModal === "shield" ? "SİBER SAVUNMA BİLEŞENİ" : infoModal === "radar" ? "SİBER TARAMA BİLEŞENİ" : infoModal === "lives" ? "SİBER YAŞAM BİLEŞENİ" : "CANLI KELİME AĞI · SEZON 01"}
           </Text>
           <Text style={styles.modalTitle}>
-            {infoModal === "shield" ? "Seri Kalkanı" : "Siber Radar"}
+            {infoModal === "shield" ? "Seri Kalkanı" : infoModal === "radar" ? "Siber Radar" : infoModal === "lives" ? "Siber Can" : "Rotanı Ateşle Nedir?"}
           </Text>
 
           <View style={styles.modalCountPill}>
-            <Text style={styles.modalCountLabel}>MEVCUT MİKTAR:</Text>
-            <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: "#38BDF8" } : { color: "#00F5D4" }]}>
-              {infoModal === "shield" ? (progress.streakShields ?? 1) : (3 + (progress.radarChargesBonus ?? 0))} Adet
+            <Text style={styles.modalCountLabel}>
+              {infoModal === "rotani" ? "MEVCUT LİG KADEMEN:" : "MEVCUT MİKTAR:"}
+            </Text>
+            <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: "#38BDF8" } : infoModal === "radar" ? { color: "#00F5D4" } : infoModal === "lives" ? { color: "#22C55E" } : { color: league.color }]}>
+              {infoModal === "shield" ? (progress.streakShields ?? 1) : infoModal === "radar" ? (3 + (progress.radarChargesBonus ?? 0)) : infoModal === "lives" ? `${livesCalc.lives}/5` : `${league.name} (${league.currentTierPoints} LP)`}
             </Text>
           </View>
 
           <Text style={styles.modalBody}>
             {infoModal === "shield"
               ? "Oyuna giremediğin veya günlük rotayı tamamlayamadığın günlerde otomatik olarak 1 Seri Kalkanı tüketilir. Böylece günlük galibiyet serin sıfırlanmaz ve korunur."
-              : "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."}
+              : infoModal === "radar"
+              ? "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş me son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
+              : infoModal === "lives"
+              ? "Dereceli bot maçlarında veya özel modlarda yenildiğinde 1 Can kaybedersin. Canların bittiğinde yeni maça girmeden önce can yenilenmesini bekleyebilir veya Çip ile yenileyebilirsin."
+              : "Rotanı Ateşle güverte kartı, oyunun ana rekabet merkezidir! 4x4 ile 10x10 arası hızlı bot düellolarına girebilir, Günün Rotası sabit tahtasını çözebilir veya Lig & Kademe merdiveninde 3D amblemler kazanmak için LP biriktirebilirsin."}
           </Text>
 
           <View style={styles.modalTipBox}>
-            <Text style={styles.modalTipTitle}>💡 NASIL KAZANILIR?</Text>
+            <Text style={styles.modalTipTitle}>💡 REKABET REHBERİ</Text>
             <Text style={styles.modalTipText}>
               {infoModal === "shield"
                 ? "• Mağaza'dan Siber Çip ile satın alabilirsin.\n• Haftalık görevleri tamamlayarak kazanabilirsin.\n• 7 günlük giriş zincirinin son gününde epik hediye olarak verilir."
-                : "• Her seviyede 3 temel hak otomatik verilir.\n• Mağaza ve görevlerden ek kalıcı bonus haklar elde edebilirsin.\n• Seviye içi gizli sandıkları çözerek ekstra hak toplayabilirsin."}
+                : infoModal === "radar"
+                ? "• Her seviyede 3 temel hak otomatik verilir.\n• Mağaza ve görevlerden ek kalıcı bonus haklar elde edebilirsin.\n• Seviye içi gizli sandıkları çözerek ekstra hak toplayabilirsin."
+                : infoModal === "lives"
+                ? "• Her 30 dakikada 1 Can otomatik olarak ücretsiz doldurulur (Maks 5).\n• Beklemek istemiyorsan Mağaza'dan Siber Çip ile anında doldurabilirsin.\n• Günlük giriş ve seviye ödüllerinden bedava Can kazanabilirsin."
+                : "• Galibiyet kazanarak lig puanı (LP) topla ve Demir'den Radian'a yüksel.\n• Günün rotasında sabit tahtayı tamamlayarak ekstra Sezon XP elde et.\n• En yüksek kelime temposu (K/DK) yakalayarak liderlik sıralamasına gir."}
             </Text>
           </View>
 
@@ -164,20 +182,27 @@ export function CommandCenter({
             onPress={() => {
               const target = infoModal;
               setInfoModal(null);
-              if (target === "shield") onNavigate("store");
+              if (target === "lives") {
+                if (onOpenLivesModal) onOpenLivesModal();
+                else onNavigate("store");
+              } else if (target === "shield") {
+                onNavigate("store");
+              } else if (target === "rotani") {
+                onNavigate("league");
+              }
             }}
             style={({ pressed }) => [
               styles.modalActionBtn,
-              infoModal === "shield" ? styles.modalActionBtnStore : styles.modalActionBtnClose,
+              infoModal === "shield" || infoModal === "lives" ? styles.modalActionBtnStore : infoModal === "rotani" ? styles.modalActionBtnLeague : styles.modalActionBtnClose,
               pressed && styles.pressed,
             ]}
           >
             <Text style={styles.modalActionBtnText}>
-              {infoModal === "shield" ? "🛒 MAĞAZADA İNCELE" : "ANLADIM"}
+              {infoModal === "shield" || infoModal === "lives" ? "🛒 MAĞAZADA İNCELE / DOLDUR" : infoModal === "rotani" ? "🏆 LİG & KADEMELERİ İNCELE" : "ANLADIM"}
             </Text>
           </Pressable>
 
-          {infoModal === "shield" && (
+          {(infoModal === "shield" || infoModal === "lives" || infoModal === "rotani") && (
             <Pressable onPress={() => setInfoModal(null)} style={styles.modalSecondaryBtn}>
               <Text style={styles.modalSecondaryBtnText}>KAPAT</Text>
             </Pressable>
@@ -209,6 +234,19 @@ export function CommandCenter({
 
         <View style={styles.topActionsGroup}>
           <Pressable 
+            onPress={() => {
+              triggerHapticSelection();
+              setInfoModal("lives");
+            }}
+            style={({ pressed }) => [styles.livesHeaderPill, pressed && styles.pressed]}
+          >
+            <Text style={styles.livesHeaderIcon}>💚</Text>
+            <Text style={styles.livesHeaderValue}>{livesCalc.lives}/5</Text>
+            <View style={[styles.infoDot, { borderColor: "#22C55E80", backgroundColor: "#22C55E20", width: 10, height: 10, borderRadius: 5, marginLeft: 1 }]}>
+              <Text style={[styles.infoDotText, { color: "#22C55E", fontSize: 7, lineHeight: 8 }]}>i</Text>
+            </View>
+          </Pressable>
+          <Pressable 
             onPress={onShowGuide} 
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
@@ -232,7 +270,7 @@ export function CommandCenter({
           style={({ pressed }) => [styles.resourcePill, styles.shieldPill, pressed && styles.pressed]}
         >
           <Text style={styles.resourceIcon}>🛡️</Text>
-          <Text style={styles.resourceLabel}>KALKAN</Text>
+          <Text numberOfLines={1} style={styles.resourceLabel}>KALKAN</Text>
           <Text style={styles.resourceValue}>{progress.streakShields ?? 1}</Text>
           <View style={styles.infoDot}><Text style={styles.infoDotText}>i</Text></View>
         </Pressable>
@@ -242,7 +280,7 @@ export function CommandCenter({
           style={({ pressed }) => [styles.resourcePill, styles.radarPill, pressed && styles.pressed]}
         >
           <Text style={styles.resourceIcon}>👁️</Text>
-          <Text style={styles.resourceLabel}>RADAR</Text>
+          <Text numberOfLines={1} style={styles.resourceLabel}>RADAR</Text>
           <Text style={[styles.resourceValue, { color: "#00F5D4" }]}>
             {progress.radarChargesBonus ?? 0}
           </Text>
@@ -256,7 +294,7 @@ export function CommandCenter({
           style={({ pressed }) => [styles.resourcePill, styles.coinPill, pressed && styles.pressed]}
         >
           <Text style={styles.resourceIcon}>🪙</Text>
-          <Text style={styles.resourceLabel}>ÇİP</Text>
+          <Text numberOfLines={1} style={styles.resourceLabel}>ÇİP</Text>
           <Text style={styles.coinValue}>{progress.coins ?? 0}</Text>
           <View style={styles.plusBadge}>
             <Text style={styles.plusText}>＋</Text>
@@ -298,21 +336,23 @@ export function CommandCenter({
           onPress={(e) => {
             e.stopPropagation();
             triggerHapticSelection();
-            onOpenModeInfo?.("pvp");
+            setInfoModal("rotani");
           }}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
           style={({ pressed }) => ({
-            width: 26,
-            height: 26,
-            borderRadius: 13,
-            backgroundColor: "rgba(0, 245, 212, 0.15)",
-            borderWidth: 1,
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            backgroundColor: "rgba(0, 245, 212, 0.2)",
+            borderWidth: 1.5,
             borderColor: "#00F5D4",
             justifyContent: "center",
             alignItems: "center",
             opacity: pressed ? 0.7 : 1,
+            zIndex: 10,
           })}
         >
-          <Text style={{ color: "#00F5D4", fontSize: 13, fontWeight: "900" }}>ⓘ</Text>
+          <Text style={{ color: "#00F5D4", fontSize: 14, fontWeight: "900" }}>ⓘ</Text>
         </Pressable>
       </View>
       <Text style={styles.deckTitle}>ROTANI{`\n`}ATEŞLE</Text>
@@ -670,20 +710,23 @@ const styles = StyleSheet.create({
   topActionsGroup: { flexDirection: "row", gap: 6, alignItems: "center" },
   topIconBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(124, 92, 246, 0.15)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.3)", alignItems: "center", justifyContent: "center" },
   topIconText: { fontSize: 14 },
+  livesHeaderPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(34, 197, 94, 0.15)", borderWidth: 1, borderColor: "rgba(34, 197, 94, 0.4)", paddingHorizontal: 9, paddingVertical: 5, borderRadius: 14 },
+  livesHeaderIcon: { fontSize: 13 },
+  livesHeaderValue: { color: "#22C55E", fontSize: 12, fontWeight: "900" },
   
   resourceRow: { flexDirection: "row", gap: 6, alignItems: "center", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(124, 92, 246, 0.15)" },
-  resourcePill: { flex: 1, flexDirection: "row", alignItems: "center", paddingVertical: 6, paddingHorizontal: 8, borderRadius: 14, backgroundColor: "rgba(23, 17, 43, 0.7)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", position: "relative" },
+  resourcePill: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 6, paddingHorizontal: 6, borderRadius: 12, backgroundColor: "rgba(23, 17, 43, 0.7)", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", position: "relative" },
   shieldPill: { backgroundColor: "rgba(56, 189, 248, 0.1)", borderColor: "rgba(56, 189, 248, 0.35)" },
   radarPill: { backgroundColor: "rgba(0, 245, 212, 0.1)", borderColor: "rgba(0, 245, 212, 0.35)" },
   coinPill: { backgroundColor: "rgba(255, 194, 74, 0.1)", borderColor: "rgba(255, 194, 74, 0.35)" },
-  resourceIcon: { fontSize: 13, marginRight: 4 },
-  resourceLabel: { color: "#A799C7", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.4, flex: 1 },
-  resourceValue: { color: "#FFF", fontSize: 11.5, fontWeight: "900" },
-  coinValue: { color: "#FFD000", fontSize: 11.5, fontWeight: "900", marginRight: 4 },
-  infoDot: { width: 13, height: 13, borderRadius: 7, borderWidth: 1, borderColor: "#38BDF880", backgroundColor: "#38BDF820", alignItems: "center", justifyContent: "center", marginLeft: 4 },
-  infoDotText: { color: "#38BDF8", fontSize: 8.5, fontWeight: "900", lineHeight: 10 },
-  plusBadge: { width: 16, height: 16, borderRadius: 8, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center" },
-  plusText: { color: "#1A102B", fontSize: 11, fontWeight: "900", lineHeight: 13 },
+  resourceIcon: { fontSize: 12, marginRight: 3 },
+  resourceLabel: { color: "#A799C7", fontSize: 8, fontWeight: "900", letterSpacing: 0.2, flex: 1, marginRight: 2 },
+  resourceValue: { color: "#FFF", fontSize: 11, fontWeight: "900" },
+  coinValue: { color: "#FFD000", fontSize: 11, fontWeight: "900", marginRight: 3 },
+  infoDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1, borderColor: "#38BDF880", backgroundColor: "#38BDF820", alignItems: "center", justifyContent: "center", marginLeft: 3 },
+  infoDotText: { color: "#38BDF8", fontSize: 8, fontWeight: "900", lineHeight: 10 },
+  plusBadge: { width: 14, height: 14, borderRadius: 7, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center" },
+  plusText: { color: "#1A102B", fontSize: 10, fontWeight: "900", lineHeight: 12 },
 
   /* Resource Info Modal */
   modalOverlay: {
@@ -729,6 +772,22 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 245, 212, 0.15)",
     borderColor: "#00F5D4",
     shadowColor: "#00F5D4",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  modalIconBadgeLives: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    borderColor: "#22C55E",
+    shadowColor: "#22C55E",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  modalIconBadgeRotani: {
+    backgroundColor: "rgba(168, 85, 247, 0.15)",
+    borderColor: "#A855F7",
+    shadowColor: "#A855F7",
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 6,
@@ -800,8 +859,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalActionBtnStore: {
-    backgroundColor: "#38BDF8",
-    shadowColor: "#38BDF8",
+    backgroundColor: "#FFD000",
+    shadowColor: "#FFD000",
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  modalActionBtnLeague: {
+    backgroundColor: "#A855F7",
+    shadowColor: "#A855F7",
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 5,

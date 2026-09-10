@@ -9,12 +9,10 @@ import { sdk } from "./sdk";
 import { registerGameRooms } from "../game/rooms";
 
 import { UserModel, hashPassword, verifyPassword, connectDb } from "../db";
-import { deletePlayerProfile, loadPlayerProfile, ProfileModel } from "../game/mongo-store";
-import { COOKIE_NAME } from "../../shared/const.js";
-import { getSessionCookieOptions } from "./cookies";
+import { deletePlayerProfile, ProfileModel } from "../game/mongo-store";
 import { z } from "zod";
 import { randomUUID, randomInt } from "node:crypto";
-import { applyArcadeProgress, applyMatchProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, findMissionById, getLeagueTier, type PlayerProgress } from "../../shared/progression";
+import { applyArcadeProgress, applyMatchProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, findMissionById, getLeagueTier, buyLives, deductLife, getCalculatedLives, reconcilePlayerProgress, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES, type PlayerProgress } from "../../shared/progression";
 import type { LeaderboardEntry } from "../../shared/game";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -34,6 +32,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
     }
   }
   throw new Error(`No available port found starting from ${startPort}`);
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function startServer() {
@@ -138,22 +140,29 @@ async function startServer() {
     }
   });
 
+  const signupSchema = z.object({
+    username: z.string().trim().min(3, "Kullanıcı adı min 3 karakter olmalıdır.").max(32),
+    password: z.string().min(4, "Şifre min 4 karakter olmalıdır.").max(128),
+    email: z.string().trim().email("Geçerli bir e-posta adresi gereklidir.").max(128),
+    fullName: z.string().trim().min(2, "Ad soyad en az 2 karakter olmalıdır.").max(64),
+    gender: z.enum(["male", "female", "unspecified"]).optional(),
+  });
+
   app.post("/api/auth/signup", async (req, res) => {
     try {
       await connectDb();
-      const { username, password, email, fullName, gender } = req.body;
-      if (!username || !password || username.length < 3 || password.length < 4) {
-        return res.status(400).json({ error: "Geçersiz kullanıcı adı veya şifre (Kullanıcı adı min 3, şifre min 4 karakter olmalıdır)." });
+      const parsed = signupSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0]?.message || "Geçersiz kayıt bilgileri." });
       }
-      if (!email || !fullName) {
-        return res.status(400).json({ error: "E-posta ve ad soyad alanları zorunludur." });
-      }
-      const existingUser = await UserModel.findOne({ username: username.toLowerCase() });
+      const { username, password, email, fullName, gender } = parsed.data;
+      const lowerUsername = username.toLocaleLowerCase("tr-TR");
+      const existingUser = await UserModel.findOne({ username: lowerUsername });
       if (existingUser) {
         return res.status(400).json({ error: "Bu kullanıcı adı zaten alınmış." });
       }
       
-      const openId = `usr_${username.toLowerCase()}`;
+      const openId = `usr_${lowerUsername}`;
       const passwordHash = hashPassword(password);
       const now = new Date();
 
@@ -163,10 +172,10 @@ async function startServer() {
       const user = new UserModel({
         id: randomInt(1, 2_147_483_647),
         openId,
-        username: username.toLowerCase(),
+        username: lowerUsername,
         passwordHash,
         name: fullName.trim(),
-        email: email.trim().toLowerCase(),
+        email: email.trim().toLocaleLowerCase("tr-TR"),
         loginMethod: "credentials",
         role: "user",
         createdAt: now,
@@ -177,7 +186,7 @@ async function startServer() {
 
       await user.save();
       const token = await sdk.createSessionToken(openId, { name: fullName.trim() });
-      res.json({ success: true, token, user: { openId, name: fullName.trim(), username: username.toLowerCase(), progress: initialProgress } });
+      res.json({ success: true, token, user: { openId, name: fullName.trim(), username: lowerUsername, progress: initialProgress } });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Kayıt işlemi başarısız." });
     }
@@ -208,14 +217,21 @@ async function startServer() {
     }
   });
 
+  const loginSchema = z.object({
+    username: z.string().trim().min(1, "Kullanıcı adı gereklidir.").max(64),
+    password: z.string().min(1, "Şifre gereklidir.").max(128),
+  });
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       await connectDb();
-      const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ error: "Kullanıcı adı ve şifre gereklidir." });
+      const parsed = loginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.issues[0]?.message || "Geçersiz giriş bilgileri." });
       }
-      const user = await UserModel.findOne({ username: username.toLowerCase() });
+      const { username, password } = parsed.data;
+      const lowerUsername = username.toLocaleLowerCase("tr-TR");
+      const user = await UserModel.findOne({ username: lowerUsername });
       if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
         return res.status(401).json({ error: "Kullanıcı adı veya şifre hatalı." });
       }
@@ -223,8 +239,9 @@ async function startServer() {
       user.lastSignedIn = new Date();
       await user.save();
 
-      const token = await sdk.createSessionToken(user.openId, { name: user.name || username.toUpperCase() });
-      res.json({ success: true, token, user: { openId: user.openId, name: user.name || username.toUpperCase(), username: user.username, progress: user.progress } });
+      const displayName = user.name || username.toLocaleUpperCase("tr-TR");
+      const token = await sdk.createSessionToken(user.openId, { name: displayName });
+      res.json({ success: true, token, user: { openId: user.openId, name: displayName, username: user.username, progress: user.progress } });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Giriş işlemi başarısız." });
     }
@@ -300,7 +317,7 @@ async function startServer() {
         $or: [
           { openId: idOrName },
           { username: idOrName.toLowerCase() },
-          { name: new RegExp(`^${idOrName}$`, "i") },
+          { name: new RegExp(`^${escapeRegex(idOrName)}$`, "i") },
         ]
       }).lean();
 
@@ -332,7 +349,7 @@ async function startServer() {
       let profile = await ProfileModel.findOne({
         $or: [
           { playerId: idOrName },
-          { name: new RegExp(`^${idOrName}$`, "i") },
+          { name: new RegExp(`^${escapeRegex(idOrName)}$`, "i") },
         ]
       }).lean();
 
@@ -410,7 +427,9 @@ async function startServer() {
               longWord: (payload.data.level ?? 1) >= 5,
               foundWords: payload.data.foundWords ?? [],
             }, "solo"),
-            soloUnlockedLevel: Math.min(101, Math.max(current.soloUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
+            soloUnlockedLevel: payload.data.daily
+              ? (current.soloUnlockedLevel ?? 1)
+              : Math.min(101, Math.max(current.soloUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
           };
       const awarded = payload.data.daily ? completeDailyProgress(next, getDailyChallenge()) : next;
       dbUser.progress = awarded;
@@ -475,6 +494,29 @@ async function startServer() {
     }
   });
 
+  app.post("/api/game/lives", async (req, res) => {
+    const payload = z.object({ option: z.enum(["one", "all", "ad"]) }).safeParse(req.body);
+    if (!payload.success) return res.status(400).json({ error: "Geçersiz can satın alma isteği." });
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      const current = { ...DEFAULT_PROGRESS, ...(dbUser?.progress ?? {}) } as PlayerProgress;
+      const result = buyLives(current, payload.data.option);
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+      if (dbUser) {
+        dbUser.progress = result.updatedProgress;
+        dbUser.updatedAt = new Date();
+        await dbUser.save();
+      }
+      res.json({ success: true, message: result.message, progress: result.updatedProgress });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Can işlemi gerçekleştirilemedi." });
+    }
+  });
+
   app.get("/api/auth/get-progress", async (req, res) => {
     try {
       await connectDb();
@@ -482,6 +524,13 @@ async function startServer() {
       if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
 
       const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (dbUser && dbUser.progress) {
+        const rec = reconcilePlayerProgress({ ...DEFAULT_PROGRESS, ...dbUser.progress });
+        dbUser.progress = rec.progress;
+        dbUser.updatedAt = new Date();
+        await dbUser.save();
+        return res.json({ progress: rec.progress });
+      }
       res.json({ progress: dbUser?.progress || null });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "İlerleme verisi alınamadı." });
@@ -508,6 +557,7 @@ async function startServer() {
           bestRound: prog.bestScore || 0,
           lp: prog.lp || 0,
           tier: tier.tier,
+          avatar: prog.selectedAvatar || "spark",
           level: Math.floor((prog.xp || 0) / 200) + 1,
         };
       });

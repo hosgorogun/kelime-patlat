@@ -253,24 +253,29 @@ export function SeasonHub({
           </View>
         </View>
 
-        {/* Sub-tabs */}
-        <View style={styles.tabSwitcher}>
+        {/* Single Modern Segmented Tab Controller */}
+        <View style={styles.segmentedTabContainer}>
           <Pressable
             onPress={() => { triggerHapticSelection(); setActiveTab("leaderboard"); }}
-            style={[styles.tabBtn, activeTab === "leaderboard" && styles.tabBtnActive]}
+            style={[styles.segmentedTabBtn, activeTab === "leaderboard" && styles.segmentedTabBtnActive]}
           >
-            <Text numberOfLines={1} style={[styles.tabBtnText, activeTab === "leaderboard" && styles.tabBtnTextActive]}>
-              🏆 LİDERLİK TABLOSU
+            <Text style={[styles.segmentedTabIcon]}>🏆</Text>
+            <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "leaderboard" && styles.segmentedTabTextActive]}>
+              LİDERLİK TABLOSU
             </Text>
           </Pressable>
 
           <Pressable
             onPress={() => { triggerHapticSelection(); setActiveTab("friends"); }}
-            style={[styles.tabBtn, activeTab === "friends" && styles.tabBtnActive]}
+            style={[styles.segmentedTabBtn, activeTab === "friends" && styles.segmentedTabBtnActive]}
           >
-            <Text numberOfLines={1} style={[styles.tabBtnText, activeTab === "friends" && styles.tabBtnTextActive]}>
-              👥 ARKADAŞLAR ({friendsList.length})
+            <Text style={[styles.segmentedTabIcon]}>👥</Text>
+            <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "friends" && styles.segmentedTabTextActive]}>
+              ARKADAŞLAR ({friendsList.length})
             </Text>
+            {onlineFriendsCount > 0 && (
+              <View style={styles.onlineBadgeDot} />
+            )}
           </Pressable>
         </View>
 
@@ -314,45 +319,44 @@ export function SeasonHub({
               </View>
             </View>
 
-
-            {/* Filter Buttons: Global vs Friends & Ranking Metric Toggle */}
-            <View style={{ gap: 10, marginBottom: 16 }}>
-              {/* Metric Switcher: LP vs Level */}
-              <View style={{ flexDirection: "row", gap: 8, backgroundColor: "rgba(19, 13, 43, 0.8)", padding: 4, borderRadius: 14, borderWidth: 1, borderColor: "rgba(124, 58, 237, 0.25)" }}>
+            {/* Sub Filters Toolbar: Metric (LP / Level) & Scope (Global / Friends) */}
+            <View style={styles.filterToolbarRow}>
+              {/* Metric Pill Toggle */}
+              <View style={styles.toolbarSegment}>
                 <Pressable
                   onPress={() => { triggerHapticSelection(); setRankingType("lp"); }}
-                  style={[{ flex: 1, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" }, rankingType === "lp" && { backgroundColor: "#7C3AED" }]}
+                  style={[styles.toolbarPill, rankingType === "lp" && styles.toolbarPillActiveLp]}
                 >
-                  <Text style={[{ fontSize: 11, fontWeight: "900", color: "#94A3B8" }, rankingType === "lp" && { color: "#FFFFFF" }]}>
-                    🛡️ LİG KADEMESİ (LP)
+                  <Text style={[styles.toolbarPillText, rankingType === "lp" && styles.toolbarPillTextActive]}>
+                    🛡️ LP
                   </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => { triggerHapticSelection(); setRankingType("level"); }}
-                  style={[{ flex: 1, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" }, rankingType === "level" && { backgroundColor: "#38BDF8" }]}
+                  style={[styles.toolbarPill, rankingType === "level" && styles.toolbarPillActiveLevel]}
                 >
-                  <Text style={[{ fontSize: 11, fontWeight: "900", color: "#94A3B8" }, rankingType === "level" && { color: "#0B132B" }]}>
-                    ⚡ SEVİYE SIRALAMASI
+                  <Text style={[styles.toolbarPillText, rankingType === "level" && styles.toolbarPillTextActive]}>
+                    ⚡ SEVİYE
                   </Text>
                 </Pressable>
               </View>
 
-              {/* Scope Switcher: Global vs Friends */}
-              <View style={styles.leaderFilterRow}>
+              {/* Scope Chip Toggle */}
+              <View style={styles.toolbarSegment}>
                 <Pressable
                   onPress={() => { triggerHapticSelection(); setLeaderboardFilter("global"); }}
-                  style={[styles.filterChip, leaderboardFilter === "global" && styles.filterChipActive]}
+                  style={[styles.toolbarPill, leaderboardFilter === "global" && styles.toolbarPillActiveScope]}
                 >
-                  <Text style={[styles.filterChipText, leaderboardFilter === "global" && styles.filterChipTextActive]}>
-                    🌐 GENEL SIRALAMA ({displayedLeaderboard.length})
+                  <Text style={[styles.toolbarPillText, leaderboardFilter === "global" && styles.toolbarPillTextActive]}>
+                    🌐 GENEL
                   </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => { triggerHapticSelection(); setLeaderboardFilter("friends"); }}
-                  style={[styles.filterChip, leaderboardFilter === "friends" && styles.filterChipActive]}
+                  style={[styles.toolbarPill, leaderboardFilter === "friends" && styles.toolbarPillActiveScope]}
                 >
-                  <Text style={[styles.filterChipText, leaderboardFilter === "friends" && styles.filterChipTextActive]}>
-                    👥 ARKADAŞLAR ({friendsList.length})
+                  <Text style={[styles.toolbarPillText, leaderboardFilter === "friends" && styles.toolbarPillTextActive]}>
+                    👥 ARKADAŞLAR
                   </Text>
                 </Pressable>
               </View>
@@ -678,38 +682,115 @@ const styles = StyleSheet.create({
   },
   rankOrbText: { color: "#FFC24A", fontWeight: "900" },
 
-  /* Segmented Sub-Tab Switcher */
-  tabSwitcher: {
+  /* Modern Segmented Tab Controller */
+  segmentedTabContainer: {
     flexDirection: "row",
-    backgroundColor: "rgba(23, 17, 44, 0.85)",
-    borderRadius: 16,
-    padding: 4,
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.25)",
+    backgroundColor: "rgba(16, 11, 32, 0.95)",
+    borderRadius: 20,
+    padding: 5,
+    marginTop: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(124, 92, 246, 0.3)",
+    gap: 4,
   },
-  tabBtn: {
+  segmentedTabBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    paddingHorizontal: 8,
+    borderRadius: 15,
+    position: "relative",
   },
-  tabBtnActive: {
+  segmentedTabBtnActive: {
+    backgroundColor: "#6D28D9",
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  segmentedTabIcon: {
+    fontSize: 14,
+  },
+  segmentedTabText: {
+    color: "#6B5E88",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+    flexShrink: 1,
+  },
+  segmentedTabTextActive: {
+    color: "#FFFFFF",
+  },
+  onlineBadgeDot: {
+    position: "absolute",
+    top: 8,
+    right: 10,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#22C55E",
+    borderWidth: 1.5,
+    borderColor: "#0C081A",
+  },
+
+  /* Compact Filter Toolbar */
+  filterToolbarRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 16,
+  },
+  toolbarSegment: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "rgba(16, 11, 32, 0.8)",
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.07)",
+    padding: 3,
+    gap: 3,
+  },
+  toolbarPill: {
+    flex: 1,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  toolbarPillText: {
+    color: "#6B5E88",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+    textAlign: "center",
+  },
+  toolbarPillTextActive: {
+    color: "#FFFFFF",
+  },
+  toolbarPillActiveLp: {
     backgroundColor: "#7C3AED",
     shadowColor: "#7C3AED",
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  tabBtnText: {
-    color: "#8E82A8",
-    fontSize: 10.5,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+  toolbarPillActiveLevel: {
+    backgroundColor: "#0E7490",
+    shadowColor: "#38BDF8",
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  tabBtnTextActive: {
-    color: "#FFFFFF",
+  toolbarPillActiveScope: {
+    backgroundColor: "#1E3A5F",
+    shadowColor: "#38BDF8",
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   /* Hero Cards */

@@ -61,6 +61,8 @@ export function MissionsScreen({
     return () => clearTimeout(timer);
   }, [toast]);
 
+  const [activeTab, setActiveTab] = useState<"daily" | "weekly">("daily");
+
   const todayId = useMemo(() => getDayId(), []);
   const weekId = useMemo(() => getWeekId(), []);
 
@@ -73,6 +75,9 @@ export function MissionsScreen({
     const current = progress.missions?.[m.id] ?? 0;
     return current >= m.target;
   }).length;
+
+  const dailyCompletedCount = dailyMissions.filter((m) => (progress.missions?.[m.id] ?? 0) >= m.target).length;
+  const weeklyCompletedCount = weeklyMissions.filter((m) => (progress.missions?.[m.id] ?? 0) >= m.target).length;
 
   const totalPossibleXp = allActiveMissions.reduce((sum, m) => sum + m.rewardXp, 0);
   const claimingRef = useRef<Set<string>>(new Set());
@@ -90,9 +95,9 @@ export function MissionsScreen({
       onClaimWeekly?.(mission.id, mission.rewardXp, mission.rewardShields ?? 0, mission.rewardCoins);
     }
 
-    const rewardsList: string[] = [`+${mission.rewardXp} XP`, `+${mission.rewardCoins} Siber Çip 🪙`];
+    const rewardsList: string[] = [`+${mission.rewardXp} XP`, `+${mission.rewardCoins} Çip 🪙`];
     if (mission.rewardShields && mission.rewardShields > 0) {
-      rewardsList.push(`+${mission.rewardShields} Seri Kalkanı 🛡️`);
+      rewardsList.push(`+${mission.rewardShields} Kalkan 🛡️`);
     }
 
     setToast({
@@ -121,59 +126,74 @@ export function MissionsScreen({
     const icon = getMissionIcon(mission.actionType);
 
     return (
-      <View key={mission.id} style={[styles.missionCard, isDone && styles.missionDone]}>
-        <View style={[styles.iconBox, isDone && styles.iconBoxDone]}>
-          <Text style={[styles.iconText, isDone && { color: "#00F5D4" }]}>{isDone ? "✓" : icon}</Text>
+      <View key={mission.id} style={[styles.missionCard, isDone && styles.missionDone, isClaimed && styles.missionClaimed]}>
+        <View style={[styles.iconBox, isDone && styles.iconBoxDone, isClaimed && styles.iconBoxClaimed]}>
+          <Text style={[styles.iconText, isDone && { color: "#00F5D4" }, isClaimed && { color: "#64748B" }]}>{isClaimed ? "✓" : isDone ? "🎁" : icon}</Text>
         </View>
 
         <View style={styles.infoBox}>
           <View style={styles.cardTopRow}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-              <Text style={[styles.missionTitle, isDone && { color: "#00F5D4" }]}>{mission.title}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1, flexWrap: "wrap" }}>
+              <Text style={[styles.missionTitle, isDone && { color: "#00F5D4" }, isClaimed && { color: "#94A3B8" }]}>{mission.title}</Text>
               <View style={[styles.diffBadge, { backgroundColor: diffConfig.bg, borderColor: diffConfig.border }]}>
                 <Text style={[styles.diffBadgeText, { color: diffConfig.color }]}>{diffConfig.label}</Text>
               </View>
             </View>
-            <Text style={styles.rewardTag}>
-              +{mission.rewardXp} XP · 🪙 {mission.rewardCoins}
-              {mission.rewardShields ? ` · 🛡️ ${mission.rewardShields}` : ""}
-            </Text>
           </View>
+          
           <Text style={styles.missionDesc}>{mission.desc}</Text>
+
+          {/* Reward Badges Row */}
+          <View style={styles.rewardBadgesRow}>
+            <View style={styles.rewardChipPill}>
+              <Text style={styles.rewardChipText}>+{mission.rewardXp} XP</Text>
+            </View>
+            <View style={styles.rewardChipPill}>
+              <Text style={styles.rewardChipText}>🪙 +{mission.rewardCoins}</Text>
+            </View>
+            {mission.rewardShields ? (
+              <View style={[styles.rewardChipPill, { borderColor: "#38BDF855", backgroundColor: "rgba(56, 189, 248, 0.15)" }]}>
+                <Text style={[styles.rewardChipText, { color: "#38BDF8" }]}>🛡️ +{mission.rewardShields}</Text>
+              </View>
+            ) : null}
+          </View>
 
           {/* Progress bar */}
           <View style={styles.cardTrack}>
             <View
               style={[
                 styles.cardFill,
-                { width: `${pct}%`, backgroundColor: diffConfig.color },
+                { width: `${Math.max(4, pct)}%`, backgroundColor: diffConfig.color },
                 isDone && { backgroundColor: "#00F5D4" },
+                isClaimed && { backgroundColor: "#475569" },
               ]}
             />
           </View>
 
           <View style={styles.cardFooter}>
-            <Text style={styles.statusText}>
+            <Text style={[styles.statusText, isDone && { color: "#00F5D4" }]}>
               {current}/{mission.target} ({pct}%)
             </Text>
 
             {isClaimed ? (
               <View style={styles.claimedBadge}>
-                <Text style={styles.claimedText}>✓ ALINDI</Text>
+                <Text style={styles.claimedText}>✓ ÖDÜL ALINDI</Text>
               </View>
             ) : isDone ? (
               <Pressable
                 onPress={() => handleClaimMission(mission)}
                 style={({ pressed }) => [styles.actionButton, styles.claimButtonGold, pressed && { opacity: 0.8 }]}
               >
-                <Text style={[styles.actionText, { color: "#121025" }]}>ÖDÜLÜ AL 🎁</Text>
+                <Text style={[styles.actionText, { color: "#121025" }]}>ÖDÜLÜ TOPLA 🎁</Text>
               </Pressable>
             ) : mission.actionType === "daily_route" ? (
               <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.actionButton, pressed && { opacity: 0.8 }]}>
                 <Text style={styles.actionText}>OYNAT →</Text>
               </Pressable>
             ) : (
-              <Text style={styles.inProgressText}>DEVAM EDİYOR</Text>
+              <View style={styles.inProgressPill}>
+                <Text style={styles.inProgressText}>⏳ DEVAM EDİYOR</Text>
+              </View>
             )}
           </View>
         </View>
@@ -183,16 +203,17 @@ export function MissionsScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Header */}
+      {/* Header Bar */}
       <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.back}>
+        <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
-        <View>
-          <Text style={styles.overline}>SİBER GÖREV MERKEZİ</Text>
-          <Text style={styles.title}>DİNAMİK GÖREV PANOSU</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.overline}>GÖREV MERKEZİ</Text>
+          <Text style={styles.title}>GÖREV PANOSU</Text>
         </View>
         <View style={styles.totalBadge}>
+          <Text style={styles.totalBadgeLabel}>TOPLAM KAZANÇ</Text>
           <Text style={styles.totalBadgeText}>+{totalPossibleXp} XP</Text>
         </View>
       </View>
@@ -223,9 +244,12 @@ export function MissionsScreen({
       {/* Mission Summary Banner */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryHead}>
-          <Text style={styles.summaryKicker}>AKTİF DÖNGÜ İLERLEMESİ</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={{ fontSize: 14 }}>⚡</Text>
+            <Text style={styles.summaryKicker}>AKTİF DÖNGÜ İLERLEMESİ</Text>
+          </View>
           <Text style={styles.summaryTitle}>
-            {completedCount}/{allActiveMissions.length} GÖREV TAMAMLANDI
+            {completedCount}/{allActiveMissions.length} GÖREV TAMAM
           </Text>
         </View>
         <View style={styles.progressTrack}>
@@ -233,48 +257,97 @@ export function MissionsScreen({
             style={[
               styles.progressFill,
               {
-                width: `${Math.round((completedCount / (allActiveMissions.length || 1)) * 100)}%`,
+                width: `${Math.max(6, Math.round((completedCount / (allActiveMissions.length || 1)) * 100))}%`,
               },
             ]}
           />
         </View>
         <Text style={styles.summaryHint}>
-          💡 90 Günlük ve 30 Haftalık devasa havuzdan her gün ve her pazartesi yepyeni görevler ve zorluk dereceleri seni bekliyor!
+          💡 Görevleri tamamlayarak Sezon XP'si, Siber Çip ve Seri Kalkanı kazan, kademeleri daha hızlı tırman!
         </Text>
       </View>
 
-      {/* Daily Missions Section */}
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>⚡ GÜNLÜK GÖREVLER (3 ADET)</Text>
-        <Text style={styles.sectionMeta}>HER GÜN 00:00&apos;DA YENİLENİR</Text>
+      {/* Tab Selector Buttons */}
+      <View style={styles.tabContainer}>
+        <Pressable
+          onPress={() => {
+            haptics.select();
+            setActiveTab("daily");
+          }}
+          style={[styles.tabButton, activeTab === "daily" && styles.tabButtonActive]}
+        >
+          <Text numberOfLines={1} style={[styles.tabButtonText, activeTab === "daily" && styles.tabButtonTextActive]}>
+            ☀️ GÜNLÜK
+          </Text>
+          <View style={[styles.tabBadge, activeTab === "daily" && styles.tabBadgeActive]}>
+            <Text style={[styles.tabBadgeText, activeTab === "daily" && styles.tabBadgeTextActive]}>
+              {dailyCompletedCount}/{dailyMissions.length}
+            </Text>
+          </View>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            haptics.select();
+            setActiveTab("weekly");
+          }}
+          style={[styles.tabButton, activeTab === "weekly" && styles.tabButtonActive]}
+        >
+          <Text numberOfLines={1} style={[styles.tabButtonText, activeTab === "weekly" && styles.tabButtonTextActive]}>
+            🏆 HAFTALIK
+          </Text>
+          <View style={[styles.tabBadge, activeTab === "weekly" && styles.tabBadgeActive]}>
+            <Text style={[styles.tabBadgeText, activeTab === "weekly" && styles.tabBadgeTextActive]}>
+              {weeklyCompletedCount}/{weeklyMissions.length}
+            </Text>
+          </View>
+        </Pressable>
       </View>
 
-      <View style={styles.missionList}>
-        {dailyMissions.map((m) => renderMissionCard(m))}
-      </View>
+      {/* Daily or Weekly Missions Section */}
+      {activeTab === "daily" ? (
+        <>
+          <View style={styles.sectionHead}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={styles.sectionIcon}>☀️</Text>
+              <Text style={styles.sectionTitle}>GÜNLÜK GÖREVLER</Text>
+            </View>
+            <Text style={styles.sectionMeta}>HER GÜN 00:00'DA YENİLENİR</Text>
+          </View>
 
-      {/* Weekly Season Missions Section */}
-      <View style={styles.sectionHead}>
-        <Text style={styles.sectionTitle}>🏆 HAFTALIK MİSYONLAR (3 ADET)</Text>
-        <Text style={styles.sectionMeta}>HER PAZARTESİ YENİLENİR</Text>
-      </View>
+          <View style={styles.missionList}>
+            {dailyMissions.map((m) => renderMissionCard(m))}
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.sectionHead}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={styles.sectionIcon}>🏆</Text>
+              <Text style={styles.sectionTitle}>HAFTALIK MİSYONLAR</Text>
+            </View>
+            <Text style={styles.sectionMeta}>HER PAZARTESİ YENİLENİR</Text>
+          </View>
 
-      <View style={styles.missionList}>
-        {weeklyMissions.map((m) => renderMissionCard(m))}
-      </View>
+          <View style={styles.missionList}>
+            {weeklyMissions.map((m) => renderMissionCard(m))}
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 0, paddingTop: 4, paddingBottom: 136 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 },
-  back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1E1838", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", alignItems: "center", justifyContent: "center" },
-  backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
-  overline: { color: "#A78BFA", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-  title: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.3 },
-  totalBadge: { marginLeft: "auto", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1.5, borderColor: "#00F5D4" },
-  totalBadgeText: { color: "#00F5D4", fontSize: 12, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 136, backgroundColor: "#0C081A" },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  back: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", alignItems: "center", justifyContent: "center" },
+  backText: { color: "#FFF9FC", fontSize: 28, lineHeight: 30, marginTop: -3 },
+  overline: { color: "#A78BFA", fontSize: 8.5, fontWeight: "900", letterSpacing: 1.1 },
+  title: { color: "#FFF9FC", fontSize: 19, fontWeight: "900", marginTop: 1, letterSpacing: 0.3 },
+  totalBadge: { marginLeft: "auto", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1.5, borderColor: "#00F5D4", alignItems: "flex-end" },
+  totalBadgeLabel: { color: "#A78BFA", fontSize: 7, fontWeight: "900", letterSpacing: 0.5 },
+  totalBadgeText: { color: "#00F5D4", fontSize: 11.5, fontWeight: "900" },
 
   toastCard: {
     flexDirection: "row",
@@ -315,41 +388,105 @@ const styles = StyleSheet.create({
   toastCloseBtn: { padding: 6 },
   toastCloseText: { color: "#A49BBF", fontSize: 18, fontWeight: "900" },
 
-  summaryCard: { padding: 16, borderRadius: 20, backgroundColor: "rgba(30, 23, 56, 0.95)", borderWidth: 1.5, borderColor: "#7C5CF6", marginBottom: 16, shadowColor: "#7C5CF6", shadowOpacity: 0.15, shadowRadius: 10 },
+  summaryCard: { padding: 16, borderRadius: 20, backgroundColor: "#171033", borderWidth: 1.5, borderColor: "#7C5CF6", marginBottom: 18, shadowColor: "#7C5CF6", shadowOpacity: 0.2, shadowRadius: 12, elevation: 4 },
   summaryHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  summaryKicker: { color: "#FFC86A", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.8 },
+  summaryKicker: { color: "#FFC86A", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   summaryTitle: { color: "#FFF9FC", fontSize: 13, fontWeight: "900" },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: "#322756", overflow: "hidden", marginBottom: 10 },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: "#0C071C", overflow: "hidden", marginBottom: 10 },
   progressFill: { height: "100%", borderRadius: 4, backgroundColor: "#00F5D4" },
-  summaryHint: { color: "#C4B5FD", fontSize: 9.5, lineHeight: 14 },
+  summaryHint: { color: "#CBD5E1", fontSize: 10, lineHeight: 15, fontWeight: "600" },
 
-  sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, marginTop: 4 },
-  sectionTitle: { color: "#E9D5FF", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
-  sectionMeta: { color: "#766D89", fontSize: 8, fontWeight: "900" },
+  tabContainer: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 16,
+    padding: 4,
+    borderRadius: 16,
+    backgroundColor: "#140E2A",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    backgroundColor: "transparent",
+  },
+  tabButtonActive: {
+    backgroundColor: "#7C3AED",
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabButtonText: {
+    color: "#94A3B8",
+    fontSize: 10.5,
+    fontWeight: "900",
+    letterSpacing: 0.2,
+    flexShrink: 1,
+  },
+  tabButtonTextActive: {
+    color: "#FFFFFF",
+  },
+  tabBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  tabBadgeActive: {
+    backgroundColor: "rgba(0, 245, 212, 0.25)",
+  },
+  tabBadgeText: {
+    color: "#94A3B8",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  tabBadgeTextActive: {
+    color: "#00F5D4",
+  },
 
-  missionList: { gap: 10, marginBottom: 18 },
-  missionCard: { padding: 14, borderRadius: 18, backgroundColor: "rgba(24, 19, 45, 0.9)", borderWidth: 1, borderColor: "#372B5E", flexDirection: "row", gap: 12 },
-  missionDone: { borderColor: "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.05)" },
-  iconBox: { width: 44, height: 44, borderRadius: 15, backgroundColor: "#2A204C", borderWidth: 1, borderColor: "#4C3B82", alignItems: "center", justifyContent: "center" },
+  sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, marginTop: 4, paddingRight: 40 },
+  sectionIcon: { fontSize: 13 },
+  sectionTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
+  sectionMeta: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+
+  missionList: { gap: 12, marginBottom: 20 },
+  missionCard: { padding: 14, borderRadius: 20, backgroundColor: "#140E2A", borderWidth: 1.5, borderColor: "rgba(255, 255, 255, 0.08)", flexDirection: "row", gap: 12 },
+  missionDone: { borderColor: "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.08)", shadowColor: "#00F5D4", shadowOpacity: 0.2, shadowRadius: 10, elevation: 4 },
+  missionClaimed: { opacity: 0.65, borderColor: "rgba(255,255,255,0.05)" },
+
+  iconBox: { width: 46, height: 46, borderRadius: 16, backgroundColor: "#1E163B", borderWidth: 1.5, borderColor: "#3D3163", alignItems: "center", justifyContent: "center" },
   iconBoxDone: { backgroundColor: "rgba(0, 245, 212, 0.15)", borderColor: "#00F5D4" },
-  iconText: { color: "#A78BFA", fontSize: 20, fontWeight: "900" },
+  iconBoxClaimed: { backgroundColor: "#17112C", borderColor: "#33294E" },
+  iconText: { color: "#A78BFA", fontSize: 22, fontWeight: "900" },
 
   infoBox: { flex: 1 },
-  cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
-  missionTitle: { color: "#FFF9FC", fontSize: 13, fontWeight: "900" },
-  diffBadge: { paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 5, borderWidth: 1 },
-  diffBadgeText: { fontSize: 7.5, fontWeight: "900", letterSpacing: 0.5 },
-  rewardTag: { color: "#00F5D4", fontSize: 9.5, fontWeight: "900" },
-  missionDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2, marginBottom: 8, lineHeight: 14 },
+  cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  missionTitle: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", letterSpacing: 0.2 },
+  diffBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+  diffBadgeText: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  missionDesc: { color: "#CBD5E1", fontSize: 11, marginTop: 2, marginBottom: 8, lineHeight: 15, fontWeight: "600" },
 
-  cardTrack: { height: 6, borderRadius: 3, backgroundColor: "#2B224A", overflow: "hidden", marginBottom: 8 },
+  rewardBadgesRow: { flexDirection: "row", gap: 6, marginBottom: 10, flexWrap: "wrap" },
+  rewardChipPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: "rgba(0, 245, 212, 0.1)", borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.3)" },
+  rewardChipText: { color: "#00F5D4", fontSize: 9.5, fontWeight: "900" },
+
+  cardTrack: { height: 6, borderRadius: 3, backgroundColor: "#0C071C", overflow: "hidden", marginBottom: 8 },
   cardFill: { height: "100%", borderRadius: 3, backgroundColor: "#8B5CF6" },
 
   cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  statusText: { color: "#C4B5FD", fontSize: 9, fontWeight: "800" },
-  claimedBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1, borderColor: "#00F5D4" },
-  claimedText: { color: "#00F5D4", fontSize: 9.5, fontWeight: "900" },
-  inProgressText: { color: "#8E82A8", fontSize: 8.5, fontWeight: "800" },
+  statusText: { color: "#94A3B8", fontSize: 10, fontWeight: "800" },
+  claimedBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: "rgba(255, 255, 255, 0.05)" },
+  claimedText: { color: "#64748B", fontSize: 9, fontWeight: "900", letterSpacing: 0.6 },
+  inProgressPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: "rgba(255, 255, 255, 0.04)" },
+  inProgressText: { color: "#94A3B8", fontSize: 8.5, fontWeight: "800" },
   actionButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: "#7C3AED" },
   claimButtonGold: {
     backgroundColor: "#FFC24A",
@@ -358,12 +495,5 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  claimButtonCyan: {
-    backgroundColor: "#00F5D4",
-    shadowColor: "#00F5D4",
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  actionText: { color: "#FFFFFF", fontSize: 9, fontWeight: "900" },
+  actionText: { color: "#FFFFFF", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.4 },
 });

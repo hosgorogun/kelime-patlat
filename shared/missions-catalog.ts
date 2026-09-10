@@ -1061,7 +1061,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "duel_play",
     "target": 15,
     "rewardXp": 300,
-    "rewardCoins": 160,
+    "rewardCoins": 45,
     "difficulty": "medium"
   },
   {
@@ -1072,7 +1072,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "duel_win",
     "target": 8,
     "rewardXp": 480,
-    "rewardCoins": 260,
+    "rewardCoins": 75,
     "rewardShields": 1,
     "difficulty": "hard"
   },
@@ -1084,7 +1084,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "word_count",
     "target": 120,
     "rewardXp": 320,
-    "rewardCoins": 180,
+    "rewardCoins": 50,
     "difficulty": "medium"
   },
   {
@@ -1096,7 +1096,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "target": 10,
     "param": 7,
     "rewardXp": 500,
-    "rewardCoins": 280,
+    "rewardCoins": 80,
     "rewardShields": 1,
     "difficulty": "hard"
   },
@@ -1108,7 +1108,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "arcade_score",
     "target": 5000,
     "rewardXp": 460,
-    "rewardCoins": 250,
+    "rewardCoins": 70,
     "difficulty": "hard"
   },
   {
@@ -1119,7 +1119,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "vintage_solve",
     "target": 15,
     "rewardXp": 320,
-    "rewardCoins": 180,
+    "rewardCoins": 50,
     "difficulty": "medium"
   },
   {
@@ -1130,7 +1130,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "earn_chips",
     "target": 400,
     "rewardXp": 480,
-    "rewardCoins": 260,
+    "rewardCoins": 75,
     "rewardShields": 1,
     "difficulty": "hard"
   },
@@ -1142,7 +1142,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "solo_progress",
     "target": 15,
     "rewardXp": 300,
-    "rewardCoins": 160,
+    "rewardCoins": 45,
     "difficulty": "medium"
   },
   {
@@ -1154,7 +1154,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "target": 5,
     "param": 10,
     "rewardXp": 460,
-    "rewardCoins": 250,
+    "rewardCoins": 70,
     "difficulty": "hard"
   },
   {
@@ -1165,7 +1165,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "combo_count",
     "target": 25,
     "rewardXp": 480,
-    "rewardCoins": 260,
+    "rewardCoins": 75,
     "difficulty": "hard"
   },
   {
@@ -1176,7 +1176,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "duel_play",
     "target": 20,
     "rewardXp": 480,
-    "rewardCoins": 260,
+    "rewardCoins": 75,
     "difficulty": "hard"
   },
   {
@@ -1187,7 +1187,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "duel_win",
     "target": 12,
     "rewardXp": 650,
-    "rewardCoins": 380,
+    "rewardCoins": 110,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1199,7 +1199,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "word_count",
     "target": 180,
     "rewardXp": 520,
-    "rewardCoins": 280,
+    "rewardCoins": 80,
     "difficulty": "hard"
   },
   {
@@ -1211,7 +1211,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "target": 5,
     "param": 8,
     "rewardXp": 680,
-    "rewardCoins": 400,
+    "rewardCoins": 120,
     "rewardShields": 1,
     "difficulty": "epic"
   },
@@ -1223,7 +1223,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "arcade_score",
     "target": 8000,
     "rewardXp": 520,
-    "rewardCoins": 280,
+    "rewardCoins": 80,
     "difficulty": "hard"
   },
   {
@@ -1234,7 +1234,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "vintage_solve",
     "target": 25,
     "rewardXp": 520,
-    "rewardCoins": 280,
+    "rewardCoins": 80,
     "rewardShields": 1,
     "difficulty": "hard"
   },
@@ -1246,7 +1246,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "earn_chips",
     "target": 600,
     "rewardXp": 700,
-    "rewardCoins": 420,
+    "rewardCoins": 125,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1258,7 +1258,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "solo_progress",
     "target": 25,
     "rewardXp": 480,
-    "rewardCoins": 260,
+    "rewardCoins": 75,
     "difficulty": "hard"
   },
   {
@@ -1270,7 +1270,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "target": 8,
     "param": 8,
     "rewardXp": 680,
-    "rewardCoins": 400,
+    "rewardCoins": 120,
     "rewardShields": 1,
     "difficulty": "epic"
   },
@@ -1282,7 +1282,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "combo_count",
     "target": 40,
     "rewardXp": 520,
-    "rewardCoins": 280,
+    "rewardCoins": 80,
     "difficulty": "hard"
   },
   {
@@ -1293,7 +1293,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "daily_route",
     "target": 4,
     "rewardXp": 500,
-    "rewardCoins": 270,
+    "rewardCoins": 78,
     "rewardShields": 1,
     "difficulty": "hard"
   },
@@ -1306,7 +1306,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "target": 10,
     "param": 4,
     "rewardXp": 350,
-    "rewardCoins": 190,
+    "rewardCoins": 55,
     "difficulty": "medium"
   },
   {
@@ -1317,7 +1317,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "word_count",
     "target": 250,
     "rewardXp": 720,
-    "rewardCoins": 440,
+    "rewardCoins": 130,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1330,7 +1330,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "target": 3,
     "param": 9,
     "rewardXp": 720,
-    "rewardCoins": 440,
+    "rewardCoins": 130,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1342,7 +1342,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "arcade_score",
     "target": 12000,
     "rewardXp": 750,
-    "rewardCoins": 460,
+    "rewardCoins": 135,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1354,7 +1354,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "vintage_solve",
     "target": 35,
     "rewardXp": 720,
-    "rewardCoins": 440,
+    "rewardCoins": 130,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1366,7 +1366,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "earn_chips",
     "target": 900,
     "rewardXp": 780,
-    "rewardCoins": 480,
+    "rewardCoins": 140,
     "rewardShields": 3,
     "difficulty": "epic"
   },
@@ -1378,7 +1378,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "solo_progress",
     "target": 35,
     "rewardXp": 720,
-    "rewardCoins": 440,
+    "rewardCoins": 130,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1390,7 +1390,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "actionType": "duel_play",
     "target": 30,
     "rewardXp": 750,
-    "rewardCoins": 460,
+    "rewardCoins": 135,
     "rewardShields": 2,
     "difficulty": "epic"
   },
@@ -1403,7 +1403,7 @@ export const WEEKLY_POOL: CatalogMission[] = [
     "target": 5,
     "param": 10,
     "rewardXp": 800,
-    "rewardCoins": 500,
+    "rewardCoins": 150,
     "rewardShields": 3,
     "difficulty": "epic"
   }

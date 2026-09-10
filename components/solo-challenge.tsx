@@ -54,7 +54,7 @@ type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
-export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, onExit, onComplete, onNext, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
+export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, lives, onExit, onComplete, onNext, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; lives?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
   const { width } = useWindowDimensions();
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
@@ -79,17 +79,23 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [decryptProgress, setDecryptProgress] = useState(0);
   const [decryptText, setDecryptText] = useState("");
 
+  const decryptIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const startDecryption = () => {
     if (chestState !== "closed") return;
     setChestState("decrypting");
     let prog = 0;
-    const interval = setInterval(() => {
+    if (decryptIntervalRef.current) clearInterval(decryptIntervalRef.current);
+    decryptIntervalRef.current = setInterval(() => {
       prog += 20;
       setDecryptProgress(prog);
       const hex = Array.from({ length: 6 }, () => Math.floor(Math.random() * 16).toString(16).toUpperCase()).join("");
       setDecryptText(`DECRYPTING [0x${hex}]...`);
       if (prog >= 100) {
-        clearInterval(interval);
+        if (decryptIntervalRef.current) {
+          clearInterval(decryptIntervalRef.current);
+          decryptIntervalRef.current = null;
+        }
         setChestState("opened");
         setRadarCharges((r) => r + 1);
         gameSfx.victory();
@@ -147,6 +153,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     initAudio().catch(() => undefined);
     return () => {
       if (resetTimer.current) clearTimeout(resetTimer.current);
+      if (decryptIntervalRef.current) clearInterval(decryptIntervalRef.current);
     };
   }, []);
 
@@ -206,13 +213,13 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         setStatus("lost");
         triggerHapticError();
         playErrorSound();
-        if (daily) onCompleteRef.current(levelRef.current, foundRef.current, false);
+        onCompleteRef.current(levelRef.current, foundRef.current, false);
         return 0;
       }
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, countdown, daily]);
+  }, [status, countdown]);
 
   useEffect(() => () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -401,6 +408,14 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   };
 
   const handleRetry = () => {
+    if (typeof lives === "number" && lives <= 0) {
+      Alert.alert(
+        "CANIN KALMADI 💔",
+        "Solo seviyede tekrar denemek için en az 1 Can gereklidir. Bekleyebilir veya mağazadan anında doldurabilirsin.",
+        [{ text: "TAMAM", onPress: () => onExit() }]
+      );
+      return;
+    }
     triggerHapticSelection();
     const nextVariation = variation + 1;
     const nextBoard = createSoloBoard(level, nextVariation, theme, excludeWords);
@@ -784,8 +799,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
           </View>
         )}
 
-        <Pressable onPress={daily ? onExit : (level >= MAX_SOLO_LEVEL ? onExit : onNext)} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}>
-          <Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : (level >= MAX_SOLO_LEVEL ? "HARİTAYA DÖN (TÜM SEVİYELER TAMAMLANDI)" : "SONRAKİ SEVİYE")}</Text>
+        <Pressable onPress={daily ? onExit : onNext} style={[styles.action, { backgroundColor: activeTheme.accentColor }]}>
+          <Text style={styles.actionText}>{daily ? "KOMUTA MERKEZİNE DÖN" : (level >= MAX_SOLO_LEVEL ? "HARİTAYA DÖN (TÜM SEVİYELER TAMAMLANDI)" : "🗺️ HARİTAYA DÖN & SONRAK SEVIYEYE GEÇ")}</Text>
           <Text style={styles.actionArrow}>→</Text>
         </Pressable>
       </View>

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   BackHandler,
   Modal,
   Image,
@@ -37,7 +38,7 @@ import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
 import { setHapticsEnabled as setSoloHapticsEnabled, triggerHapticSelection, triggerHapticSuccess } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
-import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier } from "./shared/progression";
+import { applyMatchProgress, applyArcadeProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "./shared/solo";
 import { getWordDefinition } from "./shared/dictionary";
@@ -52,6 +53,7 @@ import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 import { VintagePuzzle } from "./components/vintage-puzzle";
 import { socialManager } from "./shared/social";
 import { UserProfileModal, type InspectableUser } from "./components/user-profile-modal";
+import { LivesModal } from "./components/lives-modal";
 
 type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -221,6 +223,7 @@ function HomeScreen() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [dailySession, setDailySession] = useState<DailyChallenge | null>(null);
   const daily = useMemo(() => getDailyChallenge(), []);
+  const livesCalc = useMemo(() => getCalculatedLives(progress), [progress]);
   const unclaimedMissions = useMemo(() => getUnclaimedMissionsCount(progress), [progress]);
   const unclaimedMilestones = useMemo(() => getUnclaimedMilestonesCount(progress, soloUnlockedLevel), [progress, soloUnlockedLevel]);
   const hasClaimableDailyReward = useMemo(() => {
@@ -238,6 +241,8 @@ function HomeScreen() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [showLeaveDuelModal, setShowLeaveDuelModal] = useState(false);
   const [selectedModeInfo, setSelectedModeInfo] = useState<"pvp" | "daily" | "vintage" | "arcade" | "solo" | null>(null);
+  const [showLivesModal, setShowLivesModal] = useState(false);
+  const [buyingLivesLoading, setBuyingLivesLoading] = useState(false);
   const prevRoomStatusRef = useRef<string | null>(null);
   const gameScrollRef = useRef<ScrollView>(null);
   const [arcadeStarted, setArcadeStarted] = useState(false);
@@ -344,7 +349,11 @@ function HomeScreen() {
       }
     }
     prevTierRef.current = currentTier;
-  }, [progress.xp, progress.lp, progressReady]);
+
+    // Schedule local push notifications for streak & lives refill
+    const livesCalc = getCalculatedLives(progress);
+    notificationManager.initAndScheduleReminders(livesCalc.lives, livesCalc.nextLifeTimerSeconds);
+  }, [progress.xp, progress.lp, progress.lives, progress.lastLifeRegenTimestamp, progressReady]);
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
   const boardWidth = Math.min(
@@ -466,7 +475,7 @@ function HomeScreen() {
         setScreen(destination);
         return true;
       }
-      if (screen === "arcade" || screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "league" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store") {
+      if (screen === "arcade" || screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "league" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store" || screen === "vintage") {
         setScreen("home");
         return true;
       }
@@ -506,7 +515,7 @@ function HomeScreen() {
               await AsyncStorage.setItem("kelime-patlat:player-id", user.openId);
               await AsyncStorage.setItem("kelime-patlat:player-name", user.name || user.username || "OYUNCU");
               if (user.progress) {
-                setProgress((current) => mergePlayerProgress(current, user.progress));
+                setProgress((current) => mergePlayerProgress(current, user.progress, { preferRemoteBalances: true }));
               }
             } else {
               const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
@@ -621,6 +630,22 @@ function HomeScreen() {
       setProgressReady(true);
     }).catch(() => { if (active) setProgressReady(true); });
 
+    // Fetch cloud progress on launch if user token exists
+    AsyncStorage.getItem(SESSION_TOKEN_KEY).then((token) => {
+      if (active && token && token !== "guest") {
+        fetch(`${getApiBaseUrl()}/api/auth/get-progress`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (active && data?.progress) {
+              setProgress((current) => mergePlayerProgress(current, data.progress));
+            }
+          })
+          .catch(() => undefined);
+      }
+    }).catch(() => undefined);
+
     // Fetch real-time leaderboard from backend
     fetch(`${getApiBaseUrl()}/api/game/leaderboard`)
       .then((res) => (res.ok ? res.json() : null))
@@ -710,6 +735,23 @@ function HomeScreen() {
         `Dün günlük rotayı tamamlamadığın için ${reconciliation.previousStreak} günlük serin sıfırlandı. Bugün yeni bir seri başlatabilirsin!`
       );
     }
+  }, [progressReady]);
+
+  // Handle app resuming from background / sleep mode (day change & streak check)
+  useEffect(() => {
+    if (!progressReady) return;
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        setProgress((current) => {
+          const res = reconcilePlayerProgress(current);
+          if (res.shieldSaved || res.streakReset || res.missionsReset || res.seasonReset.seasonResetPerformed) {
+            return res.progress;
+          }
+          return current;
+        });
+      }
+    });
+    return () => subscription.remove();
   }, [progressReady]);
 
   useEffect(() => {
@@ -845,7 +887,7 @@ function HomeScreen() {
       if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
       pendingWordRef.current = null;
       setSelectionFeedback("accepted");
-      explodeParticles(selectedCells);
+      explodeParticles(selectionRef.current);
       haptics.success();
       gameSfx.accepted();
       clearFeedbackLater(360);
@@ -937,7 +979,13 @@ function HomeScreen() {
     const socket = await ensureConnectedSocket();
     if (!socket || !socket.connected) {
       setNotice("Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.");
-      Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et veya tekrar dene.");
+      setGlobalToast({
+        id: `conn-err-${Date.now()}`,
+        title: "BAĞLANTI HATASI",
+        subtitle: "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.",
+        icon: "📡",
+        accentColor: "#FF647C",
+      });
       haptics.error();
       return;
     }
@@ -965,7 +1013,13 @@ function HomeScreen() {
     const socket = await ensureConnectedSocket();
     if (!socket || !socket.connected) {
       setNotice("Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.");
-      Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et veya tekrar dene.");
+      setGlobalToast({
+        id: `conn-err-${Date.now()}`,
+        title: "BAĞLANTI HATASI",
+        subtitle: "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.",
+        icon: "📡",
+        accentColor: "#FF647C",
+      });
       haptics.error();
       return;
     }
@@ -982,8 +1036,8 @@ function HomeScreen() {
       bestScore: progress.bestScore || 0,
       bestTempo: progress.bestTempo || 0,
     };
-    socket.emit("matchmaking:join", { playerId, playerName: safeName, size, profile: myProfile });
-    setNotice("Rakip aranıyor...");
+    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: true, profile: myProfile });
+    setNotice("Yapay zeka rakip hazırlanıyor...");
   };
 
   const shareRoomInvite = async () => {
@@ -1007,7 +1061,13 @@ function HomeScreen() {
     const socket = await ensureConnectedSocket();
     if (!socket || !socket.connected) {
       setNotice("Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.");
-      Alert.alert("Bağlantı Hatası", "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et veya tekrar dene.");
+      setGlobalToast({
+        id: `conn-err-${Date.now()}`,
+        title: "BAĞLANTI HATASI",
+        subtitle: "Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.",
+        icon: "📡",
+        accentColor: "#FF647C",
+      });
       haptics.error();
       return;
     }
@@ -1032,6 +1092,8 @@ function HomeScreen() {
   const leaveRoom = () => {
     if (room) getGameSocket().emit("room:leave", { code: room.code, playerId });
     getGameSocket().emit("matchmaking:leave", { playerId, size: selectedSize });
+    setShowResultModal(false);
+    setShowLeaveDuelModal(false);
     activeRoomCodeRef.current = null;
     prevStartedAtRef.current = null;
     setGameCountdown(null);
@@ -1208,13 +1270,222 @@ function HomeScreen() {
     submitSelection(true);
   };
 
+  const handleBuyOneLife = async () => {
+    if (buyingLivesLoading) return;
+    setBuyingLivesLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token || token === "guest") {
+        const res = buyLives(progress, "one");
+        if (!res.success) {
+          setGlobalToast({
+            id: `no-chips-${Date.now()}`,
+            title: "İŞLEM GERÇEKLEŞTİRİLEMEDİ",
+            subtitle: res.message,
+            icon: "🪙",
+            accentColor: "#EF4444"
+          });
+        } else {
+          setProgress(res.updatedProgress);
+          syncProgressToCloud(res.updatedProgress);
+          triggerHapticSuccess();
+          setGlobalToast({
+            id: `life-bought-${Date.now()}`,
+            title: "CAN EKLENDİ 💚",
+            subtitle: "1 Can başarıyla profilinize tanımlandı!",
+            icon: "💚",
+            accentColor: "#22C55E"
+          });
+        }
+      } else {
+        const response = await fetch(`${getApiBaseUrl()}/api/game/lives`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ option: "one" })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setGlobalToast({
+            id: `life-err-${Date.now()}`,
+            title: "İŞLEM BAŞARISIZ",
+            subtitle: data.error || "Can satın alınamadı.",
+            icon: "❌",
+            accentColor: "#EF4444"
+          });
+        } else {
+          setProgress(data.progress);
+          triggerHapticSuccess();
+          setGlobalToast({
+            id: `life-bought-${Date.now()}`,
+            title: "CAN EKLENDİ 💚",
+            subtitle: "1 Can başarıyla profilinize tanımlandı!",
+            icon: "💚",
+            accentColor: "#22C55E"
+          });
+        }
+      }
+    } catch {
+      const res = buyLives(progress, "one");
+      if (res.success) setProgress(res.updatedProgress);
+    } finally {
+      setBuyingLivesLoading(false);
+    }
+  };
+
+  const handleRefillAllLives = async () => {
+    if (buyingLivesLoading) return;
+    setBuyingLivesLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token || token === "guest") {
+        const res = buyLives(progress, "all");
+        if (!res.success) {
+          setGlobalToast({
+            id: `no-chips-${Date.now()}`,
+            title: "İŞLEM GERÇEKLEŞTİRİLEMEDİ",
+            subtitle: res.message,
+            icon: "🪙",
+            accentColor: "#EF4444"
+          });
+        } else {
+          setProgress(res.updatedProgress);
+          syncProgressToCloud(res.updatedProgress);
+          triggerHapticSuccess();
+          setGlobalToast({
+            id: `lives-refilled-${Date.now()}`,
+            title: "CANLAR DOLDU! 💚",
+            subtitle: `Canlarınız ${MAX_LIVES}/${MAX_LIVES} olarak yenilendi!`,
+            icon: "💚",
+            accentColor: "#22C55E"
+          });
+        }
+      } else {
+        const response = await fetch(`${getApiBaseUrl()}/api/game/lives`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ option: "all" })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setGlobalToast({
+            id: `life-err-${Date.now()}`,
+            title: "İŞLEM BAŞARISIZ",
+            subtitle: data.error || "Canlar yenilenemedi.",
+            icon: "❌",
+            accentColor: "#EF4444"
+          });
+        } else {
+          setProgress(data.progress);
+          triggerHapticSuccess();
+          setGlobalToast({
+            id: `lives-refilled-${Date.now()}`,
+            title: "CANLAR DOLDU! 💚",
+            subtitle: `Canlarınız ${MAX_LIVES}/${MAX_LIVES} olarak yenilendi!`,
+            icon: "💚",
+            accentColor: "#22C55E"
+          });
+        }
+      }
+    } catch {
+      const res = buyLives(progress, "all");
+      if (res.success) setProgress(res.updatedProgress);
+    } finally {
+      setBuyingLivesLoading(false);
+    }
+  };
+
+  const handleWatchAdForLife = async () => {
+    if (buyingLivesLoading) return;
+    setBuyingLivesLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+      if (!token || token === "guest") {
+        const res = buyLives(progress, "ad");
+        if (res.success) {
+          setProgress(res.updatedProgress);
+          syncProgressToCloud(res.updatedProgress);
+          triggerHapticSuccess();
+          setGlobalToast({
+            id: `ad-life-${Date.now()}`,
+            title: "REKLAM ÖDÜLÜ 📺",
+            subtitle: "+1 Can kazandın!",
+            icon: "💚",
+            accentColor: "#22C55E"
+          });
+        }
+      } else {
+        const response = await fetch(`${getApiBaseUrl()}/api/game/lives`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ option: "ad" })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setProgress(data.progress);
+          triggerHapticSuccess();
+          setGlobalToast({
+            id: `ad-life-${Date.now()}`,
+            title: "REKLAM ÖDÜLÜ 📺",
+            subtitle: "+1 Can kazandın!",
+            icon: "💚",
+            accentColor: "#22C55E"
+          });
+        }
+      }
+    } catch {
+      const res = buyLives(progress, "ad");
+      if (res.success) setProgress(res.updatedProgress);
+    } finally {
+      setBuyingLivesLoading(false);
+    }
+  };
+
   const openSoloLevel = (level: number) => {
+    const calc = getCalculatedLives(progress);
+    if (calc.lives <= 0) {
+      setGlobalToast({
+        id: `no-lives-${Date.now()}`,
+        title: "CANIN KALMADI! 💔",
+        subtitle: "Solo moda girmek için en az 1 Can gereklidir. Bekleyebilir veya Can satın alabilirsin.",
+        icon: "💚",
+        accentColor: "#EF4444",
+      });
+      setShowLivesModal(true);
+      return;
+    }
     setDailySession(null);
     setSoloLevel(Math.min(level, MAX_SOLO_LEVEL));
     setScreen("solo");
   };
 
-  const completeSoloLevel = (level: number, foundWords: string[] = []) => {
+  const completeSoloLevel = (level: number, foundWords: string[] = [], won = true) => {
+    if (!won) {
+      setProgress((curr) => {
+        const updated = deductLife(curr);
+        void syncProgressToCloud(updated);
+        const calc = getCalculatedLives(updated);
+        if (calc.lives <= 0) {
+          setGlobalToast({
+            id: `life-lost-${Date.now()}`,
+            title: "CAN KAYBEDİLDİ 💔",
+            subtitle: "Son canını tükettin! Canların 15 dakikada bir otomatik dolar veya çiple yenileyebilirsin.",
+            icon: "💔",
+            accentColor: "#EF4444",
+          });
+          setShowLivesModal(true);
+        } else {
+          setGlobalToast({
+            id: `life-deducted-${Date.now()}`,
+            title: "1 CAN KAYBEDİLDİ 💔",
+            subtitle: `Kalan Can: ${calc.lives}/${MAX_LIVES}`,
+            icon: "💔",
+            accentColor: "#EF4444",
+          });
+        }
+        return updated;
+      });
+      return;
+    }
     if (foundWords && foundWords.length > 0) {
       setRecentSoloWords((prev) => Array.from(new Set([...foundWords, ...prev])).slice(0, 80));
     }
@@ -1242,12 +1513,11 @@ function HomeScreen() {
 
   const completeDailyChallenge = (level: number, foundWords: string[] = [], won = true) => {
     if (won) {
-      setProgress((current) => {
-        return current;
-      });
+      const updated = completeDailyProgress(applyMatchProgress(progress, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"), daily);
+      setProgress(updated);
       void awardProgressOnServer(
         { kind: "solo", level, foundWords, daily: true },
-        (current) => completeDailyProgress(applyMatchProgress(current, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"), daily),
+        () => updated,
       );
     } else {
       setProgress((current) => {
@@ -1299,7 +1569,7 @@ function HomeScreen() {
 
   if (screen === "home") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)}>
         <StatusBar style="light" />
         <CommandCenter
           playerName={safeName}
@@ -1313,6 +1583,7 @@ function HomeScreen() {
           onLeaderboard={() => setScreen("season")}
           onShowGuide={() => setShowGuide(true)}
           onOpenModeInfo={(mode) => setSelectedModeInfo(mode)}
+          onOpenLivesModal={() => setShowLivesModal(true)}
           onSelectTheme={(selectedTheme) => {
             setProgress((current) => ({ ...current, selectedTheme }));
           }}
@@ -1567,7 +1838,7 @@ function HomeScreen() {
   if (screen === "daily-lobby") {
     const dailyDone = progress.dailyCompletedId === daily.id;
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -1592,7 +1863,13 @@ function HomeScreen() {
                   key={pack.id}
                   onPress={() => {
                     if (dailyDone) {
-                      Alert.alert("🔒 Günlük Rota Kilitlendi", "Bugünkü sabit rotayı zaten tamamladın veya kaybettin! Yarın yeni bir hak kazanacaksın.");
+                      setGlobalToast({
+                        id: `daily-done-${Date.now()}`,
+                        title: "GÜNLÜK ROTA KİLİTLİ",
+                        subtitle: "Bugünkü sabit rotayı zaten tamamladın! Yarın yeni bir hak kazanacaksın.",
+                        icon: "🔒",
+                        accentColor: "#A78BFA",
+                      });
                       return;
                     }
                     haptics.light();
@@ -1625,7 +1902,13 @@ function HomeScreen() {
           <Pressable
             onPress={() => {
               if (dailyDone) {
-                Alert.alert("🔒 Günlük Rota Kilitlendi", "Bugünkü sabit rotayı zaten tamamladın veya kaybettin! Yarın yeni bir hak kazanacaksın.");
+                setGlobalToast({
+                  id: `daily-done-${Date.now()}`,
+                  title: "GÜNLÜK ROTA KİLİTLİ",
+                  subtitle: "Bugünkü sabit rotayı zaten tamamladın! Yarın yeni bir hak kazanacaksın.",
+                  icon: "🔒",
+                  accentColor: "#A78BFA",
+                });
                 return;
               }
               // Start daily challenge with the selected theme!
@@ -1659,7 +1942,7 @@ function HomeScreen() {
 
   if (screen === "season") {
     return (
-      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <SeasonHub
           playerId={playerId}
@@ -1682,7 +1965,7 @@ function HomeScreen() {
         <UserProfileModal
           visible={inspectedUser !== null}
           user={inspectedUser}
-          isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLowerCase() === (inspectedUser.username || inspectedUser.name).toLowerCase()) : false}
+          isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
           onAddFriend={(target) => {
             const res = socialManager.addFriend({
@@ -1711,8 +1994,12 @@ function HomeScreen() {
           }}
           onChallenge={(target) => {
             setInspectedUser(null);
-            createRoom(4);
-            setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
+            if (target.isBot) {
+              startBotDuel(4);
+            } else {
+              createRoom(4);
+              setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
+            }
           }}
         />
       </MainShell>
@@ -1721,7 +2008,7 @@ function HomeScreen() {
 
   if (screen === "league") {
     return (
-      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <LeagueHub playerId={playerId} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} />
       </MainShell>
@@ -1736,6 +2023,8 @@ function HomeScreen() {
         <SoloLevels
           unlockedLevel={soloUnlockedLevel}
           claimedMilestones={progress.claimedMilestones ?? {}}
+          lives={livesCalc.lives}
+          onOpenLivesModal={() => setShowLivesModal(true)}
           onBack={() => setScreen("home")}
           onSelect={openSoloLevel}
           onClaimMilestone={(milestone) => {
@@ -1758,10 +2047,6 @@ function HomeScreen() {
               accentColor: "#FFC24A",
               badge: `LVL ${milestone.level}`,
             });
-            Alert.alert(
-              `🎁 ${milestone.title}`,
-              `Tebrikler! ${milestone.desc}\n\nKazanılan Ödüller:\n+${milestone.coins} Siber Çip\n+${milestone.shields} Seri Kalkanı\n+${milestone.xp} XP`
-            );
           }}
         />
         <View style={{ position: "absolute", bottom: 8, left: 14, right: 14 }}>
@@ -1783,13 +2068,14 @@ function HomeScreen() {
           daily={Boolean(dailySession)}
           excludeWords={recentSoloWords}
           radarChargesBonus={progress.radarChargesBonus || 0}
+          lives={getCalculatedLives(progress).lives}
           onExit={() => {
             const destination = dailySession ? "home" : "levels";
             setDailySession(null);
             setScreen(destination);
           }}
           onComplete={dailySession ? completeDailyChallenge : completeSoloLevel}
-          onNext={() => setSoloLevel((current) => Math.min(MAX_SOLO_LEVEL, current + 1))}
+          onNext={() => setScreen("levels")}
           onBonusReward={(xp, radar) => {
             setProgress((current) => ({
               ...current,
@@ -1804,7 +2090,7 @@ function HomeScreen() {
 
   if (screen === "store") {
     return (
-      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <CyberStore
           coins={progress.coins ?? 0}
@@ -1833,7 +2119,13 @@ function HomeScreen() {
               if (currentCoins < item.cost) return current;
               const nextCoins = currentCoins - item.cost;
               let next = { ...current, coins: nextCoins };
-              if (item.rewardType === "radar") {
+              if (item.rewardType === "lives") {
+                next = {
+                  ...next,
+                  lives: MAX_LIVES,
+                  lastLifeRegenTimestamp: Date.now(),
+                };
+              } else if (item.rewardType === "radar") {
                 next = {
                   ...next,
                   radarChargesBonus: (current.radarChargesBonus || 0) + 5,
@@ -1908,7 +2200,7 @@ function HomeScreen() {
     if (!arcadeStarted) {
       const bestScore = progress.bestArcadeScore || 0;
       return (
-        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
           <StatusBar style="light" />
           <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.subHeader}>
@@ -2000,7 +2292,7 @@ function HomeScreen() {
 
   if (screen === "online") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -2038,10 +2330,13 @@ function HomeScreen() {
                   key={size} 
                   onPress={() => {
                     if (isLocked) {
-                      Alert.alert(
-                        `🔒 Seviye ${size === 6 ? 5 : size === 8 ? 8 : 10} Gerekli`,
-                        `${size}×${size} modu Seviye ${size === 6 ? 5 : size === 8 ? 8 : 10}'de açılır. Şu anki seviyeniz: ${currentLevel}.`
-                      );
+                      setGlobalToast({
+                        id: `size-locked-${size}-${Date.now()}`,
+                        title: `SEVİYE ${size === 6 ? 5 : size === 8 ? 8 : 10} GEREKLİ`,
+                        subtitle: `${size}×${size} modu Seviye ${size === 6 ? 5 : size === 8 ? 8 : 10}'de açılır. Şu anki seviyen: ${currentLevel}.`,
+                        icon: "🔒",
+                        accentColor: "#FFC24A",
+                      });
                       haptics.error();
                     } else {
                       haptics.light();
@@ -2200,6 +2495,8 @@ function HomeScreen() {
         <VintagePuzzle
           onBack={() => setScreen("home")}
           vintageProgress={progress.vintageProgress}
+          lives={livesCalc.lives}
+          onOpenLivesModal={() => setShowLivesModal(true)}
           onSaveProgress={(newProgress) => {
             setProgress((current) => {
               const updated = { ...current, vintageProgress: newProgress };
@@ -2236,7 +2533,7 @@ function HomeScreen() {
 
   if (screen === "missions") {
     return (
-      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <MissionsScreen
           progress={progress}
@@ -2266,12 +2563,21 @@ function HomeScreen() {
 
   if (screen === "profile") {
     return (
-      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
         <StatusBar style="light" />
         <ProfileScreen
           playerName={safeName}
           onUpdatePlayerName={setPlayerName}
           progress={progress}
+          onShowToast={(title, subtitle, icon, color) => {
+            setGlobalToast({
+              id: `toast-${Date.now()}`,
+              title,
+              subtitle,
+              icon: icon || "ℹ️",
+              accentColor: color || "#00F5D4",
+            });
+          }}
           onSelectAvatar={(selectedAvatar) => {
             setProgress((current) => ({ ...current, selectedAvatar }));
           }}
@@ -2306,15 +2612,6 @@ function HomeScreen() {
           hapticsOn={hapticsOn}
           toggleHaptics={toggleHaptics}
           onBack={() => setScreen("home")}
-          onShowToast={(title, subtitle, icon, accentColor) => {
-            setGlobalToast({
-              id: Date.now().toString(),
-              title,
-              subtitle,
-              icon: icon || "🔒",
-              accentColor: accentColor || "#EF4444",
-            });
-          }}
           onLogout={async () => {
             haptics.error();
             setAuthToken(null);
@@ -2402,7 +2699,7 @@ function HomeScreen() {
         <UserProfileModal
           visible={inspectedUser !== null}
           user={inspectedUser}
-          isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLowerCase() === (inspectedUser.username || inspectedUser.name).toLowerCase()) : false}
+          isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
           onAddFriend={(target) => {
             const res = socialManager.addFriend({
@@ -2428,6 +2725,15 @@ function HomeScreen() {
               icon: res.success ? "👥" : "ℹ️",
               accentColor: res.success ? "#00F5D4" : "#FFC24A",
             });
+          }}
+          onChallenge={(target) => {
+            setInspectedUser(null);
+            if (target.isBot) {
+              startBotDuel(4);
+            } else {
+              createRoom(4);
+              setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
+            }
           }}
         />
       </ScreenContainer>
@@ -2832,7 +3138,7 @@ function HomeScreen() {
                         >
                           <Text style={{ color: "#C4B5FD", fontSize: 9, fontWeight: "900" }}>👤 PROFİL</Text>
                         </Pressable>
-                        {!socialManager.getFriends().some((f) => f.username.toLowerCase() === opponent.name.toLowerCase()) && (
+                        {!socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === opponent.name.toLocaleLowerCase("tr-TR")) && (
                           <Pressable
                             onPress={() => {
                               triggerHapticSuccess();
@@ -3171,7 +3477,7 @@ function HomeScreen() {
       <UserProfileModal
         visible={inspectedUser !== null}
         user={inspectedUser}
-        isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLowerCase() === (inspectedUser.username || inspectedUser.name).toLowerCase()) : false}
+        isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
         onClose={() => setInspectedUser(null)}
         onAddFriend={(target) => {
           const res = socialManager.addFriend({
@@ -3198,6 +3504,25 @@ function HomeScreen() {
             accentColor: res.success ? "#00F5D4" : "#FFC24A",
           });
         }}
+        onChallenge={(target) => {
+          setInspectedUser(null);
+          if (target.isBot) {
+            startBotDuel(4);
+          } else {
+            createRoom(4);
+            setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
+          }
+        }}
+      />
+
+      <LivesModal
+        visible={showLivesModal}
+        progress={progress}
+        onClose={() => setShowLivesModal(false)}
+        onBuyOne={handleBuyOneLife}
+        onRefillAll={handleRefillAllLives}
+        onWatchAd={handleWatchAdForLife}
+        loading={buyingLivesLoading}
       />
     </ScreenContainer>
   );
@@ -3401,7 +3726,7 @@ function ScoreBadge({
   onPress?: () => void;
 }) {
   const activeAvatarObj = AVATARS.find((a) => a.id === avatar);
-  const displayIcon = activeAvatarObj ? activeAvatarObj.icon : (avatar && avatar.length <= 3 ? avatar : (name.toLowerCase().includes("bot") ? "🤖" : "👤"));
+  const displayIcon = activeAvatarObj ? activeAvatarObj.icon : (avatar && avatar.length <= 3 ? avatar : (name.toLocaleLowerCase("tr-TR").includes("bot") ? "🤖" : "👤"));
   const avatarBorderColor = activeAvatarObj ? activeAvatarObj.color : accent;
   const avatarBgColor = activeAvatarObj ? activeAvatarObj.surface : `${accent}25`;
 
@@ -3554,6 +3879,7 @@ function MainShell({
   showGuide,
   onCloseGuide,
   missionsBadgeCount,
+  storeBadgeCount,
   toast,
   onDismissToast,
   seasonResetModal,
@@ -3565,6 +3891,7 @@ function MainShell({
   showGuide?: boolean;
   onCloseGuide?: () => void;
   missionsBadgeCount?: number;
+  storeBadgeCount?: number;
   toast?: ToastData | null;
   onDismissToast?: () => void;
   seasonResetModal?: { newSeasonId: string; previousRank: string; previousLp: number; newLp: number } | null;
@@ -3578,7 +3905,7 @@ function MainShell({
       <View style={styles.shell}>
         {children}
         <View style={styles.fixedDock}>
-          <PremiumDock active={active} onNavigate={onNavigate} missionsBadgeCount={missionsBadgeCount} />
+          <PremiumDock active={active} onNavigate={onNavigate} missionsBadgeCount={missionsBadgeCount} storeBadgeCount={storeBadgeCount} />
         </View>
       </View>
       {showGuide !== undefined && onCloseGuide && (

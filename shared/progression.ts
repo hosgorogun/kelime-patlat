@@ -79,6 +79,8 @@ export type PlayerProgress = {
   vintageProgress?: VintageProgress;
   sfxEnabled?: boolean;
   hapticsEnabled?: boolean;
+  lives?: number;
+  lastLifeRegenTimestamp?: number;
   friends?: Array<{
     id: string;
     name: string;
@@ -154,6 +156,11 @@ export const SEASON_LEADERBOARD = [
   { rank: 4, name: "KIVRIM", score: 1980, tag: "UZMAN", accent: "#79C8FF" },
 ] as const;
 
+export const MAX_LIVES = 5;
+export const LIVES_REGEN_INTERVAL_MS = 15 * 60 * 1000; // 15 dakika
+export const COST_PER_LIFE = 25;
+export const COST_REFILL_ALL = 125;
+
 export const DEFAULT_PROGRESS: PlayerProgress = {
   xp: 0,
   lp: 0,
@@ -189,8 +196,88 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   },
   sfxEnabled: true,
   hapticsEnabled: true,
+  lives: MAX_LIVES,
+  lastLifeRegenTimestamp: Date.now(),
   friends: [],
 };
+
+export function getCalculatedLives(progress: Partial<PlayerProgress>): {
+  lives: number;
+  lastLifeRegenTimestamp: number;
+  nextLifeTimerSeconds: number;
+} {
+  const max = MAX_LIVES;
+  const currentLives = typeof progress.lives === "number" && Number.isFinite(progress.lives) ? Math.max(0, Math.min(max, progress.lives)) : max;
+  let lastRegen = typeof progress.lastLifeRegenTimestamp === "number" && Number.isFinite(progress.lastLifeRegenTimestamp) ? progress.lastLifeRegenTimestamp : Date.now();
+
+  if (currentLives >= max) {
+    return { lives: max, lastLifeRegenTimestamp: Date.now(), nextLifeTimerSeconds: 0 };
+  }
+
+  const now = Date.now();
+  const elapsed = Math.max(0, now - lastRegen);
+  const regenerated = Math.floor(elapsed / LIVES_REGEN_INTERVAL_MS);
+
+  if (regenerated > 0) {
+    const nextLives = Math.min(max, currentLives + regenerated);
+    if (nextLives >= max) {
+      return { lives: max, lastLifeRegenTimestamp: now, nextLifeTimerSeconds: 0 };
+    }
+    const nextRegenTime = lastRegen + regenerated * LIVES_REGEN_INTERVAL_MS;
+    const remainingMs = Math.max(0, nextRegenTime + LIVES_REGEN_INTERVAL_MS - now);
+    return { lives: nextLives, lastLifeRegenTimestamp: nextRegenTime, nextLifeTimerSeconds: Math.ceil(remainingMs / 1000) };
+  }
+
+  const remainingMs = Math.max(0, LIVES_REGEN_INTERVAL_MS - elapsed);
+  return { lives: currentLives, lastLifeRegenTimestamp: lastRegen, nextLifeTimerSeconds: Math.ceil(remainingMs / 1000) };
+}
+
+export function deductLife(progress: PlayerProgress): PlayerProgress {
+  const calc = getCalculatedLives(progress);
+  if (calc.lives <= 0) return { ...progress, lives: 0, lastLifeRegenTimestamp: calc.lastLifeRegenTimestamp };
+  const nextLives = calc.lives - 1;
+  const now = Date.now();
+  const nextTimestamp = calc.lives === MAX_LIVES ? now : calc.lastLifeRegenTimestamp;
+  return {
+    ...progress,
+    lives: nextLives,
+    lastLifeRegenTimestamp: nextTimestamp,
+  };
+}
+
+export function buyLives(progress: PlayerProgress, option: "one" | "all" | "ad"): { success: boolean; message: string; updatedProgress: PlayerProgress } {
+  const calc = getCalculatedLives(progress);
+  if (calc.lives >= MAX_LIVES) {
+    return { success: false, message: "Canlarınız zaten dolu!", updatedProgress: progress };
+  }
+
+  if (option === "ad") {
+    const nextLives = Math.min(MAX_LIVES, calc.lives + 1);
+    const updated: PlayerProgress = {
+      ...progress,
+      lives: nextLives,
+      lastLifeRegenTimestamp: nextLives >= MAX_LIVES ? Date.now() : calc.lastLifeRegenTimestamp,
+    };
+    return { success: true, message: "+1 Can kazandınız!", updatedProgress: updated };
+  }
+
+  const cost = option === "one" ? COST_PER_LIFE : COST_REFILL_ALL;
+  const currentCoins = progress.coins ?? 0;
+  if (currentCoins < cost) {
+    return { success: false, message: `Yetersiz çip! En az ${cost} Çip gerekiyor.`, updatedProgress: progress };
+  }
+
+  const targetLives = option === "one" ? Math.min(MAX_LIVES, calc.lives + 1) : MAX_LIVES;
+  const updated: PlayerProgress = {
+    ...progress,
+    coins: currentCoins - cost,
+    lives: targetLives,
+    lastLifeRegenTimestamp: targetLives >= MAX_LIVES ? Date.now() : calc.lastLifeRegenTimestamp,
+  };
+
+  const msg = option === "one" ? "+1 Can satın alındı!" : "Tüm canlarınız (5/5) dolduruldu!";
+  return { success: true, message: msg, updatedProgress: updated };
+}
 
 export function badgesFor(progress: PlayerProgress): Badge[] {
   const totalMatchesCount = progress.matches + (progress.history ? Math.floor(progress.history.length / 3) : 0);
@@ -495,7 +582,9 @@ export function mergePlayerProgress(
     ...remote,
     welcomeRewardClaimed: Boolean(local.welcomeRewardClaimed || remote.welcomeRewardClaimed),
     xp: safeNum(Math.max(local.xp, remote.xp ?? 0), local.xp),
-    lp: safeNum(Math.max(local.lp ?? 0, remote.lp ?? 0), local.lp ?? 0),
+    lp: useRemoteBalances && remote.lp !== undefined
+      ? safeNum(remote.lp, local.lp ?? 0)
+      : safeNum(Math.max(local.lp ?? 0, remote.lp ?? 0), local.lp ?? 0),
     coins: useRemoteBalances && remote.coins !== undefined
       ? safeNum(remote.coins, local.coins ?? 0)
       : safeNum(Math.max(local.coins ?? 0, remote.coins ?? 0), local.coins ?? 0),
@@ -505,6 +594,10 @@ export function mergePlayerProgress(
     radarChargesBonus: useRemoteBalances && remote.radarChargesBonus !== undefined
       ? safeNum(remote.radarChargesBonus, local.radarChargesBonus ?? 0, 99)
       : safeNum(Math.max(local.radarChargesBonus ?? 0, remote.radarChargesBonus ?? 0), local.radarChargesBonus ?? 0, 99),
+    lives: useRemoteBalances && remote.lives !== undefined
+      ? safeNum(remote.lives, local.lives ?? MAX_LIVES, MAX_LIVES)
+      : safeNum(typeof remote.lives === "number" && typeof local.lives === "number" ? Math.min(local.lives, remote.lives) : (remote.lives ?? local.lives ?? MAX_LIVES), MAX_LIVES, MAX_LIVES),
+    lastLifeRegenTimestamp: typeof remote.lastLifeRegenTimestamp === "number" ? remote.lastLifeRegenTimestamp : (typeof local.lastLifeRegenTimestamp === "number" ? local.lastLifeRegenTimestamp : Date.now()),
     streak: safeNum(Math.max(local.streak, remote.streak ?? 0), local.streak, 3650),
     wins: safeNum(Math.max(local.wins, remote.wins ?? 0), local.wins),
     matches: safeNum(Math.max(local.matches, remote.matches ?? 0), local.matches),
@@ -567,8 +660,8 @@ export function mergePlayerProgress(
     loginDaysCount: safeNum(Math.max(local.loginDaysCount ?? 0, remote?.loginDaysCount ?? 0), 0),
     friends: (() => {
       const map = new Map<string, any>();
-      (local.friends ?? []).forEach((f) => map.set(f.username.toLowerCase(), f));
-      (remote?.friends ?? []).forEach((f) => map.set(f.username.toLowerCase(), f));
+      (local.friends ?? []).forEach((f) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
+      (remote?.friends ?? []).forEach((f) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
       return Array.from(map.values());
     })(),
   };
@@ -902,28 +995,33 @@ export function getUnclaimedMissionsCount(progress: PlayerProgress, todayId?: st
   const currentTodayId = todayId || getDayId();
   const currentWeekId = weekId || getWeekId();
 
-  // Dynamic daily missions from 90-pool
+  // Dynamic daily missions from pool
   const activeDaily = getDailyMissions(currentTodayId);
+  let catalogDailyClaimedOrDone = false;
   for (const mission of activeDaily) {
     const current = progress.missions?.[mission.id] ?? 0;
     const isDone = current >= mission.target;
     const isClaimed = Boolean(progress.dailyClaimed?.[mission.id]);
     if (isDone && !isClaimed) {
       count++;
+      catalogDailyClaimedOrDone = true;
     }
   }
 
-  // Legacy seasonal daily missions fallback
-  for (const mission of SEASON_MISSIONS) {
-    const current = progress.missions?.[mission.id] ?? 0;
-    const isDone = current >= mission.target;
-    const isClaimed = Boolean(progress.dailyClaimed?.[mission.id]);
-    if (isDone && !isClaimed) {
-      count++;
+  // Legacy daily missions fallback for tests and old progress format:
+  if (!catalogDailyClaimedOrDone) {
+    for (const key of ["daily", "duels", "wordsmith"] as const) {
+      const target = key === "duels" ? 2 : 1;
+      const current = progress.missions?.[key] ?? 0;
+      const isDone = current >= target;
+      const isClaimed = Boolean(progress.dailyClaimed?.[key]);
+      if (isDone && !isClaimed) {
+        count++;
+      }
     }
   }
 
-  // Dynamic weekly missions from 30-pool
+  // Dynamic weekly missions from pool
   const activeWeekly = getWeeklyMissions(currentWeekId);
   for (const mission of activeWeekly) {
     const current = progress.missions?.[mission.id] ?? 0;
@@ -934,7 +1032,7 @@ export function getUnclaimedMissionsCount(progress: PlayerProgress, todayId?: st
     }
   }
 
-  // Legacy weekly missions fallback
+  // Legacy weekly fallbacks for tests
   if (progress.wins >= 3 && !progress.weeklyClaimed?.victoryStreak) {
     count++;
   }

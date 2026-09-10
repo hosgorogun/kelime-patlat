@@ -1,15 +1,21 @@
-// Mağaza ekipman ürünleri — React Native bağımlılığı olmayan saf veri katmanı
-
 export type ChipEquipmentItem = {
   id: string;
   name: string;
   description: string;
   cost: number;
   icon: string;
-  rewardType: "radar" | "shield" | "xp" | "avatar";
+  rewardType: "radar" | "shield" | "xp" | "lives";
 };
 
 export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
+  {
+    id: "lives_refill",
+    name: "5x Tam Can Doldurma",
+    description: "Can sayacını anında yeniler ve 5/5 tam hakka ulaştırır.",
+    cost: 50,
+    icon: "💚",
+    rewardType: "lives",
+  },
   {
     id: "radar_5",
     name: "5x Radar Şifre Çözücü",

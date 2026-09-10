@@ -313,8 +313,9 @@ export function CyberStore({
           const isRadar = item.rewardType === "radar";
           const isShield = item.rewardType === "shield";
           const isXp = item.rewardType === "xp";
+          const isLives = item.rewardType === "lives";
 
-          const accentColor = isRadar ? "#00F5D4" : isShield ? "#60A5FA" : isXp ? "#F59E0B" : "#EC4899";
+          const accentColor = isLives ? "#22C55E" : isRadar ? "#00F5D4" : isShield ? "#60A5FA" : isXp ? "#F59E0B" : "#EC4899";
 
           return (
             <View key={item.id} style={[styles.productCard, { borderColor: `${accentColor}40` }]}>
@@ -326,6 +327,11 @@ export function CyberStore({
               <View style={styles.productInfo}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={styles.productName}>{item.name}</Text>
+                  {isLives && (
+                    <View style={[styles.inventoryCountBadge, { borderColor: "#22C55E60" }]}>
+                      <Text style={[styles.inventoryCountText, { color: "#22C55E" }]}>Can: {progress?.lives ?? 5}/5</Text>
+                    </View>
+                  )}
                   {isShield && (
                     <View style={styles.inventoryCountBadge}>
                       <Text style={styles.inventoryCountText}>Sahip: {progress?.streakShields ?? 1}</Text>

@@ -61,8 +61,8 @@ class SocialManager {
   syncFromCloud(cloudFriends?: FriendUser[]): FriendUser[] {
     if (Array.isArray(cloudFriends) && cloudFriends.length > 0) {
       const map = new Map<string, FriendUser>();
-      this.friends.forEach((f) => map.set(f.username.toLowerCase(), f));
-      cloudFriends.forEach((f) => map.set(f.username.toLowerCase(), f));
+      this.friends.forEach((f) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
+      cloudFriends.forEach((f) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
       this.friends = Array.from(map.values());
       void this.persist();
     }

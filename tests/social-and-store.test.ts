@@ -82,7 +82,7 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
         expect(item.cost).toBeGreaterThan(0);
         expect(item.name).toBeTruthy();
         expect(item.description).toBeTruthy();
-        expect(["radar", "shield", "xp"]).toContain(item.rewardType);
+        expect(["radar", "shield", "xp", "lives"]).toContain(item.rewardType);
       });
     });
 

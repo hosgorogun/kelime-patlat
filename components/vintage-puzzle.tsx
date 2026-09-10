@@ -41,6 +41,8 @@ export type VintagePuzzleProps = {
     completedLevels: number[];
     score: number;
   }) => void;
+  lives?: number;
+  onOpenLivesModal?: () => void;
 };
 
 // Alt Performans Bileşeni: Grid Hücresi (60 FPS)
@@ -137,7 +139,7 @@ const LetterTileItem = React.memo(
 );
 LetterTileItem.displayName = "LetterTileItem";
 
-export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgress }: VintagePuzzleProps) {
+export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgress, lives = 5, onOpenLivesModal }: VintagePuzzleProps) {
   const { width: windowWidth } = useWindowDimensions();
   const cellSize = Math.max(26, Math.floor((windowWidth - 28) / 10));
 
@@ -590,8 +592,20 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
             <Text style={styles.newspaperKicker}>NOSTALJİ KELİME BULMACA</Text>
             <Text style={styles.newspaperTitle}>SEVİYE HARİTASI</Text>
           </View>
-          <View style={styles.scorePill}>
-            <Text style={styles.scoreText}>🪙 {score}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                onOpenLivesModal?.();
+              }}
+              style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
+            >
+              <Text style={styles.livesIcon}>💚</Text>
+              <Text style={styles.livesText}>{lives}/5</Text>
+            </Pressable>
+            <View style={styles.scorePill}>
+              <Text style={styles.scoreText}>🪙 {score}</Text>
+            </View>
           </View>
         </View>
 
@@ -1487,4 +1501,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
   },
+
+  livesPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(34, 197, 94, 0.4)",
+  },
+  livesIcon: { fontSize: 12 },
+  livesText: { color: "#22C55E", fontSize: 11, fontWeight: "900" },
 });
