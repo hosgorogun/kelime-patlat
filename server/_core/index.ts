@@ -822,11 +822,11 @@ async function startServer() {
   const staticDir = path.resolve(process.cwd(), "dist");
   if (fs.existsSync(path.join(staticDir, "index.html"))) {
     app.use(express.static(staticDir));
-    app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/api/") || req.path.startsWith("/socket.io/")) {
-        return next();
+    app.use((req, res, next) => {
+      if (req.method === "GET" && !req.path.startsWith("/api/") && !req.path.startsWith("/socket.io/")) {
+        return res.sendFile(path.join(staticDir, "index.html"));
       }
-      res.sendFile(path.join(staticDir, "index.html"));
+      next();
     });
   }
 
