@@ -367,24 +367,11 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     setCountdown(3);
   };
 
+  const [showExitModal, setShowExitModal] = useState(false);
+
   const handleExitPress = () => {
     if (status === "playing" && score > 0) {
-      Alert.alert(
-        "Oyundan Ayrıl",
-        "Zamana karşı hücum devam ediyor. Çıkmak istediğinize emin misiniz? (Şu ana kadar kazandığın skor kaydedilecektir)",
-        [
-          { text: "Devam Et", style: "cancel" },
-          {
-            text: "Ayrıl",
-            style: "destructive",
-            onPress: () => {
-              savedRef.current = true;
-              onCompleteRef.current(scoreRef.current);
-              onExit();
-            },
-          },
-        ]
-      );
+      setShowExitModal(true);
     } else {
       onExit();
     }
@@ -804,12 +791,35 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         </Modal>
       )}
 
-      {countdown !== null && (
-        <View style={styles.countdownOverlay} pointerEvents="auto">
-          <Text style={styles.countdownText}>
-            {countdown === 0 ? "BAŞLA!" : countdown}
-          </Text>
-        </View>
+      {showExitModal && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowExitModal(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: "#130E26", borderColor: "#FF647C" }]}>
+              <Text style={{ fontSize: 40, marginBottom: 6 }}>⚡</Text>
+              <Text style={[styles.modalTitle, { color: "#FFF9FC", fontSize: 18 }]}>OYUNDAN AYRIL</Text>
+              <Text style={[styles.modalBody, { color: "#B8ADD1", fontSize: 12, lineHeight: 18 }]}>
+                Zamana karşı hücum devam ediyor. Çıkmak istediğinize emin misiniz? (Şu ana kadar kazandığın skor kaydedilecektir)
+              </Text>
+              <Pressable
+                onPress={() => setShowExitModal(false)}
+                style={[styles.modalCloseButton, { backgroundColor: "#00F5D4", width: "100%", height: 44, alignItems: "center", justifyContent: "center", marginBottom: 8 }]}
+              >
+                <Text style={[styles.modalCloseText, { color: "#0C091C", fontSize: 12, fontWeight: "900" }]}>DEVAM ET</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowExitModal(false);
+                  savedRef.current = true;
+                  onCompleteRef.current(scoreRef.current);
+                  onExit();
+                }}
+                style={{ width: "100%", height: 40, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255, 100, 124, 0.4)", backgroundColor: "rgba(255, 100, 124, 0.1)", alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: "#FF647C", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>AYRIL</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );

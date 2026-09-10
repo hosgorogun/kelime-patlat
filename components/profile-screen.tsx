@@ -70,6 +70,7 @@ export function ProfileScreen({
   const [nameInput, setNameInput] = useState(playerName);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [imgError, setImgError] = useState(false);
 
@@ -628,13 +629,7 @@ export function ProfileScreen({
           </View>
 
           <Pressable
-            onPress={() => {
-              Alert.alert(
-                "🔒 GİZLİLİK POLİTİKASI",
-                "Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.\n\nİletişim: destek@kelimepatlat.app",
-                [{ text: "TAMAM" }]
-              );
-            }}
+            onPress={() => setShowPrivacyModal(true)}
             style={styles.privacyBtn}
           >
             <Text style={styles.privacyBtnText}>🔒 GİZLİLİK POLİTİKASI (PRIVACY POLICY)</Text>
@@ -729,6 +724,32 @@ export function ProfileScreen({
                 <Text style={styles.deleteModalConfirmText}>EVET, SİL</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Privacy Policy Modal */}
+      <Modal
+        visible={showPrivacyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPrivacyModal(false)}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={[styles.deleteModalCard, { borderColor: "#00F5D4" }]}>
+            <Text style={{ fontSize: 40, marginBottom: 6 }}>🔒</Text>
+            <Text style={[styles.deleteModalTitle, { color: "#00F5D4" }]}>GİZLİLİK POLİTİKASI</Text>
+            <Text style={[styles.deleteModalDesc, { color: "#CBD5E1", lineHeight: 20 }]}>
+              Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.
+              {"\n\n"}
+              İletişim: destek@kelimepatlat.app
+            </Text>
+            <Pressable
+              onPress={() => setShowPrivacyModal(false)}
+              style={[styles.deleteModalCancelBtn, { backgroundColor: "#00F5D4", borderColor: "#00F5D4", marginTop: 12 }]}
+            >
+              <Text style={[styles.deleteModalCancelText, { color: "#0C091C", fontWeight: "900" }]}>ANLADIM</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
