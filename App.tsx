@@ -1605,10 +1605,13 @@ function HomeScreen() {
       setProgress((current) => {
         const availableShields = current.streakShields || 0;
         if (availableShields >= 1) {
-          Alert.alert(
-            "🛡️ Seri Kalkanı Kullanıldı!",
-            "Günlük rotayı tamamlayamadın ancak 1 adet Seri Kalkanın kullanılarak serin korundu!"
-          );
+          setGlobalToast({
+            id: `shield-used-${Date.now()}`,
+            title: "🛡️ SERİ KALKANI KULLANILDI!",
+            subtitle: "Günlük rotayı tamamlayamadın ancak 1 Seri Kalkanın harcanarak galibiyet serin korundu!",
+            icon: "🛡️",
+            accentColor: "#A78BFA",
+          });
           return {
             ...current,
             dailyCompletedId: daily.id,
