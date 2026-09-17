@@ -1634,6 +1634,7 @@ function HomeScreen() {
     const res = checkDailyLoginReward(progress, todayId);
     if (!res) return;
     setProgress(res.updatedProgress);
+    AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(res.updatedProgress)).catch(() => undefined);
     void syncProgressToCloud(res.updatedProgress);
     haptics.success();
     gameSfx.victory();
@@ -2003,6 +2004,7 @@ function HomeScreen() {
                     await AsyncStorage.setItem(key, "true");
                     await AsyncStorage.setItem("kelime-patlat:guide-seen", "true");
                     if (updatedNext) {
+                      await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(updatedNext));
                       await syncProgressToCloud(updatedNext);
                     }
                   } catch (e) {

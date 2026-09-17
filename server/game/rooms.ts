@@ -25,6 +25,7 @@ import {
 } from "../../shared/game";
 import { createSoloBoard } from "../../shared/solo";
 import { DEFAULT_PROGRESS, getLeagueTier } from "../../shared/progression";
+import { getRandomBotPersona } from "../../shared/botPersonas";
 import { UserModel } from "../db";
 import { loadLeaderboard, recordLeaderboardRounds } from "./mongo-store";
 
@@ -560,13 +561,15 @@ function claimWord(io: Server, room: Room, playerId: string, word: string, path:
 function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = false) {
   const bot = room.guest;
   if (!bot?.isBot) return;
-  const delay = botThinkDelayMs(room.size) + (isFirstTurn ? 3000 : 0);
-  const selectTriggerDelay = Math.max(1000, delay - 1500);
+  const word = room.words.find((candidate) => !room.foundWords.some((entry) => entry.word === candidate && entry.playerId === bot.id));
+  if (!word) return;
+
+  const delay = botThinkDelayMs(room.size, word.length) + (isFirstTurn ? 2500 : 0);
+  const selectTriggerDelay = Math.max(800, delay - 1200);
+
   setTimeout(() => {
     const current = rooms.get(room.code);
     if (!current || current !== room || room.roundToken !== token || room.status !== "playing") return;
-    const word = room.words.find((candidate) => !room.foundWords.some((entry) => entry.word === candidate && entry.playerId === bot.id));
-    if (!word) return;
     const path = findWordPath(room.board, room.size, word);
     if (path) {
       room.botSelection = path;
@@ -576,7 +579,7 @@ function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = fa
         if (!finalCurrent || finalCurrent !== room || room.roundToken !== token || room.status !== "playing") return;
         claimWord(io, room, bot.id, word, path);
         if (room.status === "playing") scheduleBotTurn(io, room, token, false);
-      }, 1500);
+      }, 1200);
     } else {
       if (room.status === "playing") scheduleBotTurn(io, room, token, false);
     }
@@ -594,24 +597,11 @@ function scheduleBotFill(io: Server, room: Room) {
   const token = ++room.botFillToken;
   setTimeout(() => {
     if (rooms.get(room.code) !== room || room.botFillToken !== token || room.guest || room.status !== "waiting") return;
+    const botPersona = getRandomBotPersona(room.host);
     room.guest = {
+      ...botPersona,
       id: `bot:${room.code}`,
-      name: "KELİME BOT",
-      isBot: true,
       socketId: null,
-      connected: true,
-      ready: true,
-      rematch: false,
-      avatar: "🤖",
-      selectedTitle: "[SİBER İZCİ]",
-      level: 10,
-      tier: "GÜMÜŞ",
-      lp: 950,
-      wins: 14,
-      matches: 26,
-      streak: 4,
-      bestScore: 120,
-      bestTempo: 3.5,
     };
     room.status = "lobby";
     room.message = "Rakip bulunamadı — KELİME BOT düelloya hazır.";

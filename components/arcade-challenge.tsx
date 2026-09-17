@@ -209,6 +209,12 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     };
   };
 
+  const particleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => () => {
+    particleTimers.current.forEach(clearTimeout);
+  }, []);
+
   const explodeConfetti = () => {
     const colors = ["#FFC24A", "#50E3C2", "#FF647C", "#A78BFA", "#FF9B62"];
     const newConfetti: typeof particles = [];
@@ -229,9 +235,10 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       }).start();
     }
     setParticles((prev) => [...prev, ...newConfetti]);
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
       setParticles((prev) => prev.filter((p) => !newConfetti.includes(p)));
     }, 2600);
+    particleTimers.current.push(t1);
   };
 
   const explodeParticles = (cells: number[]) => {
@@ -263,9 +270,10 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     });
 
     setParticles((prev) => [...prev, ...newParticles]);
-    setTimeout(() => {
+    const t2 = setTimeout(() => {
       setParticles((prev) => prev.filter(p => !newParticles.includes(p)));
     }, 380);
+    particleTimers.current.push(t2);
   };
 
   const showInvalid = (message: string) => {

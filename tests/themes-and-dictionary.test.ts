@@ -38,7 +38,6 @@ describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
     });
   });
 
-  describe("Sözlük ve Kelime Anlamları (shared/dictionary.ts)", () => {
     it("tanımlı kelimelerin anlamlarını Türkçe karakter duyarlılığıyla doğru döndürür", () => {
       expect(getWordDefinition("GÖL")).toContain("su birikintisi");
       expect(getWordDefinition("göl")).toContain("su birikintisi"); // Küçük harf desteği
@@ -48,13 +47,15 @@ describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
       expect(getWordDefinition("İÇECEK")).toContain("sıvı gıda");
       expect(getWordDefinition("icecek")).toContain("sıvı gıda");
       expect(getWordDefinition("ICECEK")).toContain("sıvı gıda");
+      expect(getWordDefinition("ruzgar")).toContain("yatay hareketi");
     });
 
     it("sözlükte yer almayan kelimeler için güvenli yedek açıklama üretir", () => {
       const fallback = getWordDefinition("UZAYGEMİSİ");
       expect(fallback).toContain("Kelime Patlat ile kelime dağarcığını zenginleştir");
+      const emptyFallback = getWordDefinition("   ");
+      expect(emptyFallback).toContain("Kelime Patlat");
     });
-  });
 
   describe("Oda Daveti ve Kod Normalizasyonu (shared/invite.ts)", () => {
     it("geçerli oda kodlarını standart 5 karakterli büyük harfe dönüştürür", () => {

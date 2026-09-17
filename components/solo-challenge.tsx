@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
@@ -71,6 +71,11 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [isSelecting, setIsSelecting] = useState(false);
   const [radarCooldown, setRadarCooldown] = useState(0);
   const [radarCharges, setRadarCharges] = useState(radarChargesBonus || 0);
+
+  useEffect(() => {
+    setRadarCharges(radarChargesBonus || 0);
+  }, [radarChargesBonus]);
+
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
@@ -80,9 +85,11 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   const [decryptText, setDecryptText] = useState("");
 
   const decryptIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isDecryptingRef = useRef(false);
 
   const startDecryption = () => {
-    if (chestState !== "closed") return;
+    if (chestState !== "closed" || isDecryptingRef.current) return;
+    isDecryptingRef.current = true;
     setChestState("decrypting");
     let prog = 0;
     if (decryptIntervalRef.current) clearInterval(decryptIntervalRef.current);
@@ -107,10 +114,6 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   const [revived, setRevived] = useState(false);
   const [doubleXpEarned, setDoubleXpEarned] = useState(false);
-
-  const watchAd = (_onReward: () => void) => {
-    Alert.alert("Reklam yakında", "Ödüllü reklam sistemi mağaza entegrasyonu tamamlandığında açılacak.");
-  };
 
   // Countdown timer logic
   useEffect(() => {
@@ -181,6 +184,8 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setSelected([]); setFound([]); setFoundPaths([]); setInspectedPath(null); setInspectedColor(null); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
     setRadarCooldown(0); setRadarCharges(3 + (radarChargesBonus || 0)); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
     setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
+    hasFinishedRef.current = false;
+    isDecryptingRef.current = false;
   }, [challenge, radarChargesBonus]);
 
   useEffect(() => {
@@ -216,15 +221,20 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     return () => sub.remove();
   }, [status]);
 
+  const hasFinishedRef = useRef(false);
+
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused) return;
     const timer = setInterval(() => setSeconds((value) => {
       if (value <= 1) {
         clearInterval(timer);
-        setStatus("lost");
-        triggerHapticError();
-        playErrorSound();
-        onCompleteRef.current(levelRef.current, foundRef.current, false);
+        if (!hasFinishedRef.current) {
+          hasFinishedRef.current = true;
+          setStatus("lost");
+          triggerHapticError();
+          playErrorSound();
+          onCompleteRef.current(levelRef.current, foundRef.current, false);
+        }
         return 0;
       }
       return value - 1;
@@ -332,6 +342,12 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     triggerHapticSelection();
     if (next.length >= previous.length) playSelectionNote(next.length - 1);
   };
+  const particleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => () => {
+    particleTimers.current.forEach(clearTimeout);
+  }, []);
+
   const revealRadar = () => {
     if (radarCooldown > 0 || radarCharges <= 0 || status !== "playing") return;
     const remaining = challenge.words.filter((w) => !found.includes(w));
@@ -339,16 +355,19 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     const targetWord = remaining[0]!;
     const path = challenge.routes[targetWord];
     if (path && path.length > 0) {
+      setRadarHighlights(new Set()); // Eski vurgulamayı anında temizle
       setRadarCooldown(12);
       setRadarCharges((prev) => prev - 1);
       setTimeBonusText("👁 İPUCU AKTİF");
-      setTimeout(() => setTimeBonusText(null), 1500);
+      const t1 = setTimeout(() => setTimeBonusText(null), 1500);
+      particleTimers.current.push(t1);
       const highlights = new Set([path[0]!, path[path.length - 1]!]);
       setRadarHighlights(highlights);
       triggerHapticSelection(); playSelectionNote(0);
-      setTimeout(() => {
+      const t2 = setTimeout(() => {
         setRadarHighlights(new Set());
       }, 2500);
+      particleTimers.current.push(t2);
     }
   };
   const submit = () => {
@@ -380,6 +399,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     playSuccessSound();
 
     if (nextFound.length === challenge.words.length) {
+      hasFinishedRef.current = true;
       explodeConfetti();
       gameSfx.victory();
       triggerHapticLongWord();
@@ -410,11 +430,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   const handleRetry = () => {
     if (typeof lives === "number" && lives <= 0) {
-      Alert.alert(
-        "CANIN KALMADI 💔",
-        "Solo seviyede tekrar denemek için en az 1 Can gereklidir. Bekleyebilir veya mağazadan anında doldurabilirsin.",
-        [{ text: "TAMAM", onPress: () => onExit() }]
-      );
+      onExit();
       return;
     }
     triggerHapticSelection();
@@ -434,6 +450,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     selectionRef.current = [];
     pointerActive.current = false;
     submitted.current = false;
+    hasFinishedRef.current = false;
     setTimeBonusText(null);
     setSelectedWordInfo(null);
     setCountdown(3);

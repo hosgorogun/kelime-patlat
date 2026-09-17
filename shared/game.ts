@@ -24,10 +24,26 @@ export function wordScoreMultiplier(length: number) {
   return length >= 7 ? 3 : length >= 5 ? 2 : 1;
 }
 
-export function botThinkDelayMs(size: BoardSize, random = Math.random) {
-  const minimum = size === 4 ? 11_000 : size === 6 ? 12_000 : size === 8 ? 10_000 : 9_000;
-  const spread = size === 4 ? 6_000 : size === 6 ? 6_000 : size === 8 ? 6_000 : 5_000;
-  return minimum + Math.floor(random() * spread);
+export function botThinkDelayMs(size: BoardSize, wordLength?: number, random = Math.random) {
+  // Base delay per board size
+  const baseMin = size === 4 ? 4_500 : size === 6 ? 5_500 : size === 8 ? 5_000 : 4_500;
+  const baseSpread = size === 4 ? 3_500 : size === 6 ? 4_000 : size === 8 ? 3_500 : 3_000;
+  
+  // Word length multiplier (3-4 letter words found faster, 6+ letter words take longer)
+  let lengthFactor = 1.0;
+  if (wordLength) {
+    if (wordLength <= 3) lengthFactor = 0.8;
+    else if (wordLength === 4) lengthFactor = 0.95;
+    else if (wordLength === 5) lengthFactor = 1.15;
+    else if (wordLength >= 6) lengthFactor = 1.4;
+  }
+
+  // Human jitter variation (+/- 1.5s)
+  const jitter = (random() - 0.5) * 3_000;
+
+  const calculated = Math.floor((baseMin + random() * baseSpread) * lengthFactor + jitter);
+  // Guarantee a human reasonable bounds (between 2.5s and 16s)
+  return Math.max(2_500, Math.min(16_000, calculated));
 }
 
 export type RoomStatus = "waiting" | "lobby" | "playing" | "finished";

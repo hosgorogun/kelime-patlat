@@ -236,6 +236,14 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
     };
   }, [vintageProgress]);
 
+  useEffect(() => {
+    if (vintageProgress) {
+      setMaxUnlockedLevel(vintageProgress.maxUnlockedLevel ?? 1);
+      setCompletedLevels(new Set(vintageProgress.completedLevels ?? []));
+      setScore(vintageProgress.score ?? 0);
+    }
+  }, [vintageProgress]);
+
   const persistProgress = useCallback((newMaxUnlocked: number, newCompleted: Set<number>, newScore: number) => {
     const payload = {
       maxUnlockedLevel: newMaxUnlocked,

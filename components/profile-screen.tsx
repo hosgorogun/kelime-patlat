@@ -97,7 +97,7 @@ export function ProfileScreen({
 
   const handleSaveName = () => {
     const trimmed = nameInput.trim().toLocaleUpperCase("tr-TR").slice(0, 16);
-    if (trimmed) {
+    if (trimmed.length >= 3) {
       onUpdatePlayerName(trimmed);
       triggerHapticSuccess();
     }
