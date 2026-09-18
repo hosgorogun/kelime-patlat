@@ -82,7 +82,7 @@ export function ProfileScreen({
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
   const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
-  const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || "#00F5D4");
+  const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || "#3EE8B5");
   const currentLevel = getPlayerLevel(progress.xp);
   const currentLevelXp = progress.xp % 200;
   const nextLevelXp = 200;
@@ -175,7 +175,7 @@ export function ProfileScreen({
                 <Image source={{ uri: progress.avatarPhoto }} style={styles.avatarImage} onError={() => setImgError(true)} />
               ) : (
                 <View style={[styles.avatarInnerFallback, { backgroundColor: activeAvatar.surface || "#153E3A" }]}>
-                  <Text style={[styles.avatarGlyph, { color: activeAvatar.color || "#50E3C2" }]}>
+                  <Text style={[styles.avatarGlyph, { color: activeAvatar.color || "#4ADE80" }]}>
                     {activeAvatar.icon}
                   </Text>
                 </View>
@@ -310,7 +310,7 @@ export function ProfileScreen({
             </View>
 
             <View style={[styles.statTile, styles.statTileScore]}>
-              <View style={[styles.statIconBox, { backgroundColor: "rgba(0, 245, 212, 0.12)", borderColor: "#00F5D4" }]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(62, 232, 181, 0.12)", borderColor: "#3EE8B5" }]}>
                 <Text style={styles.statIcon}>⚡</Text>
               </View>
               <View style={styles.statDataWrap}>
@@ -320,7 +320,7 @@ export function ProfileScreen({
             </View>
 
             <View style={[styles.statTile, styles.statTileWords]}>
-              <View style={[styles.statIconBox, { backgroundColor: "rgba(167, 139, 250, 0.12)", borderColor: "#A78BFA" }]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(167, 139, 250, 0.12)", borderColor: "#E8C36A" }]}>
                 <Text style={styles.statIcon}>📚</Text>
               </View>
               <View style={styles.statDataWrap}>
@@ -356,7 +356,7 @@ export function ProfileScreen({
             <View style={styles.intelDivider} />
             <View style={styles.intelCell}>
               <Text style={styles.intelLabel}>🌟 TOPLAM XP</Text>
-              <Text style={[styles.intelValue, { color: "#00F5D4" }]}>{progress.xp}</Text>
+              <Text style={[styles.intelValue, { color: "#3EE8B5" }]}>{progress.xp}</Text>
             </View>
           </View>
 
@@ -396,7 +396,7 @@ export function ProfileScreen({
                   }}
                   style={({ pressed }) => [
                     styles.badgeTile,
-                    isSelected && { borderColor: avatar.color || "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.12)" },
+                    isSelected && { borderColor: avatar.color || "#3EE8B5", backgroundColor: "rgba(62, 232, 181, 0.12)" },
                     !unlocked && styles.badgeTileLocked,
                     pressed && styles.pressed,
                   ]}
@@ -404,17 +404,17 @@ export function ProfileScreen({
                   <View style={[
                     styles.badgeIconBubble,
                     isSelected
-                      ? { backgroundColor: "rgba(0, 245, 212, 0.18)", borderColor: avatar.color || "#00F5D4" }
+                      ? { backgroundColor: "rgba(62, 232, 181, 0.18)", borderColor: avatar.color || "#3EE8B5" }
                       : unlocked
-                      ? { backgroundColor: avatar.surface || "rgba(255, 255, 255, 0.08)", borderColor: avatar.color || "#A78BFA" }
+                      ? { backgroundColor: avatar.surface || "rgba(255, 255, 255, 0.08)", borderColor: avatar.color || "#E8C36A" }
                       : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
                   ]}>
-                    <Text style={[styles.badgeIconText, { color: isSelected ? (avatar.color || "#00F5D4") : unlocked ? (avatar.color || "#A78BFA") : "#766D89" }]}>
+                    <Text style={[styles.badgeIconText, { color: isSelected ? (avatar.color || "#3EE8B5") : unlocked ? (avatar.color || "#E8C36A") : "#766D89" }]}>
                       {unlocked ? avatar.icon : "🔒"}
                     </Text>
                   </View>
 
-                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: avatar.color || "#00F5D4" }, !unlocked && { color: "#8E889C" }]}>
+                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: avatar.color || "#3EE8B5" }, !unlocked && { color: "#8E889C" }]}>
                     {avatar.label}
                   </Text>
 
@@ -425,7 +425,7 @@ export function ProfileScreen({
                   ]}>
                     <Text style={[
                       styles.titleMiniStatusText,
-                      isSelected && { color: "#00F5D4" },
+                      isSelected && { color: "#3EE8B5" },
                       !unlocked && { color: "#7B748C" },
                     ]}>
                       {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
@@ -473,17 +473,17 @@ export function ProfileScreen({
                   <View style={[
                     styles.badgeIconBubble,
                     isSelected
-                      ? { backgroundColor: "rgba(0, 245, 212, 0.15)", borderColor: "#00F5D4" }
+                      ? { backgroundColor: "rgba(62, 232, 181, 0.15)", borderColor: "#3EE8B5" }
                       : unlocked
                       ? { backgroundColor: "rgba(255, 255, 255, 0.08)", borderColor: title.accent || "rgba(167, 139, 250, 0.4)" }
                       : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
                   ]}>
-                    <Text style={[styles.badgeIconText, { color: isSelected ? "#00F5D4" : unlocked ? (title.accent || "#A78BFA") : "#766D89" }]}>
+                    <Text style={[styles.badgeIconText, { color: isSelected ? "#3EE8B5" : unlocked ? (title.accent || "#E8C36A") : "#766D89" }]}>
                       {unlocked ? (title.icon || "🎖️") : "🔒"}
                     </Text>
                   </View>
 
-                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: "#00F5D4" }, !unlocked && { color: "#8E889C" }]}>
+                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: "#3EE8B5" }, !unlocked && { color: "#8E889C" }]}>
                     {title.badge}
                   </Text>
 
@@ -494,7 +494,7 @@ export function ProfileScreen({
                   ]}>
                     <Text style={[
                       styles.titleMiniStatusText,
-                      isSelected && { color: "#00F5D4" },
+                      isSelected && { color: "#3EE8B5" },
                       (!unlocked) && { color: "#7B748C" },
                     ]}>
                       {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
@@ -537,7 +537,7 @@ export function ProfileScreen({
                   }}
                   style={({ pressed }) => [
                     styles.badgeTile,
-                    unlocked ? { borderColor: badge.accent, backgroundColor: "rgba(33, 26, 61, 0.75)" } : styles.badgeTileLocked,
+                    unlocked ? { borderColor: badge.accent, backgroundColor: "rgba(20, 54, 43, 0.75)" } : styles.badgeTileLocked,
                     pressed && styles.pressed,
                   ]}
                 >
@@ -561,7 +561,7 @@ export function ProfileScreen({
           <View style={styles.settingsCard}>
             <View style={styles.settingRow}>
               <View style={styles.settingLabelWrap}>
-                <View style={[styles.settingIconCircle, { backgroundColor: "rgba(0, 245, 212, 0.12)" }]}>
+                <View style={[styles.settingIconCircle, { backgroundColor: "rgba(62, 232, 181, 0.12)" }]}>
                   <Text style={styles.settingRowIcon}>🔊</Text>
                 </View>
                 <View>
@@ -575,7 +575,7 @@ export function ProfileScreen({
                   triggerHapticSelection();
                   toggleSfx(val);
                 }}
-                trackColor={{ false: "#251D42", true: "#00F5D4" }}
+                trackColor={{ false: "#251D42", true: "#3EE8B5" }}
                 thumbColor="#FFF"
               />
             </View>
@@ -596,7 +596,7 @@ export function ProfileScreen({
                   triggerHapticSelection();
                   toggleHaptics(val);
                 }}
-                trackColor={{ false: "#251D42", true: "#00F5D4" }}
+                trackColor={{ false: "#251D42", true: "#3EE8B5" }}
                 thumbColor="#FFF"
               />
             </View>
@@ -652,7 +652,7 @@ export function ProfileScreen({
         onRequestClose={() => setShowLogoutModal(false)}
       >
         <View style={styles.deleteModalOverlay}>
-          <View style={[styles.deleteModalCard, { borderColor: "#A78BFA" }]}>
+          <View style={[styles.deleteModalCard, { borderColor: "#E8C36A" }]}>
             <View style={styles.modalIconTopWrap}>
               <Text style={styles.modalIconTop}>🚪</Text>
             </View>
@@ -672,7 +672,7 @@ export function ProfileScreen({
                   setShowLogoutModal(false);
                   onLogout();
                 }}
-                style={[styles.deleteModalConfirmBtn, { backgroundColor: "#7C3AED" }]}
+                style={[styles.deleteModalConfirmBtn, { backgroundColor: "#C9A227" }]}
               >
                 <Text style={[styles.deleteModalConfirmText, { color: "#FFF" }]}>ÇIKIŞ YAP</Text>
               </Pressable>
@@ -743,9 +743,9 @@ export function ProfileScreen({
         onRequestClose={() => setShowPrivacyModal(false)}
       >
         <View style={styles.deleteModalOverlay}>
-          <View style={[styles.deleteModalCard, { borderColor: "#00F5D4" }]}>
+          <View style={[styles.deleteModalCard, { borderColor: "#3EE8B5" }]}>
             <Text style={{ fontSize: 40, marginBottom: 6 }}>🔒</Text>
-            <Text style={[styles.deleteModalTitle, { color: "#00F5D4" }]}>GİZLİLİK POLİTİKASI</Text>
+            <Text style={[styles.deleteModalTitle, { color: "#3EE8B5" }]}>GİZLİLİK POLİTİKASI</Text>
             <Text style={[styles.deleteModalDesc, { color: "#CBD5E1", lineHeight: 20 }]}>
               Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.
               {"\n\n"}
@@ -753,9 +753,9 @@ export function ProfileScreen({
             </Text>
             <Pressable
               onPress={() => setShowPrivacyModal(false)}
-              style={[styles.deleteModalCancelBtn, { backgroundColor: "#00F5D4", borderColor: "#00F5D4", marginTop: 12 }]}
+              style={[styles.deleteModalCancelBtn, { backgroundColor: "#3EE8B5", borderColor: "#3EE8B5", marginTop: 12 }]}
             >
-              <Text style={[styles.deleteModalCancelText, { color: "#0C091C", fontWeight: "900" }]}>ANLADIM</Text>
+              <Text style={[styles.deleteModalCancelText, { color: "#06140F", fontWeight: "900" }]}>ANLADIM</Text>
             </Pressable>
           </View>
         </View>
@@ -782,15 +782,15 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 14,
-    backgroundColor: "#1E1838",
+    backgroundColor: "#164036",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.25)",
+    borderColor: "rgba(212, 180, 90, 0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
   headerTextWrap: { flex: 1, marginLeft: 10 },
-  overline: { color: "#A78BFA", fontSize: 8.5, fontWeight: "900", letterSpacing: 1 },
+  overline: { color: "#E8C36A", fontSize: 8.5, fontWeight: "900", letterSpacing: 1 },
   title: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.3 },
   headerChipsBadge: {
     flexDirection: "row",
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
   /* Tab Navigation */
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#16112C",
+    backgroundColor: "#0E2C22",
     borderRadius: 14,
     padding: 3,
     borderWidth: 1,
@@ -826,21 +826,21 @@ const styles = StyleSheet.create({
   tabBtnActive: {
     backgroundColor: "#2B2150",
     borderWidth: 1,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
   },
   tabBtnText: {
-    color: "#8E82A8",
+    color: "#8FBAAB",
     fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.4,
   },
   tabBtnTextActive: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
   },
 
   /* 1. HERO OPERATÖR KARTI */
   heroCard: {
-    backgroundColor: "#16112C",
+    backgroundColor: "#0E2C22",
     borderRadius: 20,
     padding: 14,
     borderWidth: 1.5,
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    backgroundColor: "#16102B",
+    backgroundColor: "#0E2C22",
   },
   avatarImage: {
     width: "100%",
@@ -887,12 +887,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -4,
     left: -4,
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#C9A227",
     borderRadius: 8,
     paddingHorizontal: 5,
     paddingVertical: 1.5,
     borderWidth: 1.5,
-    borderColor: "#16112C",
+    borderColor: "#0E2C22",
   },
   levelBadgeText: {
     color: "#FFF",
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     bottom: -6,
     backgroundColor: "#120D24",
     borderWidth: 1,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cameraIconText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 7.5,
     fontWeight: "900",
     letterSpacing: 0.4,
@@ -944,7 +944,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 6,
-    backgroundColor: "rgba(124, 92, 246, 0.2)",
+    backgroundColor: "rgba(212, 180, 90, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -960,17 +960,17 @@ const styles = StyleSheet.create({
   nameTextInput: {
     flex: 1,
     backgroundColor: "#120D24",
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 16,
     fontWeight: "900",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1.5,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
   },
   saveNameBtn: {
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     width: 30,
     height: 30,
     borderRadius: 8,
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveNameBtnText: {
-    color: "#121025",
+    color: "#071A14",
     fontWeight: "900",
     fontSize: 16,
   },
@@ -991,17 +991,17 @@ const styles = StyleSheet.create({
   titleBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(124, 92, 246, 0.15)",
+    backgroundColor: "rgba(212, 180, 90, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#7C3AED",
+    borderColor: "#C9A227",
     gap: 4,
   },
   titleBadgeIcon: { fontSize: 10 },
   titleBadgeText: {
-    color: "#D8B4FE",
+    color: "#C8D9C0",
     fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.6,
@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(124, 92, 246, 0.15)",
+    borderTopColor: "rgba(212, 180, 90, 0.15)",
   },
   xpHeaderRow: {
     flexDirection: "row",
@@ -1027,7 +1027,7 @@ const styles = StyleSheet.create({
   },
   xpTagIcon: { fontSize: 11 },
   xpLabel: {
-    color: "#8E82A8",
+    color: "#8FBAAB",
     fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.8,
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   xpCurrent: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
   },
   xpTotal: {
     color: "#64748B",
@@ -1052,7 +1052,7 @@ const styles = StyleSheet.create({
   },
   xpFill: {
     height: "100%",
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     borderRadius: 6,
   },
   xpFooterRow: {
@@ -1062,7 +1062,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   xpPercentText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 8.5,
     fontWeight: "800",
   },
@@ -1086,18 +1086,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   sectionMeta: {
-    color: "#A78BFA",
+    color: "#E8C36A",
     fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.6,
   },
   badgeCounterWrap: {
-    backgroundColor: "rgba(124, 92, 246, 0.15)",
+    backgroundColor: "rgba(212, 180, 90, 0.15)",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
   },
 
   /* 2. STATS GRID (Compact 2x2 with horizontal content) */
@@ -1111,7 +1111,7 @@ const styles = StyleSheet.create({
     width: "48.5%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#16112C",
+    backgroundColor: "#0E2C22",
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 10,
@@ -1120,7 +1120,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   statTileWins: { borderColor: "rgba(255, 194, 74, 0.25)" },
-  statTileScore: { borderColor: "rgba(0, 245, 212, 0.25)" },
+  statTileScore: { borderColor: "rgba(62, 232, 181, 0.25)" },
   statTileWords: { borderColor: "rgba(167, 139, 250, 0.25)" },
   statTileStreak: { borderColor: "rgba(244, 114, 182, 0.25)" },
   statIconBox: {
@@ -1187,7 +1187,7 @@ const styles = StyleSheet.create({
   },
   intelSub: {
     fontSize: 8,
-    color: "#8E82A8",
+    color: "#8FBAAB",
   },
   intelDivider: {
     width: 1,
@@ -1208,13 +1208,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1.5,
     borderColor: "#2B2046",
-    backgroundColor: "#16112C",
+    backgroundColor: "#0E2C22",
     alignItems: "center",
     justifyContent: "center",
     padding: 6,
   },
   titleTileUnlocked: {
-    borderColor: "rgba(124, 92, 246, 0.4)",
+    borderColor: "rgba(212, 180, 90, 0.4)",
     backgroundColor: "#1A1333",
   },
   titleTileLocked: {
@@ -1223,21 +1223,21 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   titleTileSelected: {
-    borderColor: "#00F5D4",
-    backgroundColor: "rgba(0, 245, 212, 0.08)",
+    borderColor: "#3EE8B5",
+    backgroundColor: "rgba(62, 232, 181, 0.08)",
   },
   titleMiniStatusPill: {
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: 6,
-    backgroundColor: "rgba(124, 92, 246, 0.15)",
+    backgroundColor: "rgba(212, 180, 90, 0.15)",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
     marginTop: 3,
   },
   titleMiniStatusSelected: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
-    borderColor: "#00F5D4",
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
+    borderColor: "#3EE8B5",
   },
   titleMiniStatusLocked: {
     backgroundColor: "rgba(0, 0, 0, 0.25)",
@@ -1247,7 +1247,7 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.4,
-    color: "#C4B5FD",
+    color: "#C5D9C8",
   },
 
   /* 4. TROPHY BADGES */
@@ -1344,15 +1344,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(124, 92, 246, 0.1)",
+    backgroundColor: "rgba(212, 180, 90, 0.1)",
     borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
     paddingVertical: 13,
     borderRadius: 16,
     gap: 8,
   },
   actionBtnSecondaryText: {
-    color: "#C4B5FD",
+    color: "#C5D9C8",
     fontSize: 11.5,
     fontWeight: "900",
     letterSpacing: 0.8,
@@ -1396,9 +1396,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(124, 92, 246, 0.15)",
+    backgroundColor: "rgba(212, 180, 90, 0.15)",
     borderWidth: 1.5,
-    borderColor: "#7C3AED",
+    borderColor: "#C9A227",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
@@ -1417,7 +1417,7 @@ const styles = StyleSheet.create({
   deleteModalCard: {
     width: "100%",
     maxWidth: 380,
-    backgroundColor: "#16102B",
+    backgroundColor: "#0E2C22",
     borderRadius: 24,
     borderWidth: 1.5,
     borderColor: "#EF4444",

@@ -269,8 +269,8 @@ export function SeasonHub({
   };
 
   const SIZE_LABELS: Record<BoardSize, { label: string; desc: string; color: string }> = {
-    4:  { label: "4×4", desc: "Hızlı · 55 sn", color: "#00F5D4" },
-    6:  { label: "6×6", desc: "Orta · 75 sn",  color: "#A78BFA" },
+    4:  { label: "4×4", desc: "Hızlı · 55 sn", color: "#3EE8B5" },
+    6:  { label: "6×6", desc: "Orta · 75 sn",  color: "#E8C36A" },
     8:  { label: "8×8", desc: "Zorlu · 95 sn", color: "#FB923C" },
     10: { label: "10×10", desc: "Efsane · 125 sn", color: "#FFC24A" },
   };
@@ -596,7 +596,7 @@ export function SeasonHub({
                       </View>
                       <View style={styles.playerCopy}>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                          <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#00F5D4" }]}>
+                          <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#3EE8B5" }]}>
                             {entry.name}
                           </Text>
                           {isUser && (
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     padding: 5,
     marginTop: 16,
     borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
     gap: 4,
   },
   segmentedTabBtn: {
@@ -803,7 +803,7 @@ const styles = StyleSheet.create({
   },
   segmentedTabBtnActive: {
     backgroundColor: "#6D28D9",
-    shadowColor: "#7C3AED",
+    shadowColor: "#C9A227",
     shadowOpacity: 0.55,
     shadowRadius: 10,
     elevation: 5,
@@ -869,8 +869,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   toolbarPillActiveLp: {
-    backgroundColor: "#7C3AED",
-    shadowColor: "#7C3AED",
+    backgroundColor: "#C9A227",
+    shadowColor: "#C9A227",
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 3,
@@ -922,9 +922,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: "rgba(35, 25, 68, 0.9)",
     borderWidth: 1.5,
-    borderColor: "rgba(0, 245, 212, 0.35)",
+    borderColor: "rgba(62, 232, 181, 0.35)",
   },
-  socialHeroKicker: { color: "#00F5D4", fontSize: 8, letterSpacing: 1, fontWeight: "900" },
+  socialHeroKicker: { color: "#3EE8B5", fontSize: 8, letterSpacing: 1, fontWeight: "900" },
   socialHeroTitle: { color: "#FFF9FC", fontSize: 23, fontWeight: "900", marginTop: 6 },
   socialHeroBody: { color: "#D8CDEB", fontSize: 11, marginTop: 4 },
 
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#261A46",
     borderWidth: 1,
-    borderColor: "#8B5CF6",
+    borderColor: "#D4B45A",
   },
   mysteryHeader: {
     flexDirection: "row",
@@ -943,8 +943,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-  mysteryKicker: { color: "#C4B5FD", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  mysteryReward: { color: "#00F5D4", fontSize: 9, fontWeight: "900" },
+  mysteryKicker: { color: "#C5D9C8", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  mysteryReward: { color: "#3EE8B5", fontSize: 9, fontWeight: "900" },
   mysteryDef: {
     color: "#FFF9FC",
     fontSize: 12,
@@ -952,7 +952,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     lineHeight: 17,
   },
-  mysteryHint: { color: "#A78BFA", fontSize: 8, fontWeight: "800", marginTop: 6 },
+  mysteryHint: { color: "#E8C36A", fontSize: 8, fontWeight: "800", marginTop: 6 },
 
   /* User Status Banner */
   userStatusCard: {
@@ -982,9 +982,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#C9A227",
     borderWidth: 2,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -999,15 +999,15 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   userRankBadge: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
   },
   userRankBadgeText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1068,24 +1068,24 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: "rgba(23, 17, 44, 0.8)",
+    backgroundColor: "rgba(12, 42, 34, 0.8)",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.2)",
+    borderColor: "rgba(212, 180, 90, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
   filterChipActive: {
-    backgroundColor: "rgba(124, 58, 237, 0.35)",
-    borderColor: "#7C3AED",
+    backgroundColor: "rgba(201, 162, 39, 0.35)",
+    borderColor: "#C9A227",
   },
   filterChipText: {
-    color: "#8E82A8",
+    color: "#8FBAAB",
     fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   filterChipTextActive: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
   },
 
   /* Podium (Top 3) */
@@ -1293,18 +1293,18 @@ const styles = StyleSheet.create({
     borderBottomColor: "#30254C",
   },
   rowUser: {
-    backgroundColor: "rgba(0, 245, 212, 0.08)",
+    backgroundColor: "rgba(62, 232, 181, 0.08)",
     borderLeftWidth: 4,
-    borderLeftColor: "#00F5D4",
+    borderLeftColor: "#3EE8B5",
   },
   userSelfTag: {
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
   },
   userSelfTagText: {
-    color: "#0B071E",
+    color: "#04110C",
     fontSize: 7.5,
     fontWeight: "900",
   },
@@ -1314,13 +1314,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   winRateHigh: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
   },
   winRateNormal: {
     backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   winRateText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 7.5,
     fontWeight: "900",
   },
@@ -1378,7 +1378,7 @@ const styles = StyleSheet.create({
     borderColor: "#2C2250",
   },
   addCardLabel: {
-    color: "#8E82A8",
+    color: "#8FBAAB",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 0.8,
@@ -1387,7 +1387,7 @@ const styles = StyleSheet.create({
   addFriendRow: { flexDirection: "row", gap: 8 },
   addFriendInput: {
     flex: 1,
-    backgroundColor: "#16112C",
+    backgroundColor: "#0E2C22",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -1397,7 +1397,7 @@ const styles = StyleSheet.create({
     borderColor: "#2D2254",
   },
   addFriendBtn: {
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#C9A227",
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: "center",
@@ -1410,7 +1410,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   socialMsg: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 10,
     fontWeight: "800",
     marginTop: 6,
@@ -1439,22 +1439,22 @@ const styles = StyleSheet.create({
   statusWrap: { alignItems: "flex-end", gap: 3 },
   onlineDot: { width: 8, height: 8, borderRadius: 4 },
   onlineDotActive: {
-    backgroundColor: "#00F5D4",
-    shadowColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
+    shadowColor: "#3EE8B5",
     shadowOpacity: 0.8,
     shadowRadius: 4,
   },
   onlineDotOffline: { backgroundColor: "#4C3F68" },
   onlineStatusText: {
-    color: "#8E82A8",
+    color: "#8FBAAB",
     fontSize: 7.5,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   challengeBtn: {
-    backgroundColor: "rgba(0, 245, 212, 0.12)",
+    backgroundColor: "rgba(62, 232, 181, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 212, 0.5)",
+    borderColor: "rgba(62, 232, 181, 0.5)",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -1462,7 +1462,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   challengeBtnText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1476,7 +1476,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
   removeFriendText: {
-    color: "#8E82A8",
+    color: "#8FBAAB",
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1484,7 +1484,7 @@ const styles = StyleSheet.create({
   /* Board Size Picker Modal */
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(9, 6, 20, 0.82)",
+    backgroundColor: "rgba(4, 17, 12, 0.82)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -1496,7 +1496,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 20,
     borderWidth: 1.5,
-    borderColor: "#4A3B75",
+    borderColor: "#6B4A18",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
@@ -1504,7 +1504,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   modalKicker: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
@@ -1533,7 +1533,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#130E26",
+    backgroundColor: "#0E2C22",
     borderWidth: 1.5,
     borderRadius: 12,
     paddingVertical: 10,

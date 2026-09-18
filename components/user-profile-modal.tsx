@@ -78,8 +78,8 @@ export function UserProfileModal({
 
   const activeAvatarObj = AVATARS.find((a) => a.id === user.avatar);
   const avatarIcon = activeAvatarObj ? activeAvatarObj.icon : user.avatar || (user.isBot ? "🤖" : "⚡");
-  const avatarColor = activeAvatarObj ? activeAvatarObj.color : "#00F5D4";
-  const avatarSurface = activeAvatarObj ? activeAvatarObj.surface : "#16112C";
+  const avatarColor = activeAvatarObj ? activeAvatarObj.color : "#3EE8B5";
+  const avatarSurface = activeAvatarObj ? activeAvatarObj.surface : "#0E2C22";
   const activeFrameObj = PROFILE_FRAMES.find((f) => f[0] === user.selectedFrame);
   const frameBorderColor = activeFrameObj ? activeFrameObj[2] : avatarColor;
 
@@ -197,7 +197,7 @@ export function UserProfileModal({
               <View style={styles.intelDivider} />
               <View style={styles.intelCell}>
                 <Text style={styles.intelLabel}>🌟 TOPLAM XP</Text>
-                <Text style={[styles.intelValue, { color: "#00F5D4" }]}>
+                <Text style={[styles.intelValue, { color: "#3EE8B5" }]}>
                   {user.xp ?? 0}
                 </Text>
               </View>
@@ -206,8 +206,8 @@ export function UserProfileModal({
             {/* Actions Bar */}
             <View style={styles.actionsRow}>
               {isSelf ? (
-                <View style={[styles.alreadyFriendBadge, { borderColor: "#00F5D4", backgroundColor: "rgba(0, 245, 212, 0.12)" }]}>
-                  <Text style={[styles.alreadyFriendText, { color: "#00F5D4" }]}>⭐ SENİN HESABIN</Text>
+                <View style={[styles.alreadyFriendBadge, { borderColor: "#3EE8B5", backgroundColor: "rgba(62, 232, 181, 0.12)" }]}>
+                  <Text style={[styles.alreadyFriendText, { color: "#3EE8B5" }]}>⭐ SENİN HESABIN</Text>
                 </View>
               ) : isFriend ? (
                 <View style={styles.alreadyFriendBadge}>
@@ -247,7 +247,7 @@ export function UserProfileModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(5, 3, 14, 0.85)",
+    backgroundColor: "rgba(4, 17, 12, 0.85)",
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
@@ -255,13 +255,13 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: "100%",
     maxWidth: 380,
-    backgroundColor: "#16112C",
+    backgroundColor: "#0E2C22",
     borderRadius: 24,
     borderWidth: 1.5,
     borderColor: "#372B5E",
     padding: 18,
     position: "relative",
-    shadowColor: "#7C5CF6",
+    shadowColor: "#D4B45A",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 3,
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },
@@ -325,12 +325,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -6,
     alignSelf: "center",
-    backgroundColor: "#7C5CF6",
+    backgroundColor: "#D4B45A",
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderWidth: 1,
-    borderColor: "#C4B5FD",
+    borderColor: "#C5D9C8",
   },
   levelBadgeText: {
     color: "#FFF",
@@ -345,9 +345,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: "rgba(0, 245, 212, 0.12)",
+    backgroundColor: "rgba(62, 232, 181, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(0, 245, 212, 0.3)",
+    borderColor: "rgba(62, 232, 181, 0.3)",
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   titleBadgeText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
   addFriendBtn: {
     flex: 1,
-    backgroundColor: "#7C5CF6",
+    backgroundColor: "#D4B45A",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
@@ -514,8 +514,8 @@ const styles = StyleSheet.create({
   },
   challengeBtn: {
     flex: 1,
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
-    borderColor: "#00F5D4",
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
+    borderColor: "#3EE8B5",
     borderWidth: 1.5,
     borderRadius: 12,
     paddingVertical: 12,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   challengeBtnText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.5,

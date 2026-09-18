@@ -80,7 +80,7 @@ export function GlobalGameToast({ toast, onDismiss }: GlobalGameToastProps) {
 
   if (!toast) return null;
 
-  const accent = toast.accentColor || "#00F5D4";
+  const accent = toast.accentColor || "#F4D06F";
 
   return (
     <View style={styles.container} pointerEvents="box-none">
@@ -137,9 +137,10 @@ const styles = StyleSheet.create({
   toastCard: {
     width: "100%",
     maxWidth: 420,
-    backgroundColor: "rgba(18, 13, 36, 0.96)",
+    backgroundColor: "rgba(8, 28, 22, 0.96)",
     borderRadius: 18,
-    borderWidth: 1.5,
+    borderWidth: 2,
+    borderColor: "#D4B45A",
     paddingHorizontal: 12,
     paddingVertical: 10,
     shadowOffset: { width: 0, height: 6 },
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    color: "#0B071E",
+    color: "#04110C",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,

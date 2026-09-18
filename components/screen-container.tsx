@@ -1,6 +1,9 @@
 import { View, StyleSheet, type ViewProps } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
+import { GameAtmosphere } from "./game-ui";
+import { palette } from "@/shared/palette";
+
 export interface ScreenContainerProps extends ViewProps {
   edges?: Edge[];
   style?: any;
@@ -14,6 +17,7 @@ export function ScreenContainer({
 }: ScreenContainerProps) {
   return (
     <View style={styles.container} {...props}>
+      <GameAtmosphere />
       <SafeAreaView edges={edges} style={[styles.safeArea, style]}>
         <View style={styles.content}>{children}</View>
       </SafeAreaView>
@@ -24,7 +28,7 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0C091C",
+    backgroundColor: palette.bg,
   },
   safeArea: {
     flex: 1,

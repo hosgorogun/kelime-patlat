@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: 12 },
   cardIndexText: { color: "#94A3B8", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   cardPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  cardPillTextCurrent: { color: "#0B132B", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
+  cardPillTextCurrent: { color: "#071A14", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
   cardPillTextUnlocked: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
   cardPillTextLocked: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
 
@@ -302,11 +302,11 @@ const styles = StyleSheet.create({
 
   detailDesc: { color: "#CBD5E1", fontSize: 10.5, fontWeight: "600", lineHeight: 15, textAlign: "center" },
 
-  standingsCard: { marginHorizontal: 18, marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#150F2B", borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.25)" },
+  standingsCard: { marginHorizontal: 18, marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#150F2B", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.25)" },
   standingsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   standingsTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
-  standingsBadge: { backgroundColor: "rgba(0, 245, 212, 0.15)", borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.3)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  standingsBadgeText: { color: "#00F5D4", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  standingsBadge: { backgroundColor: "rgba(62, 232, 181, 0.15)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  standingsBadgeText: { color: "#3EE8B5", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
 
   top3Row: { flexDirection: "row", gap: 8 },
   top3Item: { flex: 1, backgroundColor: "#0F0A21", borderWidth: 1, borderRadius: 12, padding: 8, alignItems: "center" },

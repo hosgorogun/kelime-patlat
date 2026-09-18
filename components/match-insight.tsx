@@ -92,15 +92,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 18,
-    backgroundColor: "rgba(22, 17, 44, 0.9)",
+    backgroundColor: "rgba(12, 42, 34, 0.9)",
     borderWidth: 1.5,
-    borderColor: "rgba(139, 92, 246, 0.25)",
+    borderColor: "rgba(212, 180, 90, 0.25)",
   },
   header: {
     marginBottom: 8,
   },
   kicker: {
-    color: "#A78BFA",
+    color: "#E8C36A",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(139, 92, 246, 0.2)",
+    borderTopColor: "rgba(212, 180, 90, 0.2)",
   },
   metricBox: {
     flex: 1,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.15)",
+    borderColor: "rgba(212, 180, 90, 0.15)",
   },
   metricLabel: {
     color: "#94A3B8",

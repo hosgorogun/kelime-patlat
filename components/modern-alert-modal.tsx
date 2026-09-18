@@ -79,7 +79,7 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
 
   if (!alert) return null;
 
-  const accentColor = alert.accentColor || "#00F5D4";
+  const accentColor = alert.accentColor || "#F4D06F";
   const cardWidth = Math.min(windowWidth - 36, 360);
 
   const handleDismiss = () => {
@@ -127,7 +127,7 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
         >
           {/* Icon Circle */}
           {alert.icon && (
-            <View style={[styles.iconCircle, { borderColor: accentColor, backgroundColor: "#0E0A1E" }]}>
+            <View style={[styles.iconCircle, { borderColor: accentColor, backgroundColor: "#04110C" }]}>
               <Text style={styles.iconText}>{alert.icon}</Text>
             </View>
           )}
@@ -202,14 +202,15 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(5, 3, 14, 0.86)",
+    backgroundColor: "rgba(4, 17, 12, 0.86)",
     justifyContent: "center",
     alignItems: "center",
     padding: 18,
   },
   card: {
-    backgroundColor: "#161129",
-    borderWidth: 2,
+    backgroundColor: "#0E2C22",
+    borderWidth: 2.5,
+    borderColor: "#D4B45A",
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingTop: 24,
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   messageText: {
-    color: "#B8ADD1",
+    color: "#A8C5B5",
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center",
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryButtonText: {
-    color: "#0C091C",
+    color: "#06140F",
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 0.6,
@@ -311,7 +312,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   secondaryButtonText: {
-    color: "#B8ADD1",
+    color: "#A8C5B5",
     fontSize: 13,
     fontWeight: "800",
   },

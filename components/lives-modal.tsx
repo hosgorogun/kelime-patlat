@@ -186,7 +186,7 @@ export function LivesModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(12, 9, 28, 0.88)",
+    backgroundColor: "rgba(4, 17, 12, 0.88)",
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
@@ -194,13 +194,13 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 420,
-    backgroundColor: "#16132A",
-    borderWidth: 1.5,
-    borderColor: "#10B981",
+    backgroundColor: "#0E2C22",
+    borderWidth: 2.5,
+    borderColor: "#D4B45A",
     borderRadius: 28,
     padding: 20,
     alignItems: "center",
-    shadowColor: "#10B981",
+    shadowColor: "#F4D06F",
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 10,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "rgba(15, 23, 42, 0.8)",
+    backgroundColor: "rgba(8, 28, 22, 0.8)",
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.2)",
     alignItems: "center",
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: "rgba(167, 139, 250, 0.12)",
     borderWidth: 1,
-    borderColor: "#A78BFA",
+    borderColor: "#E8C36A",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   timerValue: {
-    color: "#A78BFA",
+    color: "#E8C36A",
     fontWeight: "900",
   },
   balanceRow: {

@@ -28,7 +28,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     badge: "TEMEL MEKANİK & KURALLAR",
     title: "Harf Bağlama ve Rota Çizimi",
     icon: "⚡",
-    color: "#00F5D4",
+    color: "#3EE8B5",
     description: "Kelime Patlat'ta kelimeler parmağını harfler üzerinde sürükleyerek bulunur.",
     customVisual: "route",
     blocks: [
@@ -39,7 +39,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "Kelimenin son harfine ulaştığında parmağını kaldır; kelime geçerliyse anında patlar ve puan kazandırır.",
         ],
         tag: "TEMEL",
-        tagColor: "#00F5D4",
+        tagColor: "#3EE8B5",
       },
       {
         title: "Sadece 90° Dik ve Yatay Hareket 📐",
@@ -73,7 +73,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     badge: "ARENA & SEVİYE SİSTEMİ",
     title: "Oyun Modları ve Kuralları",
     icon: "🗺️",
-    color: "#8B5CF6",
+    color: "#D4B45A",
     description: "Farklı ızgara boyutlarında ve oyun türlerinde yarışarak ustalığını kanıtla.",
     customVisual: "modes",
     blocks: [
@@ -86,7 +86,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "10×10 Matris: 100 harf, 125 saniye süre. Seviye 10'da açılan devasa ustalık alanı.",
         ],
         tag: "DÜELLO",
-        tagColor: "#8B5CF6",
+        tagColor: "#D4B45A",
       },
       {
         title: "Solo Seviye Yolculuğu (100 Seviye) 🏆",
@@ -111,7 +111,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "Her bulduğun kelime sürene ek saniyeler ekler ve rekor kırmanı sağlar.",
         ],
         tag: "TEMPO",
-        tagColor: "#00F5D4",
+        tagColor: "#3EE8B5",
       },
     ],
   },
@@ -149,7 +149,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "Beraberlik: 0 LP · +40 XP (PvP) / +20 XP (Bot)",
         ],
         tag: "ÖDÜL",
-        tagColor: "#00F5D4",
+        tagColor: "#3EE8B5",
       },
       {
         title: "Seri Kalkanı Güvencesi 🛡️",
@@ -158,7 +158,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "Kalkanlarını Mağaza'dan veya günlük giriş zincirinden temin edebilirsin.",
         ],
         tag: "KORUMA",
-        tagColor: "#A78BFA",
+        tagColor: "#E8C36A",
       },
     ],
   },
@@ -168,7 +168,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     badge: "DESTEK & İPUCU SİSTEMİ",
     title: "Siber Radar ve Sözlük İncelemesi",
     icon: "📡",
-    color: "#00F5D4",
+    color: "#3EE8B5",
     description: "Zorlandığın anlarda destek jokerlerini kullanarak avantaj yakala.",
     blocks: [
       {
@@ -179,7 +179,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "Radarı kullanmak artık süre cezası vermez; rahatça stratejine odaklan!",
         ],
         tag: "JOKER",
-        tagColor: "#00F5D4",
+        tagColor: "#3EE8B5",
       },
       {
         title: "İnteraktif Rota İnceleme 🎨",
@@ -246,7 +246,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "Profil ekranından istediğin unvana dokunarak kuşan; unvanın maçlarda rakiplerine görünsün.",
         ],
         tag: "PRESTİJ",
-        tagColor: "#8B5CF6",
+        tagColor: "#D4B45A",
       },
     ],
   },
@@ -256,7 +256,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     badge: "USTA OYUNCU REHBERİ",
     title: "Yüksek Skor & Hızlı Tempo Taktikleri",
     icon: "🎯",
-    color: "#FF007F",
+    color: "#E8A54B",
     description: "Sıradan bir oyuncudan matris ustasına dönüşmeni sağlayacak stratejiler.",
     customVisual: "multipliers",
     blocks: [
@@ -268,7 +268,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "7+ Harfli Uzun Kelimeler: ×2 Katı Puan ve özel 'Uzun Usta' rozeti kazandırır!",
         ],
         tag: "BONUS",
-        tagColor: "#FF007F",
+        tagColor: "#E8A54B",
       },
       {
         title: "Köşe ve Kenar Harf Önceliği 📐",
@@ -283,7 +283,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
           "Dakikadaki Kelime Temponu (K/DK) 12 ve üzerine çıkararak liderlik tablosunun zirvesine adını yazdır!",
         ],
         tag: "PRO",
-        tagColor: "#00F5D4",
+        tagColor: "#3EE8B5",
       },
     ],
   },
@@ -412,20 +412,20 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
 
             {currentSection.customVisual === "modes" && (
               <View style={styles.modesPillRow}>
-                <View style={[styles.modeMiniBadge, { borderColor: "#00F5D4" }]}>
-                  <Text style={[styles.modeMiniBadgeTitle, { color: "#00F5D4" }]}>4×4 MATRİS</Text>
+                <View style={[styles.modeMiniBadge, { borderColor: "#3EE8B5" }]}>
+                  <Text style={[styles.modeMiniBadgeTitle, { color: "#3EE8B5" }]}>4×4 MATRİS</Text>
                   <Text style={styles.modeMiniBadgeSub}>16 Harf · 60sn</Text>
                 </View>
-                <View style={[styles.modeMiniBadge, { borderColor: "#A78BFA" }]}>
-                  <Text style={[styles.modeMiniBadgeTitle, { color: "#A78BFA" }]}>6×6 MATRİS</Text>
+                <View style={[styles.modeMiniBadge, { borderColor: "#E8C36A" }]}>
+                  <Text style={[styles.modeMiniBadgeTitle, { color: "#E8C36A" }]}>6×6 MATRİS</Text>
                   <Text style={styles.modeMiniBadgeSub}>36 Harf · 75sn</Text>
                 </View>
                 <View style={[styles.modeMiniBadge, { borderColor: "#FFD000" }]}>
                   <Text style={[styles.modeMiniBadgeTitle, { color: "#FFD000" }]}>8×8 MATRİS</Text>
                   <Text style={styles.modeMiniBadgeSub}>64 Harf · 95sn</Text>
                 </View>
-                <View style={[styles.modeMiniBadge, { borderColor: "#FF007F" }]}>
-                  <Text style={[styles.modeMiniBadgeTitle, { color: "#FF007F" }]}>10×10 MATRİS</Text>
+                <View style={[styles.modeMiniBadge, { borderColor: "#E8A54B" }]}>
+                  <Text style={[styles.modeMiniBadgeTitle, { color: "#E8A54B" }]}>10×10 MATRİS</Text>
                   <Text style={styles.modeMiniBadgeSub}>100 Harf · 125sn</Text>
                 </View>
               </View>
@@ -448,14 +448,14 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
                   <Text style={[styles.leagueChipTitle, { color: "#FFD700" }]}>ALTIN</Text>
                   <Text style={styles.leagueChipLp}>900-1599 LP</Text>
                 </View>
-                <View style={[styles.leagueChip, { borderColor: "#00F5D4" }]}>
+                <View style={[styles.leagueChip, { borderColor: "#3EE8B5" }]}>
                   <Text style={styles.leagueChipIcon}>💎</Text>
-                  <Text style={[styles.leagueChipTitle, { color: "#00F5D4" }]}>ELMAS</Text>
+                  <Text style={[styles.leagueChipTitle, { color: "#3EE8B5" }]}>ELMAS</Text>
                   <Text style={styles.leagueChipLp}>1600-2499</Text>
                 </View>
-                <View style={[styles.leagueChip, { borderColor: "#FF007F" }]}>
+                <View style={[styles.leagueChip, { borderColor: "#E8A54B" }]}>
                   <Text style={styles.leagueChipIcon}>🌟</Text>
-                  <Text style={[styles.leagueChipTitle, { color: "#FF007F" }]}>ŞAMPİYON</Text>
+                  <Text style={[styles.leagueChipTitle, { color: "#E8A54B" }]}>ŞAMPİYON</Text>
                   <Text style={styles.leagueChipLp}>2500+ LP</Text>
                 </View>
               </View>
@@ -483,14 +483,14 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
                   <Text style={styles.multiplierValue}>×1.0</Text>
                   <Text style={styles.multiplierSub}>Standart Puan</Text>
                 </View>
-                <View style={[styles.multiplierItem, { borderColor: "#00F5D4" }]}>
-                  <Text style={[styles.multiplierBadge, { color: "#00F5D4" }]}>5-6 HARF</Text>
-                  <Text style={[styles.multiplierValue, { color: "#00F5D4" }]}>×1.5</Text>
+                <View style={[styles.multiplierItem, { borderColor: "#3EE8B5" }]}>
+                  <Text style={[styles.multiplierBadge, { color: "#3EE8B5" }]}>5-6 HARF</Text>
+                  <Text style={[styles.multiplierValue, { color: "#3EE8B5" }]}>×1.5</Text>
                   <Text style={styles.multiplierSub}>Siber Bonus</Text>
                 </View>
-                <View style={[styles.multiplierItem, { borderColor: "#FF007F", backgroundColor: "rgba(255, 0, 127, 0.1)" }]}>
-                  <Text style={[styles.multiplierBadge, { color: "#FF007F" }]}>7+ HARF</Text>
-                  <Text style={[styles.multiplierValue, { color: "#FF007F" }]}>×2.0</Text>
+                <View style={[styles.multiplierItem, { borderColor: "#E8A54B", backgroundColor: "rgba(255, 0, 127, 0.1)" }]}>
+                  <Text style={[styles.multiplierBadge, { color: "#E8A54B" }]}>7+ HARF</Text>
+                  <Text style={[styles.multiplierValue, { color: "#E8A54B" }]}>×2.0</Text>
                   <Text style={styles.multiplierSub}>Dev Çarpan!</Text>
                 </View>
               </View>
@@ -545,7 +545,7 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
 
               {currentIndex < GUIDE_SECTIONS.length - 1 ? (
                 <Pressable onPress={handleNext} style={[styles.nextBtn, { backgroundColor: currentSection.color }]}>
-                  <Text style={[styles.nextBtnText, { color: currentSection.color === "#FFD000" || currentSection.color === "#00F5D4" ? "#100C24" : "#FFFFFF" }]}>
+                  <Text style={[styles.nextBtnText, { color: currentSection.color === "#FFD000" || currentSection.color === "#3EE8B5" ? "#100C24" : "#FFFFFF" }]}>
                     SONRAKİ BÖLÜM →
                   </Text>
                 </Pressable>
@@ -577,10 +577,10 @@ const styles = StyleSheet.create({
     maxHeight: 720,
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.6)",
+    borderColor: "rgba(212, 180, 90, 0.6)",
     backgroundColor: "#120D26",
     overflow: "hidden",
-    shadowColor: "#7C5CF6",
+    shadowColor: "#D4B45A",
     shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 10,
@@ -593,8 +593,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(124, 92, 246, 0.2)",
-    backgroundColor: "rgba(22, 17, 44, 0.8)",
+    borderBottomColor: "rgba(212, 180, 90, 0.2)",
+    backgroundColor: "rgba(12, 42, 34, 0.8)",
   },
   headerKickerRow: {
     flexDirection: "row",
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   tabsContainer: {
     backgroundColor: "rgba(16, 11, 34, 0.95)",
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(124, 92, 246, 0.15)",
+    borderBottomColor: "rgba(212, 180, 90, 0.15)",
     paddingVertical: 8,
   },
   tabsScroll: {
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(28, 21, 55, 0.7)",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.25)",
+    borderColor: "rgba(212, 180, 90, 0.25)",
   },
   tabChipActive: {
     borderWidth: 1.5,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   tabChipText: {
-    color: "#A799C7",
+    color: "#8FBAAB",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   sectionDescription: {
-    color: "#C4B5FD",
+    color: "#C5D9C8",
     fontSize: 10.5,
     lineHeight: 15,
     marginTop: 2,
@@ -714,10 +714,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
   },
   visualLabel: {
-    color: "#A799C7",
+    color: "#8FBAAB",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 0.8,
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
   exampleDivider: {
     width: 1,
     height: 48,
-    backgroundColor: "rgba(124, 92, 246, 0.3)",
+    backgroundColor: "rgba(212, 180, 90, 0.3)",
     marginHorizontal: 8,
   },
   miniBoardRow: {
@@ -753,25 +753,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   miniCellActive: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
-    borderColor: "#00F5D4",
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
+    borderColor: "#3EE8B5",
   },
   miniCellInvalid: {
     backgroundColor: "rgba(255, 100, 124, 0.15)",
     borderColor: "#FF647C",
   },
   miniLetter: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 12,
     fontWeight: "900",
   },
   miniArrow: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 12,
     fontWeight: "900",
   },
   validStatusText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 8.5,
     fontWeight: "900",
   },
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   modeMiniBadgeSub: {
-    color: "#A799C7",
+    color: "#8FBAAB",
     fontSize: 8,
     fontWeight: "700",
     marginTop: 2,
@@ -830,7 +830,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   leagueChipLp: {
-    color: "#A799C7",
+    color: "#8FBAAB",
     fontSize: 7,
     fontWeight: "700",
     marginTop: 1,
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 10,
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
   },
   rewardPillsRow: {
     flexDirection: "row",
@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "rgba(27, 21, 52, 0.8)",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.2)",
+    borderColor: "rgba(212, 180, 90, 0.2)",
     alignItems: "center",
   },
   rewardMiniPillEpic: {
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   rewardMiniDay: {
-    color: "#A799C7",
+    color: "#8FBAAB",
     fontSize: 7.5,
     fontWeight: "800",
     marginTop: 1,
@@ -887,11 +887,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "rgba(25, 18, 50, 0.7)",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
     alignItems: "center",
   },
   multiplierBadge: {
-    color: "#A799C7",
+    color: "#8FBAAB",
     fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   multiplierSub: {
-    color: "#C4B5FD",
+    color: "#C5D9C8",
     fontSize: 7.5,
     fontWeight: "700",
   },
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 13,
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.22)",
+    borderColor: "rgba(212, 180, 90, 0.22)",
   },
   blockHead: {
     flexDirection: "row",
@@ -956,7 +956,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     flex: 1,
-    color: "#DDD6FE",
+    color: "#D5E5D8",
     fontSize: 10.5,
     lineHeight: 15.5,
     fontWeight: "500",
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 14,
     borderTopWidth: 1,
-    borderTopColor: "rgba(124, 92, 246, 0.2)",
+    borderTopColor: "rgba(212, 180, 90, 0.2)",
     backgroundColor: "rgba(18, 13, 38, 0.9)",
   },
   indicatorRow: {
@@ -997,13 +997,13 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.35)",
+    borderColor: "rgba(212, 180, 90, 0.35)",
     backgroundColor: "rgba(30, 24, 58, 0.6)",
     alignItems: "center",
     justifyContent: "center",
   },
   prevBtnText: {
-    color: "#B5A9CD",
+    color: "#8FBAAB",
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   finishBtn: {
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
   },
   finishBtnText: {
     color: "#0F172A",

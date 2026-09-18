@@ -341,7 +341,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   };
 
   const explodeConfetti = () => {
-    const colors = ["#FFC24A", "#50E3C2", "#FF647C", "#A78BFA", "#FF9B62"];
+    const colors = ["#FFC24A", "#4ADE80", "#FF647C", "#E8C36A", "#FF9B62"];
     const newConfetti: typeof particles = [];
     for (let i = 0; i < 40; i++) {
       const anim = new Animated.ValueXY({ x: 0, y: 0 });
@@ -670,12 +670,12 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     <Animated.View ref={boardRef} onLayout={measureBoard} style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative", backgroundColor: activeTheme.background, borderColor: activeTheme.cellBorder, transform: [{ translateX: shakeAnim }] }, isUrgent && styles.boardUrgent]}>
       {/* HUD Matrix Grid Backing */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <View style={{ position: "absolute", top: 0, bottom: 0, left: "25%", width: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
-        <View style={{ position: "absolute", top: 0, bottom: 0, left: "50%", width: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
-        <View style={{ position: "absolute", top: 0, bottom: 0, left: "75%", width: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
-        <View style={{ position: "absolute", left: 0, right: 0, top: "25%", height: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
-        <View style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
-        <View style={{ position: "absolute", left: 0, right: 0, top: "75%", height: 1, backgroundColor: "rgba(124, 92, 246, 0.06)" }} />
+        <View style={{ position: "absolute", top: 0, bottom: 0, left: "25%", width: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
+        <View style={{ position: "absolute", top: 0, bottom: 0, left: "50%", width: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
+        <View style={{ position: "absolute", top: 0, bottom: 0, left: "75%", width: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
+        <View style={{ position: "absolute", left: 0, right: 0, top: "25%", height: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
+        <View style={{ position: "absolute", left: 0, right: 0, top: "50%", height: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
+        <View style={{ position: "absolute", left: 0, right: 0, top: "75%", height: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
       </View>
 
       {selected.slice(0, -1).map((cellIdx, i) => {
@@ -805,7 +805,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                     position: "absolute",
                     top: challenge.size >= 8 ? 1 : 2,
                     right: challenge.size >= 8 ? 1 : 2,
-                    backgroundColor: isInspectedStart ? "#059669" : "rgba(15, 23, 42, 0.9)",
+                    backgroundColor: isInspectedStart ? "#059669" : "rgba(8, 28, 22, 0.9)",
                     borderRadius: challenge.size >= 8 ? 4 : 6,
                     minWidth: challenge.size >= 8 ? 12 : 16,
                     height: challenge.size >= 8 ? 12 : 16,
@@ -931,7 +931,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
             {chestState === "opened" && (
               <>
                 <Text style={styles.chestIcon}>🎁</Text>
-                <Text style={[styles.chestTitle, { color: "#50E3C2" }]}>DEŞİFRE BAŞARILI!</Text>
+                <Text style={[styles.chestTitle, { color: "#4ADE80" }]}>DEŞİFRE BAŞARILI!</Text>
                 <Text style={styles.chestSuccessReward}>
                   {doubleXpEarned
                     ? "VERİ KATLANDI: +300 SEZON XP & +1 RADAR HAKKI!"
@@ -1037,10 +1037,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         {!revived && (
           <Pressable
             onPress={() => safeWatchAd(() => { setSeconds(20); setStatus("playing"); setRevived(true); })}
-            style={[styles.action, { backgroundColor: "#00F5D4", marginTop: 12 }]}
+            style={[styles.action, { backgroundColor: "#3EE8B5", marginTop: 12 }]}
           >
-            <Text style={[styles.actionText, { color: "#121025" }]}>💾 SÜREYİ KURTAR (+20sn REKLAM)</Text>
-            <Text style={[styles.actionArrow, { color: "#121025" }]}>⚡</Text>
+            <Text style={[styles.actionText, { color: "#071A14" }]}>💾 SÜREYİ KURTAR (+20sn REKLAM)</Text>
+            <Text style={[styles.actionArrow, { color: "#071A14" }]}>⚡</Text>
           </Pressable>
         )}
 
@@ -1122,7 +1122,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
           accentColor: "#FF647C",
           primaryButton: {
             text: "DEVAM ET",
-            color: activeTheme.accentColor || "#00F5D4",
+            color: activeTheme.accentColor || "#3EE8B5",
             onPress: () => setShowExitModal(false),
           },
           secondaryButton: {
@@ -1150,7 +1150,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900" }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#50E3C2", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#50E3C2", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#50E3C2" }, cellFound: { backgroundColor: "#287B70", borderColor: "#50E3C2" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#50E3C2" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, hint: { color: "#B5A9CD", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900" }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, hint: { color: "#8FBAAB", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", zIndex: 100 },
   modalContent: { width: "86%", borderRadius: 20, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },
@@ -1158,26 +1158,26 @@ const styles = StyleSheet.create({
   modalCloseButton: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
   modalCloseText: { color: "#000000", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
   countdownOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(18, 16, 37, 0.85)", justifyContent: "center", alignItems: "center", zIndex: 200 },
-  countdownText: { color: "#00F5D4", fontSize: 72, fontWeight: "900", textShadowColor: "rgba(0, 245, 212, 0.8)", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 15 },
-  chestCard: { width: "100%", marginTop: 12, padding: 16, borderRadius: 16, borderStyle: "dashed", borderWidth: 1.5, backgroundColor: "rgba(18, 14, 38, 0.45)", alignItems: "center" },
+  countdownText: { color: "#3EE8B5", fontSize: 72, fontWeight: "900", textShadowColor: "rgba(62, 232, 181, 0.8)", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 15 },
+  chestCard: { width: "100%", marginTop: 12, padding: 16, borderRadius: 16, borderStyle: "dashed", borderWidth: 1.5, backgroundColor: "rgba(8, 28, 22, 0.45)", alignItems: "center" },
   chestIcon: { fontSize: 36, marginBottom: 8 },
   chestTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 1, textAlign: "center" },
-  chestCopy: { color: "#B5A9CD", fontSize: 8, textAlign: "center", marginTop: 4, lineHeight: 11, paddingHorizontal: 12 },
+  chestCopy: { color: "#8FBAAB", fontSize: 8, textAlign: "center", marginTop: 4, lineHeight: 11, paddingHorizontal: 12 },
   chestButton: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
-  chestButtonText: { color: "#121025", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  chestButtonText: { color: "#071A14", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   chestProgress: { color: "#FFC24A", fontSize: 10, fontWeight: "900", fontFamily: "monospace", marginTop: 8, letterSpacing: 0.8 },
   chestSuccessReward: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4, textAlign: "center", marginTop: 6 },
   pauseBtn: { width: 35, height: 35, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center", marginLeft: 6 },
-  pauseOverlay: { flex: 1, backgroundColor: "rgba(12, 9, 28, 0.92)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
-  pauseCard: { width: "100%", maxWidth: 360, backgroundColor: "#130E26", borderWidth: 1.5, borderColor: "#7C3AED", borderRadius: 24, padding: 24, alignItems: "center" },
+  pauseOverlay: { flex: 1, backgroundColor: "rgba(4, 17, 12, 0.92)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  pauseCard: { width: "100%", maxWidth: 360, backgroundColor: "#0E2C22", borderWidth: 1.5, borderColor: "#C9A227", borderRadius: 24, padding: 24, alignItems: "center" },
   pauseTitle: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 1, marginBottom: 8 },
-  pauseSub: { color: "#B5A9CD", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
+  pauseSub: { color: "#8FBAAB", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
   resumeBtn: { width: "100%", height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  resumeBtnText: { color: "#0C091C", fontSize: 12, fontWeight: "900", letterSpacing: 0.6 },
+  resumeBtnText: { color: "#06140F", fontSize: 12, fontWeight: "900", letterSpacing: 0.6 },
   pauseExitBtn: { width: "100%", height: 42, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.15)", backgroundColor: "rgba(255, 255, 255, 0.05)", alignItems: "center", justifyContent: "center" },
   pauseExitBtnText: { color: "#E2E8F0", fontSize: 11, fontWeight: "800", letterSpacing: 0.4 },
   adOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#0A0816", justifyContent: "center", alignItems: "center", zIndex: 300 },
-  adTitle: { color: "#7C5CF6", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 12 },
+  adTitle: { color: "#D4B45A", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 12 },
   adSpinner: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", textAlign: "center", paddingHorizontal: 28, lineHeight: 18 },
-  adCountdown: { color: "#00F5D4", fontSize: 48, fontWeight: "900", marginTop: 24, textShadowColor: "rgba(0, 245, 212, 0.6)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }
+  adCountdown: { color: "#3EE8B5", fontSize: 48, fontWeight: "900", marginTop: 24, textShadowColor: "rgba(62, 232, 181, 0.6)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }
 });

@@ -8,10 +8,6 @@ import {
   fillBoardBlanks,
   getRoundDurationMs,
   isAdjacent,
-  TURKISH_LETTERS,
-  WORD_BANK,
-  WORD_CATALOG,
-  WORD_CATALOG_DATA,
   maskOpponentFoundWords,
   pickLiveFourWordLengths,
   wordScoreMultiplier,
@@ -24,6 +20,7 @@ import {
   type RoomStatus,
 } from "../../shared/game";
 import { createSoloBoard } from "../../shared/solo";
+import { catalogWordsForBoard } from "../../shared/word-catalog";
 import { DEFAULT_PROGRESS, getLeagueTier } from "../../shared/progression";
 import { getRandomBotPersona } from "../../shared/botPersonas";
 import { UserModel } from "../db";
@@ -214,7 +211,7 @@ function pickLiveFourWords() {
   const difficultyOrder = shuffled(["easy", "medium", "hard"] as const);
   const words: string[] = [];
   for (let index = 0; index < lengths.length; index += 1) {
-    const available = WORD_CATALOG[4].filter((entry) => entry.word.length === lengths[index] && !words.includes(entry.word));
+    const available = catalogWordsForBoard(4).filter((entry) => entry.word.length === lengths[index] && !words.includes(entry.word));
     const preferred = available.filter((entry) => entry.difficulty === difficultyOrder[index % difficultyOrder.length]);
     const selected = randomItem(preferred.length ? preferred : available);
     if (!selected) throw new Error("Canlı 4×4 kelime havuzunda istenen uzunluk için kelime bulunamadı.");

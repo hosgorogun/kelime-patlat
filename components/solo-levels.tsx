@@ -190,7 +190,7 @@ export function SoloLevels({
                           pressed && isUnlocked && !isClaimed && styles.pressed,
                         ]}
                       >
-                        <Text style={[styles.milestoneBtnText, isUnlocked && !isClaimed && { color: "#0B132B" }]}>
+                        <Text style={[styles.milestoneBtnText, isUnlocked && !isClaimed && { color: "#071A14" }]}>
                           {isClaimed ? "ALINDI" : isUnlocked ? "AÇ! 🎁" : "🔒 KİLİTLİ"}
                         </Text>
                       </Pressable>
@@ -255,15 +255,15 @@ export function SoloLevels({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0C091C" },
-  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 120, backgroundColor: "#0C091C", flexGrow: 1 },
+  container: { flex: 1, backgroundColor: "#06140F" },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 120, backgroundColor: "#06140F", flexGrow: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
-  back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1E1838", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", alignItems: "center", justifyContent: "center" },
+  back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#164036", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
-  overline: { color: "#A78BFA", fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
+  overline: { color: "#E8C36A", fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
   title: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 },
 
-  sectionTitle: { color: "#E9D5FF", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginTop: 10, marginBottom: 16 },
+  sectionTitle: { color: "#DCE8DC", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginTop: 10, marginBottom: 16 },
 
   // Grid Map
   gridContainer: {
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     height: 2,
     borderStyle: "dashed",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.45)",
+    borderColor: "rgba(212, 180, 90, 0.45)",
     zIndex: 1,
   },
   verticalConnector: {
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     marginLeft: -1,
     borderStyle: "dashed",
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.45)",
+    borderColor: "rgba(212, 180, 90, 0.45)",
     zIndex: 1,
   },
   nodeWrapper: {
@@ -324,8 +324,8 @@ const styles = StyleSheet.create({
   },
   nodeCompleted: {
     backgroundColor: "rgba(80, 227, 194, 0.08)",
-    borderColor: "#50E3C2",
-    shadowColor: "#50E3C2",
+    borderColor: "#4ADE80",
+    shadowColor: "#4ADE80",
     shadowOpacity: 0.15,
     shadowRadius: 6,
   },
@@ -338,9 +338,9 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   nodeSelected: {
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
     borderWidth: 3,
-    shadowColor: "#00F5D4",
+    shadowColor: "#3EE8B5",
     shadowOpacity: 0.35,
     shadowRadius: 10,
     transform: [{ scale: 1.1 }],
@@ -356,13 +356,13 @@ const styles = StyleSheet.create({
     color: "#8FA4CF",
   },
   nodeTextCompleted: {
-    color: "#50E3C2",
+    color: "#4ADE80",
   },
   nodeTextCurrent: {
     color: "#FFC24A",
   },
   nodeTextSelected: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
   },
   nodeTextLocked: {
     fontSize: 12,
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   nodeLabelSelected: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
   },
   nodeLabelLocked: {
     color: "#475569",
@@ -383,9 +383,9 @@ const styles = StyleSheet.create({
 
   // Docked Mission Deck Details Card
   dockedDeck: {
-    backgroundColor: "rgba(18, 14, 38, 0.98)",
+    backgroundColor: "rgba(8, 28, 22, 0.98)",
     borderTopWidth: 1.5,
-    borderTopColor: "rgba(124, 92, 246, 0.35)",
+    borderTopColor: "rgba(212, 180, 90, 0.35)",
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 92,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   },
   badgeCompleted: {
     backgroundColor: "#172A25",
-    borderColor: "#50E3C2",
+    borderColor: "#4ADE80",
   },
   statusBadgeText: {
     fontSize: 7,
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(12, 8, 37, 0.4)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.15)",
+    borderColor: "rgba(212, 180, 90, 0.15)",
     paddingVertical: 12,
     paddingHorizontal: 8,
     marginBottom: 20,
@@ -470,23 +470,23 @@ const styles = StyleSheet.create({
   infoDivider: {
     width: 1,
     height: 20,
-    backgroundColor: "rgba(124, 92, 246, 0.2)",
+    backgroundColor: "rgba(212, 180, 90, 0.2)",
   },
   launchButton: {
     height: 48,
     borderRadius: 16,
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: "#00F5D4",
+    shadowColor: "#3EE8B5",
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   launchButtonLocked: {
-    backgroundColor: "rgba(33, 26, 61, 0.6)",
+    backgroundColor: "rgba(20, 54, 43, 0.6)",
     borderColor: "rgba(87, 69, 141, 0.2)",
     borderWidth: 1.5,
     shadowOpacity: 0,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(22, 16, 48, 0.7)",
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "rgba(124, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   milestoneBadge: {
-    color: "#50E3C2",
+    color: "#4ADE80",
     fontSize: 9,
     fontWeight: "900",
     backgroundColor: "rgba(80, 227, 194, 0.15)",

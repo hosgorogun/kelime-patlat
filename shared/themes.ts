@@ -14,15 +14,15 @@ export type VisualTheme = {
 export const VISUAL_THEMES: Record<string, VisualTheme> = {
   standard: {
     id: "standard",
-    name: "Klasik Gece Yarısı",
-    background: "#0F0B24",
-    surface: "#30264D",
-    surfaceSelected: "#4D3B81",
-    cellBorder: "#594884",
-    text: "#FFF9FC",
-    trayBackground: "#211A3D",
-    headerText: "#B8ADD1",
-    accentColor: "#9A76ED"
+    name: "Zümrüt Orman",
+    background: "#06140F",
+    surface: "#164536",
+    surfaceSelected: "#1F6A52",
+    cellBorder: "#8C6A2E",
+    text: "#FFF8E7",
+    trayBackground: "#0E2C22",
+    headerText: "#A8C5B5",
+    accentColor: "#F4D06F"
   },
   space: {
     id: "space",

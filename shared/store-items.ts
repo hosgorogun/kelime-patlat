@@ -43,7 +43,7 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
 ];
 
 export const PROFILE_FRAMES = [
-  ["signal", "SİNYAL", "#00F5D4", 0],
+  ["signal", "SİNYAL", "#3EE8B5", 0],
   ["neon", "NEON MOR", "#A78BFA", 140],
   ["chrome", "KROM GÜMÜŞ", "#CBD5E1", 220],
   ["gold", "ALTIN KRAL", "#FFC24A", 350],
@@ -59,7 +59,7 @@ export const VICTORY_EFFECTS = [
 ] as const;
 
 export const BOARD_SKINS = [
-  ["grid", "MATRİS", "#00F5D4", 0],
+  ["grid", "MATRİS", "#3EE8B5", 0],
   ["night", "GECE SİNYALİ", "#818CF8", 120],
   ["ember", "KOR HATTI", "#FB7185", 180],
   ["gold_grid", "ALTIN IZGARA", "#FFC24A", 300],

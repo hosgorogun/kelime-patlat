@@ -206,7 +206,7 @@ export function CyberStore({
 
             <View style={styles.confirmBalanceInfo}>
               <Text style={styles.confirmBalanceText}>
-                Mevcut Bakiye: <Text style={{ color: "#FFC24A", fontWeight: "900" }}>{coins} Çip</Text> → Kalan: <Text style={{ color: "#00F5D4", fontWeight: "900" }}>{Math.max(0, coins - (confirmPurchase?.cost ?? 0))} Çip</Text>
+                Mevcut Bakiye: <Text style={{ color: "#FFC24A", fontWeight: "900" }}>{coins} Çip</Text> → Kalan: <Text style={{ color: "#3EE8B5", fontWeight: "900" }}>{Math.max(0, coins - (confirmPurchase?.cost ?? 0))} Çip</Text>
               </Text>
             </View>
 
@@ -310,7 +310,7 @@ export function CyberStore({
           const canAfford = coins >= item.cost;
           const isDisabled = !canAfford || isLivesFull;
 
-          const accentColor = isLives ? "#22C55E" : isRadar ? "#00F5D4" : isShield ? "#60A5FA" : isXp ? "#F59E0B" : "#EC4899";
+          const accentColor = isLives ? "#22C55E" : isRadar ? "#3EE8B5" : isShield ? "#60A5FA" : isXp ? "#F59E0B" : "#EC4899";
 
           return (
             <View key={item.id} style={[styles.productCard, { borderColor: `${accentColor}40` }]}>
@@ -333,8 +333,8 @@ export function CyberStore({
                     </View>
                   )}
                   {isRadar && (
-                    <View style={[styles.inventoryCountBadge, { borderColor: "#00F5D460" }]}>
-                      <Text style={[styles.inventoryCountText, { color: "#00F5D4" }]}>Bonus: +{progress?.radarChargesBonus ?? 0}</Text>
+                    <View style={[styles.inventoryCountBadge, { borderColor: "#3EE8B560" }]}>
+                      <Text style={[styles.inventoryCountText, { color: "#3EE8B5" }]}>Bonus: +{progress?.radarChargesBonus ?? 0}</Text>
                     </View>
                   )}
                 </View>
@@ -351,7 +351,7 @@ export function CyberStore({
                   pressed && !isDisabled && { opacity: 0.8 }
                 ]}
               >
-                <Text style={[styles.chipBuyButtonText, isOwned && { color: "#00F5D4" }, isLivesFull && { color: "#22C55E" }, !isOwned && !canAfford && !isLivesFull && { color: "#8E82A8" }]}>
+                <Text style={[styles.chipBuyButtonText, isOwned && { color: "#3EE8B5" }, isLivesFull && { color: "#22C55E" }, !isOwned && !canAfford && !isLivesFull && { color: "#8FBAAB" }]}>
                   {isOwned ? "✓ AÇIK" : isLivesFull ? "✓ DOLU" : `🪙 ${item.cost}`}
                 </Text>
               </Pressable>
@@ -411,7 +411,7 @@ export function CyberStore({
                     isSelected ? { backgroundColor: color } :
                     owned ? styles.badgeOwned : styles.badgeCost
                   ]}>
-                    <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#0B071E" }]}>
+                    <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#04110C" }]}>
                       {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : cost === 0 ? "ÜCRETSİZ" : `🪙 ${cost}`}
                     </Text>
                   </View>
@@ -431,8 +431,8 @@ export function CyberStore({
               const isSelected = progress?.selectedVictoryEffect === id;
 
               const VICTORY_META: Record<string, { color: string; emoji: string }> = {
-                pulse: { color: "#00F5D4", emoji: "🌊" },
-                glitch: { color: "#A78BFA", emoji: "💻" },
+                pulse: { color: "#3EE8B5", emoji: "🌊" },
+                glitch: { color: "#E8C36A", emoji: "💻" },
                 flare: { color: "#F97316", emoji: "💥" },
                 lightning: { color: "#FACC15", emoji: "⚡" },
                 fireworks: { color: "#FF2A85", emoji: "🎆" },
@@ -471,7 +471,7 @@ export function CyberStore({
                     isSelected ? { backgroundColor: themeColor } :
                     owned ? styles.badgeOwned : styles.badgeCost
                   ]}>
-                    <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#0B071E" }]}>
+                    <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#04110C" }]}>
                       {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : cost === 0 ? "ÜCRETSİZ" : `🪙 ${cost}`}
                     </Text>
                   </View>
@@ -525,7 +525,7 @@ export function CyberStore({
 
                   <Text numberOfLines={1} style={styles.cosmeticName}>{label}</Text>
                   <View style={[styles.cosmeticBadge, isSelected ? { backgroundColor: color } : owned ? styles.badgeOwned : styles.badgeCost]}>
-                    <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#0B071E" }]}>
+                    <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#04110C" }]}>
                       {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : `🪙 ${cost}`}
                     </Text>
                   </View>
@@ -572,24 +572,24 @@ export function CyberStore({
 const styles = StyleSheet.create({
   container: { flexGrow: 1, paddingHorizontal: 0, paddingTop: 4, paddingBottom: 136 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  backButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1F1936", borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.25)", alignItems: "center", justifyContent: "center" },
+  backButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1F1936", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF", fontSize: 26, lineHeight: 28 },
   headerTitleWrap: { flex: 1, marginLeft: 12, marginRight: 8 },
-  headerKicker: { color: "#7C5CF6", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
+  headerKicker: { color: "#D4B45A", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
   headerTitle: { color: "#FFF", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.3 },
   coinBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(39, 30, 68, 0.95)", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 14, borderWidth: 1.5, borderColor: "#FFC24A", gap: 4 },
   coinIcon: { fontSize: 14 },
   coinText: { color: "#FFC24A", fontSize: 14, fontWeight: "900" },
-  coinUnit: { color: "#E9D5FF", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  coinUnit: { color: "#DCE8DC", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
 
-  msgBanner: { backgroundColor: "#271E44", padding: 12, borderRadius: 14, borderWidth: 1, borderColor: "#00F5D4", marginBottom: 12 },
-  msgBannerText: { color: "#00F5D4", fontSize: 11, fontWeight: "800", textAlign: "center" },
+  msgBanner: { backgroundColor: "#271E44", padding: 12, borderRadius: 14, borderWidth: 1, borderColor: "#3EE8B5", marginBottom: 12 },
+  msgBannerText: { color: "#3EE8B5", fontSize: 11, fontWeight: "800", textAlign: "center" },
 
   storeList: { gap: 10 },
   tabs: { flexDirection: "row", backgroundColor: "#17112D", borderRadius: 14, padding: 4, marginBottom: 14, borderWidth: 1, borderColor: "#30264F" },
   tab: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 10 },
-  tabActive: { backgroundColor: "#00F5D4" },
-  tabText: { color: "#8E82A8", fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
+  tabActive: { backgroundColor: "#3EE8B5" },
+  tabText: { color: "#8FBAAB", fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
   tabTextActive: { color: "#0E0922" },
   tabIntro: { padding: 14, borderRadius: 16, backgroundColor: "#1B1533", borderWidth: 1, borderColor: "#493B70" },
   tabIntroTitle: { color: "#FFF", fontSize: 13, fontWeight: "900" },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     padding: 10,
-    backgroundColor: "#16102B",
+    backgroundColor: "#0E2C22",
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -703,9 +703,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeOwned: {
-    backgroundColor: "rgba(0, 245, 212, 0.15)",
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
     borderWidth: 1,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
   },
   badgeCost: {
     backgroundColor: "rgba(255, 255, 255, 0.08)",
@@ -720,24 +720,24 @@ const styles = StyleSheet.create({
   },
 
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 2 },
-  sectionTitleHeader: { color: "#E9D5FF", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.8 },
+  sectionTitleHeader: { color: "#DCE8DC", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.8 },
   sectionSubHeader: { color: "#766D89", fontSize: 8, fontWeight: "900" },
 
-  adBannerCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(26, 21, 58, 0.95)", padding: 14, borderRadius: 20, borderWidth: 1.5, borderColor: "#00F5D4" },
-  adIconCircle: { width: 44, height: 44, borderRadius: 15, backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1, borderColor: "#00F5D4", alignItems: "center", justifyContent: "center", marginRight: 12 },
-  adBannerKicker: { color: "#00F5D4", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
-  adFreeBadge: { backgroundColor: "rgba(0, 245, 212, 0.2)", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 },
-  adFreeText: { color: "#00F5D4", fontSize: 7, fontWeight: "900" },
+  adBannerCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(26, 21, 58, 0.95)", padding: 14, borderRadius: 20, borderWidth: 1.5, borderColor: "#3EE8B5" },
+  adIconCircle: { width: 44, height: 44, borderRadius: 15, backgroundColor: "rgba(62, 232, 181, 0.12)", borderWidth: 1, borderColor: "#3EE8B5", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  adBannerKicker: { color: "#3EE8B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
+  adFreeBadge: { backgroundColor: "rgba(62, 232, 181, 0.2)", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 },
+  adFreeText: { color: "#3EE8B5", fontSize: 7, fontWeight: "900" },
   adBannerTitle: { color: "#FFF", fontSize: 13, fontWeight: "900", marginTop: 2 },
   adBannerDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2 },
-  adButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 64 },
+  adButton: { backgroundColor: "#3EE8B5", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 64 },
   adButtonText: { color: "#0E0922", fontSize: 12, fontWeight: "900" },
 
   productCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(27, 21, 51, 0.9)", padding: 14, borderRadius: 18, borderWidth: 1, borderColor: "#372B5E" },
-  iapCard: { borderColor: "rgba(124, 92, 246, 0.35)", backgroundColor: "rgba(25, 18, 48, 0.9)" },
+  iapCard: { borderColor: "rgba(212, 180, 90, 0.35)", backgroundColor: "rgba(25, 18, 48, 0.9)" },
   productIconWrap: { width: 46, height: 46, borderRadius: 16, backgroundColor: "#251C45", borderWidth: 1.5, borderColor: "#4F3C80", alignItems: "center", justifyContent: "center", marginRight: 12, position: "relative" },
   productEmblemDot: { position: "absolute", top: 3, right: 3, width: 6, height: 6, borderRadius: 3 },
-  iapIconWrap: { borderColor: "#7C5CF6", backgroundColor: "rgba(124, 92, 246, 0.15)" },
+  iapIconWrap: { borderColor: "#D4B45A", backgroundColor: "rgba(212, 180, 90, 0.15)" },
   productIcon: { fontSize: 24 },
   productInfo: { flex: 1, marginRight: 10 },
   productName: { color: "#FFF", fontSize: 13, fontWeight: "900" },
@@ -756,13 +756,13 @@ const styles = StyleSheet.create({
   },
   productDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2, lineHeight: 14 },
 
-  chipBuyButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72, shadowColor: "#00F5D4", shadowOpacity: 0.35, shadowRadius: 6, elevation: 3 },
+  chipBuyButton: { backgroundColor: "#3EE8B5", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72, shadowColor: "#3EE8B5", shadowOpacity: 0.35, shadowRadius: 6, elevation: 3 },
   chipBuyButtonDisabled: { backgroundColor: "#261E3E", borderWidth: 1, borderColor: "#3D3360", shadowOpacity: 0, elevation: 0 },
-  chipBuyButtonOwned: { backgroundColor: "rgba(0, 245, 212, 0.12)", borderWidth: 1, borderColor: "#00F5D4", shadowOpacity: 0, elevation: 0 },
-  chipBuyButtonText: { color: "#0B132B", fontSize: 11.5, fontWeight: "900" },
+  chipBuyButtonOwned: { backgroundColor: "rgba(62, 232, 181, 0.12)", borderWidth: 1, borderColor: "#3EE8B5", shadowOpacity: 0, elevation: 0 },
+  chipBuyButtonText: { color: "#071A14", fontSize: 11.5, fontWeight: "900" },
 
-  buyButton: { backgroundColor: "#00F5D4", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72 },
-  buyButtonText: { color: "#121025", fontSize: 12, fontWeight: "900" },
+  buyButton: { backgroundColor: "#3EE8B5", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72 },
+  buyButtonText: { color: "#071A14", fontSize: 12, fontWeight: "900" },
 
   /* Satın Alma Onay Modalı Stilleri */
   confirmOverlay: {
@@ -775,11 +775,11 @@ const styles = StyleSheet.create({
   confirmCard: {
     width: "100%",
     maxWidth: 340,
-    backgroundColor: "#16112C",
+    backgroundColor: "#0E2C22",
     borderRadius: 22,
     padding: 22,
     borderWidth: 1.5,
-    borderColor: "#4A3B75",
+    borderColor: "#6B4A18",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
@@ -791,20 +791,20 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(0, 245, 212, 0.12)",
+    backgroundColor: "rgba(62, 232, 181, 0.12)",
     borderWidth: 2,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
-    shadowColor: "#00F5D4",
+    shadowColor: "#3EE8B5",
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 5,
   },
   confirmBadgeIcon: { fontSize: 28 },
   confirmKicker: {
-    color: "#A78BFA",
+    color: "#E8C36A",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
@@ -830,7 +830,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 194, 74, 0.4)",
     marginBottom: 12,
   },
-  confirmCostLabel: { color: "#C4B5FD", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
+  confirmCostLabel: { color: "#C5D9C8", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
   confirmCostValue: { color: "#FFD000", fontSize: 13, fontWeight: "900" },
   confirmDesc: {
     color: "#CBD5E1",
@@ -841,11 +841,11 @@ const styles = StyleSheet.create({
   },
   confirmBalanceInfo: {
     width: "100%",
-    backgroundColor: "rgba(23, 17, 44, 0.8)",
+    backgroundColor: "rgba(12, 42, 34, 0.8)",
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
-    borderColor: "rgba(124, 92, 246, 0.25)",
+    borderColor: "rgba(212, 180, 90, 0.25)",
     marginBottom: 18,
     alignItems: "center",
   },
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#241B42",
     borderWidth: 1,
-    borderColor: "#4A3B75",
+    borderColor: "#6B4A18",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -879,10 +879,10 @@ const styles = StyleSheet.create({
     flex: 1.2,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#00F5D4",
+    shadowColor: "#3EE8B5",
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 4,

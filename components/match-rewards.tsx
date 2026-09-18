@@ -97,9 +97,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 18,
-    backgroundColor: "rgba(22, 17, 44, 0.9)",
+    backgroundColor: "rgba(12, 42, 34, 0.9)",
     borderWidth: 1.5,
-    borderColor: "rgba(139, 92, 246, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.3)",
   },
   header: {
     flexDirection: "row",
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "rgba(139, 92, 246, 0.18)",
+    borderTopColor: "rgba(212, 180, 90, 0.18)",
     gap: 6,
   },
   leagueIcon: {

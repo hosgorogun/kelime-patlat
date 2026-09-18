@@ -965,7 +965,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
           accentColor: "#FF647C",
           primaryButton: {
             text: "DEVAM ET",
-            color: "#00F5D4",
+            color: "#3EE8B5",
             onPress: () => setShowExitModal(false),
           },
           secondaryButton: {
@@ -989,7 +989,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: "#0C091C",
+    backgroundColor: "#06140F",
     paddingTop: 4,
     paddingHorizontal: 0,
   },
@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.15)",
   },
   backBtnText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
     borderColor: "#F59E0B",
   },
   targetChipSelected: {
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
     borderWidth: 2,
     backgroundColor: "#E0F2FE",
   },
@@ -1311,7 +1311,7 @@ const styles = StyleSheet.create({
     color: "#78695C",
   },
   cellNumberBadgeSelected: {
-    color: "#0B132B",
+    color: "#071A14",
   },
   gridCellCenterArea: {
     backgroundColor: "#FEF3C7",
@@ -1339,9 +1339,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   gridCellSelected: {
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
     borderWidth: 2.5,
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
   },
   centerStarIcon: {
     fontSize: 10,
@@ -1358,7 +1358,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   cellCharSelectedText: {
-    color: "#0B132B",
+    color: "#071A14",
   },
   letterPoolContainer: {
     flexDirection: "row",
@@ -1409,15 +1409,15 @@ const styles = StyleSheet.create({
   winCard: {
     width: "100%",
     maxWidth: 340,
-    backgroundColor: "#16102B",
+    backgroundColor: "#0E2C22",
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: "#00F5D4",
+    borderColor: "#3EE8B5",
     padding: 24,
     alignItems: "center",
   },
   winTitle: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 17,
     fontWeight: "900",
     letterSpacing: 0.8,
@@ -1455,7 +1455,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   nextBtn: {
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -1464,7 +1464,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   nextBtnText: {
-    color: "#0B132B",
+    color: "#071A14",
     fontSize: 13,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1487,7 +1487,7 @@ const styles = StyleSheet.create({
 
   // SEVİYE HARİTASI STİLLERİ
   mapHeroCard: {
-    backgroundColor: "#16102B",
+    backgroundColor: "#0E2C22",
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: "#FFC24A",
@@ -1520,7 +1520,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mapStatValue: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 15,
     fontWeight: "900",
   },
@@ -1542,7 +1542,7 @@ const styles = StyleSheet.create({
   },
   levelCardNode: {
     width: "48%",
-    backgroundColor: "#1E1838",
+    backgroundColor: "#164036",
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: "#332A59",
@@ -1557,7 +1557,7 @@ const styles = StyleSheet.create({
   levelCardLocked: {
     opacity: 0.45,
     borderColor: "#1E1B2E",
-    backgroundColor: "#0F0B1E",
+    backgroundColor: "#04110C",
   },
   levelCardTop: {
     flexDirection: "row",
@@ -1580,7 +1580,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   unlockedBadgeText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 9,
     fontWeight: "800",
   },
@@ -1594,7 +1594,7 @@ const styles = StyleSheet.create({
     color: "#64748B",
   },
   levelCardFooterText: {
-    color: "#00F5D4",
+    color: "#3EE8B5",
     fontSize: 10,
     fontWeight: "800",
   },
@@ -1647,7 +1647,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   exitModalSub: {
-    color: "#B8ADD1",
+    color: "#A8C5B5",
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center",
@@ -1656,14 +1656,14 @@ const styles = StyleSheet.create({
   exitModalResumeBtn: {
     width: "100%",
     height: 44,
-    backgroundColor: "#00F5D4",
+    backgroundColor: "#3EE8B5",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 10,
   },
   exitModalResumeText: {
-    color: "#0C091C",
+    color: "#06140F",
     fontSize: 13,
     fontWeight: "900",
     letterSpacing: 0.5,

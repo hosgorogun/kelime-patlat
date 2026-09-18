@@ -324,7 +324,7 @@ function HomeScreen() {
   }, [progress.lastLoginDay, ticker]);
   const activeBoardSkinColor = useMemo(() => {
     const skin = BOARD_SKINS.find((s) => s[0] === progress.selectedBoardSkin);
-    return skin ? skin[2] : "#00F5D4";
+    return skin ? skin[2] : "#3EE8B5";
   }, [progress.selectedBoardSkin]);
   const activeVictoryEffect = useMemo(() => {
     const eff = VICTORY_EFFECTS.find((e) => e[0] === progress.selectedVictoryEffect);
@@ -461,7 +461,7 @@ function HomeScreen() {
         title: `SEVİYE ATLADIN! (SEVİYE ${currentLevel})`,
         subtitle: unlockHint,
         icon: "🚀",
-        accentColor: "#00F5D4",
+        accentColor: "#3EE8B5",
         badge: `LVL ${currentLevel}`,
       });
     }
@@ -988,7 +988,7 @@ function HomeScreen() {
         kicker: "SERİ KORUMASI",
         title: "Seri Kalkanı Devreye Girdi!",
         message: `Dün oyuna giremediğin için ${reconciliation.shieldsConsumed} adet Seri Kalkanı kullanıldı ve ${reconciliation.previousStreak} günlük serin başarıyla korundu!`,
-        accentColor: "#00F5D4",
+        accentColor: "#3EE8B5",
         primaryButton: {
           text: "HARİKA!",
           onPress: () => {},
@@ -1003,7 +1003,7 @@ function HomeScreen() {
         accentColor: "#FF647C",
         primaryButton: {
           text: "YENİDEN BAŞLA",
-          color: "#00F5D4",
+          color: "#3EE8B5",
           onPress: () => {},
         },
       });
@@ -1881,7 +1881,7 @@ function HomeScreen() {
             title: "🛡️ SERİ KALKANI KULLANILDI!",
             subtitle: "Günlük rotayı tamamlayamadın ancak 1 Seri Kalkanın harcanarak galibiyet serin korundu!",
             icon: "🛡️",
-            accentColor: "#A78BFA",
+            accentColor: "#E8C36A",
           });
           return {
             ...current,
@@ -1915,7 +1915,7 @@ function HomeScreen() {
       title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
       subtitle: `${res.reward.label} tamamlandı! +${res.reward.amount} ${rewardName} hesabına eklendi.`,
       icon: res.reward.icon,
-      accentColor: "#00F5D4",
+      accentColor: "#3EE8B5",
       badge: `+${res.reward.amount}`,
     });
   };
@@ -1973,13 +1973,13 @@ function HomeScreen() {
               style={{
                 width: "100%",
                 maxWidth: 360,
-                backgroundColor: "#130E26",
+                backgroundColor: "#0E2C22",
                 borderRadius: 24,
                 borderWidth: 1.5,
-                borderColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                borderColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "daily" ? "#E8C36A" : "#3EE8B5",
                 padding: 24,
                 alignItems: "center",
-                shadowColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                shadowColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "daily" ? "#E8C36A" : "#3EE8B5",
                 shadowOpacity: 0.3,
                 shadowRadius: 16,
                 elevation: 12,
@@ -1991,9 +1991,9 @@ function HomeScreen() {
                   width: 52,
                   height: 52,
                   borderRadius: 26,
-                  backgroundColor: selectedModeInfo === "arcade" ? "rgba(255, 208, 0, 0.15)" : selectedModeInfo === "vintage" ? "rgba(255, 194, 74, 0.15)" : selectedModeInfo === "solo" ? "rgba(56, 189, 248, 0.15)" : selectedModeInfo === "daily" ? "rgba(167, 139, 250, 0.15)" : "rgba(0, 245, 212, 0.15)",
+                  backgroundColor: selectedModeInfo === "arcade" ? "rgba(255, 208, 0, 0.15)" : selectedModeInfo === "vintage" ? "rgba(255, 194, 74, 0.15)" : selectedModeInfo === "solo" ? "rgba(56, 189, 248, 0.15)" : selectedModeInfo === "daily" ? "rgba(167, 139, 250, 0.15)" : "rgba(62, 232, 181, 0.15)",
                   borderWidth: 1.5,
-                  borderColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                  borderColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#E8C36A" : "#3EE8B5",
                   justifyContent: "center",
                   alignItems: "center",
                   marginBottom: 12,
@@ -2004,7 +2004,7 @@ function HomeScreen() {
                 </Text>
               </View>
 
-              <Text style={{ color: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 4, textAlign: "center" }}>
+              <Text style={{ color: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#E8C36A" : "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginBottom: 4, textAlign: "center" }}>
                 {selectedModeInfo === "pvp" ? "ÇOK OYUNCULU DÜELLO" : selectedModeInfo === "daily" ? "ETKİNLİK MODU" : selectedModeInfo === "solo" ? "KLASİK TEK OYUNCU" : selectedModeInfo === "vintage" ? "NOSTALJİ MİNİ OYUN" : "ZAMANA KARŞI YARIŞ"}
               </Text>
               
@@ -2014,7 +2014,7 @@ function HomeScreen() {
 
               <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255, 255, 255, 0.05)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginBottom: 16, gap: 6 }}>
                 <Text style={{ color: "#94A3B8", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>OYUN TİPİ:</Text>
-                <Text style={{ color: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4", fontSize: 12, fontWeight: "900" }}>
+                <Text style={{ color: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#E8C36A" : "#3EE8B5", fontSize: 12, fontWeight: "900" }}>
                   {selectedModeInfo === "pvp" ? "1v1 Canlı Rakip" : selectedModeInfo === "daily" ? "Günlük Özel Tahta" : selectedModeInfo === "solo" ? "Bölüm İlerleme Sistemi" : selectedModeInfo === "vintage" ? "10×10 Gazete Matrisi" : "Süreli Rekor Modu"}
                 </Text>
               </View>
@@ -2052,13 +2052,13 @@ function HomeScreen() {
                   width: "100%",
                   height: 46,
                   borderRadius: 14,
-                  backgroundColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#A78BFA" : "#00F5D4",
+                  backgroundColor: selectedModeInfo === "arcade" ? "#FFD000" : selectedModeInfo === "vintage" ? "#FFC24A" : selectedModeInfo === "solo" ? "#38BDF8" : selectedModeInfo === "daily" ? "#E8C36A" : "#3EE8B5",
                   justifyContent: "center",
                   alignItems: "center",
                   opacity: pressed ? 0.8 : 1,
                 })}
               >
-                <Text style={{ color: "#0B071E", fontSize: 14, fontWeight: "900", letterSpacing: 0.8 }}>ANLADIM</Text>
+                <Text style={{ color: "#04110C", fontSize: 14, fontWeight: "900", letterSpacing: 0.8 }}>ANLADIM</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -2079,13 +2079,13 @@ function HomeScreen() {
               style={{
                 width: "100%",
                 maxWidth: 360,
-                backgroundColor: "#130E26",
+                backgroundColor: "#0E2C22",
                 borderRadius: 24,
                 borderWidth: 2,
-                borderColor: "#00F5D4",
+                borderColor: "#3EE8B5",
                 padding: 24,
                 alignItems: "center",
-                shadowColor: "#00F5D4",
+                shadowColor: "#3EE8B5",
                 shadowOpacity: 0.35,
                 shadowRadius: 20,
                 elevation: 14,
@@ -2098,9 +2098,9 @@ function HomeScreen() {
                   width: 56,
                   height: 56,
                   borderRadius: 28,
-                  backgroundColor: "rgba(0,245,212,0.12)",
+                  backgroundColor: "rgba(62,232,181,0.12)",
                   borderWidth: 1.5,
-                  borderColor: "#00F5D4",
+                  borderColor: "#3EE8B5",
                   justifyContent: "center",
                   alignItems: "center",
                   marginBottom: 14,
@@ -2110,7 +2110,7 @@ function HomeScreen() {
               </View>
 
               {/* Üst etiket */}
-              <Text style={{ color: "#00F5D4", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>
+              <Text style={{ color: "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>
                 DERECELİ DÜELLO
               </Text>
 
@@ -2123,11 +2123,11 @@ function HomeScreen() {
               <View style={{ width: "100%", gap: 8, marginBottom: 20 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
                   <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "700" }}>⏱ SÜRE</Text>
-                  <Text style={{ color: "#00F5D4", fontSize: 12, fontWeight: "900" }}>{pendingMatchConfirm?.durationText}</Text>
+                  <Text style={{ color: "#3EE8B5", fontSize: 12, fontWeight: "900" }}>{pendingMatchConfirm?.durationText}</Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
                   <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "700" }}>🗺 ROTA</Text>
-                  <Text style={{ color: "#A78BFA", fontSize: 12, fontWeight: "900" }}>{pendingMatchConfirm?.routesText}</Text>
+                  <Text style={{ color: "#E8C36A", fontSize: 12, fontWeight: "900" }}>{pendingMatchConfirm?.routesText}</Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
                   <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "700" }}>🏅 LP</Text>
@@ -2149,13 +2149,13 @@ function HomeScreen() {
                     width: "100%",
                     height: 50,
                     borderRadius: 14,
-                    backgroundColor: "#00F5D4",
+                    backgroundColor: "#3EE8B5",
                     justifyContent: "center",
                     alignItems: "center",
                     opacity: pressed ? 0.8 : 1,
                   })}
                 >
-                  <Text style={{ color: "#0B071E", fontSize: 15, fontWeight: "900", letterSpacing: 1 }}>⚔️ SAVAŞI BAŞLAT</Text>
+                  <Text style={{ color: "#04110C", fontSize: 15, fontWeight: "900", letterSpacing: 1 }}>⚔️ SAVAŞI BAŞLAT</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setPendingMatchConfirm(null)}
@@ -2196,19 +2196,19 @@ function HomeScreen() {
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)", justifyContent: "center", alignItems: "center", padding: 24 }}>
             <View style={{
               width: "100%", maxWidth: 360,
-              backgroundColor: "#130E26",
+              backgroundColor: "#0E2C22",
               borderRadius: 28,
               borderWidth: 2,
-              borderColor: "#00F5D4",
+              borderColor: "#3EE8B5",
               padding: 28,
-              shadowColor: "#00F5D4",
+              shadowColor: "#3EE8B5",
               shadowOpacity: 0.25,
               shadowRadius: 20,
               elevation: 16,
             }}>
               {/* Başlık */}
               <Text style={{ fontSize: 26, textAlign: "center", marginBottom: 4 }}>🎁</Text>
-              <Text style={{ color: "#00F5D4", fontSize: 18, fontWeight: "900", letterSpacing: 1.2, textAlign: "center", marginBottom: 4 }}>
+              <Text style={{ color: "#3EE8B5", fontSize: 18, fontWeight: "900", letterSpacing: 1.2, textAlign: "center", marginBottom: 4 }}>
                 HOŞ GELDİN HEDİYESİ!
               </Text>
               <Text style={{ color: "#94A3B8", fontSize: 12, textAlign: "center", marginBottom: 20, lineHeight: 18 }}>
@@ -2225,21 +2225,21 @@ function HomeScreen() {
                   </View>
                   <Text style={{ color: "#FFD000", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>BAŞLANGIÇ</Text>
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0, 245, 212, 0.08)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(0, 245, 212, 0.3)", padding: 14, gap: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(62, 232, 181, 0.08)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", padding: 14, gap: 14 }}>
                   <Text style={{ fontSize: 28 }}>👁️</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: "#00F5D4", fontSize: 20, fontWeight: "900" }}>5</Text>
+                    <Text style={{ color: "#3EE8B5", fontSize: 20, fontWeight: "900" }}>5</Text>
                     <Text style={{ color: "#E2E8F0", fontSize: 13, fontWeight: "700" }}>Radar İpucu Hakkı</Text>
                   </View>
-                  <Text style={{ color: "#00F5D4", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>JOKER</Text>
+                  <Text style={{ color: "#3EE8B5", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>JOKER</Text>
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(154, 118, 237, 0.1)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(154, 118, 237, 0.35)", padding: 14, gap: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(212, 180, 90, 0.1)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.35)", padding: 14, gap: 14 }}>
                   <Text style={{ fontSize: 28 }}>🛡️</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: "#9A76ED", fontSize: 20, fontWeight: "900" }}>1</Text>
+                    <Text style={{ color: "#D4B45A", fontSize: 20, fontWeight: "900" }}>1</Text>
                     <Text style={{ color: "#E2E8F0", fontSize: 13, fontWeight: "700" }}>Seri Kalkanı</Text>
                   </View>
-                  <Text style={{ color: "#9A76ED", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>KORUMA</Text>
+                  <Text style={{ color: "#D4B45A", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>KORUMA</Text>
                 </View>
               </View>
 
@@ -2288,18 +2288,18 @@ function HomeScreen() {
                   }
                 }}
                 style={({ pressed }) => ({
-                  backgroundColor: "#00F5D4",
+                  backgroundColor: "#3EE8B5",
                   borderRadius: 18,
                   paddingVertical: 15,
                   alignItems: "center",
                   opacity: pressed || isClaimingWelcomeReward ? 0.7 : 1,
-                  shadowColor: "#00F5D4",
+                  shadowColor: "#3EE8B5",
                   shadowOpacity: 0.4,
                   shadowRadius: 10,
                   elevation: 6,
                 })}
               >
-                <Text style={{ color: "#0B132B", fontSize: 14, fontWeight: "900", letterSpacing: 1 }}>HARİKA, BAŞLA! 🚀</Text>
+                <Text style={{ color: "#071A14", fontSize: 14, fontWeight: "900", letterSpacing: 1 }}>HARİKA, BAŞLA! 🚀</Text>
               </Pressable>
             </View>
           </View>
@@ -2341,7 +2341,7 @@ function HomeScreen() {
                         title: "GÜNLÜK ROTA KİLİTLİ",
                         subtitle: "Bugünkü sabit rotayı zaten tamamladın! Yarın yeni bir hak kazanacaksın.",
                         icon: "🔒",
-                        accentColor: "#A78BFA",
+                        accentColor: "#E8C36A",
                       });
                       return;
                     }
@@ -2380,7 +2380,7 @@ function HomeScreen() {
                   title: "GÜNLÜK ROTA KİLİTLİ",
                   subtitle: "Bugünkü sabit rotayı zaten tamamladın! Yarın yeni bir hak kazanacaksın.",
                   icon: "🔒",
-                  accentColor: "#A78BFA",
+                  accentColor: "#E8C36A",
                 });
                 return;
               }
@@ -2394,15 +2394,15 @@ function HomeScreen() {
             }}
             style={({ pressed }) => [
               styles.primaryButton,
-              { backgroundColor: THEME_PACKS.find(p => p.id === progress.selectedTheme)?.accent ?? "#06B6D4" },
+              { backgroundColor: THEME_PACKS.find(p => p.id === progress.selectedTheme)?.accent ?? "#3EE8B5" },
               dailyDone && styles.disabledButton,
               pressed && !dailyDone && styles.pressed
             ]}
           >
-            <Text style={[styles.primaryButtonText, { color: "#0B132B" }]}>
+            <Text style={[styles.primaryButtonText, { color: "#071A14" }]}>
               {dailyDone ? "BUGÜNLÜK HAKKIN BİTTİ" : "BUGÜNKÜ ROTAYI BAŞLAT"}
             </Text>
-            <Text style={[styles.primaryButtonArrow, { color: "#0B132B" }]}>→</Text>
+            <Text style={[styles.primaryButtonArrow, { color: "#071A14" }]}>→</Text>
           </Pressable>
 
           <Text style={styles.notice}>
@@ -2463,7 +2463,7 @@ function HomeScreen() {
               title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
               subtitle: res.message,
               icon: res.success ? "👥" : "ℹ️",
-              accentColor: res.success ? "#00F5D4" : "#FFC24A",
+              accentColor: res.success ? "#3EE8B5" : "#FFC24A",
             });
           }}
           onChallenge={(target) => {
@@ -2625,7 +2625,7 @@ function HomeScreen() {
                 const data = await res.json();
                 if (res.ok && data.progress) {
                   setProgress(data.progress);
-                  setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#00F5D4" });
+                  setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#3EE8B5" });
                   return;
                 }
               } catch {
@@ -2650,7 +2650,7 @@ function HomeScreen() {
               void syncProgressToCloud(next);
               return next;
             });
-            setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#00F5D4" });
+            setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#3EE8B5" });
           }}
           onSelectFrame={(selectedFrame) => {
             setProgress((current) => {
@@ -2658,7 +2658,7 @@ function HomeScreen() {
               void syncProgressToCloud(next);
               return next;
             });
-            setGlobalToast({ id: `frame-${Date.now()}`, title: "ÇERÇEVE KUŞANILDI", subtitle: "Profiler sinyalin güncellendi.", icon: "✨", accentColor: "#00F5D4" });
+            setGlobalToast({ id: `frame-${Date.now()}`, title: "ÇERÇEVE KUŞANILDI", subtitle: "Profiler sinyalin güncellendi.", icon: "✨", accentColor: "#3EE8B5" });
           }}
           onSelectVictoryEffect={(selectedVictoryEffect) => {
             setProgress((current) => {
@@ -2666,7 +2666,7 @@ function HomeScreen() {
               void syncProgressToCloud(next);
               return next;
             });
-            setGlobalToast({ id: `effect-${Date.now()}`, title: "ZAFER EFEKTİ SEÇİLDİ", subtitle: "Bitiriş kutlama efekti aktif.", icon: "💥", accentColor: "#A78BFA" });
+            setGlobalToast({ id: `effect-${Date.now()}`, title: "ZAFER EFEKTİ SEÇİLDİ", subtitle: "Bitiriş kutlama efekti aktif.", icon: "💥", accentColor: "#E8C36A" });
           }}
           onSelectBoardSkin={(selectedBoardSkin) => {
             setProgress((current) => {
@@ -2694,7 +2694,7 @@ function HomeScreen() {
                 const data = await res.json();
                 if (res.ok && data.progress) {
                   setProgress(data.progress);
-                  setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#00F5D4" });
+                  setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#3EE8B5" });
                   return true;
                 }
               } catch {
@@ -2713,7 +2713,7 @@ function HomeScreen() {
               void syncProgressToCloud(next);
               return next;
             });
-            setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#00F5D4" });
+            setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#3EE8B5" });
             return true;
           }}
           onBack={() => setScreen("home")}
@@ -2926,9 +2926,9 @@ function HomeScreen() {
 
   if (authLoading) {
     return (
-      <ScreenContainer style={{ flex: 1, backgroundColor: "#0C091C", justifyContent: "center", alignItems: "center" }}>
+      <ScreenContainer style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#00F5D4" />
+        <ActivityIndicator size="large" color="#3EE8B5" />
       </ScreenContainer>
     );
   }
@@ -3022,7 +3022,7 @@ function HomeScreen() {
 
   if (screen === "vintage") {
     return (
-      <ScreenContainer style={{ flex: 1, backgroundColor: "#0C091C" }}>
+      <ScreenContainer style={{ flex: 1 }}>
         <StatusBar style="light" />
         <VintagePuzzle
           onBack={() => setScreen("home")}
@@ -3099,7 +3099,7 @@ function HomeScreen() {
               title,
               subtitle,
               icon: icon || "ℹ️",
-              accentColor: color || "#00F5D4",
+              accentColor: color || "#3EE8B5",
             });
           }}
           onSelectAvatar={(selectedAvatar) => {
@@ -3120,7 +3120,7 @@ function HomeScreen() {
               title: "UNVAN KUŞANILDI",
               subtitle: `"${selectedTitle}" unvanı profilinde ve maçlarda aktif edildi.`,
               icon: "🏷️",
-              accentColor: "#00F5D4",
+              accentColor: "#3EE8B5",
             });
           }}
           onSelectTheme={(selectedTheme) => {
@@ -3148,7 +3148,7 @@ function HomeScreen() {
               title: avatarPhoto ? "PROFİL FOTOĞRAFI GÜNCELLENDİ" : "GLİF AVATARINA GEÇİLDİ",
               subtitle: avatarPhoto ? "Yeni profil portreniz kuşanıldı." : "Klasik siber glif simgenize geri dönüldü.",
               icon: "📷",
-              accentColor: "#00F5D4",
+              accentColor: "#3EE8B5",
             });
           }}
           sfxOn={sfxOn}
@@ -3272,7 +3272,7 @@ function HomeScreen() {
               title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
               subtitle: res.message,
               icon: res.success ? "👥" : "ℹ️",
-              accentColor: res.success ? "#00F5D4" : "#FFC24A",
+              accentColor: res.success ? "#3EE8B5" : "#FFC24A",
             });
           }}
           onChallenge={(target) => {
@@ -3416,7 +3416,7 @@ function HomeScreen() {
             height: boardWidth,
             position: "relative",
             borderColor: activeBoardSkinColor ? `${activeBoardSkinColor}66` : "rgba(148, 163, 184, 0.15)",
-            shadowColor: activeBoardSkinColor || "#00F5D4",
+            shadowColor: activeBoardSkinColor || "#3EE8B5",
             shadowOpacity: 0.3,
             shadowRadius: 10,
             elevation: 4,
@@ -3719,12 +3719,12 @@ function HomeScreen() {
                 maxWidth: 440,
                 height: "88%",
                 maxHeight: 740,
-                backgroundColor: "#130E26",
+                backgroundColor: "#0E2C22",
                 borderRadius: 24,
                 borderWidth: 2,
-                borderColor: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185",
+                borderColor: isDraw ? "#E8C36A" : iWon ? "#2DD4BF" : "#FB7185",
                 overflow: "hidden",
-                shadowColor: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185",
+                shadowColor: isDraw ? "#E8C36A" : iWon ? "#2DD4BF" : "#FB7185",
                 shadowOpacity: 0.35,
                 shadowRadius: 18,
                 elevation: 16,
@@ -3739,7 +3739,7 @@ function HomeScreen() {
               >
                 <View style={styles.resultModalHeader}>
                   <Text style={styles.resultModalIcon}>{isDraw ? "⚔️" : iWon ? `${activeVictoryEffect} 🏆 ${activeVictoryEffect}` : "💔"}</Text>
-                  <Text style={[styles.resultModalTitle, { color: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185" }]}>
+                  <Text style={[styles.resultModalTitle, { color: isDraw ? "#E8C36A" : iWon ? "#2DD4BF" : "#FB7185" }]}>
                     {isDraw ? "BERABERE BİTTİ!" : iWon ? `TUR SENİN! ${activeVictoryEffect}` : "TUR RAKİBİNİN"}
                   </Text>
                   <Text style={styles.resultModalSub}>
@@ -3767,11 +3767,11 @@ function HomeScreen() {
                             openUserProfile(opponent);
                           }}
                           style={({ pressed }) => [
-                            { backgroundColor: "rgba(124, 92, 246, 0.2)", borderColor: "#7C5CF6", borderWidth: 1, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
+                            { backgroundColor: "rgba(212, 180, 90, 0.2)", borderColor: "#D4B45A", borderWidth: 1, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
                             pressed && { opacity: 0.7 }
                           ]}
                         >
-                          <Text style={{ color: "#C4B5FD", fontSize: 9, fontWeight: "900" }}>👤 PROFİL</Text>
+                          <Text style={{ color: "#C5D9C8", fontSize: 9, fontWeight: "900" }}>👤 PROFİL</Text>
                         </Pressable>
                         {!socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === opponent.name.toLocaleLowerCase("tr-TR")) && (
                           <Pressable
@@ -3798,15 +3798,15 @@ function HomeScreen() {
                                 title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
                                 subtitle: res.message,
                                 icon: res.success ? "👥" : "ℹ️",
-                                accentColor: res.success ? "#00F5D4" : "#FFC24A",
+                                accentColor: res.success ? "#3EE8B5" : "#FFC24A",
                               });
                             }}
                             style={({ pressed }) => [
-                              { backgroundColor: "rgba(0, 245, 212, 0.2)", borderColor: "#00F5D4", borderWidth: 1, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
+                              { backgroundColor: "rgba(62, 232, 181, 0.2)", borderColor: "#3EE8B5", borderWidth: 1, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6 },
                               pressed && { opacity: 0.7 }
                             ]}
                           >
-                            <Text style={{ color: "#00F5D4", fontSize: 9, fontWeight: "900" }}>➕ EKLE</Text>
+                            <Text style={{ color: "#3EE8B5", fontSize: 9, fontWeight: "900" }}>➕ EKLE</Text>
                           </Pressable>
                         )}
                       </View>
@@ -3879,12 +3879,12 @@ function HomeScreen() {
                       width: "100%",
                       height: 48,
                       borderRadius: 14,
-                      backgroundColor: "#00F5D4",
+                      backgroundColor: "#3EE8B5",
                       flexDirection: "row",
                       alignItems: "center",
                       justifyContent: "center",
                       marginTop: 8,
-                      shadowColor: "#00F5D4",
+                      shadowColor: "#3EE8B5",
                       shadowOpacity: 0.3,
                       shadowRadius: 10,
                       elevation: 4,
@@ -3892,7 +3892,7 @@ function HomeScreen() {
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={{ color: "#0B071E", fontSize: 13, fontWeight: "900", letterSpacing: 0.8 }}>
+                  <Text style={{ color: "#04110C", fontSize: 13, fontWeight: "900", letterSpacing: 0.8 }}>
                     {me?.rematch ? "RAKİP BEKLENİYOR..." : "↻ RÖVANŞ İSTE"}
                   </Text>
                 </Pressable>
@@ -3933,7 +3933,7 @@ function HomeScreen() {
                     pressed && styles.pressed,
                   ]}
                 >
-                  <Text style={{ color: "#00F5D4", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>
+                  <Text style={{ color: "#3EE8B5", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }}>
                     🔍 TAHTAYI VE KELİMELERİ İNCELE
                   </Text>
                 </Pressable>
@@ -3951,12 +3951,12 @@ function HomeScreen() {
         onRequestClose={() => setShowLeaveDuelModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowLeaveDuelModal(false)}>
-          <Pressable style={[styles.modalContent, { backgroundColor: "#130E26", borderColor: "#FF007F", borderWidth: 2, width: "90%", maxWidth: 360, paddingVertical: 24, paddingHorizontal: 20, borderRadius: 28 }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.modalContent, { backgroundColor: "#0E2C22", borderColor: "#E8A54B", borderWidth: 2, width: "90%", maxWidth: 360, paddingVertical: 24, paddingHorizontal: 20, borderRadius: 28 }]} onPress={(e) => e.stopPropagation()}>
             <Text style={{ fontSize: 36, textAlign: "center", marginBottom: 6 }}>⚔️</Text>
-            <Text style={{ color: "#FF007F", fontSize: 18, fontWeight: "900", letterSpacing: 1.2, textAlign: "center", marginBottom: 6 }}>
+            <Text style={{ color: "#E8A54B", fontSize: 18, fontWeight: "900", letterSpacing: 1.2, textAlign: "center", marginBottom: 6 }}>
               DÜELLODAN AYRIL?
             </Text>
-            <Text style={{ color: "#B5A9CD", fontSize: 12, textAlign: "center", marginBottom: 22, lineHeight: 18, fontWeight: "600" }}>
+            <Text style={{ color: "#8FBAAB", fontSize: 12, textAlign: "center", marginBottom: 22, lineHeight: 18, fontWeight: "600" }}>
               Canlı düello henüz devam ediyor! Şimdi ayrılırsan maç mağlubiyet sayılabilir ve lig puanı kaybedebilirsin.
             </Text>
 
@@ -3967,18 +3967,18 @@ function HomeScreen() {
                   setShowLeaveDuelModal(false);
                 }}
                 style={({ pressed }) => ({
-                  backgroundColor: "#00F5D4",
+                  backgroundColor: "#3EE8B5",
                   borderRadius: 16,
                   paddingVertical: 14,
                   alignItems: "center",
                   opacity: pressed ? 0.85 : 1,
-                  shadowColor: "#00F5D4",
+                  shadowColor: "#3EE8B5",
                   shadowOpacity: 0.4,
                   shadowRadius: 8,
                   elevation: 4,
                 })}
               >
-                <Text style={{ color: "#0B132B", fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>⚔️ SAVAŞA DEVAM ET</Text>
+                <Text style={{ color: "#071A14", fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>⚔️ SAVAŞA DEVAM ET</Text>
               </Pressable>
 
               <Pressable
@@ -3997,7 +3997,7 @@ function HomeScreen() {
                   opacity: pressed ? 0.8 : 1,
                 })}
               >
-                <Text style={{ color: "#FF007F", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 }}>🏃‍♂️ MAÇI TERK ET VE AYRIL</Text>
+                <Text style={{ color: "#E8A54B", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 }}>🏃‍♂️ MAÇI TERK ET VE AYRIL</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -4016,8 +4016,8 @@ function HomeScreen() {
             style={[
               styles.modalContent,
               {
-                backgroundColor: "#130E26",
-                borderColor: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F",
+                backgroundColor: "#0E2C22",
+                borderColor: selectedModeInfo === "pvp" ? "#3EE8B5" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#E8C36A" : "#E8A54B",
                 borderWidth: 2,
                 width: "90%",
                 maxWidth: 370,
@@ -4034,9 +4034,9 @@ function HomeScreen() {
                   width: 54,
                   height: 54,
                   borderRadius: 27,
-                  backgroundColor: selectedModeInfo === "pvp" ? "rgba(0,245,212,0.12)" : selectedModeInfo === "daily" ? "rgba(255,194,74,0.12)" : selectedModeInfo === "vintage" ? "rgba(167,139,250,0.12)" : "rgba(255,0,127,0.12)",
+                  backgroundColor: selectedModeInfo === "pvp" ? "rgba(62,232,181,0.12)" : selectedModeInfo === "daily" ? "rgba(255,194,74,0.12)" : selectedModeInfo === "vintage" ? "rgba(167,139,250,0.12)" : "rgba(255,0,127,0.12)",
                   borderWidth: 1.5,
-                  borderColor: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F",
+                  borderColor: selectedModeInfo === "pvp" ? "#3EE8B5" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#E8C36A" : "#E8A54B",
                   justifyContent: "center",
                   alignItems: "center",
                   marginBottom: 10,
@@ -4047,7 +4047,7 @@ function HomeScreen() {
                 </Text>
               </View>
 
-              <Text style={{ color: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F", fontSize: 11, fontWeight: "900", letterSpacing: 1.2, marginBottom: 2 }}>
+              <Text style={{ color: selectedModeInfo === "pvp" ? "#3EE8B5" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#E8C36A" : "#E8A54B", fontSize: 11, fontWeight: "900", letterSpacing: 1.2, marginBottom: 2 }}>
                 {selectedModeInfo === "pvp" ? "ÇOK OYUNCULU SİBER MOD" : selectedModeInfo === "daily" ? "ETKİNLİK MODU" : selectedModeInfo === "vintage" ? "KLASİK MACERA MODU" : "TEMPO HÜCUM MODU"}
               </Text>
               <Text style={{ color: "#FFFFFF", fontSize: 20, fontWeight: "900", textAlign: "center" }}>
@@ -4055,7 +4055,7 @@ function HomeScreen() {
               </Text>
             </View>
 
-            <Text style={{ color: "#B5A9CD", fontSize: 12, textAlign: "center", marginBottom: 16, lineHeight: 18 }}>
+            <Text style={{ color: "#8FBAAB", fontSize: 12, textAlign: "center", marginBottom: 16, lineHeight: 18 }}>
               {selectedModeInfo === "pvp"
                 ? "Gerçek zamanlı olarak bir rakiple veya botla kapış! Süre dolmadan harita üzerindeki gizli kelimeleri bağlayarak en yüksek puanı topla. Kazanan lig puanı (LP) ve çip ödülü alır."
                 : selectedModeInfo === "daily"
@@ -4084,14 +4084,14 @@ function HomeScreen() {
                 setSelectedModeInfo(null);
               }}
               style={({ pressed }) => ({
-                backgroundColor: selectedModeInfo === "pvp" ? "#00F5D4" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#A78BFA" : "#FF007F",
+                backgroundColor: selectedModeInfo === "pvp" ? "#3EE8B5" : selectedModeInfo === "daily" ? "#FFC24A" : selectedModeInfo === "vintage" ? "#E8C36A" : "#E8A54B",
                 borderRadius: 16,
                 paddingVertical: 14,
                 alignItems: "center",
                 opacity: pressed ? 0.85 : 1,
               })}
             >
-              <Text style={{ color: "#0B132B", fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>ANLADIM, BAŞLA! 🚀</Text>
+              <Text style={{ color: "#071A14", fontSize: 13, fontWeight: "900", letterSpacing: 1 }}>ANLADIM, BAŞLA! 🚀</Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -4137,7 +4137,7 @@ function HomeScreen() {
             title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
             subtitle: res.message,
             icon: res.success ? "👥" : "ℹ️",
-            accentColor: res.success ? "#00F5D4" : "#FFC24A",
+            accentColor: res.success ? "#3EE8B5" : "#FFC24A",
           });
         }}
         onChallenge={(target) => {
@@ -4293,7 +4293,7 @@ const BoardCell = React.memo(({
               position: "absolute",
               top: size >= 8 ? 1 : 2,
               right: size >= 8 ? 1 : 2,
-              backgroundColor: isInspectedStart ? "#059669" : "rgba(15, 23, 42, 0.9)",
+              backgroundColor: isInspectedStart ? "#059669" : "rgba(8, 28, 22, 0.9)",
               borderRadius: size >= 8 ? 4 : 6,
               minWidth: size >= 8 ? 12 : 16,
               height: size >= 8 ? 12 : 16,
@@ -4515,7 +4515,7 @@ function SeasonResetModal({ data, onClose }: { data: { newSeasonId: string; prev
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: "#130D2B", borderColor: "#7C3AED", borderWidth: 2, width: "90%", maxWidth: 390, paddingVertical: 24, paddingHorizontal: 20, borderRadius: 28 }]}>
+        <View style={[styles.modalContent, { backgroundColor: "#0E2C22", borderColor: "#C9A227", borderWidth: 2, width: "90%", maxWidth: 390, paddingVertical: 24, paddingHorizontal: 20, borderRadius: 28 }]}>
           {/* Header Trophy Circle */}
           <View style={{ width: 72, height: 72, borderRadius: 26, backgroundColor: "rgba(255, 194, 74, 0.14)", borderWidth: 2, borderColor: "#FFC24A", alignItems: "center", justifyContent: "center", marginBottom: 14, shadowColor: "#FFC24A", shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 }}>
             <Text style={{ fontSize: 36 }}>🏆</Text>
@@ -4530,7 +4530,7 @@ function SeasonResetModal({ data, onClose }: { data: { newSeasonId: string; prev
           {/* Rank comparison cards */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, width: "100%", marginBottom: 20 }}>
             {/* Previous season */}
-            <View style={{ flex: 1, backgroundColor: "rgba(23, 17, 48, 0.95)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.16)" }}>
+            <View style={{ flex: 1, backgroundColor: "rgba(12, 42, 34, 0.95)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.16)" }}>
               <Text style={{ color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginBottom: 6 }}>ÖNCEKİ SEZON</Text>
               <View style={{ width: 52, height: 52, borderRadius: 16, borderWidth: 1.5, borderColor: prevTier.color, backgroundColor: "rgba(255, 255, 255, 0.06)", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
                 {prevImg ? (
@@ -4544,14 +4544,14 @@ function SeasonResetModal({ data, onClose }: { data: { newSeasonId: string; prev
             </View>
 
             {/* Arrow icon */}
-            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(124, 58, 237, 0.2)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#7C3AED" }}>
-              <Text style={{ color: "#A78BFA", fontSize: 13, fontWeight: "900" }}>➔</Text>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(201, 162, 39, 0.2)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#C9A227" }}>
+              <Text style={{ color: "#E8C36A", fontSize: 13, fontWeight: "900" }}>➔</Text>
             </View>
 
             {/* New season */}
-            <View style={{ flex: 1, backgroundColor: "rgba(6, 182, 212, 0.14)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 2, borderColor: "#00F5D4", shadowColor: "#00F5D4", shadowOpacity: 0.2, shadowRadius: 8 }}>
-              <Text style={{ color: "#00F5D4", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginBottom: 6 }}>YENİ DERECE</Text>
-              <View style={{ width: 52, height: 52, borderRadius: 16, borderWidth: 2, borderColor: newTier.color, backgroundColor: "rgba(0, 245, 212, 0.15)", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
+            <View style={{ flex: 1, backgroundColor: "rgba(6, 182, 212, 0.14)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 2, borderColor: "#3EE8B5", shadowColor: "#3EE8B5", shadowOpacity: 0.2, shadowRadius: 8 }}>
+              <Text style={{ color: "#3EE8B5", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginBottom: 6 }}>YENİ DERECE</Text>
+              <View style={{ width: 52, height: 52, borderRadius: 16, borderWidth: 2, borderColor: newTier.color, backgroundColor: "rgba(62, 232, 181, 0.15)", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
                 {newImg ? (
                   <Image source={newImg} style={{ width: 52, height: 52, borderRadius: 14 }} resizeMode="cover" />
                 ) : (
@@ -4559,7 +4559,7 @@ function SeasonResetModal({ data, onClose }: { data: { newSeasonId: string; prev
                 )}
               </View>
               <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>{newTier.tier}</Text>
-              <Text style={{ color: "#00F5D4", fontSize: 10, fontWeight: "900", marginTop: 2 }}>{data.newLp} LP</Text>
+              <Text style={{ color: "#3EE8B5", fontSize: 10, fontWeight: "900", marginTop: 2 }}>{data.newLp} LP</Text>
             </View>
           </View>
 
@@ -4573,17 +4573,17 @@ function SeasonResetModal({ data, onClose }: { data: { newSeasonId: string; prev
               alignSelf: "stretch",
               height: 52,
               borderRadius: 18,
-              backgroundColor: "#00F5D4",
+              backgroundColor: "#3EE8B5",
               alignItems: "center",
               justifyContent: "center",
-              shadowColor: "#00F5D4",
+              shadowColor: "#3EE8B5",
               shadowOpacity: 0.4,
               shadowRadius: 10,
               elevation: 6,
               opacity: pressed ? 0.85 : 1,
             } as any]}
           >
-            <Text style={{ color: "#0B132B", fontSize: 14, fontWeight: "900", letterSpacing: 1 }}>YENİ SEZONA BAŞLA 🚀</Text>
+            <Text style={{ color: "#071A14", fontSize: 14, fontWeight: "900", letterSpacing: 1 }}>YENİ SEZONA BAŞLA 🚀</Text>
           </Pressable>
         </View>
       </View>
@@ -4639,11 +4639,11 @@ function MainShell({
 
 const battleStyles = StyleSheet.create({
   gameScroll: { flexGrow: 1, paddingBottom: 50 },
-  previewCell: { backgroundColor: "#0F3652", borderColor: "#22D3EE", shadowColor: "#22D3EE", shadowOpacity: 0.45, shadowRadius: 6, elevation: 4 },
+  previewCell: { backgroundColor: "#0F3652", borderColor: "#3EE8B5", shadowColor: "#3EE8B5", shadowOpacity: 0.45, shadowRadius: 6, elevation: 4 },
   botPreviewCell: { backgroundColor: "#3D172A", borderColor: "#F43F5E", shadowColor: "#F43F5E", shadowOpacity: 0.45, shadowRadius: 6, elevation: 4 },
   cellTailBot: { borderColor: "#F43F5E", borderWidth: 2, transform: [{ scale: 1.04 }] },
   cellOrderBot: { position: "absolute", top: 3, right: 4, color: "#FFE4E6", fontSize: 8, fontWeight: "900" },
-  statusRail: { marginTop: 7, minHeight: 48, backgroundColor: "rgba(15, 23, 42, 0.85)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", borderRadius: 16, paddingHorizontal: 13, paddingVertical: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  statusRail: { marginTop: 7, minHeight: 48, backgroundColor: "rgba(8, 28, 22, 0.85)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", borderRadius: 16, paddingHorizontal: 13, paddingVertical: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   statusRailFinal: { backgroundColor: "rgba(61, 23, 42, 0.85)", borderColor: "rgba(244, 63, 94, 0.35)" },
   railLabel: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },
   timerValue: { color: "#E2E8F0", fontSize: 19, lineHeight: 21, fontWeight: "900", letterSpacing: 1.3, marginTop: 1 },
@@ -4653,7 +4653,7 @@ const battleStyles = StyleSheet.create({
   multiplierText: { color: "#FEF08A", fontSize: 8, fontWeight: "900", letterSpacing: 0.4 },
   streakBadge: { backgroundColor: "rgba(16, 185, 129, 0.15)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 5, borderWidth: 1, borderColor: "rgba(16, 185, 129, 0.45)" },
   streakText: { color: "#A7F3D0", fontSize: 8, fontWeight: "900", letterSpacing: 0.6 },
-  statsRow: { minHeight: 47, marginTop: 8, borderRadius: 16, backgroundColor: "rgba(15, 23, 42, 0.85)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", flexDirection: "row", alignItems: "center", paddingHorizontal: 10 },
+  statsRow: { minHeight: 47, marginTop: 8, borderRadius: 16, backgroundColor: "rgba(8, 28, 22, 0.85)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", flexDirection: "row", alignItems: "center", paddingHorizontal: 10 },
   statCell: { flex: 1, alignItems: "center" },
   statDivider: { width: 1, height: 24, backgroundColor: "rgba(148, 163, 184, 0.15)" },
   statLabel: { color: "#94A3B8", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 },
@@ -4670,37 +4670,37 @@ const styles = StyleSheet.create({
   subHeaderKicker: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
   subHeaderTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 },
   modeIntro: { color: "#CBD5E1", fontSize: 13, lineHeight: 19, marginTop: 23, marginBottom: 14 },
-  nameCard: { backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", padding: 14, borderRadius: 20 },
+  nameCard: { backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", padding: 14, borderRadius: 20 },
   inputLabel: { color: "#94A3B8", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   nameInput: { color: "#FFFFFF", fontSize: 17, fontWeight: "800", paddingVertical: 6, letterSpacing: 1.3 },
   sectionLabel: { color: "#94A3B8", fontSize: 10, fontWeight: "800", letterSpacing: 1.1, marginTop: 22, marginBottom: 9 },
   sizeRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
-  sizeCard: { width: "48%", backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, padding: 14 },
-  dailyThemeCard: { width: "100%", backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, padding: 14 },
-  sizeCardSelected: { borderColor: "#22D3EE", backgroundColor: "rgba(6, 182, 212, 0.12)", shadowColor: "#22D3EE", shadowOpacity: 0.1, shadowRadius: 8 },
+  sizeCard: { width: "48%", backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, padding: 14 },
+  dailyThemeCard: { width: "100%", backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, padding: 14 },
+  sizeCardSelected: { borderColor: "#F4D06F", backgroundColor: "rgba(244, 208, 111, 0.12)", shadowColor: "#F4D06F", shadowOpacity: 0.18, shadowRadius: 8 },
   sizeValue: { color: "#FFFFFF", fontSize: 25, fontWeight: "900" },
-  sizeValueSelected: { color: "#22D3EE" },
+  sizeValueSelected: { color: "#F4D06F" },
   sizeCaption: { color: "#F1F5F9", fontSize: 13, fontWeight: "800", marginTop: 4 },
   sizeDetail: { color: "#94A3B8", fontSize: 11, marginTop: 3 },
-  primaryButton: { marginTop: 18, height: 58, backgroundColor: "#06B6D4", borderRadius: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, shadowColor: "#06B6D4", shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 },
-  primaryButtonText: { color: "#0B132B", fontSize: 14, fontWeight: "900", letterSpacing: 1 },
-  primaryButtonArrow: { color: "#0B132B", fontSize: 24, fontWeight: "600" },
+  primaryButton: { marginTop: 18, height: 58, backgroundColor: "#F4D06F", borderRadius: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, shadowColor: "#F4D06F", shadowOpacity: 0.45, shadowRadius: 10, elevation: 6, borderWidth: 2, borderColor: "#8C6A2E" },
+  primaryButtonText: { color: "#3A2408", fontSize: 14, fontWeight: "900", letterSpacing: 1 },
+  primaryButtonArrow: { color: "#3A2408", fontSize: 24, fontWeight: "600" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   disabledButton: { opacity: 0.46 },
-  joinCard: { backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, padding: 14, marginTop: 14 },
+  joinCard: { backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, padding: 14, marginTop: 14 },
   joinTitle: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
   joinRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 9 },
   codeInput: { color: "#FFFFFF", fontSize: 16, fontWeight: "900", letterSpacing: 3, flex: 1, paddingVertical: 7 },
-  joinButton: { backgroundColor: "rgba(6, 182, 212, 0.15)", borderRadius: 12, paddingHorizontal: 17, paddingVertical: 12, borderWidth: 1, borderColor: "rgba(6, 182, 212, 0.3)" },
-  joinButtonText: { color: "#22D3EE", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
-  customRoomButton: { marginTop: 12, height: 52, backgroundColor: "rgba(124, 58, 237, 0.2)", borderWidth: 1.5, borderColor: "#8B5CF6", borderRadius: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
-  customRoomButtonText: { color: "#DDD6FE", fontSize: 13, fontWeight: "900", letterSpacing: 0.8 },
-  customRoomButtonIcon: { color: "#DDD6FE", fontSize: 20, fontWeight: "900" },
+  joinButton: { backgroundColor: "rgba(244, 208, 111, 0.16)", borderRadius: 12, paddingHorizontal: 17, paddingVertical: 12, borderWidth: 1.5, borderColor: "rgba(244, 208, 111, 0.45)" },
+  joinButtonText: { color: "#F4D06F", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
+  customRoomButton: { marginTop: 12, height: 52, backgroundColor: "rgba(201, 162, 39, 0.2)", borderWidth: 1.5, borderColor: "#D4B45A", borderRadius: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
+  customRoomButtonText: { color: "#D5E5D8", fontSize: 13, fontWeight: "900", letterSpacing: 0.8 },
+  customRoomButtonIcon: { color: "#D5E5D8", fontSize: 20, fontWeight: "900" },
   returnHomeButton: { marginTop: 10, height: 48, alignSelf: "stretch", backgroundColor: "rgba(255, 255, 255, 0.08)", borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.2)", borderRadius: 18, alignItems: "center", justifyContent: "center" },
   returnHomeButtonText: { color: "#E2E8F0", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
   notice: { color: "#94A3B8", textAlign: "center", fontSize: 12, lineHeight: 18, marginTop: 15, paddingHorizontal: 15 },
   navRow: { height: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  backButton: { width: 36, height: 36, justifyContent: "center", alignItems: "center", borderRadius: 12, backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)" },
+  backButton: { width: 36, height: 36, justifyContent: "center", alignItems: "center", borderRadius: 12, backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)" },
   backText: { color: "#FFFFFF", fontSize: 30, lineHeight: 32 },
   navTitle: { color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 1.2 },
   navSpacer: { width: 36 },
@@ -4710,9 +4710,9 @@ const styles = StyleSheet.create({
   inviteButton: { marginTop: 15, borderRadius: 14, backgroundColor: "rgba(99, 102, 241, 0.15)", borderWidth: 1, borderColor: "rgba(99, 102, 241, 0.4)", minHeight: 42, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 10 },
   inviteButtonText: { color: "#E0E7FF", fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
   inviteButtonIcon: { color: "#818CF8", fontSize: 18, fontWeight: "900" },
-  playerList: { backgroundColor: "rgba(15, 23, 42, 0.8)", borderRadius: 24, padding: 8, borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)" },
+  playerList: { backgroundColor: "rgba(8, 28, 22, 0.8)", borderRadius: 24, padding: 8, borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)" },
   playerRow: { flexDirection: "row", alignItems: "center", minHeight: 64, paddingHorizontal: 8, gap: 11 },
-  playerAvatar: { width: 43, height: 43, borderRadius: 15, borderWidth: 2, borderColor: "#38BDF8", backgroundColor: "#0B132B", alignItems: "center", justifyContent: "center" },
+  playerAvatar: { width: 43, height: 43, borderRadius: 15, borderWidth: 2, borderColor: "#38BDF8", backgroundColor: "#071A14", alignItems: "center", justifyContent: "center" },
   playerAvatarText: { color: "#FFFFFF", fontWeight: "900", fontSize: 13 },
   playerInfo: { flex: 1 },
   playerName: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
@@ -4723,21 +4723,21 @@ const styles = StyleSheet.create({
   waitAvatarText: { color: "#64748B", fontWeight: "700", fontSize: 19 },
   waitTitle: { color: "#E2E8F0", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
   waitSub: { color: "#64748B", fontSize: 11, marginTop: 3 },
-  ruleCard: { marginTop: 18, backgroundColor: "rgba(15, 23, 42, 0.8)", flexDirection: "row", padding: 15, borderRadius: 20, gap: 11, borderLeftWidth: 4, borderLeftColor: "#10B981", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.08)" },
+  ruleCard: { marginTop: 18, backgroundColor: "rgba(8, 28, 22, 0.8)", flexDirection: "row", padding: 15, borderRadius: 20, gap: 11, borderLeftWidth: 4, borderLeftColor: "#10B981", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.08)" },
   ruleIcon: { color: "#10B981", fontSize: 20 },
   ruleTextWrap: { flex: 1 },
   ruleTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
   ruleCopy: { color: "#CBD5E1", fontSize: 12, lineHeight: 17, marginTop: 4 },
   gameHeader: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 5 },
-  exitButton: { width: 34, height: 34, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(15, 23, 42, 0.8)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)" },
+  exitButton: { width: 34, height: 34, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(8, 28, 22, 0.8)", borderRadius: 12, borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)" },
   exitText: { color: "#E2E8F0", fontSize: 25, lineHeight: 25 },
   gameMode: { color: "#FFFFFF", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   gameCode: { color: "#94A3B8", fontSize: 9, marginTop: 2, fontWeight: "800", letterSpacing: 0.8 },
   liveChip: { backgroundColor: "rgba(6, 182, 212, 0.15)", borderRadius: 99, flexDirection: "row", alignItems: "center", paddingHorizontal: 9, paddingVertical: 6, gap: 5, borderWidth: 1, borderColor: "rgba(6, 182, 212, 0.3)" },
   liveDot: { width: 6, height: 6, borderRadius: 5, backgroundColor: "#10B981" },
-  liveText: { color: "#22D3EE", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  liveText: { color: "#3EE8B5", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   scoreRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 7 },
-  scoreBadge: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, alignItems: "center", justifyContent: "center", paddingVertical: 10, paddingHorizontal: 8 },
+  scoreBadge: { flex: 1, backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 20, alignItems: "center", justifyContent: "center", paddingVertical: 10, paddingHorizontal: 8 },
   scoreName: { color: "#E2E8F0", maxWidth: 105, fontSize: 11, fontWeight: "900", letterSpacing: 0.4 },
   scoreValue: { color: "#FFFFFF", fontSize: 26, lineHeight: 28, fontWeight: "900", marginTop: 2 },
   scoreStatus: { color: "#94A3B8", fontSize: 9.5, fontWeight: "800", letterSpacing: 0.6, marginTop: 1 },
@@ -4747,7 +4747,7 @@ const styles = StyleSheet.create({
   targetLabel: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1.3 },
   targetWord: { color: "#10B981", fontSize: 29, fontWeight: "900", letterSpacing: 2, marginTop: 2 },
   targetTip: { color: "#CBD5E1", fontSize: 11, lineHeight: 15, marginTop: 4, maxWidth: "100%", paddingHorizontal: 12, textAlign: "center" },
-  board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#0B132B", borderRadius: 26, padding: 4, borderWidth: 1.5, borderColor: "rgba(148, 163, 184, 0.15)", overflow: "hidden", userSelect: "none", touchAction: "none" } as any,
+  board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#071A14", borderRadius: 26, padding: 4, borderWidth: 1.5, borderColor: "rgba(148, 163, 184, 0.15)", overflow: "hidden", userSelect: "none", touchAction: "none" } as any,
   cellWrap: { padding: 5 },
   cell: { flex: 1, borderRadius: 99, backgroundColor: "#1C2541", borderWidth: 1.5, borderColor: "rgba(148, 163, 184, 0.2)", alignItems: "center", justifyContent: "center", aspectRatio: 1 },
   cellFinished: { backgroundColor: "#10B981" },
@@ -4764,7 +4764,7 @@ const styles = StyleSheet.create({
   cellFoundOpponent: { backgroundColor: "rgba(244, 63, 94, 0.35)", borderColor: "#FB7185", shadowColor: "#FB7185", shadowOpacity: 0.45, shadowRadius: 6, elevation: 4 },
   cellCheck: { position: "absolute", left: 4, bottom: 2, color: "#D1FAE5", fontSize: 9, fontWeight: "900" },
   cellCheckOpponent: { color: "#FDA4AF" },
-  wordTray: { minHeight: 82, marginTop: 12, borderRadius: 20, backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  wordTray: { minHeight: 82, marginTop: 12, borderRadius: 20, backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
   wordTrayInvalid: { borderColor: "#EF4444", backgroundColor: "rgba(127, 29, 29, 0.4)" },
   wordTrayAccepted: { borderColor: "#10B981", backgroundColor: "rgba(6, 95, 70, 0.4)" },
   wordLabel: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
@@ -4774,14 +4774,14 @@ const styles = StyleSheet.create({
   wordActions: { position: "absolute", right: 10, top: 19, gap: 8, alignItems: "flex-end" },
   clearWord: { paddingVertical: 2 },
   clearWordText: { color: "#F43F5E", fontSize: 9, fontWeight: "900" },
-  submitWord: { backgroundColor: "#06B6D4", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5 },
-  submitWordText: { color: "#0B132B", fontSize: 9, fontWeight: "900" },
+  submitWord: { backgroundColor: "#3EE8B5", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5 },
+  submitWordText: { color: "#071A14", fontSize: 9, fontWeight: "900" },
   cellMissed: { backgroundColor: "rgba(239, 68, 68, 0.22)", borderColor: "#EF4444", borderWidth: 1.5, shadowColor: "#EF4444", shadowOpacity: 0.45, shadowRadius: 6, elevation: 3 },
   cellLetterMissed: { color: "#FCA5A5" },
   cellInspected: { borderColor: "#F59E0B", borderWidth: 2.5, backgroundColor: "rgba(245, 158, 11, 0.3)", transform: [{ scale: 1.06 }], shadowColor: "#F59E0B", shadowOpacity: 0.7, shadowRadius: 8, elevation: 6 },
   cellLetterInspected: { color: "#FEF08A" },
   cellCheckMissed: { position: "absolute", left: 4, bottom: 2, color: "#EF4444", fontSize: 10, fontWeight: "900" },
-  foundPanel: { marginTop: 9, borderRadius: 16, backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", padding: 12 },
+  foundPanel: { marginTop: 9, borderRadius: 16, backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", padding: 12 },
   foundLabel: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
   foundTags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
   foundTag: { backgroundColor: "#334155", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 5 },
@@ -4797,14 +4797,14 @@ const styles = StyleSheet.create({
   resultPanel: { alignItems: "center", marginTop: 10 },
   resultTitle: { color: "#FFFFFF", fontSize: 17, fontWeight: "900", letterSpacing: 0.2 },
   resultCopy: { color: "#CBD5E1", fontSize: 12, marginTop: 3 },
-  viewResultsButton: { marginTop: 10, marginBottom: 6, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, backgroundColor: "rgba(0, 245, 212, 0.15)", borderWidth: 1.5, borderColor: "#00F5D4", alignItems: "center", alignSelf: "stretch" },
-  viewResultsButtonText: { color: "#00F5D4", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
-  resultModalCard: { width: "94%", maxWidth: 400, maxHeight: "92%", paddingHorizontal: 14, paddingVertical: 14, borderRadius: 24, borderWidth: 2, backgroundColor: "#130E26", alignItems: "center" },
+  viewResultsButton: { marginTop: 10, marginBottom: 6, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, backgroundColor: "rgba(62, 232, 181, 0.15)", borderWidth: 1.5, borderColor: "#3EE8B5", alignItems: "center", alignSelf: "stretch" },
+  viewResultsButtonText: { color: "#3EE8B5", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  resultModalCard: { width: "94%", maxWidth: 400, maxHeight: "92%", paddingHorizontal: 14, paddingVertical: 14, borderRadius: 24, borderWidth: 2, backgroundColor: "#0E2C22", alignItems: "center" },
   resultModalHeader: { alignItems: "center", marginBottom: 6 },
   resultModalIcon: { fontSize: 30, marginBottom: 2 },
   resultModalTitle: { fontSize: 18, fontWeight: "900", letterSpacing: 0.4 },
   resultModalSub: { color: "#CBD5E1", fontSize: 11, textAlign: "center", marginTop: 2, lineHeight: 15 },
-  resultScoreRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%", marginVertical: 6, backgroundColor: "rgba(26, 21, 51, 0.8)", borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: "rgba(124, 92, 246, 0.2)" },
+  resultScoreRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%", marginVertical: 6, backgroundColor: "rgba(26, 21, 51, 0.8)", borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.2)" },
   resultScoreCol: { flex: 1, alignItems: "center" },
   resultScoreWinner: { transform: [{ scale: 1.04 }] },
   resultScorePlayerName: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
@@ -4813,19 +4813,19 @@ const styles = StyleSheet.create({
   resultVsBox: { paddingHorizontal: 6 },
   resultVsText: { color: "#64748B", fontSize: 11, fontWeight: "900" },
   inspectBoardButton: { marginTop: 6, paddingVertical: 8, alignItems: "center", justifyContent: "center", width: "100%" },
-  inspectBoardButtonText: { color: "#00F5D4", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  inspectBoardButtonText: { color: "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
   rematchButton: { alignSelf: "stretch", marginTop: 8, height: 46 },
   roomScroll: { flexGrow: 1, paddingBottom: 8 },
-  eyebrow: { color: "#06B6D4", fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
+  eyebrow: { color: "#3EE8B5", fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", alignItems: "center", zIndex: 100 },
   modalContent: { width: "92%", maxWidth: 420, maxHeight: "90%", borderRadius: 24, borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 18, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 20, elevation: 12 },
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },
   modalBody: { color: "#FFFFFF", fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20, fontWeight: "600" },
   modalCloseButton: { borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.4, shadowRadius: 5, elevation: 4 },
-  modalCloseText: { color: "#0B132B", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
+  modalCloseText: { color: "#071A14", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
 
   // Arcade Lobby Styles
-  arcadeHeroCard: { backgroundColor: "rgba(33, 26, 61, 0.7)", borderRadius: 24, borderWidth: 1.5, borderColor: "#FFD000", padding: 20, marginTop: 14, shadowColor: "#FFD000", shadowOpacity: 0.15, shadowRadius: 12 },
+  arcadeHeroCard: { backgroundColor: "rgba(20, 54, 43, 0.7)", borderRadius: 24, borderWidth: 1.5, borderColor: "#FFD000", padding: 20, marginTop: 14, shadowColor: "#FFD000", shadowOpacity: 0.15, shadowRadius: 12 },
   arcadeHeroTop: { flexDirection: "row", alignItems: "center" },
   arcadeIconCircle: { width: 64, height: 64, borderRadius: 22, backgroundColor: "rgba(255, 208, 0, 0.15)", borderWidth: 2, borderColor: "#FFD000", alignItems: "center", justifyContent: "center" },
   arcadeHeroKicker: { color: "#FFD000", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
@@ -4833,23 +4833,23 @@ const styles = StyleSheet.create({
   arcadeHeroUnit: { color: "#FFD000", fontSize: 12, fontWeight: "900", letterSpacing: 1 },
   arcadeHeroSub: { color: "#E2E8F0", fontSize: 12, lineHeight: 18, marginTop: 14, fontWeight: "600" },
   arcadeInfoSection: { marginTop: 18 },
-  arcadeRuleTile: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "rgba(15, 23, 42, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 18, padding: 14, marginBottom: 10 },
+  arcadeRuleTile: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "rgba(8, 28, 22, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.12)", borderRadius: 18, padding: 14, marginBottom: 10 },
   arcadeRuleIcon: { fontSize: 24 },
   arcadeRuleTitle: { color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 },
   arcadeRuleDesc: { color: "#94A3B8", fontSize: 11, lineHeight: 16, marginTop: 3 },
   arcadeStartButton: { marginTop: 16, marginBottom: 30, height: 56, backgroundColor: "#FFD000", borderRadius: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22, shadowColor: "#FFD000", shadowOpacity: 0.35, shadowRadius: 10, elevation: 6 },
-  arcadeStartButtonText: { color: "#0B132B", fontSize: 13, fontWeight: "900", letterSpacing: 1 },
-  arcadeStartButtonIcon: { color: "#0B132B", fontSize: 22, fontWeight: "900" },
+  arcadeStartButtonText: { color: "#071A14", fontSize: 13, fontWeight: "900", letterSpacing: 1 },
+  arcadeStartButtonIcon: { color: "#071A14", fontSize: 22, fontWeight: "900" },
 
   // Ranked/Game Countdown Overlay Styles
   countdownOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(11, 19, 43, 0.88)", justifyContent: "center", alignItems: "center", zIndex: 999 },
-  countdownCard: { alignItems: "center", justifyContent: "center", padding: 30, borderRadius: 28, backgroundColor: "rgba(28, 37, 65, 0.95)", borderWidth: 2, borderColor: "#22D3EE", shadowColor: "#22D3EE", shadowOpacity: 0.4, shadowRadius: 20, elevation: 15 },
-  countdownOverline: { color: "#22D3EE", fontSize: 12, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
-  countdownText: { color: "#FFFFFF", fontSize: 68, fontWeight: "900", letterSpacing: 2, textShadowColor: "#22D3EE", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 16 },
+  countdownCard: { alignItems: "center", justifyContent: "center", padding: 30, borderRadius: 28, backgroundColor: "rgba(28, 37, 65, 0.95)", borderWidth: 2, borderColor: "#3EE8B5", shadowColor: "#3EE8B5", shadowOpacity: 0.4, shadowRadius: 20, elevation: 15 },
+  countdownOverline: { color: "#3EE8B5", fontSize: 12, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
+  countdownText: { color: "#FFFFFF", fontSize: 68, fontWeight: "900", letterSpacing: 2, textShadowColor: "#3EE8B5", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 16 },
   countdownHint: { color: "#94A3B8", fontSize: 12, fontWeight: "700", marginTop: 14, textAlign: "center" },
 
   // Aktif Rota Kartı ve Yön Okları
-  activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(15, 23, 42, 0.95)", borderWidth: 1.5, borderColor: "#2DD4BF", padding: 14, shadowColor: "#2DD4BF", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
+  activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(8, 28, 22, 0.95)", borderWidth: 1.5, borderColor: "#2DD4BF", padding: 14, shadowColor: "#2DD4BF", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
   activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   activeRouteTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
   activeRouteBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: "rgba(45, 212, 191, 0.4)" },
