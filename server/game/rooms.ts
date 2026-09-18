@@ -393,7 +393,7 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
                 "progress.bestScore": roundScore,
               },
             },
-            { new: true }
+            { returnDocument: 'after' }
           );
 
           currentLp = nextLp;

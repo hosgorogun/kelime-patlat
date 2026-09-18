@@ -56,6 +56,7 @@ import { socialManager } from "./shared/social";
 import { UserProfileModal, type InspectableUser } from "./components/user-profile-modal";
 import { LivesModal } from "./components/lives-modal";
 import { ErrorBoundary } from "./components/error-boundary";
+import { ModernAlertModal, type ModernAlertData } from "./components/modern-alert-modal";
 
 type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -216,6 +217,7 @@ function HomeScreen() {
     return { pageX: ne.pageX ?? 0, pageY: ne.pageY ?? 0 };
   };
   const [screen, setScreen] = useState<Screen>("home");
+  const [globalAlert, setGlobalAlert] = useState<ModernAlertData | null>(null);
   const [playerName, setPlayerName] = useState("OYUNCU");
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -423,19 +425,21 @@ function HomeScreen() {
   }, []);
 
   const watchAd = (onReward: () => void) => {
-    Alert.alert(
-      "📺 Sponsorlu Reklam İzle",
-      "Serini korumak için 15 saniyelik sponsorlu ödüllü reklam oynatılacak. Onaylıyor musunuz?",
-      [
-        { text: "Vazgeç", style: "cancel" },
-        {
-          text: "İzle ve Koruları Al",
-          onPress: () => {
-            onReward();
-          },
-        },
-      ]
-    );
+    setGlobalAlert({
+      icon: "📺",
+      kicker: "REKLAM ÖDÜLÜ",
+      title: "Sponsorlu Reklam İzle",
+      message: "Serini korumak için 15 saniyelik sponsorlu ödüllü reklam oynatılacak. Onaylıyor musunuz?",
+      accentColor: "#FFC24A",
+      primaryButton: {
+        text: "İZLE VE KORUMAYI AL",
+        color: "#FFC24A",
+        onPress: () => onReward(),
+      },
+      secondaryButton: {
+        text: "VAZGEÇ",
+      },
+    });
   };
 
   // Reactive Level-up & League Promotion Celebrations
@@ -621,62 +625,75 @@ function HomeScreen() {
         setSeasonResetModal(null);
         return true;
       }
+      if (globalAlert !== null) {
+        setGlobalAlert(null);
+        return true;
+      }
       if (screen === "room" || screen === "game") {
-        Alert.alert(
-          "Düellodan Ayrıl",
-          "Mevcut odadan ve maçtan ayrılmak istediğinize emin misiniz?",
-          [
-            { text: "Vazgeç", style: "cancel" },
-            {
-              text: "Ayrıl",
-              style: "destructive",
-              onPress: () => leaveRoom(),
-            },
-          ]
-        );
+        setGlobalAlert({
+          icon: "⚔️",
+          kicker: "DÜELLODAN AYRIL",
+          title: "Maçtan Ayrılmak İstiyor Musunuz?",
+          message: "Mevcut odadan ve maçtan ayrılmak istediğinize emin misiniz?",
+          accentColor: "#FF647C",
+          primaryButton: {
+            text: "AYRIL",
+            color: "#FF647C",
+            onPress: () => leaveRoom(),
+          },
+          secondaryButton: {
+            text: "VAZGEÇ",
+          },
+        });
         return true;
       }
       if (screen === "solo") {
-        Alert.alert(
-          dailySession ? "Günün Rotasından Ayrıl" : "Bölümden Ayrıl (-1 Can)",
-          dailySession
-            ? "Günün rotasından çıkmak istediğinize emin misiniz?"
+        setGlobalAlert({
+          icon: "⚠️",
+          kicker: dailySession ? "GÜNÜN ROTASI" : "TEK OYUNCULU MOD",
+          title: dailySession ? "Günün Rotasından Ayrıl" : "Bölümden Ayrıl (-1 Can)",
+          message: dailySession
+            ? "Günün rotasından çıkmak istediğinize emin misiniz? Günlük tek oynama hakkınızı korumak için oyunu tamamlamayı deneyin."
             : "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
-          [
-            { text: "Vazgeç", style: "cancel" },
-            {
-              text: dailySession ? "Ayrıl" : "Ayrıl (-1 Can)",
-              style: "destructive",
-              onPress: () => {
-                if (!dailySession) {
-                  completeSoloLevel(soloLevel, [], false);
-                }
-                const destination = dailySession ? "home" : "levels";
-                setDailySession(null);
-                setScreen(destination);
-              },
+          accentColor: "#FF647C",
+          primaryButton: {
+            text: dailySession ? "AYRIL" : "AYRIL (-1 CAN)",
+            color: "#FF647C",
+            onPress: () => {
+              if (!dailySession) {
+                completeSoloLevel(soloLevel, [], false);
+              }
+              const destination = dailySession ? "home" : "levels";
+              setDailySession(null);
+              setScreen(destination);
             },
-          ]
-        );
+          },
+          secondaryButton: {
+            text: "DEVAM ET",
+          },
+        });
         return true;
       }
       if (screen === "arcade") {
         if (arcadeStarted) {
-          Alert.alert(
-            "Arcade Modundan Ayrıl",
-            "Mevcut yarıştan ayrılmak istediğinize emin misiniz?",
-            [
-              { text: "Vazgeç", style: "cancel" },
-              {
-                text: "Ayrıl",
-                style: "destructive",
-                onPress: () => {
-                  setArcadeStarted(false);
-                  setScreen("home");
-                },
+          setGlobalAlert({
+            icon: "⚡",
+            kicker: "ARCADE YARIŞI",
+            title: "Yarıştan Ayrılmak İstiyor Musunuz?",
+            message: "Mevcut yarıştan ayrılmak istediğinize emin misiniz? Şu ana kadar kazandığınız skor kaydedilecektir.",
+            accentColor: "#FFC24A",
+            primaryButton: {
+              text: "AYRIL",
+              color: "#FF647C",
+              onPress: () => {
+                setArcadeStarted(false);
+                setScreen("home");
               },
-            ]
-          );
+            },
+            secondaryButton: {
+              text: "DEVAM ET",
+            },
+          });
           return true;
         }
         setScreen("home");
@@ -966,15 +983,30 @@ function HomeScreen() {
         newLp: sr.newLp ?? 0,
       });
     } else if (reconciliation.shieldSaved) {
-      Alert.alert(
-        "🛡️ Seri Kalkanı Devreye Girdi!",
-        `Dün oyuna giremediğin için ${reconciliation.shieldsConsumed} adet Seri Kalkanı kullanıldı ve ${reconciliation.previousStreak} günlük serin başarıyla korundu!`
-      );
+      setGlobalAlert({
+        icon: "🛡️",
+        kicker: "SERİ KORUMASI",
+        title: "Seri Kalkanı Devreye Girdi!",
+        message: `Dün oyuna giremediğin için ${reconciliation.shieldsConsumed} adet Seri Kalkanı kullanıldı ve ${reconciliation.previousStreak} günlük serin başarıyla korundu!`,
+        accentColor: "#00F5D4",
+        primaryButton: {
+          text: "HARİKA!",
+          onPress: () => {},
+        },
+      });
     } else if (reconciliation.streakReset && reconciliation.previousStreak > 0) {
-      Alert.alert(
-        "⚡ Günlük Seri Sıfırlandı",
-        `Dün günlük rotayı tamamlamadığın için ${reconciliation.previousStreak} günlük serin sıfırlandı. Bugün yeni bir seri başlatabilirsin!`
-      );
+      setGlobalAlert({
+        icon: "⚡",
+        kicker: "SERİ GÜNCELLEMESİ",
+        title: "Günlük Seri Sıfırlandı",
+        message: `Dün günlük rotayı tamamlamadığın için ${reconciliation.previousStreak} günlük serin sıfırlandı. Bugün yeni bir seri başlatabilirsin!`,
+        accentColor: "#FF647C",
+        primaryButton: {
+          text: "YENİDEN BAŞLA",
+          color: "#00F5D4",
+          onPress: () => {},
+        },
+      });
     }
   }, [progressReady]);
 

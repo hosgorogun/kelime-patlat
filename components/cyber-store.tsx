@@ -426,13 +426,20 @@ export function CyberStore({
             <Text style={styles.sectionSubHeader}>BİTİRİŞ PATLAMASI</Text>
           </View>
           <View style={styles.cosmeticGrid}>
-            {VICTORY_EFFECTS.map(([id, label, , cost]) => {
+            {VICTORY_EFFECTS.map(([id, label, glyph, cost]) => {
               const owned = Boolean(progress?.ownedVictoryEffects?.[id]);
               const isSelected = progress?.selectedVictoryEffect === id;
-              const isPulse = id === "pulse";
-              const isGlitch = id === "glitch";
-              const themeColor = isPulse ? "#00F5D4" : isGlitch ? "#A78BFA" : "#FFC24A";
-              const centerEmoji = isPulse ? "🌊" : isGlitch ? "💻" : "🔥";
+
+              const VICTORY_META: Record<string, { color: string; emoji: string }> = {
+                pulse: { color: "#00F5D4", emoji: "🌊" },
+                glitch: { color: "#A78BFA", emoji: "💻" },
+                flare: { color: "#F97316", emoji: "💥" },
+                lightning: { color: "#FACC15", emoji: "⚡" },
+                fireworks: { color: "#FF2A85", emoji: "🎆" },
+              };
+              const meta = VICTORY_META[id] || { color: "#FFC24A", emoji: glyph || "🔥" };
+              const themeColor = meta.color;
+              const centerEmoji = meta.emoji;
 
               return (
                 <Pressable

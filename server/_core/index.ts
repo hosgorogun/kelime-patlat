@@ -239,7 +239,7 @@ async function startServer() {
       const guest = await UserModel.findOneAndUpdate(
         { openId: guestSession.openId, guestClaimedBy: null },
         { $set: { guestClaimedBy: user.openId, updatedAt: new Date() } },
-        { new: false },
+        { returnDocument: 'before' },
       );
       if (!guest) return res.status(409).json({ error: "Bu misafir ilerlemesi daha önce başka bir hesaba aktarıldı." });
       const target = await UserModel.findOne({ openId: user.openId });
@@ -565,7 +565,7 @@ async function startServer() {
       const dbUser = await UserModel.findOneAndUpdate(
         { openId: user.openId, processedAwardIds: { $ne: payload.data.awardId } },
         { $push: { processedAwardIds: { $each: [payload.data.awardId], $slice: -200 } } },
-        { new: true },
+        { returnDocument: 'after' },
       );
       if (!dbUser) return res.status(409).json({ error: "Bu ödül isteği daha önce işlendi." });
       const current = { ...DEFAULT_PROGRESS, ...(dbUser?.progress ?? {}) } as PlayerProgress;

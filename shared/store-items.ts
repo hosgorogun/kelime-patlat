@@ -51,11 +51,11 @@ export const PROFILE_FRAMES = [
 ] as const;
 
 export const VICTORY_EFFECTS = [
-  ["pulse", "PULSE", "✦", 0],
-  ["glitch", "GLITCH", "▦", 160],
-  ["flare", "FLARE", "✹", 240],
+  ["pulse", "PULSE", "🌊", 0],
+  ["glitch", "GLITCH", "💻", 160],
+  ["flare", "FLARE", "💥", 240],
   ["lightning", "ŞİMŞEK", "⚡", 380],
-  ["fireworks", "KAVRAMA", "🎆", 450],
+  ["fireworks", "KUTLAMA", "🎆", 450],
 ] as const;
 
 export const BOARD_SKINS = [

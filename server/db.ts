@@ -184,7 +184,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       $set: updateData,
       $setOnInsert: setOnInsert,
     },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 }
 

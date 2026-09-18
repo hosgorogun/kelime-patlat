@@ -7,6 +7,8 @@ import {
   ScrollView,
   Animated,
   useWindowDimensions,
+  Modal,
+  BackHandler,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -19,6 +21,7 @@ import {
   playErrorSound,
 } from "@/shared/audio-haptics";
 import { generatePuzzle, PuzzleResult, PlacedWord } from "@/shared/puzzle-generator";
+import { ModernAlertModal } from "./modern-alert-modal";
 
 const TR_ALPHABET = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
 const VINTAGE_STORAGE_KEY = "@kelime_patlat:vintage_puzzle_progress";
@@ -166,6 +169,42 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
   const [score, setScore] = useState(() => vintageProgress?.score ?? 0);
   const [isLevelComplete, setIsLevelComplete] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [pendingExitDestination, setPendingExitDestination] = useState<"map" | "app">("map");
+
+  const handlePlayBackPress = useCallback(() => {
+    triggerHapticSelection();
+    if (!isLevelComplete) {
+      setPendingExitDestination("map");
+      setShowExitModal(true);
+    } else {
+      setViewMode("map");
+    }
+  }, [isLevelComplete]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (showExitModal) {
+        setShowExitModal(false);
+        return true;
+      }
+      if (viewMode === "play") {
+        if (!isLevelComplete) {
+          setPendingExitDestination("map");
+          setShowExitModal(true);
+        } else {
+          setViewMode("map");
+        }
+        return true;
+      }
+      onBack();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [showExitModal, viewMode, isLevelComplete, onBack]);
 
   const gridContainerRef = useRef<View>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -707,7 +746,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
     <View style={styles.outerContainer}>
       {/* Üst Başlık */}
       <View style={styles.header}>
-        <Pressable onPress={() => setViewMode("map")} style={styles.backBtn}>
+        <Pressable onPress={handlePlayBackPress} style={styles.backBtn}>
           <Text style={styles.backBtnText}>‹ HARİTA</Text>
         </Pressable>
         <View style={styles.titleWrap}>
@@ -916,6 +955,33 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
           </View>
         </View>
       )}
+
+      <ModernAlertModal
+        alert={showExitModal ? {
+          icon: "🗞️",
+          kicker: "NOSTALJİ GAZETE",
+          title: "Bulmacadan Ayrıl",
+          message: "Mevcut bulmacadan ayrılmak istediğinize emin misiniz? İlerlemeniz ve yerleştirilen harfler sıfırlanacaktır.",
+          accentColor: "#FF647C",
+          primaryButton: {
+            text: "DEVAM ET",
+            color: "#00F5D4",
+            onPress: () => setShowExitModal(false),
+          },
+          secondaryButton: {
+            text: "AYRIL",
+            onPress: () => {
+              setShowExitModal(false);
+              if (pendingExitDestination === "app") {
+                onBack();
+              } else {
+                setViewMode("map");
+              }
+            },
+          },
+        } : null}
+        onDismiss={() => setShowExitModal(false)}
+      />
     </View>
   );
 }
@@ -1546,4 +1612,76 @@ const styles = StyleSheet.create({
   },
   livesIcon: { fontSize: 12 },
   livesText: { color: "#22C55E", fontSize: 11, fontWeight: "900" },
+
+  exitModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(10, 8, 20, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  exitModalCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#1C1633",
+    borderWidth: 2,
+    borderColor: "#FF647C",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  exitModalIcon: {
+    fontSize: 42,
+    marginBottom: 8,
+  },
+  exitModalTitle: {
+    color: "#FFF9FC",
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  exitModalSub: {
+    color: "#B8ADD1",
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  exitModalResumeBtn: {
+    width: "100%",
+    height: 44,
+    backgroundColor: "#00F5D4",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  exitModalResumeText: {
+    color: "#0C091C",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  exitModalConfirmBtn: {
+    width: "100%",
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255, 100, 124, 0.4)",
+    backgroundColor: "rgba(255, 100, 124, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  exitModalConfirmText: {
+    color: "#FF647C",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
 });
