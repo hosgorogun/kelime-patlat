@@ -77,6 +77,7 @@ const playerProfileSchema = z.object({
   avatar: z.string().optional(),
   avatarPhoto: z.string().optional(),
   selectedTitle: z.string().optional(),
+  selectedFrame: z.string().optional(),
   level: z.number().optional(),
   tier: z.string().optional(),
   lp: z.number().optional(),
@@ -266,6 +267,7 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
     avatar: player!.avatar,
     avatarPhoto: player!.avatarPhoto,
     selectedTitle: player!.selectedTitle,
+    selectedFrame: player!.selectedFrame,
     level: player!.level,
     tier: player!.tier,
     lp: player!.lp,
@@ -365,6 +367,7 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
       let userAvatar: string | undefined;
       let userAvatarPhoto: string | undefined;
       let userSelectedTitle: string | undefined;
+      let userSelectedFrame: string | undefined;
 
       try {
         const dbUser = await UserModel.findOne({ openId: player.id });
@@ -398,11 +401,13 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
           userAvatar = updatedUser?.progress?.selectedAvatar || prevProgress.selectedAvatar || player.avatar;
           userAvatarPhoto = updatedUser?.progress?.avatarPhoto || prevProgress.avatarPhoto || player.avatarPhoto;
           userSelectedTitle = updatedUser?.progress?.selectedTitle || prevProgress.selectedTitle || player.selectedTitle;
+          userSelectedFrame = updatedUser?.progress?.selectedFrame || prevProgress.selectedFrame || player.selectedFrame;
         } else {
           currentTier = getLeagueTier(0).tier;
           userAvatar = player.avatar;
           userAvatarPhoto = player.avatarPhoto;
           userSelectedTitle = player.selectedTitle;
+          userSelectedFrame = player.selectedFrame;
         }
       } catch (err) {
         console.error(`[Leaderboard] Error updating user ${player.id} progress:`, err);
@@ -423,6 +428,7 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
         avatar: userAvatar,
         avatarPhoto: userAvatarPhoto,
         selectedTitle: userSelectedTitle,
+        selectedFrame: userSelectedFrame,
         level: Math.floor(nextScore / 200) + 1,
       });
 
@@ -436,6 +442,7 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
         avatar: userAvatar,
         avatarPhoto: userAvatarPhoto,
         selectedTitle: userSelectedTitle,
+        selectedFrame: userSelectedFrame,
       };
     })
   );
@@ -789,16 +796,34 @@ export function registerGameRooms(io: Server) {
       if (!isValidPayload(matchmakingJoinSchema, payload)) return fail(socket, "Geçersiz eşleştirme isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       if (!BOARD_SIZES.includes(payload.size)) return fail(socket, "Geçersiz tahta boyutu.");
-      let queue = matchmakingQueue.get(payload.size);
-      if (!queue) {
-        queue = [];
-        matchmakingQueue.set(payload.size, queue);
+
+      // Tüm boyutlardaki önceki olası kuyruk kayıtlarını temizle (hayalet oyuncuları ve boyut çakışmalarını önler)
+      for (const [s, q] of matchmakingQueue.entries()) {
+        matchmakingQueue.set(s, q.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id));
       }
-      queue = queue.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id);
+
+      let queue = matchmakingQueue.get(payload.size) || [];
+
+      // Canlı ve bağlı bir rakip bulana kadar kuyruğu incele
+      let opponent: typeof queue[0] | undefined;
+      while (queue.length > 0) {
+        const candidate = queue.shift()!;
+        const candidateSocket = io.sockets.sockets.get(candidate.socketId || "");
+        if (candidateSocket && candidateSocket.connected) {
+          opponent = candidate;
+          break;
+        } else {
+          // Bağlantısı kopmuş adayı ve zamanlayıcısını temizle
+          const candidateTimer = matchmakingTimers.get(candidate.socketId);
+          if (candidateTimer) {
+            clearTimeout(candidateTimer);
+            matchmakingTimers.delete(candidate.socketId);
+          }
+        }
+      }
+      matchmakingQueue.set(payload.size, queue);
       
-      if (queue.length > 0) {
-        const opponent = queue.shift()!;
-        matchmakingQueue.set(payload.size, queue);
+      if (opponent) {
         const opponentTimer = matchmakingTimers.get(opponent.socketId);
         if (opponentTimer) {
           clearTimeout(opponentTimer);
@@ -916,10 +941,8 @@ export function registerGameRooms(io: Server) {
         clearTimeout(existingTimer);
         matchmakingTimers.delete(socket.id);
       }
-      let queue = matchmakingQueue.get(payload.size);
-      if (queue) {
-        queue = queue.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id);
-        matchmakingQueue.set(payload.size, queue);
+      for (const [s, q] of matchmakingQueue.entries()) {
+        matchmakingQueue.set(s, q.filter(p => p.playerId !== payload.playerId && p.socketId !== socket.id));
       }
       socket.emit("matchmaking:status", { status: "idle" });
     });
@@ -1005,7 +1028,10 @@ export function registerGameRooms(io: Server) {
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(payload.code.trim().toUpperCase());
       const player = room ? roomForPlayer(room, payload.playerId) : null;
-      if (!room || !player) return;
+      if (!room || !player) {
+        socket.emit("room:error", { message: "Oda süresi doldu veya sonlandırıldı." });
+        return;
+      }
 
       // Önceki veya kopmuş soket varsa odadan çıkar
       if (player.socketId && player.socketId !== socket.id) {
@@ -1142,8 +1168,15 @@ export function registerGameRooms(io: Server) {
         if (room.status === "lobby" || room.status === "waiting") {
           leaveRoom(io, socket, room, player.id);
         } else if (room.status === "finished") {
-          // Oyuncunun geçici bağlantı kopmasında odadaki sonuç ve rövanş verisini koru
-          emitRoom(io, room);
+          // Eğer odada bağlı kalan hiçbir insan oyuncu kalmadıysa odayı hafızadan temizle
+          const hostConnected = room.host?.connected;
+          const guestConnected = room.guest && !room.guest.isBot ? room.guest.connected : false;
+          if (!hostConnected && !guestConnected) {
+            destroyRoom(room.code, room);
+          } else {
+            // Oyuncunun geçici bağlantı kopmasında odadaki sonuç ve rövanş verisini koru
+            emitRoom(io, room);
+          }
         } else if (room.status === "playing") {
           const opponent = room.host.id === player.id ? room.guest : room.host;
           room.message = `${player.name} bağlantısı koptu. (15s içinde yeniden bağlanmazsa hükmen yenilecek)`;
@@ -1178,4 +1211,35 @@ export function registerGameRooms(io: Server) {
       }
     });
   });
+
+  // Periyodik oda bellek temizliği (her 60 saniyede bir sahipsiz/eski odaları süpürür)
+  const roomSweeper = setInterval(() => {
+    const now = Date.now();
+    for (const [code, room] of rooms.entries()) {
+      const hostConnected = room.host?.connected;
+      const guestConnected = room.guest && !room.guest.isBot ? room.guest.connected : false;
+      const noHumanConnected = !hostConnected && !guestConnected;
+
+      // 1. İnsan oyuncusu kalmamış tamamlanan odalar
+      if (room.status === "finished" && noHumanConnected) {
+        destroyRoom(code, room);
+        continue;
+      }
+      // 2. TTL süresini (15 dakika) aşmış herhangi bir oda (zombi oda koruması)
+      if (room.startedAt && now - room.startedAt > ROOM_TTL_MS) {
+        destroyRoom(code, room);
+        continue;
+      }
+      // 3. Kimsenin bağlanmadığı 10 dakikadan eski bekleme/lobi odaları
+      if ((room.status === "waiting" || room.status === "lobby") && noHumanConnected && now - room.touchedAt > 10 * 60 * 1000) {
+        destroyRoom(code, room);
+        continue;
+      }
+    }
+  }, 60_000);
+
+  // Sunucu kapanışında timer'ın süreci engellemesini önle
+  if (roomSweeper && typeof roomSweeper.unref === "function") {
+    roomSweeper.unref();
+  }
 }

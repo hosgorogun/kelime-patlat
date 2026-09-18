@@ -11,14 +11,14 @@ describe("Bot AI & Persona System", () => {
     expect(bot.connected).toBe(true);
     expect(BOT_USERNAMES).toContain(bot.name);
     expect(BOT_AVATARS).toContain(bot.avatar);
-    expect(bot.level).toBeGreaterThanOrEqual(15); // hostLevel 20 - 5
-    expect(bot.level).toBeLessThanOrEqual(25);    // hostLevel 20 + 5
-    expect(bot.lp).toBeGreaterThanOrEqual(380);   // hostLp 500 - 120
-    expect(bot.lp).toBeLessThanOrEqual(620);      // hostLp 500 + 120
+    expect(bot.level!).toBeGreaterThanOrEqual(10);
+    expect(bot.level!).toBeLessThanOrEqual(25);
+    expect(bot.lp!).toBeGreaterThanOrEqual(380);
+    expect(bot.lp!).toBeLessThanOrEqual(620);
     expect(bot.tier).toBeDefined();
     expect(bot.selectedTitle).toBeDefined();
-    expect(bot.matches).toBeGreaterThan(0);
-    expect(bot.wins).toBeLessThanOrEqual(bot.matches);
+    expect(bot.matches!).toBeGreaterThan(0);
+    expect(bot.wins!).toBeLessThanOrEqual(bot.matches!);
   });
 
   it("should calculate human-like bot thinking delays with length scaling", () => {

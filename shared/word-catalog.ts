@@ -93,6 +93,22 @@ const WORD_BLACKLIST = new Set([
   "NUH", "AYLA", "AYAŞ", "SİVAS", "ZELVE", "ORLON", "ORİON", "YUNAN", "URLA",
   "VANLI", "RUMCA", "NİSAN", "METİS", "MOĞOL", "MACAR", "KİLİS", "KEŞAN",
   "ÇEÇEN", "ZENCİ", "ORYA",
+  "UŞAKLI", "KÜTAHYALI", "DÜZCELİ", "ADANALI", "ANTALYALI", "AĞRILI", "BURDURLU",
+  "RİZELİ", "MERSİNLİ", "AKSARAYLI", "HATAYLI", "AMASYALI", "BAYBURTLU", "ARTVİNLİ",
+  "TRABZONLU", "KIRŞEHİRLİ", "YALOVALI", "TUNCELİLİ", "ERZURUMLU", "ERZİNCANLI",
+  "KARABÜKLÜ", "TOKATLI", "SİVASLI", "BİNGÖLLÜ", "GİRİTLİ", "KARTALLI",
+  "BEŞİRİ", "KOZLUK", "GERCÜŞ", "HASANKEYF", "TAVAS", "ACIPAYAM", "BULDAN",
+  "SERİNHİSAR", "CİHANBEYLİ", "DOĞANHİSAR", "ILGIN", "SEYDİŞEHİR", "BEYŞEHİR",
+  "YALIHÜYÜK", "ÇATAK", "ERCİŞ", "BAHÇESARAY", "ÇAMLIDERE", "KALECİK", "HAYMANA",
+  "SİLİVRİ", "ALANYA", "MANAVGAT", "KORKUTELİ", "DEMRE", "GÜNDOĞMUŞ", "DİGOR",
+  "SARIKAMIŞ", "ARPAÇAY", "ANAMUR", "BOZYAZI", "TARSUS", "BERGAMA", "ALİAĞA",
+  "GAZİEMİR", "KARŞIYAKA", "TORBALI", "URLA", "KARABURUN", "PAZARCIK", "SİLVAN",
+  "BİSMİL", "HAZRO", "İDİL", "ULUDERE", "GÜÇLÜKONAK", "ŞEMDİNLİ", "ÇUKURCA",
+  "DERECİK", "KURTALAN", "BAYKAN", "ŞİRVAN", "BİRECİK", "AKÇAKALE", "DİYADİN",
+  "TATVAN", "MUTKİ", "GÜROYMAK", "MAZGİRT", "ÇAYIRLI", "OTLUKBELİ", "AŞKALE",
+  "İSPİR", "NARMAN", "OLTU", "PASİNLER", "ŞENKAYA", "TORTUM", "KARAÇOBAN",
+  "KÖPRÜKÖY", "UZUNDERE", "ALUCRA", "ÇAMOLUK", "YAĞLIDERE", "ÇATALPINAR", "FATSA",
+  "KORGAN", "ÜNYE", "ARHAVİ", "MURGUL", "SÜRMENE", "ŞALPAZARI", "TONYA", "VAKFIKEBİR",
 
   // --- Rahatsız edici / argo / kaba ---
   "CİFE", "SOBE", "SIYGA",
@@ -140,12 +156,14 @@ const WORD_BLACKLIST = new Set([
   "CAMİT", "FAHTE", "FAÇALI", "CARLI", "MAHCUR", "NAKİP", "MUHAT", "MAHUR", "REKİZ",
   "GABRO", "MUHİP", "RUHÇA", "RİCAL", "RÜKÜN", "RÜYET", "MEVUT", "GABİN", "REMİZ",
   "RECİM", "RÜSUM", "REVAK", "MİLEL", "MUTAT", "MÜHRE", "MUTAF", "FAÇUNA", "FAGOT",
-  "FANYA", "FASIK", "FASİT", "FİRAK", "FÜCUR", "FÜTUR", "CAĞLI", "CANFEZ", "CAVLAN"
+  "FANYA", "FASIK", "FASİT", "FİRAK", "FÜCUR", "FÜTUR", "CAĞLI", "CANFEZ", "CAVLAN",
+  "PESEK",
+  "ÇOKÇA"
 ]);
 
 
 // Senior QA Stem Filter: Removes possessive, case, participial and artificial derived suffixes
-const ARTIFICIAL_SUFFIX_REGEX = /(Sİ|SÜ|SU|SI|LİK|LUK|LÜK|MA|ME|MELİ|MALI|MEK|MAK|Cİ|CU|CÜ|CI|Çİ|ÇU|ÇÜ|ÇI|SEL|SAL|MACA|MECE|EN|AN|LENME|LANMA|ULMA|İLME)$/;
+const ARTIFICIAL_SUFFIX_REGEX = /(Sİ|SÜ|SU|SI|LİK|LUK|LÜK|MA|ME|MELİ|MALI|MEK|MAK|Cİ|CU|CÜ|CI|Çİ|ÇU|ÇÜ|ÇI|SEL|SAL|MACA|MECE|EN|AN|LENME|LANMA|ULMA|İLME|CA|CE|ÇA|ÇE)$/;
 
 // Living Turkish natural infinitives (approved core verbs)
 const NATURAL_INFINITIVES = [
@@ -162,6 +180,10 @@ const STEM_WHITELIST = new Set([
   "ÇEŞME", "BÖLME", "DÖNME", "GÖRME", "GELME", "ORMAN", "ADAM", "KADIN", "İNSAN", "VADİ",
   "SAHİL", "KENT", "ŞEHİR", "DUVAR", "TAVAN", "MASA", "KAPILMA", "SARMA", "DOLMA", "KIZARTMA",
   "FOTOSENTEZ", "EKOSİSTEM", "BİYOÇEŞİTLİLİK",
+  "BAHÇE", "PARÇA", "DİLEKÇE", "KEMENÇE", "ORTANCA", "İMECE", "AMCA", "GONCA",
+  "SERÇE", "İŞKENCE", "TABANCA", "KARINCA", "DÜŞÜNCE", "GÜVENCE", "EĞLENCE",
+  "SÖYLENCE", "DİRENCE", "GÖRÜMCE", "BİLMECE", "BULMACA", "ÇEKMECE", "DÖNENCE",
+  "LONCA", "İLTİCA",
   ...NATURAL_INFINITIVES
 ]);
 
@@ -175,7 +197,7 @@ const THEME_WORDS: Record<Exclude<WordTheme, "general">, readonly string[]> = {
     "GÖKKUŞAĞI", "BİYOÇEŞİTLİLİK", "YANARDAĞ", "KUTUPAYISI", "BUZULLAR"
   ],
   city: [
-    "EV", "ODA", "KAPI", "KENT", "YOL", "PARK", "BİNA", "KULE", "YAYA", "ÇATI", "OTEL",
+    "EVİM", "ODA", "KAPI", "KENT", "YOL", "PARK", "BİNA", "KULE", "YAYA", "ÇATI", "OTEL",
     "ŞEHİR", "YOLCU", "SEFER", "SOKAK", "CADDE", "KÖPRÜ", "PAZAR", "METRO", "ARABA", "LAMBA", "LİMAN", "SİTE",
     "HARİTA", "PUSULA", "MACERA", "TİYATRO", "SİNEMA", "MARKET", "DÜKKAN", "OTOBÜS", "TRAFİK", "BALKON", "MEYDAN", "OTOGAR", "BULVAR", "KAVŞAK", "VİYADÜK", "SANAYİ",
     "MAHALLE", "TRAMVAY", "BİSİKLET", "ASANSÖR", "PENCERE", "RESTORAN", "İSTASYON", "GÖKDELEN", "BELEDİYE", "OTOPARK", "KAMUSAL",
@@ -206,7 +228,7 @@ const THEME_WORDS: Record<Exclude<WordTheme, "general">, readonly string[]> = {
   food: [
     "TUZ", "BAL", "YAĞ", "SÜT", "ÇAY", "AŞÇI", "FIRIN", "OCAK", "TARİF", "ÇORBA", "PİLAV", "SEBZE", "MEYVE", "TATLI",
     "EKMEK", "LEZZET", "YEMEK", "TUZLU", "ŞEKER", "TAVUK", "BALIK", "KAHVE", "BÖREK", "KÖFTE", "IZGARA", "ŞERBET", "PEYNİR", "MEZE", "HELVA", "MANTI",
-    "MUTFAK", "BAHARAT", "KAVURMA", "DONDURMA", "PASTA", "SOSLAR", "İÇECEK", "GOURMET", "ZİYAFET", "SUNUM", "MENEMEN", "BAKLAVA",
+    "MUTFAK", "BAHARAT", "KAVURMA", "DONDURMA", "PASTA", "SOSLAR", "İÇECEK", "GURME", "ZİYAFET", "SUNUM", "MENEMEN", "BAKLAVA",
     "KIZARTMA", "RESTORAN", "APARATİF", "ENGİNAR", "KAHVALTI", "TEREYAĞI",
     "GASTRONOMİ", "ZEYTİNYAĞLI", "AKŞAMYEMEĞİ"
   ]

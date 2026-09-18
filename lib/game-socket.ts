@@ -27,3 +27,12 @@ export function getGameSocket() {
   }
   return gameSocket;
 }
+
+export function reconnectGameSocket() {
+  if (gameSocket) {
+    gameSocket.disconnect();
+    gameSocket.connect();
+  } else {
+    getGameSocket();
+  }
+}

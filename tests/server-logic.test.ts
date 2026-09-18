@@ -49,9 +49,16 @@ function simulateCosmeticBuy(progress: PlayerProgress, kind: "avatar" | "frame" 
     if (!entry) return { ok: false, error: "Gecersiz avatar." };
     cost = 0;
   }
+  const isAlreadyOwned =
+    kind === "frame" ? Boolean(progress.ownedFrames?.[id]) :
+    kind === "effect" ? Boolean(progress.ownedVictoryEffects?.[id]) :
+    kind === "board" ? Boolean(progress.ownedBoardSkins?.[id]) :
+    Boolean(progress.purchasedAvatars?.[id]);
+
+  const effectiveCost = isAlreadyOwned ? 0 : cost;
   const currentCoins = progress.coins ?? 0;
-  if (cost > 0 && currentCoins < cost) return { ok: false, error: "Yetersiz cip!" };
-  const nextCoins = Math.max(0, currentCoins - cost);
+  if (effectiveCost > 0 && currentCoins < effectiveCost) return { ok: false, error: "Yetersiz cip!" };
+  const nextCoins = Math.max(0, currentCoins - effectiveCost);
   let next = { ...progress, coins: nextCoins };
   if (kind === "frame") { next.selectedFrame = id; next.ownedFrames = { ...(progress.ownedFrames ?? {}), [id]: true }; }
   else if (kind === "effect") { next.selectedVictoryEffect = id; next.ownedVictoryEffects = { ...(progress.ownedVictoryEffects ?? {}), [id]: true }; }
@@ -170,6 +177,19 @@ describe("Kozmetik Satin Alma Is Mantigi (cosmetic-buy)", () => {
     expect(result.error).toContain("Yetersiz cip");
   });
 
+  it("zaten satin alinmis bir cerceveyi kusanmak 0 cipe mal olur ve bakiye 0 olsa da basarilidir", () => {
+    const progressWithOwnedFrame: PlayerProgress = {
+      ...DEFAULT_PROGRESS,
+      coins: 0,
+      ownedFrames: { signal: true, neon: true },
+      selectedFrame: "signal",
+    };
+    const result = simulateCosmeticBuy(progressWithOwnedFrame, "frame", "neon");
+    expect(result.ok).toBe(true);
+    expect(result.next!.coins).toBe(0);
+    expect(result.next!.selectedFrame).toBe("neon");
+  });
+
   it("gecersiz frame ID ile hata doner", () => {
     expect(simulateCosmeticBuy(DEFAULT_PROGRESS, "frame", "invalid_frame_99").ok).toBe(false);
   });
@@ -260,5 +280,111 @@ describe("Sunucu Yetkilendirme ve Guvenlik", () => {
     expect(validKinds).not.toContain("skin");
     expect(validKinds).not.toContain("");
   });
+
+  it("sync-progress ucretsiz cerceve/efekt/tahtayi kabul eder ancak satin alinmamis ucretli cerceveleri filtreler", () => {
+    // Sunucu tarafındaki sanitizasyon fonksiyonu simülasyonu
+    const sanitizeCosmetics = (incoming: any, serverOwned: Record<string, boolean> | undefined, catalog: readonly (readonly [string, string, any, number])[]) => {
+      const safe: Record<string, boolean> = { ...(serverOwned || {}) };
+      if (incoming && typeof incoming === "object") {
+        for (const [id, val] of Object.entries(incoming)) {
+          if (val === true) {
+            const item = catalog.find((c) => c[0] === id);
+            if (item && (item[3] === 0 || serverOwned?.[id] === true)) {
+              safe[id] = true;
+            }
+          }
+        }
+      }
+      return safe;
+    };
+
+    const serverOwnedFrames = { signal: true };
+    // Kötü niyetli istemci satın almadığı 'cyber' (500 çip) ve 'gold' (350 çip) çerçevelerini sync ile göndermeye çalışıyor
+    const hackedIncomingFrames = { signal: true, cyber: true, gold: true };
+
+    const sanitized = sanitizeCosmetics(hackedIncomingFrames, serverOwnedFrames, PROFILE_FRAMES);
+
+    expect(sanitized.signal).toBe(true);
+    expect(sanitized.cyber).toBeUndefined(); // Reddedilmeli!
+    expect(sanitized.gold).toBeUndefined();  // Reddedilmeli!
+  });
+
+  it("sync-progress daha once satin alinmis ucretli kozmetikleri korur", () => {
+    const sanitizeCosmetics = (incoming: any, serverOwned: Record<string, boolean> | undefined, catalog: readonly (readonly [string, string, any, number])[]) => {
+      const safe: Record<string, boolean> = { ...(serverOwned || {}) };
+      if (incoming && typeof incoming === "object") {
+        for (const [id, val] of Object.entries(incoming)) {
+          if (val === true) {
+            const item = catalog.find((c) => c[0] === id);
+            if (item && (item[3] === 0 || serverOwned?.[id] === true)) {
+              safe[id] = true;
+            }
+          }
+        }
+      }
+      return safe;
+    };
+
+    // Kullanıcı veritabanında 'neon' çerçevesine önceden sahip
+    const serverOwnedFrames = { signal: true, neon: true };
+    const incomingFrames = { signal: true, neon: true, chrome: true }; // 'chrome' henüz satın alınmadı
+
+    const sanitized = sanitizeCosmetics(incomingFrames, serverOwnedFrames, PROFILE_FRAMES);
+
+    expect(sanitized.signal).toBe(true);
+    expect(sanitized.neon).toBe(true);       // Önceden satın alındığı için korunmalı
+    expect(sanitized.chrome).toBeUndefined(); // Satın alınmadığı için filtrelenmeli
+  });
+
+  it("Oda temizleyici (sweeper) sahipsiz tamamlanmis odalari ve TTL suresi dolmus zombi odalari tespit eder", () => {
+    type TestRoom = {
+      code: string;
+      status: string;
+      startedAt: number | null;
+      touchedAt: number;
+      host: { connected: boolean };
+      guest: { connected: boolean; isBot?: boolean } | null;
+    };
+
+    const testRooms = new Map<string, TestRoom>([
+      ["ROOM1", { code: "ROOM1", status: "finished", startedAt: Date.now() - 5000, touchedAt: Date.now(), host: { connected: false }, guest: { connected: false } }],
+      ["ROOM2", { code: "ROOM2", status: "finished", startedAt: Date.now() - 5000, touchedAt: Date.now(), host: { connected: true }, guest: { connected: false } }],
+      ["ROOM3", { code: "ROOM3", status: "playing", startedAt: Date.now() - 16 * 60 * 1000, touchedAt: Date.now(), host: { connected: true }, guest: { connected: true } }],
+    ]);
+
+    const destroyedCodes: string[] = [];
+    const destroyTestRoom = (code: string) => {
+      destroyedCodes.push(code);
+      testRooms.delete(code);
+    };
+
+    const now = Date.now();
+    const TTL = 15 * 60 * 1000;
+
+    for (const [code, room] of testRooms.entries()) {
+      const hostConnected = room.host?.connected;
+      const guestConnected = room.guest && !room.guest.isBot ? room.guest.connected : false;
+      const noHumanConnected = !hostConnected && !guestConnected;
+
+      if (room.status === "finished" && noHumanConnected) {
+        destroyTestRoom(code);
+        continue;
+      }
+      if (room.startedAt && now - room.startedAt > TTL) {
+        destroyTestRoom(code);
+        continue;
+      }
+    }
+
+    // ROOM1: finished & no human connected -> yok edilmeli
+    expect(destroyedCodes).toContain("ROOM1");
+    // ROOM2: finished & host hala bağlı -> korunmalı
+    expect(destroyedCodes).not.toContain("ROOM2");
+    // ROOM3: 16 dakika geçmiş (TTL dolmuş zombi oda) -> yok edilmeli
+    expect(destroyedCodes).toContain("ROOM3");
+    expect(testRooms.size).toBe(1);
+    expect(testRooms.has("ROOM2")).toBe(true);
+  });
 });
+
 

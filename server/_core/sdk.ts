@@ -151,7 +151,7 @@ class SDKServer {
     return this.signSession(
       {
         openId,
-        appId: ENV.appId,
+        appId: ENV.appId || "kelime-patlat",
         name: options.name || "",
       },
       options,
@@ -169,7 +169,7 @@ class SDKServer {
 
     return new SignJWT({
       openId: payload.openId,
-      appId: payload.appId,
+      appId: payload.appId || ENV.appId || "kelime-patlat",
       name: payload.name,
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
@@ -192,14 +192,14 @@ class SDKServer {
       });
       const { openId, appId, name } = payload as Record<string, unknown>;
 
-      if (!isNonEmptyString(openId) || !isNonEmptyString(appId) || typeof name !== "string") {
+      if (!isNonEmptyString(openId) || typeof name !== "string") {
         console.warn("[Auth] Session payload missing required fields");
         return null;
       }
 
       return {
         openId,
-        appId,
+        appId: isNonEmptyString(appId) ? appId : (ENV.appId || "kelime-patlat"),
         name,
       };
     } catch (error) {

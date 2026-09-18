@@ -61,7 +61,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 const UserSchema = new Schema<User>({
   id: { type: Number, required: true },
   openId: { type: String, required: true, unique: true },
-  username: { type: String, unique: true, sparse: true, default: null },
+  username: { type: String, unique: true, sparse: true },
   passwordHash: { type: String, default: null },
   name: { type: String, default: null },
   email: { type: String, default: null },
@@ -84,15 +84,49 @@ function databaseUri() {
   return uri || "mongodb://127.0.0.1:27017/kelime_patlat";
 }
 
+export async function seedDemoUser() {
+  try {
+    await UserModel.updateMany({ username: null }, { $unset: { username: 1 } });
+    const existing = await UserModel.findOne({ username: "siber_oyuncu" });
+    if (!existing) {
+      await UserModel.create({
+        id: 5002,
+        openId: "usr_demo_siber_oyuncu",
+        username: "siber_oyuncu",
+        passwordHash: hashPassword("siber123"),
+        name: "Siber Oyuncu",
+        email: "siber@kelimepatlat.com",
+        loginMethod: "credentials",
+        role: "user",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastSignedIn: new Date(),
+      });
+      console.log("[Database] Demo hesabı başarıyla oluşturuldu: siber_oyuncu / siber123");
+    }
+  } catch (err) {
+    console.error("[Database] seedDemoUser hatası:", err);
+  }
+}
+
 let connectionPromise: Promise<typeof mongoose> | null = null;
+let hasSeededDemoUser = false;
 
 export async function connectDb() {
   if (mongoose.connection.readyState === 1) {
+    if (!hasSeededDemoUser) {
+      hasSeededDemoUser = true;
+      seedDemoUser().catch(() => {});
+    }
     return mongoose;
   }
   if (!connectionPromise || mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
     connectionPromise = mongoose.connect(databaseUri(), {
       serverSelectionTimeoutMS: 4000
+    }).then((m) => {
+      hasSeededDemoUser = true;
+      seedDemoUser().catch(() => {});
+      return m;
     }).catch((err) => {
       connectionPromise = null;
       throw err;

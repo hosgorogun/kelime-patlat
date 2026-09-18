@@ -215,6 +215,9 @@ export function getCalculatedLives(progress: Partial<PlayerProgress>): {
   }
 
   const now = Date.now();
+  if (lastRegen > now) {
+    lastRegen = now;
+  }
   const elapsed = Math.max(0, now - lastRegen);
   const regenerated = Math.floor(elapsed / LIVES_REGEN_INTERVAL_MS);
 

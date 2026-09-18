@@ -29,6 +29,7 @@ import {
   triggerHapticSelection,
   triggerHapticSuccess,
 } from "@/shared/audio-haptics";
+import { PROFILE_FRAMES } from "@/shared/store-items";
 
 export function ProfileScreen({
   playerName,
@@ -80,6 +81,8 @@ export function ProfileScreen({
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
+  const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
+  const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || "#00F5D4");
   const currentLevel = getPlayerLevel(progress.xp);
   const currentLevelXp = progress.xp % 200;
   const nextLevelXp = 200;
@@ -159,7 +162,11 @@ export function ProfileScreen({
               style={({ pressed }) => [
                 styles.avatarRing,
                 {
-                  borderColor: activeAvatar.color || "#00F5D4",
+                  borderColor: activeFrameColor,
+                  shadowColor: activeFrameColor,
+                  shadowOpacity: 0.45,
+                  shadowRadius: 10,
+                  elevation: 6,
                 },
                 pressed && { opacity: 0.85 },
               ]}

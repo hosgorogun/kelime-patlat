@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { AVATARS } from "@/shared/progression";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { PROFILE_FRAMES } from "@/shared/store-items";
 
 export type InspectableUser = {
   id: string;
@@ -19,6 +20,7 @@ export type InspectableUser = {
   avatar?: string;
   avatarPhoto?: string;
   selectedTitle?: string;
+  selectedFrame?: string;
   level?: number;
   tier?: string;
   lp?: number;
@@ -68,7 +70,7 @@ export function UserProfileModal({
 
   if (!user) return null;
 
-  const displayName = user.name.trim().slice(0, 16) || "OYUNCU";
+  const displayName = (user.name || user.username || "").trim().slice(0, 16) || "OYUNCU";
   const displayTitle = user.selectedTitle || "[ÇAYLAK]";
   const displayLevel = user.level ?? (user.xp ? Math.floor(user.xp / 200) + 1 : 1);
   const displayTier = user.tier || "DEMİR";
@@ -78,6 +80,8 @@ export function UserProfileModal({
   const avatarIcon = activeAvatarObj ? activeAvatarObj.icon : user.avatar || (user.isBot ? "🤖" : "⚡");
   const avatarColor = activeAvatarObj ? activeAvatarObj.color : "#00F5D4";
   const avatarSurface = activeAvatarObj ? activeAvatarObj.surface : "#16112C";
+  const activeFrameObj = PROFILE_FRAMES.find((f) => f[0] === user.selectedFrame);
+  const frameBorderColor = activeFrameObj ? activeFrameObj[2] : avatarColor;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -101,7 +105,7 @@ export function UserProfileModal({
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             {/* Top Identity Block */}
             <View style={styles.identityRow}>
-              <View style={[styles.avatarBox, { borderColor: avatarColor, backgroundColor: avatarSurface }]}>
+              <View style={[styles.avatarBox, { borderColor: frameBorderColor, backgroundColor: avatarSurface }]}>
                 {user.avatarPhoto && !imgError ? (
                   <Image source={{ uri: user.avatarPhoto }} style={styles.avatarImage} onError={() => setImgError(true)} />
                 ) : (

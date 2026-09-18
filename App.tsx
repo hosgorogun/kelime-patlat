@@ -32,7 +32,8 @@ import { LeagueHub } from "./components/league-hub";
 import { SoloChallenge } from "./components/solo-challenge";
 import { SoloLevels } from "./components/solo-levels";
 import { ArcadeChallenge } from "./components/arcade-challenge";
-import { getGameSocket } from "./lib/game-socket";
+import { getGameSocket, reconnectGameSocket } from "./lib/game-socket";
+import { BOARD_SKINS, PROFILE_FRAMES, VICTORY_EFFECTS } from "./shared/store-items";
 import { OnboardingGuide } from "./components/onboarding-guide";
 import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
@@ -65,30 +66,108 @@ function initials(name: string) {
   return name.trim().slice(0, 2).toLocaleUpperCase("tr-TR") || "KP";
 }
 
-function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
+function ConnectLine({
+  x1,
+  y1,
+  x2,
+  y2,
+  color,
+  opacity = 0.95,
+  showArrow = true,
+}: {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  opacity?: number;
+  showArrow?: boolean;
+}) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const length = Math.sqrt(dx * dx + dy * dy);
   const angle = Math.atan2(dy, dx);
+  const arrowPos = Math.max(0, length - 18);
+
   return (
     <View
       pointerEvents="none"
       style={{
         position: "absolute",
         left: x1,
-        top: y1 - 2.5,
+        top: y1,
         width: length,
-        height: 5,
-        backgroundColor: color,
-        transform: [
-          { rotate: `${angle}rad` }
-        ],
+        height: 0,
+        transform: [{ rotate: `${angle}rad` }],
         transformOrigin: "0% 50%",
-        zIndex: 10,
-        opacity: 0.85,
-        borderRadius: 2.5
+        zIndex: 20,
+        overflow: "visible",
       }}
-    />
+    >
+      {/* Çizgi gövdesi */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          top: -3,
+          width: Math.max(0, length - 6),
+          height: 6,
+          backgroundColor: color,
+          borderRadius: 3,
+          opacity,
+          shadowColor: color,
+          shadowOpacity: 0.8,
+          shadowRadius: 6,
+          elevation: 4,
+        }}
+      />
+      {/* Vektörel Yön Oku (Ok Sonu ->) */}
+      {showArrow && length > 14 && (
+        <View
+          style={{
+            position: "absolute",
+            left: arrowPos,
+            top: -8,
+            width: 14,
+            height: 16,
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 25,
+            opacity,
+          }}
+        >
+          {/* Dış renkli ok */}
+          <View
+            style={{
+              position: "absolute",
+              width: 0,
+              height: 0,
+              borderTopWidth: 8,
+              borderBottomWidth: 8,
+              borderLeftWidth: 14,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: color,
+            }}
+          />
+          {/* İç beyaz keskin ok */}
+          <View
+            style={{
+              position: "absolute",
+              left: 1,
+              width: 0,
+              height: 0,
+              borderTopWidth: 5,
+              borderBottomWidth: 5,
+              borderLeftWidth: 9,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: "#FFFFFF",
+            }}
+          />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -241,6 +320,14 @@ function HomeScreen() {
     const todayId = getDayId();
     return progress.lastLoginDay !== todayId;
   }, [progress.lastLoginDay, ticker]);
+  const activeBoardSkinColor = useMemo(() => {
+    const skin = BOARD_SKINS.find((s) => s[0] === progress.selectedBoardSkin);
+    return skin ? skin[2] : "#00F5D4";
+  }, [progress.selectedBoardSkin]);
+  const activeVictoryEffect = useMemo(() => {
+    const eff = VICTORY_EFFECTS.find((e) => e[0] === progress.selectedVictoryEffect);
+    return eff ? eff[2] : "✦";
+  }, [progress.selectedVictoryEffect]);
   const [seasonResetModal, setSeasonResetModal] = useState<{ newSeasonId: string; previousRank: string; previousLp: number; newLp: number } | null>(null);
   const [globalToast, setGlobalToast] = useState<ToastData | null>(null);
   const prevLevelRef = useRef<number | null>(null);
@@ -261,6 +348,41 @@ function HomeScreen() {
   const [gameCountdown, setGameCountdown] = useState<number | null>(null);
   const [inspectedUser, setInspectedUser] = useState<InspectableUser | null>(null);
   const prevStartedAtRef = useRef<number | null>(null);
+  const prevOpponentWordCountRef = useRef(0);
+
+  // Oyun bittiğinde tüm bulunan ve bulunamayan kelimelerin birleşik listesi (Unconditional Hook)
+  const allFinishedWords = useMemo(() => {
+    if (!room || room.status !== "finished") return [];
+    const myFound = room.foundWords.filter((entry) => entry.playerId === playerId);
+    const list: { word: string; path: number[]; color: string; isMissed: boolean }[] = [];
+    myFound.forEach((w, idx) => {
+      const palette = WORD_PALETTE[idx % WORD_PALETTE.length]!;
+      list.push({ word: w.word, path: w.path, color: palette.border, isMissed: false });
+    });
+    if (room.missedWords) {
+      room.missedWords.forEach((w, idx) => {
+        const colorIdx = (myFound.length + idx) % WORD_PALETTE.length;
+        const palette = WORD_PALETTE[colorIdx]!;
+        list.push({ word: w.word, path: w.path, color: palette.border, isMissed: true });
+      });
+    }
+    return list;
+  }, [room, playerId]);
+
+  // Oyun tamamlandığı anda ilk kelimenin rotasını ve oklarını tahtada otomatik aç; oyun sürerken rotaları kesinlikle sıfırla
+  useEffect(() => {
+    if (room?.status !== "finished") {
+      if (inspectedPath) setInspectedPath(null);
+      if (selectedWordInfo) setSelectedWordInfo(null);
+      return;
+    }
+    if (room.status === "finished" && allFinishedWords.length > 0 && !inspectedPath) {
+      const first = allFinishedWords[0]!;
+      setInspectedPath(first.path);
+      setInspectedColor(first.color);
+      setSelectedWordInfo({ word: first.word, definition: getWordDefinition(first.word) });
+    }
+  }, [room?.status, allFinishedWords, inspectedPath, selectedWordInfo]);
 
   const openUserProfile = useCallback(async (target: Partial<InspectableUser> & { id: string; name: string }) => {
     // Önce eldeki hazır bilgileri anında göster
@@ -272,6 +394,7 @@ function HomeScreen() {
       avatar: target.avatar,
       avatarPhoto: target.avatarPhoto,
       selectedTitle: target.selectedTitle || "[ÇAYLAK]",
+      selectedFrame: target.selectedFrame || "signal",
       level: target.level || 1,
       tier: target.tier || "DEMİR",
       lp: target.lp ?? 0,
@@ -466,6 +589,38 @@ function HomeScreen() {
         setSelectedWordInfo(null);
         return true;
       }
+      if (inspectedPath) {
+        setInspectedPath(null);
+        return true;
+      }
+      if (selectedModeInfo !== null) {
+        setSelectedModeInfo(null);
+        return true;
+      }
+      if (pendingMatchConfirm !== null) {
+        setPendingMatchConfirm(null);
+        return true;
+      }
+      if (showLivesModal) {
+        setShowLivesModal(false);
+        return true;
+      }
+      if (showWelcomeModal) {
+        setShowWelcomeModal(false);
+        return true;
+      }
+      if (showResultModal) {
+        setShowResultModal(false);
+        return true;
+      }
+      if (showLeaveDuelModal) {
+        setShowLeaveDuelModal(false);
+        return true;
+      }
+      if (seasonResetModal !== null) {
+        setSeasonResetModal(null);
+        return true;
+      }
       if (screen === "room" || screen === "game") {
         Alert.alert(
           "Düellodan Ayrıl",
@@ -482,12 +637,52 @@ function HomeScreen() {
         return true;
       }
       if (screen === "solo") {
-        const destination = dailySession ? "home" : "levels";
-        setDailySession(null);
-        setScreen(destination);
+        Alert.alert(
+          dailySession ? "Günün Rotasından Ayrıl" : "Bölümden Ayrıl (-1 Can)",
+          dailySession
+            ? "Günün rotasından çıkmak istediğinize emin misiniz?"
+            : "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
+          [
+            { text: "Vazgeç", style: "cancel" },
+            {
+              text: dailySession ? "Ayrıl" : "Ayrıl (-1 Can)",
+              style: "destructive",
+              onPress: () => {
+                if (!dailySession) {
+                  completeSoloLevel(soloLevel, [], false);
+                }
+                const destination = dailySession ? "home" : "levels";
+                setDailySession(null);
+                setScreen(destination);
+              },
+            },
+          ]
+        );
         return true;
       }
-      if (screen === "arcade" || screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "league" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store" || screen === "vintage") {
+      if (screen === "arcade") {
+        if (arcadeStarted) {
+          Alert.alert(
+            "Arcade Modundan Ayrıl",
+            "Mevcut yarıştan ayrılmak istediğinize emin misiniz?",
+            [
+              { text: "Vazgeç", style: "cancel" },
+              {
+                text: "Ayrıl",
+                style: "destructive",
+                onPress: () => {
+                  setArcadeStarted(false);
+                  setScreen("home");
+                },
+              },
+            ]
+          );
+          return true;
+        }
+        setScreen("home");
+        return true;
+      }
+      if (screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "league" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store" || screen === "vintage") {
         setScreen("home");
         return true;
       }
@@ -496,7 +691,23 @@ function HomeScreen() {
 
     const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => subscription.remove();
-  }, [screen, showGuide, selectedWordInfo, dailySession, room]);
+  }, [
+    screen,
+    showGuide,
+    selectedWordInfo,
+    inspectedPath,
+    selectedModeInfo,
+    pendingMatchConfirm,
+    showLivesModal,
+    showWelcomeModal,
+    showResultModal,
+    showLeaveDuelModal,
+    seasonResetModal,
+    arcadeStarted,
+    dailySession,
+    soloLevel,
+    room,
+  ]);
 
   // Load token and verify auth state
   useEffect(() => {
@@ -902,6 +1113,8 @@ function HomeScreen() {
     if (room.status === "playing") {
       victoryCueRef.current = null;
       setShowResultModal(false);
+      setInspectedPath(null);
+      setSelectedWordInfo(null);
       if (room.startedAt && room.startedAt !== prevStartedAtRef.current) {
         prevStartedAtRef.current = room.startedAt;
         if (room.startedAt > Date.now() - 1500) {
@@ -939,9 +1152,20 @@ function HomeScreen() {
   const setRoomFromServer = useCallback((next: RoomSnapshot) => {
     activeRoomCodeRef.current = next.code;
     setRoom(next);
+    if (next.status !== "finished") {
+      setInspectedPath(null);
+      setSelectedWordInfo(null);
+    }
     if (next.status === "playing" || next.status === "finished") setScreen("game");
     else setScreen("room");
     setNotice(next.message);
+
+    const opponentFoundCount = next.foundWords.filter((entry) => entry.playerId !== playerId).length;
+    if (next.status === "playing" && prevOpponentWordCountRef.current < opponentFoundCount) {
+      haptics.light();
+    }
+    prevOpponentWordCountRef.current = next.status === "playing" ? opponentFoundCount : 0;
+
     const pendingWord = pendingWordRef.current;
     const accepted = Boolean(pendingWord && next.foundWords.some((entry) => entry.word === pendingWord && entry.playerId === playerId));
     if (accepted) {
@@ -955,14 +1179,20 @@ function HomeScreen() {
     } else if (next.status !== "playing") {
       clearSelection();
     }
-  }, [clearFeedbackLater, clearSelection]);
+  }, [clearFeedbackLater, clearSelection, playerId]);
 
   useEffect(() => {
     const socket = getGameSocket();
     const onRoomUpdate = (next: RoomSnapshot) => setRoomFromServer(next);
     const onRoomError = (payload: { message?: string }) => {
       haptics.error();
-      setNotice(payload.message ?? "Odayla ilgili bir sorun oluştu.");
+      const msg = payload.message ?? "Odayla ilgili bir sorun oluştu.";
+      setNotice(msg);
+      if (msg.includes("Oda süresi") || msg.includes("sonlandırıldı") || msg.includes("bulunamadı")) {
+        activeRoomCodeRef.current = null;
+        setRoom(null);
+        setScreen("home");
+      }
     };
     const onRejected = (payload?: { word?: string; reason?: string }) => {
       if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
@@ -1044,6 +1274,8 @@ function HomeScreen() {
   };
 
   const createRoom = async (size = selectedSize) => {
+    setInspectedPath(null);
+    setSelectedWordInfo(null);
     haptics.light();
     const socket = await ensureConnectedSocket();
     if (!socket || !socket.connected) {
@@ -1062,6 +1294,7 @@ function HomeScreen() {
       avatar: progress.selectedAvatar,
       avatarPhoto: progress.avatarPhoto,
       selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      selectedFrame: progress.selectedFrame || "signal",
       level: getPlayerLevel(progress.xp),
       tier: getLeagueTier(progress).tier,
       lp: progress.lp || 0,
@@ -1077,6 +1310,8 @@ function HomeScreen() {
 
   const startBotDuel = async (size: BoardSize) => {
     setSelectedSize(size);
+    setInspectedPath(null);
+    setSelectedWordInfo(null);
     setScreen("online");
     haptics.light();
     const socket = await ensureConnectedSocket();
@@ -1096,6 +1331,7 @@ function HomeScreen() {
       avatar: progress.selectedAvatar,
       avatarPhoto: progress.avatarPhoto,
       selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      selectedFrame: progress.selectedFrame || "signal",
       level: getPlayerLevel(progress.xp),
       tier: getLeagueTier(progress).tier,
       lp: progress.lp || 0,
@@ -1140,6 +1376,8 @@ function HomeScreen() {
       setNotice("5 karakterli oda kodunu yaz.");
       return;
     }
+    setInspectedPath(null);
+    setSelectedWordInfo(null);
     const socket = await ensureConnectedSocket();
     if (!socket || !socket.connected) {
       setNotice("Sunucuya bağlanılamadı. Lütfen internet bağlantını kontrol et.");
@@ -1158,6 +1396,7 @@ function HomeScreen() {
       avatar: progress.selectedAvatar,
       avatarPhoto: progress.avatarPhoto,
       selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      selectedFrame: progress.selectedFrame || "signal",
       level: getPlayerLevel(progress.xp),
       tier: getLeagueTier(progress).tier,
       lp: progress.lp || 0,
@@ -2695,6 +2934,7 @@ function HomeScreen() {
               await AsyncStorage.setItem("kelime-patlat:player-name", fallbackGuestName);
             }
           }
+          reconnectGameSocket();
           setScreen("home");
         }}
         onSuccess={async (token, username, cloudProgress, openId, previousGuestToken) => {
@@ -2719,6 +2959,7 @@ function HomeScreen() {
               if (transferResponse.ok && transferData.progress) {
                 setProgress(transferData.progress);
                 await syncProgressToCloud(transferData.progress);
+                reconnectGameSocket();
                 setScreen("home");
                 return;
               }
@@ -2732,6 +2973,7 @@ function HomeScreen() {
 
           setProgress(mergedProgress);
           await syncProgressToCloud(mergedProgress);
+          reconnectGameSocket();
           setScreen("home");
 
           const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
@@ -2897,6 +3139,7 @@ function HomeScreen() {
             await AsyncStorage.removeItem(SOLO_UNLOCK_KEY).catch(() => undefined);
             await AsyncStorage.removeItem("kelime-patlat:player-id").catch(() => undefined);
             await AsyncStorage.removeItem("kelime-patlat:player-name").catch(() => undefined);
+            reconnectGameSocket();
           }}
           onDeleteAccount={async () => {
             haptics.error();
@@ -2927,6 +3170,7 @@ function HomeScreen() {
             setSoloUnlockedLevel(1);
             setShowGuide(false);
             setNotice("Hesabınız ve tüm verileriniz kalıcı olarak silindi.");
+            reconnectGameSocket();
             setScreen("auth");
           }}
         />
@@ -3063,7 +3307,6 @@ function HomeScreen() {
     });
   }
 
-
   return (
     <ScreenContainer style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20 }}>
       <StatusBar style="light" />
@@ -3093,6 +3336,7 @@ function HomeScreen() {
             combo={room.combos?.[playerId]}
             avatar={me?.avatar || (progress.selectedAvatar ? String(progress.selectedAvatar) : "🎮")}
             avatarPhoto={me?.avatarPhoto || progress.avatarPhoto}
+            selectedFrame={me?.selectedFrame || progress.selectedFrame || "signal"}
           />
           <View style={styles.vsMark}><Text style={styles.vsText}>VS</Text></View>
           <ScoreBadge
@@ -3106,6 +3350,7 @@ function HomeScreen() {
             combo={opponent ? room.combos?.[opponent.id] : undefined}
             avatar={opponent?.avatar || (opponent?.isBot ? "🤖" : "👤")}
             avatarPhoto={opponent?.avatarPhoto}
+            selectedFrame={opponent?.selectedFrame || "signal"}
             onPress={opponent ? () => {
               triggerHapticSelection();
               openUserProfile(opponent);
@@ -3132,8 +3377,21 @@ function HomeScreen() {
       <View
         ref={boardRef}
         onLayout={measureBoard}
-        style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative" }]}
+        style={[
+          styles.board,
+          {
+            width: boardWidth,
+            height: boardWidth,
+            position: "relative",
+            borderColor: activeBoardSkinColor ? `${activeBoardSkinColor}66` : "rgba(148, 163, 184, 0.15)",
+            shadowColor: activeBoardSkinColor || "#00F5D4",
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+            elevation: 4,
+          },
+        ]}
       >
+        {/* Canlı seçim rotası ve okları */}
         {selectedCells.slice(0, -1).map((cellIdx, i) => {
           const nextCellIdx = selectedCells[i + 1]!;
           const start = getCellCenter(cellIdx);
@@ -3145,25 +3403,33 @@ function HomeScreen() {
               y1={start.y}
               x2={end.x}
               y2={end.y}
-              color="#2DD4BF"
+              color={activeBoardSkinColor || "#2DD4BF"}
+              showArrow
             />
           );
         })}
 
-        {inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
-          const nextCellIdx = inspectedPath[i + 1]!;
-          const start = getCellCenter(cellIdx);
-          const end = getCellCenter(nextCellIdx);
-          return (
-            <ConnectLine
-              key={`inspect-line-${i}`}
-              x1={start.x}
-              y1={start.y}
-              x2={end.x}
-              y2={end.y}
-              color={inspectedColor || "#F59E0B"}
-            />
-          );
+        {/* Oyun bittiğinde: Tahtadaki TÜM kelimelerin rotalarını ve yön oklarını hemen çiz */}
+        {room.status === "finished" && allFinishedWords.map((fw, fwIdx) => {
+          const isCurrentInspected = Boolean(inspectedPath && inspectedPath.length === fw.path.length && inspectedPath.every((c, ci) => c === fw.path[ci]));
+          const lineOpacity = inspectedPath ? (isCurrentInspected ? 1 : 0.4) : 0.92;
+          return fw.path.slice(0, -1).map((cellIdx, i) => {
+            const nextCellIdx = fw.path[i + 1]!;
+            const start = getCellCenter(cellIdx);
+            const end = getCellCenter(nextCellIdx);
+            return (
+              <ConnectLine
+                key={`finished-line-${fwIdx}-${i}`}
+                x1={start.x}
+                y1={start.y}
+                x2={end.x}
+                y2={end.y}
+                color={fw.color}
+                opacity={lineOpacity}
+                showArrow
+              />
+            );
+          });
         })}
 
         {room.board.map((letter, index) => {
@@ -3172,8 +3438,16 @@ function HomeScreen() {
           const isTail = selectedCells.at(-1) === index;
           const foundBy = foundCellOwners.get(index);
           const isFound = foundBy !== undefined;
-          const isInspected = Boolean(inspectedPath?.includes(index));
           const cellColor = foundCellColors.get(index);
+
+          let inspectedOrder = (room.status === "finished" && inspectedPath) ? inspectedPath.indexOf(index) : -1;
+          let isInspectedStart = room.status === "finished" && inspectedPath !== null && inspectedOrder === 0;
+          let isInspectedEnd = (room.status === "finished" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
+          let isInspected = room.status === "finished" && inspectedPath !== null && inspectedOrder >= 0;
+
+          // Oyun bittiğinde, inspectedPath seçilmemişse hücreleri zorla işaretleme
+          // (tüm kelimeler kendi renkli hücreleriyle gösterilmeli, ayrıca isInspected zorlamaya gerek yok)
+
 
           return <BoardCell
             key={`${letter}-${index}`}
@@ -3192,6 +3466,9 @@ function HomeScreen() {
             botOrder={-1}
             isBotTail={false}
             isInspected={isInspected}
+            inspectedOrder={inspectedOrder}
+            isInspectedStart={isInspectedStart}
+            isInspectedEnd={isInspectedEnd}
             cellColor={cellColor}
           />;
         })}
@@ -3229,8 +3506,76 @@ function HomeScreen() {
           </View>
         </View>
       )}
+      {/* Aktif Kelime Rotası ve Harf Yön Akışı Kartı */}
+      {selectedWordInfo && inspectedPath && (
+        <View style={styles.activeRouteCard}>
+          <View style={styles.activeRouteHeader}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={{ fontSize: 14 }}>🧭</Text>
+              <Text style={styles.activeRouteTitle}>KELİME ROTASI & YÖNÜ</Text>
+              <View style={[styles.activeRouteBadge, { backgroundColor: inspectedColor ? `${inspectedColor}25` : "rgba(45, 212, 191, 0.2)" }]}>
+                <Text style={[styles.activeRouteBadgeText, { color: inspectedColor || "#2DD4BF" }]}>
+                  {selectedWordInfo.word.length} HARF
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                setSelectedWordInfo(null);
+                setInspectedPath(null);
+              }}
+              style={({ pressed }) => [styles.activeRouteClose, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={styles.activeRouteCloseText}>✕ Rotayı Kapat</Text>
+            </Pressable>
+          </View>
+
+          {/* Harf akışı ve oklar */}
+          <View style={styles.activeRouteFlow}>
+            {selectedWordInfo.word.split("").map((ch, idx, arr) => (
+              <React.Fragment key={`route-ch-${idx}`}>
+                <View style={[
+                  styles.activeRouteChip,
+                  idx === 0 && styles.activeRouteChipStart,
+                  idx === arr.length - 1 && styles.activeRouteChipEnd,
+                ]}>
+                  <Text style={[
+                    styles.activeRouteChipText,
+                    idx === 0 && styles.activeRouteChipTextStart,
+                    idx === arr.length - 1 && styles.activeRouteChipTextEnd,
+                  ]}>
+                    {ch}
+                  </Text>
+                  <Text style={[
+                    styles.activeRouteChipSub,
+                    idx === 0 && { color: "#34D399" },
+                    idx === arr.length - 1 && { color: "#F87171" },
+                  ]}>
+                    {idx + 1}
+                  </Text>
+                </View>
+                {idx < arr.length - 1 && (
+                  <Text style={[styles.activeRouteArrow, { color: inspectedColor || "#2DD4BF" }]}>➔</Text>
+                )}
+              </React.Fragment>
+            ))}
+          </View>
+
+          {selectedWordInfo.definition ? (
+            <View style={styles.activeRouteDefBox}>
+              <Text style={styles.activeRouteDefLabel}>TDK ANLAMI</Text>
+              <Text style={styles.activeRouteDefText}>{selectedWordInfo.definition}</Text>
+            </View>
+          ) : null}
+        </View>
+      )}
+
       <View style={styles.foundPanel}>
         <Text style={styles.foundLabel}>{room.status === "finished" ? "OYUNDAKİ TÜM KELİMELER (SÖZLÜK VE ROTA İÇİN DOKUN)" : "BULDUĞUN KELİMELER"}</Text>
+        {room.status === "finished" && !inspectedPath && (
+          <Text style={styles.routeExploreHint}>👆 Harflerin başlangıç ve bitiş oklarını tahtada görmek için bir kelimeye dokun.</Text>
+        )}
         
         <View style={{ marginTop: 6 }}>
           <Text style={{ color: "#2DD4BF", fontSize: 10, fontWeight: "800", letterSpacing: 0.5, marginBottom: 4 }}>
@@ -3314,7 +3659,7 @@ function HomeScreen() {
 
       {room.status === "finished" ? (
         <View style={styles.resultPanel}>
-          <Text style={styles.resultTitle}>{isDraw ? "BERABERE BİTTİ!" : iWon ? "TUR SENİN!" : "TUR RAKİBİNİN"}</Text>
+          <Text style={styles.resultTitle}>{isDraw ? "BERABERE BİTTİ!" : iWon ? `TUR SENİN! ${activeVictoryEffect}` : "TUR RAKİBİNİN"}</Text>
           <Text style={styles.resultCopy}>{isDraw ? "İki taraf da eşit puan topladı! Rövanşla kazananı belirle." : iWon ? "En yüksek puanı sen topladın." : "Rövanşta daha fazla kelime bul."}</Text>
           <Pressable onPress={() => setShowResultModal(true)} style={({ pressed }) => [styles.viewResultsButton, pressed && styles.pressed]}>
             <Text style={styles.viewResultsButtonText}>📊 SONUÇ VE DETAY KARTINI GÖR</Text>
@@ -3331,21 +3676,6 @@ function HomeScreen() {
         <Text style={styles.notice}>{notice}</Text>
       )}
       </ScrollView>
-
-      {selectedWordInfo && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => { setSelectedWordInfo(null); setInspectedPath(null); }}>
-          <Pressable style={styles.modalOverlay} onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); }}>
-            <Pressable style={[styles.modalContent, { backgroundColor: "#1A1530", borderColor: "#2DD4BF" }]} onPress={(e) => e.stopPropagation()}>
-              <Text style={[styles.modalTitle, { color: "#2DD4BF" }]}>{selectedWordInfo.word}</Text>
-              <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
-              <Pressable onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); }} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: "#2DD4BF" }, pressed && { opacity: 0.8 }]}>
-                <Text style={styles.modalCloseText}>KAPAT</Text>
-              </Pressable>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
-
 
       {/* Game Over / Match Result Modal */}
       {room.status === "finished" && showResultModal && (
@@ -3376,9 +3706,9 @@ function HomeScreen() {
                 bounces={false}
               >
                 <View style={styles.resultModalHeader}>
-                  <Text style={styles.resultModalIcon}>{isDraw ? "⚔️" : iWon ? "🏆" : "💔"}</Text>
+                  <Text style={styles.resultModalIcon}>{isDraw ? "⚔️" : iWon ? `${activeVictoryEffect} 🏆 ${activeVictoryEffect}` : "💔"}</Text>
                   <Text style={[styles.resultModalTitle, { color: isDraw ? "#A78BFA" : iWon ? "#2DD4BF" : "#FB7185" }]}>
-                    {isDraw ? "BERABERE BİTTİ!" : iWon ? "TUR SENİN!" : "TUR RAKİBİNİN"}
+                    {isDraw ? "BERABERE BİTTİ!" : iWon ? `TUR SENİN! ${activeVictoryEffect}` : "TUR RAKİBİNİN"}
                   </Text>
                   <Text style={styles.resultModalSub}>
                     {isDraw ? "İki taraf da eşit puan topladı! Rövanşla kazananı belirle." : iWon ? "Tebrikler! En yüksek puanı toplayarak turu kazandın." : "Rakip bu tur daha hızlı davrandı. Rövanşla puanları geri al!"}
@@ -3818,6 +4148,9 @@ const BoardCell = React.memo(({
   botOrder,
   isBotTail,
   isInspected,
+  inspectedOrder,
+  isInspectedStart,
+  isInspectedEnd,
   cellColor,
 }: {
   letter: string;
@@ -3835,6 +4168,9 @@ const BoardCell = React.memo(({
   botOrder?: number;
   isBotTail?: boolean;
   isInspected?: boolean;
+  inspectedOrder?: number;
+  isInspectedStart?: boolean;
+  isInspectedEnd?: boolean;
   cellColor?: {
     bg: string;
     border: string;
@@ -3875,6 +4211,22 @@ const BoardCell = React.memo(({
           elevation: 4,
         },
         isInspected && styles.cellInspected,
+        isInspectedStart && {
+          borderColor: cellColor?.border ?? "#10B981",
+          borderWidth: 3,
+          shadowColor: cellColor?.glow ?? "#10B981",
+          shadowOpacity: 0.9,
+          shadowRadius: 10,
+          elevation: 7,
+        },
+        isInspectedEnd && {
+          borderColor: cellColor?.border ?? "#EF4444",
+          borderWidth: 3,
+          shadowColor: cellColor?.glow ?? "#EF4444",
+          shadowOpacity: 0.9,
+          shadowRadius: 10,
+          elevation: 7,
+        },
         selected && battleStyles.previewCell,
         isTail && styles.cellTail,
         isBotSelected && battleStyles.botPreviewCell,
@@ -3902,6 +4254,37 @@ const BoardCell = React.memo(({
           >
             {order + 1}
           </Text>
+        )}
+        {!selected && inspectedOrder !== undefined && inspectedOrder >= 0 && (
+          <View
+            style={{
+              position: "absolute",
+              top: size >= 8 ? 1 : 2,
+              right: size >= 8 ? 1 : 2,
+              backgroundColor: isInspectedStart ? "#059669" : "rgba(15, 23, 42, 0.9)",
+              borderRadius: size >= 8 ? 4 : 6,
+              minWidth: size >= 8 ? 12 : 16,
+              height: size >= 8 ? 12 : 16,
+              justifyContent: "center",
+              alignItems: "center",
+              paddingHorizontal: 2,
+              borderWidth: 1,
+              borderColor: isInspectedStart ? "#34D399" : "rgba(255, 255, 255, 0.35)",
+              zIndex: 6,
+            }}
+          >
+            <Text
+              selectable={false}
+              style={{
+                color: "#FFFFFF",
+                fontSize: size >= 8 ? 7 : 8,
+                fontWeight: "900",
+                textAlign: "center",
+              }}
+            >
+              {inspectedOrder + 1}
+            </Text>
+          </View>
         )}
         {isBotSelected && !selected && (
           <Text
@@ -3946,11 +4329,37 @@ const BoardCell = React.memo(({
 
 
 
-function PlayerRow({ player, isMe, accent, onPress }: { player: { name: string; connected: boolean; ready: boolean; isBot?: boolean }; isMe: boolean; accent: string; onPress?: () => void }) {
+function PlayerRow({
+  player,
+  isMe,
+  accent,
+  onPress,
+}: {
+  player: {
+    name: string;
+    connected: boolean;
+    ready: boolean;
+    isBot?: boolean;
+    avatar?: string;
+    avatarPhoto?: string;
+    selectedFrame?: string;
+  };
+  isMe: boolean;
+  accent: string;
+  onPress?: () => void;
+}) {
+  const frameColor = PROFILE_FRAMES.find(([fId]) => fId === player.selectedFrame)?.[2];
+  const avatarBorderColor = frameColor || accent;
+  const [imgError, setImgError] = useState(false);
+
   const rowContent = (
     <View style={styles.playerRow}>
-      <View style={[styles.playerAvatar, { borderColor: accent }]}>
-        <Text style={styles.playerAvatarText}>{player.isBot ? "BOT" : initials(player.name)}</Text>
+      <View style={[styles.playerAvatar, { borderColor: avatarBorderColor, overflow: "hidden" }]}>
+        {player.avatarPhoto && !imgError ? (
+          <Image source={{ uri: player.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 20 }} resizeMode="cover" onError={() => setImgError(true)} />
+        ) : (
+          <Text style={styles.playerAvatarText}>{player.isBot ? "BOT" : player.avatar && player.avatar.length <= 3 ? player.avatar : initials(player.name)}</Text>
+        )}
       </View>
       <View style={styles.playerInfo}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
@@ -3985,6 +4394,7 @@ function ScoreBadge({
   combo,
   avatar,
   avatarPhoto,
+  selectedFrame,
   onPress,
 }: {
   name: string;
@@ -3997,11 +4407,13 @@ function ScoreBadge({
   combo?: number;
   avatar?: string;
   avatarPhoto?: string;
+  selectedFrame?: string;
   onPress?: () => void;
 }) {
   const activeAvatarObj = AVATARS.find((a) => a.id === avatar);
   const displayIcon = activeAvatarObj ? activeAvatarObj.icon : (avatar && avatar.length <= 3 ? avatar : (name.toLocaleLowerCase("tr-TR").includes("bot") ? "🤖" : "👤"));
-  const avatarBorderColor = activeAvatarObj ? activeAvatarObj.color : accent;
+  const frameColor = PROFILE_FRAMES.find(([fId]) => fId === selectedFrame)?.[2];
+  const avatarBorderColor = frameColor || (activeAvatarObj ? activeAvatarObj.color : accent);
   const avatarBgColor = activeAvatarObj ? activeAvatarObj.surface : `${accent}25`;
   const [imgError, setImgError] = useState(false);
 
@@ -4403,6 +4815,28 @@ const styles = StyleSheet.create({
   countdownOverline: { color: "#22D3EE", fontSize: 12, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
   countdownText: { color: "#FFFFFF", fontSize: 68, fontWeight: "900", letterSpacing: 2, textShadowColor: "#22D3EE", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 16 },
   countdownHint: { color: "#94A3B8", fontSize: 12, fontWeight: "700", marginTop: 14, textAlign: "center" },
+
+  // Aktif Rota Kartı ve Yön Okları
+  activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(15, 23, 42, 0.95)", borderWidth: 1.5, borderColor: "#2DD4BF", padding: 14, shadowColor: "#2DD4BF", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
+  activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  activeRouteTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
+  activeRouteBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: "rgba(45, 212, 191, 0.4)" },
+  activeRouteBadgeText: { fontSize: 10, fontWeight: "900" },
+  activeRouteClose: { backgroundColor: "rgba(239, 68, 68, 0.15)", borderWidth: 1, borderColor: "rgba(239, 68, 68, 0.35)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  activeRouteCloseText: { color: "#FCA5A5", fontSize: 10, fontWeight: "800" },
+  activeRouteFlow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5, paddingVertical: 4 },
+  activeRouteChip: { flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(30, 41, 59, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.25)", borderRadius: 10, minWidth: 36, paddingHorizontal: 6, paddingVertical: 4 },
+  activeRouteChipStart: { backgroundColor: "rgba(5, 150, 105, 0.25)", borderColor: "#10B981", borderWidth: 1.5 },
+  activeRouteChipEnd: { backgroundColor: "rgba(220, 38, 38, 0.25)", borderColor: "#EF4444", borderWidth: 1.5 },
+  activeRouteChipText: { color: "#F1F5F9", fontSize: 14, fontWeight: "900" },
+  activeRouteChipTextStart: { color: "#34D399" },
+  activeRouteChipTextEnd: { color: "#F87171" },
+  activeRouteChipSub: { color: "#94A3B8", fontSize: 8, fontWeight: "800", marginTop: 1 },
+  activeRouteArrow: { fontSize: 14, fontWeight: "900", marginHorizontal: 1 },
+  activeRouteDefBox: { marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(148, 163, 184, 0.15)" },
+  activeRouteDefLabel: { color: "#2DD4BF", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  activeRouteDefText: { color: "#CBD5E1", fontSize: 12, lineHeight: 18, marginTop: 2, fontWeight: "500" },
+  routeExploreHint: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginTop: 4, marginBottom: 2, textAlign: "center" },
 });
 
 export default function App() {

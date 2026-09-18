@@ -1,4 +1,4 @@
-const WORD_DEFINITIONS: Record<string, string> = {
+export const WORD_DEFINITIONS: Record<string, string> = {
   // Doğa
   "AY": "Dünya'nın tek doğal uydusu olan gök cismi.",
   "ADA": "Dört tarafı tamamen suyla çevrili kara parçası.",
@@ -190,7 +190,7 @@ const WORD_DEFINITIONS: Record<string, string> = {
   "PASTA": "Özel günlerde kutlanan, pandispanya ve krema ile yapılan katlı tatlı.",
   "SOSLAR": "Yemeklerin lezzetini, nemini ve görünümünü zenginleştiren kıvamlı karışımlar.",
   "İÇECEK": "Susuzluğu gidermek veya keyif almak için tüketilen her türlü sıvı gıda.",
-  "GOURMET": "Yemek ve içecek sanatında üstün tat ve kalite zevkine sahip lezzet uzmanı.",
+  "GURME": "Yemek ve içecek sanatında üstün tat ve kalite zevkine sahip lezzet uzmanı.",
   "ZİYAFET": "Özel konuklar için hazırlanan zengin, gösterişli ve bol çeşitli yemek sofrası.",
   "SUNUM": "Yemeğin tabağa ve sofraya göze hitap edecek şekilde estetik dizilmesi.",
   "MENEMEN": "Domates, biber ve yumurtanın tavada pişirildiği geleneksel kahvaltılık lezzet.",

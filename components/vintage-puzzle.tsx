@@ -827,7 +827,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
 
                   return (
                     <GridCellItem
-                      key={cIdx}
+                      key={`${rIdx}-${cIdx}`}
                       row={rIdx}
                       col={cIdx}
                       char={char}

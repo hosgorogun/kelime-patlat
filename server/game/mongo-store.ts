@@ -12,7 +12,7 @@ type ProfileDocument = {
 };
 
 type LeaderboardDocument = LeaderboardEntry & { updatedAt: Date };
-type RoundEntry = { id: string; name: string; score: number; won: boolean; lp?: number; tier?: string; avatar?: string; avatarPhoto?: string; selectedTitle?: string };
+type RoundEntry = { id: string; name: string; score: number; won: boolean; lp?: number; tier?: string; avatar?: string; avatarPhoto?: string; selectedTitle?: string; selectedFrame?: string };
 
 const ProfileSchema = new Schema<ProfileDocument>({
   playerId: { type: String, required: true, unique: true },
@@ -34,6 +34,7 @@ const LeaderboardSchema = new Schema<LeaderboardDocument>({
   avatar: { type: String, default: "spark" },
   avatarPhoto: { type: String },
   selectedTitle: { type: String },
+  selectedFrame: { type: String, default: "signal" },
   updatedAt: { type: Date, default: Date.now }
 });
 
@@ -100,7 +101,7 @@ export async function deletePlayerProfile(playerId: string) {
 
 export async function loadLeaderboard() {
   return safely(async () => {
-    const entries = await LeaderboardModel.find({}, { _id: 0, id: 1, name: 1, score: 1, wins: 1, matches: 1, bestRound: 1, lp: 1, tier: 1, avatar: 1, avatarPhoto: 1, selectedTitle: 1 })
+    const entries = await LeaderboardModel.find({}, { _id: 0, id: 1, name: 1, score: 1, wins: 1, matches: 1, bestRound: 1, lp: 1, tier: 1, avatar: 1, avatarPhoto: 1, selectedTitle: 1, selectedFrame: 1 })
       .sort({ score: -1, wins: -1, bestRound: -1 })
       .limit(50)
       .lean();
@@ -118,6 +119,7 @@ export async function recordLeaderboardRounds(rounds: RoundEntry[]) {
       if (round.avatar !== undefined) setFields.avatar = round.avatar;
       if (round.avatarPhoto !== undefined) setFields.avatarPhoto = round.avatarPhoto;
       if (round.selectedTitle !== undefined) setFields.selectedTitle = round.selectedTitle;
+      if (round.selectedFrame !== undefined) setFields.selectedFrame = round.selectedFrame;
 
       return LeaderboardModel.updateOne(
         { id: round.id },

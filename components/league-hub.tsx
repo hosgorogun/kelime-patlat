@@ -86,6 +86,11 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
           snapToInterval={CARD_WIDTH + 14}
           decelerationRate="fast"
           initialScrollIndex={currentIndex !== -1 ? currentIndex : 0}
+          onScrollToIndexFailed={(info) => {
+            setTimeout(() => {
+              flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
+            }, 100);
+          }}
           getItemLayout={(_, index) => ({ length: CARD_WIDTH + 14, offset: (CARD_WIDTH + 14) * index, index })}
           contentContainerStyle={{ paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - 18 }}
           onMomentumScrollEnd={(e) => {
@@ -229,7 +234,7 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
               <View key={entry.id || idx} style={[styles.top3Item, { borderColor: borderCol }]}>
                 <Text style={styles.top3Medal}>{medal}</Text>
                 <Text numberOfLines={1} style={styles.top3Name}>{entry.name}</Text>
-                <Text style={styles.top3Lp}>{entry.score} LP</Text>
+                <Text style={styles.top3Lp}>{entry.lp ?? entry.score} LP</Text>
               </View>
             );
           })}

@@ -58,6 +58,7 @@ export type GamePlayer = {
   avatar?: string;
   avatarPhoto?: string;
   selectedTitle?: string;
+  selectedFrame?: string;
   level?: number;
   tier?: string;
   lp?: number;
@@ -110,6 +111,7 @@ export type LeaderboardEntry = {
   avatar?: string;
   avatarPhoto?: string;
   selectedTitle?: string;
+  selectedFrame?: string;
   level?: number;
 };
 

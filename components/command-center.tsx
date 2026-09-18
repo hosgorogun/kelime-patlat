@@ -4,6 +4,7 @@ import { Alert, Animated, Easing, Image, Modal, Pressable, ScrollView, StyleShee
 import { type LeaderboardEntry } from "@/shared/game";
 import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, getDailyMysteryWord, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, getCalculatedLives, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
+import { PROFILE_FRAMES } from "@/shared/store-items";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions";
 
@@ -130,6 +131,8 @@ export function CommandCenter({
   const handlePlayBot10 = makeLockedHandler(10, 10, () => onPlayBot(10));
 
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
+  const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
+  const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || "#00F5D4");
 
   const [infoModal, setInfoModal] = useState<"shield" | "radar" | "lives" | "rotani" | null>(null);
 
@@ -229,7 +232,7 @@ export function CommandCenter({
     <View style={styles.topbar}>
       <View style={styles.topbarRow}>
         <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
-          <View style={[styles.avatar, { borderColor: activeAvatar.color, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
+          <View style={[styles.avatar, { borderColor: activeFrameColor, backgroundColor: activeAvatar.surface, borderWidth: 2 }]}>
             {progress.avatarPhoto && !imgError ? (
               <Image 
                 source={{ uri: progress.avatarPhoto }} 

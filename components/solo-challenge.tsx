@@ -18,11 +18,28 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 
-function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
+function ConnectLine({
+  x1,
+  y1,
+  x2,
+  y2,
+  color,
+  opacity = 0.95,
+  showArrow = true,
+}: {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  opacity?: number;
+  showArrow?: boolean;
+}) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const length = Math.sqrt(dx * dx + dy * dy);
   const angle = Math.atan2(dy, dx);
+  const arrowPos = Math.max(0, length - 18);
   
   return (
     <View
@@ -30,23 +47,75 @@ function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: nu
       style={{
         position: "absolute",
         left: x1,
-        top: y1 - 2.5,
+        top: y1,
         width: length,
-        height: 5,
-        backgroundColor: color,
-        transform: [
-          { rotate: `${angle}rad` }
-        ],
+        height: 0,
+        transform: [{ rotate: `${angle}rad` }],
         transformOrigin: "0% 50%",
-        borderRadius: 2.5,
-        opacity: 0.75,
-        shadowColor: color,
-        shadowOpacity: 0.6,
-        shadowRadius: 6,
-        elevation: 3,
-        zIndex: 5,
+        zIndex: 20,
+        overflow: "visible",
       }}
-    />
+    >
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          top: -3,
+          width: Math.max(0, length - 6),
+          height: 6,
+          backgroundColor: color,
+          borderRadius: 3,
+          opacity,
+          shadowColor: color,
+          shadowOpacity: 0.8,
+          shadowRadius: 6,
+          elevation: 4,
+        }}
+      />
+      {showArrow && length > 14 && (
+        <View
+          style={{
+            position: "absolute",
+            left: arrowPos,
+            top: -8,
+            width: 14,
+            height: 16,
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 25,
+            opacity,
+          }}
+        >
+          <View
+            style={{
+              position: "absolute",
+              width: 0,
+              height: 0,
+              borderTopWidth: 8,
+              borderBottomWidth: 8,
+              borderLeftWidth: 14,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: color,
+            }}
+          />
+          <View
+            style={{
+              position: "absolute",
+              left: 1,
+              width: 0,
+              height: 0,
+              borderTopWidth: 5,
+              borderBottomWidth: 5,
+              borderLeftWidth: 9,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: "#FFFFFF",
+            }}
+          />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -54,8 +123,9 @@ type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
-export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, lives, onExit, onComplete, onNext, onAdvanceLevel, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; lives?: number; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onAdvanceLevel?: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
+export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, lives, watchAd, onExit, onComplete, onNext, onAdvanceLevel, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; lives?: number; watchAd?: (onReward: () => void) => void; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onAdvanceLevel?: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
   const { width } = useWindowDimensions();
+  const safeWatchAd = useMemo(() => watchAd ?? ((onReward: () => void) => onReward()), [watchAd]);
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
   
@@ -561,7 +631,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
           if (radarCharges > 0) {
               revealRadar();
           } else {
-            watchAd(() => setRadarCharges(1));
+            safeWatchAd(() => setRadarCharges(1));
           }
         }}
         style={[
@@ -623,7 +693,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         );
       })}
 
-      {inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
+      {status !== "playing" && inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
         const nextCellIdx = inspectedPath[i + 1]!;
         const start = getCellCenter(cellIdx);
         const end = getCellCenter(nextCellIdx);
@@ -648,7 +718,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         const solutionColor = solutionColors.get(index);
         const isSolution = solutionColor !== undefined;
         const isRadar = radarHighlights.has(index);
-        const isInspected = Boolean(inspectedPath?.includes(index));
+        const isInspected = Boolean(status !== "playing" && inspectedPath?.includes(index));
+        const inspectedOrder = (status !== "playing" && inspectedPath) ? inspectedPath.indexOf(index) : -1;
+        const isInspectedStart = status !== "playing" && inspectedOrder === 0;
+        const isInspectedEnd = (status !== "playing" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
         return (
           <View
             key={`${letter}-${index}`}
@@ -677,6 +750,22 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                   borderWidth: 2.5,
                   backgroundColor: "rgba(245, 158, 11, 0.25)",
                   transform: [{ scale: 1.06 }],
+                },
+                isInspectedStart && {
+                  borderColor: "#10B981",
+                  borderWidth: 2.5,
+                  shadowColor: "#10B981",
+                  shadowOpacity: 0.8,
+                  shadowRadius: 8,
+                  elevation: 6,
+                },
+                isInspectedEnd && {
+                  borderColor: "#EF4444",
+                  borderWidth: 2.5,
+                  shadowColor: "#EF4444",
+                  shadowOpacity: 0.8,
+                  shadowRadius: 8,
+                  elevation: 6,
                 },
                 isSelected && [styles.cellSelected, { backgroundColor: activeTheme.surfaceSelected }],
                 isTail && styles.cellTail,
@@ -708,6 +797,37 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                 >
                   {order + 1}
                 </Text>
+              )}
+              {!isSelected && inspectedOrder >= 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: challenge.size >= 8 ? 1 : 2,
+                    right: challenge.size >= 8 ? 1 : 2,
+                    backgroundColor: isInspectedStart ? "#059669" : "rgba(15, 23, 42, 0.9)",
+                    borderRadius: challenge.size >= 8 ? 4 : 6,
+                    minWidth: challenge.size >= 8 ? 12 : 16,
+                    height: challenge.size >= 8 ? 12 : 16,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    paddingHorizontal: 2,
+                    borderWidth: 1,
+                    borderColor: isInspectedStart ? "#34D399" : "rgba(255, 255, 255, 0.35)",
+                    zIndex: 6,
+                  }}
+                >
+                  <Text
+                    selectable={false}
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: challenge.size >= 8 ? 7 : 8,
+                      fontWeight: "900",
+                      textAlign: "center",
+                    }}
+                  >
+                    {inspectedOrder + 1}
+                  </Text>
+                </View>
               )}
               {isFound && !isSelected && (
                 <Text
@@ -819,7 +939,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                 </Text>
                 {!doubleXpEarned && (
                   <Pressable
-                    onPress={() => watchAd(() => {
+                    onPress={() => safeWatchAd(() => {
                       setDoubleXpEarned(true);
                       gameSfx.victory();
                       triggerHapticSuccess();
@@ -915,7 +1035,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         
         {!revived && (
           <Pressable
-            onPress={() => watchAd(() => { setSeconds(20); setStatus("playing"); setRevived(true); })}
+            onPress={() => safeWatchAd(() => { setSeconds(20); setStatus("playing"); setRevived(true); })}
             style={[styles.action, { backgroundColor: "#00F5D4", marginTop: 12 }]}
           >
             <Text style={[styles.actionText, { color: "#121025" }]}>💾 SÜREYİ KURTAR (+20sn REKLAM)</Text>

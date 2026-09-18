@@ -48,6 +48,7 @@ describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
       expect(getWordDefinition("icecek")).toContain("sıvı gıda");
       expect(getWordDefinition("ICECEK")).toContain("sıvı gıda");
       expect(getWordDefinition("ruzgar")).toContain("yatay hareketi");
+      expect(getWordDefinition("GURME")).toContain("lezzet uzmanı");
     });
 
     it("sözlükte yer almayan kelimeler için güvenli yedek açıklama üretir", () => {
@@ -55,6 +56,35 @@ describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
       expect(fallback).toContain("Kelime Patlat ile kelime dağarcığını zenginleştir");
       const emptyFallback = getWordDefinition("   ");
       expect(emptyFallback).toContain("Kelime Patlat");
+    });
+
+    it("tüm kelime kataloğunun (WORD_CATALOG_DATA) Türkçe harfler ve min 3 uzunluğunda olduğunu doğrular", async () => {
+      const { WORD_CATALOG_DATA } = await import("../shared/word-catalog");
+      const TR_REGEX = /^[ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ]+$/;
+      for (const entry of WORD_CATALOG_DATA.words) {
+        expect(TR_REGEX.test(entry.word)).toBe(true);
+        expect(entry.word.length).toBeGreaterThanOrEqual(3);
+        expect(entry.word.length).toBeLessThanOrEqual(15);
+      }
+    });
+
+    it("PESEK, UŞAKLI, BEŞİRİ, ÇOKÇA ve il/ilçe demomimlerinin kelime havuzundan kesinlikle çıkarıldığını doğrular", async () => {
+      const { WORD_CATALOG_DATA, WORD_BANK } = await import("../shared/word-catalog");
+      const catalogSet = new Set(WORD_CATALOG_DATA.words.map((w) => w.word));
+      const forbidden = [
+        "PESEK", "UŞAKLI", "BEŞİRİ", "ÇOKÇA", "KÜTAHYALI", "DÜZCELİ", "ADANALI", "ANTALYALI", "AĞRILI",
+        "BURDURLU", "RİZELİ", "MERSİNLİ", "AKSARAYLI", "HATAYLI", "AMASYALI", "BAYBURTLU",
+        "ARTVİNLİ", "TRABZONLU", "KIRŞEHİRLİ", "YALOVALI", "TUNCELİLİ", "ERZURUMLU",
+        "ERZİNCANLI", "KARABÜKLÜ", "TOKATLI", "SİVASLI", "BİNGÖLLÜ", "GİRİTLİ", "KARTALLI",
+        "KOZLUK", "GERCÜŞ", "HASANKEYF", "TAVAS", "ACIPAYAM", "BULDAN", "CİHANBEYLİ", "SİLİVRİ",
+      ];
+      for (const badWord of forbidden) {
+        expect(catalogSet.has(badWord)).toBe(false);
+        expect(WORD_BANK[4].includes(badWord)).toBe(false);
+        expect(WORD_BANK[6].includes(badWord)).toBe(false);
+        expect(WORD_BANK[8].includes(badWord)).toBe(false);
+        expect(WORD_BANK[10].includes(badWord)).toBe(false);
+      }
     });
 
   describe("Oda Daveti ve Kod Normalizasyonu (shared/invite.ts)", () => {

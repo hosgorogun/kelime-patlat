@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getApiBaseUrl, SESSION_TOKEN_KEY, startOAuthLogin } from "@/constants/oauth";
+import { getApiBaseUrl, SESSION_TOKEN_KEY, startOAuthLogin, isOAuthConfigured } from "@/constants/oauth";
 import { ScreenContainer } from "./screen-container";
 import { haptics } from "@/lib/haptics";
 import { type GenderType } from "@/shared/progression";
@@ -22,14 +22,38 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleSubmit = async () => {
-    if (!username.trim() || !password.trim()) {
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+
+    if (!cleanUsername || !cleanPassword) {
       setError("Kullanıcı adı ve şifre gereklidir.");
       return;
     }
     if (isSignUp && (!email.trim() || !fullName.trim())) {
       setError("Ad soyad ve e-posta alanları kayıt için zorunludur.");
       return;
+    }
+    if (isSignUp) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setError("Lütfen geçerli bir e-posta adresi giriniz.");
+        return;
+      }
+      if (cleanUsername.length < 3) {
+        setError("Kullanıcı adı en az 3 karakter olmalıdır.");
+        return;
+      }
+      if (/\s/.test(cleanUsername)) {
+        setError("Kullanıcı adı boşluk içeremez.");
+        return;
+      }
+      if (cleanPassword.length < 4) {
+        setError("Şifre en az 4 karakter olmalıdır.");
+        return;
+      }
     }
     if (isSignUp && gender === "unspecified") {
       setError("Lütfen cinsiyet seçimini yapınız.");
@@ -42,8 +66,8 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
     try {
       const endpoint = isSignUp ? "/api/auth/signup" : "/api/auth/login";
       const bodyPayload = isSignUp
-        ? { username: username.trim(), password: password.trim(), email: email.trim(), fullName: fullName.trim(), gender }
-        : { username: username.trim(), password: password.trim() };
+        ? { username: cleanUsername, password: cleanPassword, email: email.trim(), fullName: fullName.trim(), gender }
+        : { username: cleanUsername, password: cleanPassword };
 
       const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
         method: "POST",
@@ -64,7 +88,12 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
       onSuccess(data.token, data.user.name || data.user.username, data.user.progress, data.user.openId, previousGuestToken);
     } catch (err: any) {
       haptics.error();
-      setError(err.message || "Giriş yapılırken bir hata oluştu.");
+      const rawMsg = err.message || "";
+      if (rawMsg.includes("Network request failed") || rawMsg.includes("Failed to fetch")) {
+        setError("Sunucuya bağlanılamadı. Lütfen sunucunun açık olduğundan ve internet bağlantınızdan emin olun.");
+      } else {
+        setError(rawMsg || "Giriş yapılırken bir hata oluştu.");
+      }
     } finally {
       setLoading(false);
     }
@@ -72,18 +101,31 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 
   const handleThirdPartyPress = (provider: string) => {
     haptics.light();
+    if (!isOAuthConfigured()) {
+      Alert.alert(
+        `🌐 ${provider} ile Hızlı Giriş`,
+        `${provider} ile doğrudan oturum açma seçeneği mağaza sürümünde (App Store / Play Store) entegre kimlik sağlayıcısı ile sunulmaktadır.\n\nŞu anda kullanıcı adı veya e-posta ile saniyeler içinde ücretsiz hesabınızı açabilir veya "Giriş Yapmadan Devam Et" seçeneğiyle hemen oynamaya başlayabilirsiniz!`,
+        [{ text: "Anladım", style: "default" }]
+      );
+      return;
+    }
+
     Alert.alert(
       `🌐 ${provider} Bağlantısı`,
-      `${provider} ile hızlı giriş altyapısı aktiftir. Oturum açmak istiyor musunuz?`,
+      `${provider} ile hızlı oturum açma penceresi açılacaktır. Devam etmek istiyor musunuz?`,
       [
-        { text: "İptal", style: "cancel" },
+        { text: "Vazgeç", style: "cancel" },
         {
-          text: "Tamam",
+          text: "Devam Et",
           onPress: async () => {
             try {
-              await startOAuthLogin();
-            } catch (e) {
+              const res = await startOAuthLogin(provider);
+              if (res && !res.success && res.message) {
+                Alert.alert("Giriş Bildirimi", res.message);
+              }
+            } catch (e: any) {
               console.warn(e);
+              Alert.alert("Hata", "Oturum açma bağlantısı başlatılamadı.");
             }
           }
         }
@@ -154,28 +196,56 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
             </>
           ) : null}
 
-          <Text style={styles.label}>KULLANICI ADI</Text>
+          <Text style={styles.label}>{isSignUp ? "KULLANICI ADI" : "KULLANICI ADI VEYA E-POSTA"}</Text>
           <TextInput
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
             style={styles.input}
-            placeholder="Kullanıcı adınızı seçin"
+            placeholder={isSignUp ? "Kullanıcı adınızı seçin (min 3 harf)" : "Kullanıcı adı veya e-posta girin"}
             placeholderTextColor="#6F879A"
           />
 
           <Text style={styles.label}>ŞİFRE</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-            placeholder="Şifrenizi belirleyin"
-            placeholderTextColor="#6F879A"
-          />
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={[styles.input, styles.passwordInput]}
+              placeholder={isSignUp ? "Şifrenizi belirleyin" : "Şifrenizi girin"}
+              placeholderTextColor="#6F879A"
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+            />
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setShowPassword(!showPassword);
+              }}
+              style={styles.eyeBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "🙈"}</Text>
+            </Pressable>
+          </View>
+
+          {!isSignUp && (
+            <Pressable
+              onPress={() => {
+                haptics.light();
+                setUsername("siber_oyuncu");
+                setPassword("siber123");
+                setError("");
+              }}
+              style={styles.demoFillBtn}
+            >
+              <Text style={styles.demoFillText}>⚡ Demo Bilgileriyle Doldur</Text>
+            </Pressable>
+          )}
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
@@ -342,6 +412,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 13,
     fontWeight: "700",
+  },
+  passwordWrapper: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 44,
+  },
+  eyeBtn: {
+    position: "absolute",
+    right: 12,
+    top: 10,
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  eyeIcon: {
+    fontSize: 15,
+  },
+  demoFillBtn: {
+    alignSelf: "center",
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "rgba(0, 245, 212, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 245, 212, 0.25)",
+  },
+  demoFillText: {
+    color: "#00F5D4",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.4,
   },
   submitButton: {
     height: 46,

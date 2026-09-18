@@ -132,4 +132,118 @@ describe("Siber Güvenlik & Hile Önleme Kontrolleri", () => {
     expect(canClaimMilestone(20, 15, { 15: true }).ok).toBe(false);
     expect(canClaimMilestone(20, 15, { 15: true }).error).toBe("already_claimed");
   });
+
+  it("Çevrimdışı Solo Seviye Koruma: çevrimdışı kazanılan meşru seviyeleri korur ve sınırları gözetir", () => {
+    function resolveSoloUnlockedSync(currentServerLevel: number, clientReportedLevel: unknown) {
+      return Math.min(
+        101,
+        Math.max(
+          currentServerLevel,
+          typeof clientReportedLevel === "number" ? clientReportedLevel : 1
+        )
+      );
+    }
+
+    // Çevrimdışı oynayıp 8. seviyeye gelen oyuncunun ilerlemesi korunur
+    expect(resolveSoloUnlockedSync(1, 8)).toBe(8);
+    // Sunucudaki seviye daha yüksekse düşürülmez
+    expect(resolveSoloUnlockedSync(15, 5)).toBe(15);
+    // Hileli veya geçersiz tipler engellenir
+    expect(resolveSoloUnlockedSync(10, "999")).toBe(10);
+    expect(resolveSoloUnlockedSync(10, null)).toBe(10);
+    // Maksimum solo seviye sınırı (101) aşılmaz
+    expect(resolveSoloUnlockedSync(1, 9999)).toBe(101);
+  });
 });
+
+describe("JWT Oturum Doğrulama ve Token Bütünlüğü", () => {
+  it("sdk.createSessionToken ve sdk.verifySession tokenları eksiksiz doğrular", async () => {
+    const { sdk } = await import("../server/_core/sdk");
+    const openId = "usr_test_oyuncu";
+    const displayName = "Test Oyuncu";
+
+    // Token üret
+    const token = await sdk.createSessionToken(openId, { name: displayName });
+    expect(typeof token).toBe("string");
+    expect(token.length).toBeGreaterThan(20);
+
+    // Token doğrula
+    const session = await sdk.verifySession(token);
+    expect(session).not.toBeNull();
+    expect(session?.openId).toBe(openId);
+    expect(session?.name).toBe(displayName);
+    expect(session?.appId).toBeTruthy();
+
+    // Geçersiz token reddedilir
+    const invalidSession = await sdk.verifySession("gecersiz.jwt.token");
+    expect(invalidSession).toBeNull();
+
+    // Boş token reddedilir
+    expect(await sdk.verifySession(null)).toBeNull();
+    expect(await sdk.verifySession("")).toBeNull();
+  });
+});
+
+describe("Giriş & Kayıt Gelişmiş Kimlik Doğrulama Kontrolleri", () => {
+  it("Kayıt: kullanıcı adında boşluk bulunmasını reddeder", () => {
+    const usernameRegex = /^\S+$/;
+    expect(usernameRegex.test("siber_oyuncu")).toBe(true);
+    expect(usernameRegex.test("oyuncu123")).toBe(true);
+    expect(usernameRegex.test("ahmet mehmet")).toBe(false);
+    expect(usernameRegex.test(" oyuncu")).toBe(false);
+    expect(usernameRegex.test("oyuncu ")).toBe(false);
+    expect(usernameRegex.test("oyun cu")).toBe(false);
+  });
+
+  it("Giriş: kullanıcı adı veya e-posta ile kimlik çözümleme mantığını destekler", () => {
+    const mockUsers = [
+      { username: "siber_oyuncu", email: "siber@kelimepatlat.com", openId: "usr_siber_oyuncu" },
+      { username: "kelime_ustasi", email: "kelime@test.com", openId: "usr_kelime_ustasi" }
+    ];
+
+    function findUserByIdentifier(identifier: string) {
+      const lower = identifier.toLocaleLowerCase("tr-TR");
+      return mockUsers.find(u => u.username === lower || u.email === lower);
+    }
+
+    // Kullanıcı adı ile bulma
+    expect(findUserByIdentifier("siber_oyuncu")?.openId).toBe("usr_siber_oyuncu");
+    expect(findUserByIdentifier("SİBER_OYUNCU")?.openId).toBe("usr_siber_oyuncu");
+
+    // E-posta ile bulma
+    expect(findUserByIdentifier("siber@kelimepatlat.com")?.openId).toBe("usr_siber_oyuncu");
+    expect(findUserByIdentifier("SİBER@KELİMEPATLAT.COM")?.openId).toBe("usr_siber_oyuncu");
+    expect(findUserByIdentifier("kelime@test.com")?.openId).toBe("usr_kelime_ustasi");
+
+    // Bulunamayan giriş
+    expect(findUserByIdentifier("olmayan_kullanici")).toBeUndefined();
+    expect(findUserByIdentifier("yanlis@email.com")).toBeUndefined();
+  });
+
+  it("OAuth: generateOAuthUrl güvenli URL üretimi yapar ve provider parametresini ekler", () => {
+    function buildLoginUrl(portalUrl: string | undefined, apiBase: string, appId: string, redirectUri: string, provider?: string) {
+      const portal = (portalUrl || apiBase).trim();
+      const base = portal.startsWith("http") ? portal : `https://${portal}`;
+      const url = new URL(`${base.replace(/\/$/, "")}/app-auth`);
+      url.searchParams.set("appId", appId || "kelime-patlat");
+      url.searchParams.set("redirectUri", redirectUri);
+      url.searchParams.set("type", "signIn");
+      if (provider) {
+        url.searchParams.set("provider", provider.toLowerCase());
+      }
+      return url.toString();
+    }
+
+    // Portal boş olduğunda dahi asla crash olmamalı, apiBase fallback kullanmalı
+    const fallbackUrl = buildLoginUrl("", "http://localhost:3000", "kelime-patlat", "http://localhost:3000/callback", "google");
+    expect(fallbackUrl).toContain("provider=google");
+    expect(fallbackUrl).toContain("app-auth");
+
+    // Portal tanımlı olduğunda portal URL'sini kullanmalı
+    const prodUrl = buildLoginUrl("https://auth.kelimepatlat.com", "http://localhost:3000", "kelime-patlat", "http://localhost:3000/callback", "apple");
+    expect(prodUrl).toContain("auth.kelimepatlat.com/app-auth");
+    expect(prodUrl).toContain("provider=apple");
+  });
+});
+
+

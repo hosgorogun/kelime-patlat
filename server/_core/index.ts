@@ -119,6 +119,10 @@ async function startServer() {
       if (!checkRateLimit(guestAttempts, key, 15)) {
         return res.status(429).json({ error: "Çok fazla misafir oturumu isteği. Lütfen bir dakika sonra tekrar deneyin." });
       }
+    } else if (req.path.endsWith("/sync-progress")) {
+      if (!checkRateLimit(gameAttempts, key, 30)) {
+        return res.status(429).json({ error: "Çok sık ilerleme senkronizasyonu yapıldı. Lütfen biraz bekleyin." });
+      }
     }
     next();
   });
@@ -168,7 +172,7 @@ async function startServer() {
   });
 
   const signupSchema = z.object({
-    username: z.string().trim().min(3, "Kullanıcı adı min 3 karakter olmalıdır.").max(32),
+    username: z.string().trim().min(3, "Kullanıcı adı min 3 karakter olmalıdır.").max(32).regex(/^\S+$/, "Kullanıcı adı boşluk içeremez."),
     password: z.string().min(4, "Şifre min 4 karakter olmalıdır.").max(128),
     email: z.string().trim().email("Geçerli bir e-posta adresi gereklidir.").max(128),
     fullName: z.string().trim().min(2, "Ad soyad en az 2 karakter olmalıdır.").max(64),
@@ -257,7 +261,7 @@ async function startServer() {
   });
 
   const loginSchema = z.object({
-    username: z.string().trim().min(1, "Kullanıcı adı gereklidir.").max(64),
+    username: z.string().trim().min(1, "Kullanıcı adı veya e-posta gereklidir.").max(128),
     password: z.string().min(1, "Şifre gereklidir.").max(128),
   });
 
@@ -269,8 +273,10 @@ async function startServer() {
         return res.status(400).json({ error: parsed.error.issues[0]?.message || "Geçersiz giriş bilgileri." });
       }
       const { username, password } = parsed.data;
-      const lowerUsername = username.toLocaleLowerCase("tr-TR");
-      const user = await UserModel.findOne({ username: lowerUsername });
+      const lowerIdentifier = username.toLocaleLowerCase("tr-TR");
+      const user = await UserModel.findOne({
+        $or: [{ username: lowerIdentifier }, { email: lowerIdentifier }]
+      });
       if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
         return res.status(401).json({ error: "Kullanıcı adı veya şifre hatalı." });
       }
@@ -278,7 +284,7 @@ async function startServer() {
       user.lastSignedIn = new Date();
       await user.save();
 
-      const displayName = user.name || username.toLocaleUpperCase("tr-TR");
+      const displayName = user.name || (user.username || lowerIdentifier).toLocaleUpperCase("tr-TR");
       const token = await sdk.createSessionToken(user.openId, { name: displayName });
       res.json({ success: true, token, user: { openId: user.openId, name: displayName, username: user.username, progress: user.progress } });
     } catch (err: any) {
@@ -311,22 +317,78 @@ async function startServer() {
         const isClaimingWelcome = !currentProg.welcomeRewardClaimed && Boolean(progress.welcomeRewardClaimed);
         const welcomeCoinsBonus = isClaimingWelcome ? 50 : 0;
 
+        // Kozmetik Güvenliği: Yalnızca ücretsiz (maliyeti 0) veya veritabanında daha önceden satın alınmış eşyalar kabul edilir
+        const safeOwnedFrames: Record<string, boolean> = { ...(currentProg.ownedFrames || {}), signal: true };
+        if (progress.ownedFrames && typeof progress.ownedFrames === "object") {
+          for (const [fId, val] of Object.entries(progress.ownedFrames)) {
+            if (val === true) {
+              const item = PROFILE_FRAMES.find((f) => f[0] === fId);
+              if (item && (item[3] === 0 || currentProg.ownedFrames?.[fId] === true)) {
+                safeOwnedFrames[fId] = true;
+              }
+            }
+          }
+        }
+
+        const safeOwnedEffects: Record<string, boolean> = { ...(currentProg.ownedVictoryEffects || {}), pulse: true };
+        if (progress.ownedVictoryEffects && typeof progress.ownedVictoryEffects === "object") {
+          for (const [eId, val] of Object.entries(progress.ownedVictoryEffects)) {
+            if (val === true) {
+              const item = VICTORY_EFFECTS.find((e) => e[0] === eId);
+              if (item && (item[3] === 0 || currentProg.ownedVictoryEffects?.[eId] === true)) {
+                safeOwnedEffects[eId] = true;
+              }
+            }
+          }
+        }
+
+        const safeOwnedBoardSkins: Record<string, boolean> = { ...(currentProg.ownedBoardSkins || {}), grid: true };
+        if (progress.ownedBoardSkins && typeof progress.ownedBoardSkins === "object") {
+          for (const [bId, val] of Object.entries(progress.ownedBoardSkins)) {
+            if (val === true) {
+              const item = BOARD_SKINS.find((b) => b[0] === bId);
+              if (item && (item[3] === 0 || currentProg.ownedBoardSkins?.[bId] === true)) {
+                safeOwnedBoardSkins[bId] = true;
+              }
+            }
+          }
+        }
+
+        const validSelectedFrame =
+          progress.selectedFrame && safeOwnedFrames[progress.selectedFrame]
+            ? progress.selectedFrame
+            : currentProg.selectedFrame;
+
+        const validSelectedEffect =
+          progress.selectedVictoryEffect && safeOwnedEffects[progress.selectedVictoryEffect]
+            ? progress.selectedVictoryEffect
+            : currentProg.selectedVictoryEffect;
+
+        const validSelectedBoard =
+          progress.selectedBoardSkin && safeOwnedBoardSkins[progress.selectedBoardSkin]
+            ? progress.selectedBoardSkin
+            : currentProg.selectedBoardSkin;
+
         dbUser.progress = {
           ...currentProg,
           selectedAvatar: progress.selectedAvatar || currentProg.selectedAvatar,
-          selectedFrame: progress.selectedFrame !== undefined ? progress.selectedFrame : currentProg.selectedFrame,
-          selectedBoardSkin: progress.selectedBoardSkin !== undefined ? progress.selectedBoardSkin : currentProg.selectedBoardSkin,
-          selectedVictoryEffect: progress.selectedVictoryEffect !== undefined ? progress.selectedVictoryEffect : currentProg.selectedVictoryEffect,
+          selectedFrame: validSelectedFrame,
+          selectedBoardSkin: validSelectedBoard,
+          selectedVictoryEffect: validSelectedEffect,
           selectedTitle: progress.selectedTitle || currentProg.selectedTitle,
           selectedTheme: progress.selectedTheme || currentProg.selectedTheme,
           gender: progress.gender || currentProg.gender,
-          avatarPhoto: progress.avatarPhoto !== undefined ? progress.avatarPhoto : currentProg.avatarPhoto,
+          avatarPhoto: typeof progress.avatarPhoto === "string" && progress.avatarPhoto.length <= 250_000
+            ? progress.avatarPhoto
+            : progress.avatarPhoto === null
+            ? null
+            : currentProg.avatarPhoto,
           sfxEnabled: progress.sfxEnabled !== undefined ? progress.sfxEnabled : currentProg.sfxEnabled,
           hapticsEnabled: progress.hapticsEnabled !== undefined ? progress.hapticsEnabled : currentProg.hapticsEnabled,
           purchasedAvatars: { ...(currentProg.purchasedAvatars || {}), ...(progress.purchasedAvatars || {}) },
-          ownedFrames: { ...(currentProg.ownedFrames || {}), ...(progress.ownedFrames || {}) },
-          ownedBoardSkins: { ...(currentProg.ownedBoardSkins || {}), ...(progress.ownedBoardSkins || {}) },
-          ownedVictoryEffects: { ...(currentProg.ownedVictoryEffects || {}), ...(progress.ownedVictoryEffects || {}) },
+          ownedFrames: safeOwnedFrames,
+          ownedBoardSkins: safeOwnedBoardSkins,
+          ownedVictoryEffects: safeOwnedEffects,
           friends: Array.isArray(progress.friends) ? progress.friends : currentProg.friends,
           welcomeRewardClaimed: currentProg.welcomeRewardClaimed || Boolean(progress.welcomeRewardClaimed),
           claimedMilestones: {
@@ -348,13 +410,14 @@ async function startServer() {
           seasonHistory: progress.seasonHistory || currentProg.seasonHistory,
           lastSeasonResetId: progress.lastSeasonResetId || currentProg.lastSeasonResetId,
           vintageProgress: progress.vintageProgress || currentProg.vintageProgress,
-          // xp, lp, wins, matches, streak, soloUnlockedLevel SUNUCU OTORİTESİNDEDİR
+          // xp, lp, wins, matches, streak SUNUCU OTORİTESİNDEDİR
           xp: currentProg.xp,
           lp: currentProg.lp,
           wins: currentProg.wins,
           matches: currentProg.matches,
           streak: currentProg.streak,
-          soloUnlockedLevel: currentProg.soloUnlockedLevel,
+          // Çevrimdışı kazanılan solo seviye ilerlemesi güvenli üst sınırla (101) korunur
+          soloUnlockedLevel: Math.min(101, Math.max(currentProg.soloUnlockedLevel ?? 1, typeof progress.soloUnlockedLevel === "number" ? progress.soloUnlockedLevel : 1)),
         };
         dbUser.updatedAt = new Date();
         await dbUser.save();
@@ -389,7 +452,7 @@ async function startServer() {
   app.get("/api/user/profile/:idOrName", async (req, res) => {
     try {
       const idOrName = req.params.idOrName?.trim();
-      if (!idOrName) return res.status(400).json({ error: "Geçersiz arama parametresi." });
+      if (!idOrName || idOrName.length > 64) return res.status(400).json({ error: "Geçersiz arama parametresi." });
 
       // Bot kontrolü
       if (idOrName.startsWith("bot:") || idOrName.toLowerCase().includes("bot")) {
@@ -433,6 +496,7 @@ async function startServer() {
           avatar: prog.selectedAvatar || "spark",
           avatarPhoto: prog.avatarPhoto,
           selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
+          selectedFrame: prog.selectedFrame || "signal",
           level: Math.floor((prog.xp || 0) / 200) + 1,
           tier: tierInfo.tier,
           lp: prog.lp || 0,
@@ -465,6 +529,7 @@ async function startServer() {
           avatar: prog.selectedAvatar || "spark",
           avatarPhoto: prog.avatarPhoto,
           selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
+          selectedFrame: prog.selectedFrame || "signal",
           level: Math.floor((prog.xp || 0) / 200) + 1,
           tier: tierInfo.tier,
           lp: prog.lp || 0,
@@ -735,12 +800,20 @@ async function startServer() {
         cost = 0;
       }
 
+      const isAlreadyOwned =
+        kind === "frame" ? Boolean(current.ownedFrames?.[id]) :
+        kind === "effect" ? Boolean(current.ownedVictoryEffects?.[id]) :
+        kind === "board" ? Boolean(current.ownedBoardSkins?.[id]) :
+        Boolean(current.purchasedAvatars?.[id]);
+
+      const effectiveCost = isAlreadyOwned ? 0 : cost;
+
       const currentCoins = current.coins ?? 0;
-      if (cost > 0 && currentCoins < cost) {
-        return res.status(400).json({ error: `Yetersiz çip! Bu kozmetik için ${cost} siber çip gerekiyor.` });
+      if (effectiveCost > 0 && currentCoins < effectiveCost) {
+        return res.status(400).json({ error: `Yetersiz çip! Bu kozmetik için ${effectiveCost} siber çip gerekiyor.` });
       }
 
-      const nextCoins = Math.max(0, currentCoins - cost);
+      const nextCoins = Math.max(0, currentCoins - effectiveCost);
       let next = { ...current, coins: nextCoins };
       if (kind === "frame") {
         next.selectedFrame = id;

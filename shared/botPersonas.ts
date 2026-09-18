@@ -1,5 +1,6 @@
 import { getLeagueTier, CYBER_TITLES } from "./progression";
 import type { GamePlayer } from "./game";
+import { PROFILE_FRAMES } from "./store-items";
 
 export const BOT_USERNAMES = [
   "SiberKaptan",
@@ -47,6 +48,8 @@ export function getRandomBotPersona(hostPlayer?: Partial<GamePlayer>): GamePlaye
   // Pick a title from CYBER_TITLES array or default
   const titleObj = CYBER_TITLES[Math.floor(Math.random() * CYBER_TITLES.length)];
   const selectedTitle = titleObj ? titleObj.badge : "[ÇAYLAK]";
+  const randomFrame = PROFILE_FRAMES[Math.floor(Math.random() * PROFILE_FRAMES.length)];
+  const selectedFrame = randomFrame ? randomFrame[0] : "signal";
 
   const matches = Math.floor(20 + Math.random() * 180);
   const winRate = 0.48 + Math.random() * 0.22; // 48% to 70% win rate
@@ -62,6 +65,7 @@ export function getRandomBotPersona(hostPlayer?: Partial<GamePlayer>): GamePlaye
     rematch: false,
     avatar,
     selectedTitle,
+    selectedFrame,
     level,
     tier,
     lp,

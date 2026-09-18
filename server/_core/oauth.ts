@@ -58,6 +58,7 @@ function buildUserResponse(
     name: user?.name ?? null,
     email: user?.email ?? null,
     loginMethod: user?.loginMethod ?? null,
+    username: (user as any)?.username ?? null,
     lastSignedIn: (user?.lastSignedIn ?? new Date()).toISOString(),
     progress: (user as any)?.progress ?? null,
   };

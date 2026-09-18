@@ -16,11 +16,28 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 
-function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: number; y2: number; color: string }) {
+function ConnectLine({
+  x1,
+  y1,
+  x2,
+  y2,
+  color,
+  opacity = 0.95,
+  showArrow = true,
+}: {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  opacity?: number;
+  showArrow?: boolean;
+}) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const length = Math.sqrt(dx * dx + dy * dy);
   const angle = Math.atan2(dy, dx);
+  const arrowPos = Math.max(0, length - 18);
   
   return (
     <View
@@ -28,23 +45,75 @@ function ConnectLine({ x1, y1, x2, y2, color }: { x1: number; y1: number; x2: nu
       style={{
         position: "absolute",
         left: x1,
-        top: y1 - 2.5,
+        top: y1,
         width: length,
-        height: 5,
-        backgroundColor: color,
-        transform: [
-          { rotate: `${angle}rad` }
-        ],
+        height: 0,
+        transform: [{ rotate: `${angle}rad` }],
         transformOrigin: "0% 50%",
-        borderRadius: 2.5,
-        opacity: 0.75,
-        shadowColor: color,
-        shadowOpacity: 0.6,
-        shadowRadius: 6,
-        elevation: 3,
-        zIndex: 5,
+        zIndex: 20,
+        overflow: "visible",
       }}
-    />
+    >
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          top: -3,
+          width: Math.max(0, length - 6),
+          height: 6,
+          backgroundColor: color,
+          borderRadius: 3,
+          opacity,
+          shadowColor: color,
+          shadowOpacity: 0.8,
+          shadowRadius: 6,
+          elevation: 4,
+        }}
+      />
+      {showArrow && length > 14 && (
+        <View
+          style={{
+            position: "absolute",
+            left: arrowPos,
+            top: -8,
+            width: 14,
+            height: 16,
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 25,
+            opacity,
+          }}
+        >
+          <View
+            style={{
+              position: "absolute",
+              width: 0,
+              height: 0,
+              borderTopWidth: 8,
+              borderBottomWidth: 8,
+              borderLeftWidth: 14,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: color,
+            }}
+          />
+          <View
+            style={{
+              position: "absolute",
+              left: 1,
+              width: 0,
+              height: 0,
+              borderTopWidth: 5,
+              borderBottomWidth: 5,
+              borderLeftWidth: 9,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: "#FFFFFF",
+            }}
+          />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -544,7 +613,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         );
       })}
 
-      {inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
+      {status !== "playing" && inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
         const nextCellIdx = inspectedPath[i + 1]!;
         const start = getCellCenter(cellIdx);
         const end = getCellCenter(nextCellIdx);
@@ -567,7 +636,10 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         const isFound = foundCells.has(index);
         const foundColor = foundCellColors.get(index);
         const missedColor = missedCellColors.get(index);
-        const isInspected = Boolean(inspectedPath?.includes(index));
+        const isInspected = Boolean(status !== "playing" && inspectedPath?.includes(index));
+        const inspectedOrder = (status !== "playing" && inspectedPath) ? inspectedPath.indexOf(index) : -1;
+        const isInspectedStart = status !== "playing" && inspectedOrder === 0;
+        const isInspectedEnd = (status !== "playing" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
         
         return (
           <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}>
@@ -591,6 +663,22 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
                 backgroundColor: "rgba(255, 194, 74, 0.25)",
                 transform: [{ scale: 1.06 }],
               },
+              isInspectedStart && {
+                borderColor: "#10B981",
+                borderWidth: 2.5,
+                shadowColor: "#10B981",
+                shadowOpacity: 0.8,
+                shadowRadius: 8,
+                elevation: 6,
+              },
+              isInspectedEnd && {
+                borderColor: "#EF4444",
+                borderWidth: 2.5,
+                shadowColor: "#EF4444",
+                shadowOpacity: 0.8,
+                shadowRadius: 8,
+                elevation: 6,
+              },
               isSelected && styles.cellSelected,
               isTail && styles.cellTail,
               feedback === "invalid" && isSelected && styles.cellInvalid,
@@ -603,6 +691,37 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
                 missedColor && { color: missedColor.text },
               ]}>{letter}</Text>
               {isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}
+              {!isSelected && inspectedOrder >= 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: challenge.size >= 8 ? 1 : 2,
+                    right: challenge.size >= 8 ? 1 : 2,
+                    backgroundColor: isInspectedStart ? "#059669" : "rgba(15, 23, 42, 0.9)",
+                    borderRadius: challenge.size >= 8 ? 4 : 6,
+                    minWidth: challenge.size >= 8 ? 12 : 16,
+                    height: challenge.size >= 8 ? 12 : 16,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    paddingHorizontal: 2,
+                    borderWidth: 1,
+                    borderColor: isInspectedStart ? "#34D399" : "rgba(255, 255, 255, 0.35)",
+                    zIndex: 6,
+                  }}
+                >
+                  <Text
+                    selectable={false}
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: challenge.size >= 8 ? 7 : 8,
+                      fontWeight: "900",
+                      textAlign: "center",
+                    }}
+                  >
+                    {inspectedOrder + 1}
+                  </Text>
+                </View>
+              )}
               {isFound && !isSelected && <Text selectable={false} style={[styles.check, foundColor && { color: foundColor.border }]}>✓</Text>}
               {missedColor && !isSelected && !isFound && <Text selectable={false} style={[styles.check, { color: missedColor.border }]}>✗</Text>}
             </View>

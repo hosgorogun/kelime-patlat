@@ -80,11 +80,11 @@ describe("Milestone Sandıkları, Günlük Ödül & Vintage Modu Testleri", () =
 
     // 19. seviyeyi bitirince maxUnlockedLevel 20 olmalı
     const updated = applyVintageProgress(progress, 19, 50);
-    expect(updated.vintageProgress.maxUnlockedLevel).toBe(20);
-    expect(updated.vintageProgress.completedLevels).toContain(19);
+    expect(updated.vintageProgress!.maxUnlockedLevel).toBe(20);
+    expect(updated.vintageProgress!.completedLevels).toContain(19);
 
     // 20. seviyeyi bitirince maxUnlockedLevel 20 üstünde 21 olmamalı, 20'de kalmalı
     const maxed = applyVintageProgress(updated, 20, 50);
-    expect(maxed.vintageProgress.maxUnlockedLevel).toBe(20);
+    expect(maxed.vintageProgress!.maxUnlockedLevel).toBe(20);
   });
 });

@@ -251,11 +251,13 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
   const themedFiltered = themed.filter((entry) => entry.word.length >= adjustedMinLen && !excludeSet.has(entry.word));
   const generalFiltered = general.filter((entry) => entry.word.length >= adjustedMinLen && !excludeSet.has(entry.word));
   const generalAllFiltered = general.filter((entry) => !excludeSet.has(entry.word));
+  const themedAllFiltered = themed.filter((entry) => !excludeSet.has(entry.word));
 
   const pools = [
     themedFiltered,
     generalFiltered,
     generalAllFiltered,
+    themedAllFiltered,
     themed.filter((entry) => entry.word.length >= adjustedMinLen),
     general
   ];
@@ -397,24 +399,57 @@ function fullBoardPath(size: BoardSize, random: () => number) {
   return serpentinePath(size);
 }
 
-export function createSoloBoard(level: number, variation = 0, theme: WordTheme = "general", excludeWords: string[] = []): SoloBoard {
-  const config = getSoloLevel(level);
+const soloLevelWordsCache = new Map<string, WordEntry[]>();
 
-  // Guarantee consecutive levels never repeat words:
-  // If adjacent levels exist (level - 1, level - 2, level - 3), exclude their generated words
-  const rollingExcludes = new Set(excludeWords);
-  if (level > 1) {
-    for (let prevLevel = Math.max(1, level - 3); prevLevel < level; prevLevel++) {
-      const prevConfig = getSoloLevel(prevLevel);
-      const prevRandom = seededRandom(prevConfig.level * 23_917 + variation * 433);
-      const prevWords = selectWords(prevConfig, variation, prevRandom, theme, []);
-      for (const entry of prevWords) {
-        rollingExcludes.add(entry.word);
+export function getSoloLevelWords(level: number, variation = 0, theme: WordTheme = "general"): WordEntry[] {
+  const cacheKey = `${level}:${variation}:${theme}`;
+  const cached = soloLevelWordsCache.get(cacheKey);
+  if (cached) return cached;
+
+  // Build preceding levels sequentially so each level accurately excludes the previous levels
+  const startLevel = Math.max(1, level - 3);
+  for (let p = 1; p < level; p++) {
+    const pKey = `${p}:${variation}:${theme}`;
+    if (!soloLevelWordsCache.has(pKey)) {
+      getSoloLevelWords(p, variation, theme);
+    }
+  }
+
+  const excludes: string[] = [];
+  for (let p = startLevel; p < level; p++) {
+    const pWords = soloLevelWordsCache.get(`${p}:${variation}:${theme}`);
+    if (pWords) {
+      for (const w of pWords) {
+        excludes.push(w.word);
       }
     }
   }
 
-  const entries = selectWords(config, variation, seededRandom(config.level * 23_917 + variation * 433), theme, Array.from(rollingExcludes));
+  const config = getSoloLevel(level);
+  const random = seededRandom(config.level * 23_917 + variation * 433);
+  const words = selectWords(config, variation, random, theme, excludes);
+  soloLevelWordsCache.set(cacheKey, words);
+  return words;
+}
+
+export function createSoloBoard(level: number, variation = 0, theme: WordTheme = "general", excludeWords: string[] = []): SoloBoard {
+  const config = getSoloLevel(level);
+
+  let entries: WordEntry[];
+  if (excludeWords.length === 0) {
+    entries = getSoloLevelWords(level, variation, theme);
+  } else {
+    const rollingExcludes = new Set(excludeWords);
+    for (let p = Math.max(1, level - 3); p < level; p++) {
+      const pWords = getSoloLevelWords(p, variation, theme);
+      for (const w of pWords) {
+        rollingExcludes.add(w.word);
+      }
+    }
+    const random = seededRandom(config.level * 23_917 + variation * 433);
+    entries = selectWords(config, variation, random, theme, Array.from(rollingExcludes));
+  }
+
   const words = entries.map((entry) => entry.word);
   
   for (let attempt = 0; attempt < 200; attempt += 1) {

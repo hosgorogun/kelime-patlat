@@ -148,6 +148,13 @@ export function SeasonHub({
     const cleanInput = friendInput.trim();
     if (!cleanInput) return;
 
+    if (cleanInput.length > 64) {
+      triggerHapticError();
+      setSocialMessage("Kullanıcı adı veya kimliği en fazla 64 karakter olabilir.");
+      setTimeout(() => setSocialMessage(null), 3500);
+      return;
+    }
+
     // Self-addition check
     if (
       cleanInput.toLocaleLowerCase("tr-TR") === (playerName || "").toLocaleLowerCase("tr-TR") ||

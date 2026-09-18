@@ -103,15 +103,24 @@ export const getRedirectUri = () => {
   }
 };
 
-export const getLoginUrl = () => {
+export function isOAuthConfigured(): boolean {
+  return Boolean(OAUTH_PORTAL_URL && OAUTH_PORTAL_URL.trim().length > 0);
+}
+
+export const getLoginUrl = (provider?: string) => {
   const redirectUri = getRedirectUri();
   const state = encodeState(redirectUri);
+  const portal = (OAUTH_PORTAL_URL || getApiBaseUrl()).trim();
+  const base = portal.startsWith("http") ? portal : `https://${portal}`;
 
-  const url = new URL(`${OAUTH_PORTAL_URL}/app-auth`);
-  url.searchParams.set("appId", APP_ID);
+  const url = new URL(`${base.replace(/\/$/, "")}/app-auth`);
+  url.searchParams.set("appId", APP_ID || "kelime-patlat");
   url.searchParams.set("redirectUri", redirectUri);
   url.searchParams.set("state", state);
   url.searchParams.set("type", "signIn");
+  if (provider) {
+    url.searchParams.set("provider", provider.toLowerCase());
+  }
 
   return url.toString();
 };
@@ -123,34 +132,36 @@ export const getLoginUrl = () => {
  * the OAuth callback returns via deep link to the app.
  *
  * On web, this simply redirects to the login URL.
- *
- * @returns Always null, the callback is handled via deep link.
  */
-export async function startOAuthLogin(): Promise<string | null> {
-  const loginUrl = getLoginUrl();
+export async function startOAuthLogin(provider?: string): Promise<{ success: boolean; message?: string }> {
+  if (!isOAuthConfigured()) {
+    return {
+      success: false,
+      message: `${provider || "Sosyal"} giriş altyapısı için OAuth sunucusu yapılandırılmamış. Lütfen kullanıcı adı ve şifre ile giriş yapın veya Misafir olarak devam edin.`
+    };
+  }
+
+  const loginUrl = getLoginUrl(provider);
 
   if (ReactNative.Platform.OS === "web") {
     // On web, just redirect
     if (typeof window !== "undefined") {
       window.location.href = loginUrl;
     }
-    return null;
+    return { success: true };
   }
 
   const supported = await Linking.canOpenURL(loginUrl);
   if (!supported) {
     console.warn("[OAuth] Cannot open login URL: URL scheme not supported");
-    // 可考虑抛出错误或返回错误状态，让调用方处理
-    return null;
+    return { success: false, message: "Cihazınızda oturum açma bağlantısı açılamadı." };
   }
 
   try {
     await Linking.openURL(loginUrl);
-  } catch (error) {
+    return { success: true };
+  } catch (error: any) {
     console.error("[OAuth] Failed to open login URL:", error);
-    // 可考虑抛出错误让调用方处理
+    return { success: false, message: error?.message || "Bağlantı açılamadı." };
   }
-
-  // The OAuth callback will reopen the app via deep link.
-  return null;
 }
