@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
@@ -182,6 +182,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
   const lastTouchedIndexRef = useRef<number | null>(null);
+  const hasAutoInspectedRef = useRef(false);
 
   useEffect(() => {
     initAudio().catch(() => undefined);
@@ -442,6 +443,9 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     submitted.current = false;
     setTimeBonusText(null);
     setSelectedWordInfo(null);
+    setInspectedPath(null);
+    setInspectedColor(null);
+    hasAutoInspectedRef.current = false;
     setCountdown(3);
   };
 
@@ -558,6 +562,26 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     return { missedWords: missed, missedCellColors: colors };
   }, [status, challenge, found]);
 
+  // Oyun bittiğinde ilk kelimenin rotasını ve yön oklarını tahtada otomatik göster
+  useEffect(() => {
+    if (status === "playing") {
+      hasAutoInspectedRef.current = false;
+      return;
+    }
+    if (challenge.words.length > 0 && !hasAutoInspectedRef.current) {
+      hasAutoInspectedRef.current = true;
+      const targetWord = missedWords[0] || found[0] || challenge.words[0]!;
+      const path = challenge.routes[targetWord];
+      const wIdx = challenge.words.indexOf(targetWord);
+      const palette = APP_WORD_PALETTE[(wIdx >= 0 ? wIdx : 0) % APP_WORD_PALETTE.length]!;
+      if (path) {
+        setInspectedPath(path);
+        setInspectedColor(palette.border);
+        setSelectedWordInfo({ word: targetWord, definition: getWordDefinition(targetWord) });
+      }
+    }
+  }, [status, challenge.words, challenge.routes, missedWords, found]);
+
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const isUrgent = seconds <= 8;
 
@@ -598,6 +622,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         <View style={{ position: "absolute", left: 0, right: 0, top: "75%", height: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
       </View>
 
+      {/* Canlı sürükleme çizgisi ve okları */}
       {selected.slice(0, -1).map((cellIdx, i) => {
         const nextCellIdx = selected[i + 1]!;
         const start = getCellCenter(cellIdx);
@@ -610,24 +635,59 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
             x2={end.x}
             y2={end.y}
             color="#FFC24A"
+            showArrow
           />
         );
       })}
 
-      {status !== "playing" && inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
-        const nextCellIdx = inspectedPath[i + 1]!;
-        const start = getCellCenter(cellIdx);
-        const end = getCellCenter(nextCellIdx);
-        return (
-          <ConnectLine
-            key={`inspect-line-${i}`}
-            x1={start.x}
-            y1={start.y}
-            x2={end.x}
-            y2={end.y}
-            color={inspectedColor || "#FFC24A"}
-          />
-        );
+      {/* Oyun sürerken bulunan kelimelerin tahtadaki rotaları */}
+      {status === "playing" && foundPaths.map((path, pIdx) => {
+        const palette = APP_WORD_PALETTE[pIdx % APP_WORD_PALETTE.length]!;
+        return path.slice(0, -1).map((cellIdx, i) => {
+          const nextCellIdx = path[i + 1]!;
+          const start = getCellCenter(cellIdx);
+          const end = getCellCenter(nextCellIdx);
+          return (
+            <ConnectLine
+              key={`found-live-line-${pIdx}-${i}`}
+              x1={start.x}
+              y1={start.y}
+              x2={end.x}
+              y2={end.y}
+              color={palette.border}
+              opacity={0.65}
+              showArrow
+            />
+          );
+        });
+      })}
+
+      {/* Oyun bittiğinde: Tahtadaki TÜM kelimelerin rotalarını ve yön oklarını hemen çiz */}
+      {status === "lost" && challenge.words.map((word, wIdx) => {
+        const path = challenge.routes[word];
+        if (!path || path.length < 2) return null;
+        const palette = APP_WORD_PALETTE[wIdx % APP_WORD_PALETTE.length]!;
+        const isCurrentInspected = Boolean(inspectedPath && inspectedPath.length === path.length && inspectedPath.every((c, ci) => c === path[ci]));
+        const lineOpacity = inspectedPath ? (isCurrentInspected ? 1 : 0.35) : 0.88;
+        const lineColor = isCurrentInspected ? (inspectedColor || palette.border) : palette.border;
+
+        return path.slice(0, -1).map((cellIdx, i) => {
+          const nextCellIdx = path[i + 1]!;
+          const start = getCellCenter(cellIdx);
+          const end = getCellCenter(nextCellIdx);
+          return (
+            <ConnectLine
+              key={`finished-line-${wIdx}-${i}`}
+              x1={start.x}
+              y1={start.y}
+              x2={end.x}
+              y2={end.y}
+              color={lineColor}
+              opacity={lineOpacity}
+              showArrow
+            />
+          );
+        });
       })}
 
       {challenge.board.map((letter, index) => {
@@ -698,7 +758,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
                     position: "absolute",
                     top: challenge.size >= 8 ? 1 : 2,
                     right: challenge.size >= 8 ? 1 : 2,
-                    backgroundColor: isInspectedStart ? "#059669" : "rgba(8, 28, 22, 0.9)",
+                    backgroundColor: isInspectedStart ? "#059669" : isInspectedEnd ? "#DC2626" : "rgba(8, 28, 22, 0.9)",
                     borderRadius: challenge.size >= 8 ? 4 : 6,
                     minWidth: challenge.size >= 8 ? 12 : 16,
                     height: challenge.size >= 8 ? 12 : 16,
@@ -706,7 +766,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
                     alignItems: "center",
                     paddingHorizontal: 2,
                     borderWidth: 1,
-                    borderColor: isInspectedStart ? "#34D399" : "rgba(255, 255, 255, 0.35)",
+                    borderColor: isInspectedStart ? "#34D399" : isInspectedEnd ? "#F87171" : "rgba(255, 255, 255, 0.35)",
                     zIndex: 6,
                   }}
                 >
@@ -719,7 +779,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
                       textAlign: "center",
                     }}
                   >
-                    {inspectedOrder + 1}
+                    {isInspectedStart ? "1" : isInspectedEnd ? "✓" : inspectedOrder + 1}
                   </Text>
                 </View>
               )}
@@ -743,6 +803,73 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         {selected.length > 0 ? `[ ${activeWord.split("").join(" - ")} ]` : "—"}
       </Text>
     </View>
+
+    {/* Aktif Kelime Rotası ve Harf Yön Akışı Kartı */}
+    {selectedWordInfo && inspectedPath && (
+      <View style={[styles.activeRouteCard, { borderColor: inspectedColor || "#FFC24A" }]}>
+        <View style={styles.activeRouteHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={{ fontSize: 14 }}>🧭</Text>
+            <Text style={styles.activeRouteTitle}>KELİME ROTASI & YÖNÜ</Text>
+            <View style={[styles.activeRouteBadge, { backgroundColor: inspectedColor ? `${inspectedColor}25` : "rgba(255, 194, 74, 0.2)" }]}>
+              <Text style={[styles.activeRouteBadgeText, { color: inspectedColor || "#FFC24A" }]}>
+                {selectedWordInfo.word.length} HARF
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              setSelectedWordInfo(null);
+              setInspectedPath(null);
+              setInspectedColor(null);
+            }}
+            style={({ pressed }) => [styles.activeRouteClose, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.activeRouteCloseText}>✕ Rotayı Kapat</Text>
+          </Pressable>
+        </View>
+
+        {/* Harf akışı ve oklar */}
+        <View style={styles.activeRouteFlow}>
+          {selectedWordInfo.word.split("").map((ch, idx, arr) => (
+            <React.Fragment key={`route-ch-${idx}`}>
+              <View style={[
+                styles.activeRouteChip,
+                idx === 0 && styles.activeRouteChipStart,
+                idx === arr.length - 1 && styles.activeRouteChipEnd,
+              ]}>
+                <Text style={[
+                  styles.activeRouteChipText,
+                  idx === 0 && styles.activeRouteChipTextStart,
+                  idx === arr.length - 1 && styles.activeRouteChipTextEnd,
+                ]}>
+                  {ch}
+                </Text>
+                <Text style={[
+                  styles.activeRouteChipSub,
+                  idx === 0 && { color: "#34D399" },
+                  idx === arr.length - 1 && { color: "#F87171" },
+                ]}>
+                  {idx === 0 ? "BAŞLANGIÇ" : idx === arr.length - 1 ? "BİTİŞ" : idx + 1}
+                </Text>
+              </View>
+              {idx < arr.length - 1 && (
+                <Text style={[styles.activeRouteArrow, { color: inspectedColor || "#FFC24A" }]}>➔</Text>
+              )}
+            </React.Fragment>
+          ))}
+        </View>
+
+        {selectedWordInfo.definition ? (
+          <View style={styles.activeRouteDefBox}>
+            <Text style={[styles.activeRouteDefLabel, { color: inspectedColor || "#FFC24A" }]}>TDK ANLAMI</Text>
+            <Text style={styles.activeRouteDefText}>{selectedWordInfo.definition}</Text>
+          </View>
+        ) : null}
+      </View>
+    )}
+
     <View style={styles.found}>
       <Text style={styles.foundLabel}>BULDUĞUN KELİMELER (ROTA VE SÖZLÜK İÇİN TIKLA)</Text>
       <View style={styles.tags}>
@@ -873,19 +1000,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     )}
       </ScrollView>
 
-      {selectedWordInfo && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
-          <Pressable style={styles.modalOverlay} onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
-            <Pressable style={[styles.modalContent, { backgroundColor: "#30264D", borderColor: inspectedColor || "#FFC24A" }]} onPress={(e) => e.stopPropagation()}>
-              <Text style={[styles.modalTitle, { color: inspectedColor || "#FFC24A" }]}>{selectedWordInfo.word}</Text>
-              <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
-              <Pressable onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: inspectedColor || "#FFC24A" }, pressed && { opacity: 0.8 }]}>
-                <Text style={styles.modalCloseText}>KAPAT</Text>
-              </Pressable>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
+
 
       {isPaused && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setIsPaused(false)}>
@@ -948,7 +1063,26 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#06140F" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900" }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900" }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { color: "#A8C5B5", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, backgroundColor: "#30264D", borderWidth: 2, borderColor: "#594884", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B" }, foundLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878" }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#06140F" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, progressMeta: { color: "#A8C5B5", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, backgroundColor: "#30264D", borderWidth: 2, borderColor: "#594884", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 }, foundLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12, textShadowColor: "#000", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(8, 28, 22, 0.95)", borderWidth: 1.5, borderColor: "#FFC24A", padding: 14, shadowColor: "#FFC24A", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
+  activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  activeRouteTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
+  activeRouteBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: "rgba(255, 194, 74, 0.4)" },
+  activeRouteBadgeText: { fontSize: 10, fontWeight: "900" },
+  activeRouteClose: { backgroundColor: "rgba(239, 68, 68, 0.15)", borderWidth: 1, borderColor: "rgba(239, 68, 68, 0.35)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  activeRouteCloseText: { color: "#FCA5A5", fontSize: 10, fontWeight: "800" },
+  activeRouteFlow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5, paddingVertical: 4 },
+  activeRouteChip: { flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(30, 41, 59, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.25)", borderRadius: 10, minWidth: 36, paddingHorizontal: 6, paddingVertical: 4 },
+  activeRouteChipStart: { backgroundColor: "rgba(5, 150, 105, 0.25)", borderColor: "#10B981", borderWidth: 1.5 },
+  activeRouteChipEnd: { backgroundColor: "rgba(220, 38, 38, 0.25)", borderColor: "#EF4444", borderWidth: 1.5 },
+  activeRouteChipText: { color: "#F1F5F9", fontSize: 14, fontWeight: "900" },
+  activeRouteChipTextStart: { color: "#34D399" },
+  activeRouteChipTextEnd: { color: "#F87171" },
+  activeRouteChipSub: { color: "#94A3B8", fontSize: 8, fontWeight: "800", marginTop: 1 },
+  activeRouteArrow: { fontSize: 14, fontWeight: "900", marginHorizontal: 1 },
+  activeRouteDefBox: { marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(148, 163, 184, 0.15)" },
+  activeRouteDefLabel: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  activeRouteDefText: { color: "#CBD5E1", fontSize: 12, lineHeight: 18, marginTop: 2, fontWeight: "500" },
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", zIndex: 100 },
   modalContent: { width: "86%", borderRadius: 20, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },

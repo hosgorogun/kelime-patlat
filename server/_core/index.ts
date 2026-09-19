@@ -10,11 +10,11 @@ import { registerStorageProxy } from "./storageProxy";
 import { sdk } from "./sdk";
 import { registerGameRooms } from "../game/rooms";
 
-import { UserModel, hashPassword, verifyPassword, connectDb } from "../db";
+import { UserModel, hashPassword, verifyPassword, connectDb, createFriendRequest, getPendingFriendRequests, updateFriendRequestStatus, findFriendRequestById } from "../db";
 import { deletePlayerProfile, ProfileModel } from "../game/mongo-store";
 import { z } from "zod";
 import { randomUUID, randomInt } from "node:crypto";
-import { AVATARS, applyArcadeProgress, applyMatchProgress, applyVintageProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, SEASON_MISSIONS, findMissionById, getLeagueTier, buyLives, deductLife, getCalculatedLives, reconcilePlayerProgress, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES, MILESTONE_REWARDS, type PlayerProgress, type GenderType } from "../../shared/progression";
+import { AVATARS, applyArcadeProgress, applyMatchProgress, applyVintageProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, backfillMatchHistoryIfEmpty, SEASON_MISSIONS, findMissionById, getLeagueTier, buyLives, deductLife, getCalculatedLives, reconcilePlayerProgress, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES, MILESTONE_REWARDS, checkDailyLoginReward, getDayId, type PlayerProgress, type GenderType } from "../../shared/progression";
 import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
 import type { LeaderboardEntry } from "../../shared/game";
 
@@ -292,16 +292,47 @@ async function startServer() {
     }
   });
 
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+      if (dbUser.progress && (!Array.isArray(dbUser.progress.matchHistory) || dbUser.progress.matchHistory.length === 0)) {
+        dbUser.progress.matchHistory = backfillMatchHistoryIfEmpty({ ...DEFAULT_PROGRESS, ...dbUser.progress });
+        dbUser.updatedAt = new Date();
+        await dbUser.save();
+      }
+      const displayName = dbUser.name || (dbUser.username || "").toLocaleUpperCase("tr-TR") || "OYUNCU";
+      res.json({
+        success: true,
+        user: {
+          openId: dbUser.openId,
+          name: displayName,
+          username: dbUser.username,
+          progress: dbUser.progress,
+        },
+      });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err.message || "Kullanıcı bilgisi alınamadı." });
+    }
+  });
+
   app.post("/api/auth/sync-progress", async (req, res) => {
     try {
       const user = await sdk.authenticateRequest(req);
       if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
       
-      const { progress } = req.body as { progress?: Partial<PlayerProgress> };
+      const { progress, name } = req.body as { progress?: Partial<PlayerProgress>; name?: string };
       if (!progress || typeof progress !== "object") return res.status(400).json({ error: "Geçersiz progress verisi." });
       await connectDb();
       const dbUser = await UserModel.findOne({ openId: user.openId });
       if (dbUser) {
+        if (name && typeof name === "string" && name.trim().length >= 2) {
+          dbUser.name = name.trim().slice(0, 32);
+        }
+
         const currentProg = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
         // Bakiye alanları istemci tarafından artırılamaz (yalnızca kozmetik harcamasında azalabilir)
         const nextCoins = typeof progress.coins === "number" && progress.coins < (currentProg.coins ?? 0)
@@ -316,6 +347,27 @@ async function startServer() {
 
         const isClaimingWelcome = !currentProg.welcomeRewardClaimed && Boolean(progress.welcomeRewardClaimed);
         const welcomeCoinsBonus = isClaimingWelcome ? 50 : 0;
+        const welcomeShieldsBonus = isClaimingWelcome ? 1 : 0;
+        const welcomeRadarBonus = isClaimingWelcome ? 5 : 0;
+
+        // Çevrimdışı/senkronize sırasında alınan günlük giriş ödülü doğrulaması
+        const todayId = getDayId();
+        const isClaimingDailyLogin = Boolean(
+          progress.lastLoginDay &&
+          progress.lastLoginDay !== currentProg.lastLoginDay &&
+          progress.lastLoginDay === todayId
+        );
+        let dailyLoginCoinsBonus = 0;
+        let dailyLoginShieldBonus = 0;
+        let dailyLoginXpBonus = 0;
+        if (isClaimingDailyLogin) {
+          const dlResult = checkDailyLoginReward(currentProg, progress.lastLoginDay!);
+          if (dlResult) {
+            dailyLoginCoinsBonus = dlResult.reward.rewardType === "coins" ? dlResult.reward.amount : 0;
+            dailyLoginShieldBonus = dlResult.reward.rewardType === "shield" ? dlResult.reward.amount : 0;
+            dailyLoginXpBonus = dlResult.reward.rewardType === "xp" ? dlResult.reward.amount : 0;
+          }
+        }
 
         // Kozmetik Güvenliği: Yalnızca ücretsiz (maliyeti 0) veya veritabanında daha önceden satın alınmış eşyalar kabul edilir
         const safeOwnedFrames: Record<string, boolean> = { ...(currentProg.ownedFrames || {}), signal: true };
@@ -395,13 +447,17 @@ async function startServer() {
             ...(currentProg.claimedMilestones || {}),
             ...(progress.claimedMilestones || {}),
           },
-          coins: nextCoins + welcomeCoinsBonus,
-          streakShields: nextShields,
-          radarChargesBonus: nextRadar,
+          coins: nextCoins + welcomeCoinsBonus + dailyLoginCoinsBonus,
+          streakShields: nextShields + welcomeShieldsBonus + dailyLoginShieldBonus,
+          radarChargesBonus: nextRadar + welcomeRadarBonus,
           lives: typeof progress.lives === "number" ? Math.min(MAX_LIVES, Math.max(0, progress.lives)) : currentProg.lives,
           lastLifeRegenTimestamp: typeof progress.lastLifeRegenTimestamp === "number" ? progress.lastLifeRegenTimestamp : currentProg.lastLifeRegenTimestamp,
           dailyCompletedId: progress.dailyCompletedId || currentProg.dailyCompletedId,
           lastStreakCheckDate: progress.lastStreakCheckDate || currentProg.lastStreakCheckDate,
+          lastLoginDay: progress.lastLoginDay || currentProg.lastLoginDay,
+          loginDaysCount: typeof progress.loginDaysCount === "number"
+            ? Math.max(currentProg.loginDaysCount || 0, progress.loginDaysCount)
+            : currentProg.loginDaysCount,
           dailyClaimed: { ...(currentProg.dailyClaimed || {}), ...(progress.dailyClaimed || {}) },
           weeklyClaimed: { ...(currentProg.weeklyClaimed || {}), ...(progress.weeklyClaimed || {}) },
           missions: { ...(currentProg.missions || {}), ...(progress.missions || {}) },
@@ -410,12 +466,35 @@ async function startServer() {
           seasonHistory: progress.seasonHistory || currentProg.seasonHistory,
           lastSeasonResetId: progress.lastSeasonResetId || currentProg.lastSeasonResetId,
           vintageProgress: progress.vintageProgress || currentProg.vintageProgress,
-          // xp, lp, wins, matches, streak SUNUCU OTORİTESİNDEDİR
-          xp: currentProg.xp,
+          matchHistory: (() => {
+            const map = new Map<string, any>();
+            (currentProg.matchHistory || []).forEach((m: any) => {
+              if (m && typeof m.id === "string") map.set(m.id, m);
+            });
+            (Array.isArray(progress.matchHistory) ? progress.matchHistory : []).forEach((m: any) => {
+              if (m && typeof m.id === "string") map.set(m.id, m);
+            });
+            const combined = Array.from(map.values())
+              .sort((a: any, b: any) => (b.date || 0) - (a.date || 0))
+              .slice(0, 50);
+            if (combined.length === 0) {
+              return backfillMatchHistoryIfEmpty(currentProg);
+            }
+            return combined;
+          })(),
+          history: Array.from(new Set([...(currentProg.history || []), ...(Array.isArray(progress.history) ? progress.history : [])])).slice(-150),
+          bestScore: Math.max(currentProg.bestScore || 0, typeof progress.bestScore === "number" ? progress.bestScore : 0),
+          bestTempo: Math.max(currentProg.bestTempo || 0, typeof progress.bestTempo === "number" ? progress.bestTempo : 0),
+          bestArcadeScore: Math.max(currentProg.bestArcadeScore || 0, typeof progress.bestArcadeScore === "number" ? progress.bestArcadeScore : 0),
+          lastMatchReward: progress.lastMatchReward || currentProg.lastMatchReward,
+          // xp, lp, wins, matches SUNUCU OTORİTESİNDEDİR (günlük giriş ödülü XP'si hariç)
+          xp: currentProg.xp + dailyLoginXpBonus,
           lp: currentProg.lp,
           wins: currentProg.wins,
           matches: currentProg.matches,
-          streak: currentProg.streak,
+          // Günlük rota başarısızlığı veya kalkan yokluğunda serinin sıfırlanmasına izin verilir
+          streak: typeof progress.streak === "number" ? Math.min(currentProg.streak, Math.max(0, progress.streak)) : currentProg.streak,
+          pvpWinStreak: typeof progress.pvpWinStreak === "number" ? Math.max(0, progress.pvpWinStreak) : (currentProg.pvpWinStreak ?? 0),
           // Çevrimdışı kazanılan solo seviye ilerlemesi güvenli üst sınırla (101) korunur
           soloUnlockedLevel: Math.min(101, Math.max(currentProg.soloUnlockedLevel ?? 1, typeof progress.soloUnlockedLevel === "number" ? progress.soloUnlockedLevel : 1)),
         };
@@ -549,7 +628,180 @@ async function startServer() {
     }
   });
 
-  app.post("/api/game/award", async (req, res) => {
+  // --- SOSYAL VE ARKADAŞLIK REST ENDPOINTLERİ ---
+  app.get("/api/friends/requests/:userIdOrUsername", async (req, res) => {
+    try {
+      const target = req.params.userIdOrUsername?.trim();
+      if (!target) return res.status(400).json({ error: "Geçersiz parametre." });
+      await connectDb();
+      const requests = await getPendingFriendRequests(target);
+      res.json({ requests });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "İstekler alınamadı." });
+    }
+  });
+
+  app.post("/api/friends/request", async (req, res) => {
+    try {
+      const payload = z.object({
+        toUsername: z.string().trim().min(1).max(64),
+        fromPlayerId: z.string().trim().min(1).max(128),
+        fromPlayerName: z.string().trim().min(1).max(64),
+        profile: z.any().optional(),
+      }).safeParse(req.body);
+
+      if (!payload.success) return res.status(400).json({ error: "Geçersiz istek parametreleri." });
+      const { toUsername, fromPlayerId, fromPlayerName, profile } = payload.data;
+
+      if (toUsername.toLowerCase() === fromPlayerName.toLowerCase() || toUsername.toLowerCase() === (profile?.username || "").toLowerCase()) {
+        return res.status(400).json({ error: "Kendinize arkadaşlık isteği gönderemezsiniz." });
+      }
+
+      await connectDb();
+      const targetUser = await UserModel.findOne({
+        $or: [
+          { username: toUsername.toLowerCase() },
+          { openId: toUsername },
+          { name: new RegExp(`^${escapeRegex(toUsername)}$`, "i") }
+        ]
+      }).lean();
+
+      const targetUserId = targetUser?.openId || toUsername;
+      const targetUsernameClean = targetUser?.username || targetUser?.name || toUsername;
+      const targetNameClean = targetUser?.name || targetUser?.username || toUsername;
+
+      if (targetUser?.progress?.friends && Array.isArray(targetUser.progress.friends)) {
+        const isAlreadyFriend = targetUser.progress.friends.some(
+          (f: any) => (typeof f === "string" ? f === fromPlayerId : f.id === fromPlayerId || f.username?.toLowerCase() === (profile?.username || fromPlayerName).toLowerCase())
+        );
+        if (isAlreadyFriend) {
+          return res.status(400).json({ error: "Bu kullanıcı zaten arkadaş listenizde." });
+        }
+      }
+
+      const existingRequests = await getPendingFriendRequests(targetUserId);
+      const alreadyPending = existingRequests.some(
+        r => (r.fromUserId === fromPlayerId || r.fromUsername.toLowerCase() === (profile?.username || fromPlayerName).toLowerCase()) && r.status === "pending"
+      );
+      if (alreadyPending) {
+        return res.status(400).json({ error: "Bu kullanıcıya daha önce istek gönderilmiş." });
+      }
+
+      const newRequest = await createFriendRequest({
+        fromUserId: fromPlayerId,
+        fromUsername: profile?.username || fromPlayerName,
+        fromName: fromPlayerName,
+        fromAvatar: profile?.avatar || "spark",
+        fromAvatarPhoto: profile?.avatarPhoto,
+        fromSelectedTitle: profile?.selectedTitle || "[ÇAYLAK]",
+        fromLevel: profile?.level || 1,
+        fromTier: profile?.tier || "DEMİR",
+        fromLp: profile?.lp || 0,
+        fromXp: profile?.xp || 0,
+        toUserId: targetUserId,
+        toUsername: targetUsernameClean,
+        toName: targetNameClean,
+      });
+
+      res.json({ success: true, message: `${targetNameClean} kullanıcısına arkadaşlık isteği gönderildi!`, request: newRequest });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "İstek oluşturulamadı." });
+    }
+  });
+
+  app.post("/api/friends/respond", async (req, res) => {
+    try {
+      const payload = z.object({
+        requestId: z.string().trim().min(1),
+        action: z.enum(["accept", "reject"]),
+        playerId: z.string().trim().min(1),
+        playerName: z.string().trim().optional(),
+        profile: z.any().optional(),
+      }).safeParse(req.body);
+
+      if (!payload.success) return res.status(400).json({ error: "Geçersiz parametreler." });
+      const { requestId, action, playerId, playerName, profile } = payload.data;
+
+      await connectDb();
+      const reqDoc = await findFriendRequestById(requestId);
+      if (!reqDoc) return res.status(404).json({ error: "İstek bulunamadı." });
+
+      if (action === "reject") {
+        await updateFriendRequestStatus(requestId, "rejected");
+        return res.json({ success: true, message: "İstek reddedildi." });
+      }
+
+      await updateFriendRequestStatus(requestId, "accepted");
+
+      const friendForAcceptor = {
+        id: reqDoc.fromUserId,
+        name: reqDoc.fromName,
+        username: reqDoc.fromUsername,
+        avatar: reqDoc.fromAvatar || "spark",
+        avatarPhoto: reqDoc.fromAvatarPhoto,
+        selectedTitle: reqDoc.fromSelectedTitle || "[ÇAYLAK]",
+        level: reqDoc.fromLevel || 1,
+        tier: reqDoc.fromTier || "DEMİR",
+        lp: reqDoc.fromLp || 0,
+        xp: reqDoc.fromXp || 0,
+        isOnline: true,
+      };
+
+      const friendForRequester = {
+        id: playerId,
+        name: playerName || reqDoc.toName || "OYUNCU",
+        username: reqDoc.toUsername,
+        avatar: profile?.avatar || "spark",
+        avatarPhoto: profile?.avatarPhoto,
+        selectedTitle: profile?.selectedTitle || "[ÇAYLAK]",
+        level: profile?.level || 1,
+        tier: profile?.tier || "DEMİR",
+        lp: profile?.lp || 0,
+        xp: profile?.xp || 0,
+        isOnline: true,
+      };
+
+      await UserModel.findOneAndUpdate(
+        { openId: reqDoc.toUserId },
+        { $push: { "progress.friends": friendForAcceptor } }
+      );
+      await UserModel.findOneAndUpdate(
+        { openId: reqDoc.fromUserId },
+        { $push: { "progress.friends": friendForRequester } }
+      );
+
+      res.json({
+        success: true,
+        message: `${friendForAcceptor.name} ile artık arkadaşsınız!`,
+        newFriend: friendForAcceptor,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "İşlem gerçekleştirilemedi." });
+    }
+  });
+
+  app.post("/api/game/daily-login", async (req, res) => {
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+      const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+      const todayId = getDayId();
+      const claimResult = checkDailyLoginReward(current, todayId);
+      if (!claimResult) {
+        return res.status(400).json({ error: "Bugünkü giriş ödülü zaten alındı.", progress: current });
+      }
+      dbUser.progress = claimResult.updatedProgress;
+      dbUser.updatedAt = new Date();
+      await dbUser.save();
+      res.json({ success: true, reward: claimResult.reward, progress: claimResult.updatedProgress });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Giriş ödülü alınamadı." });
+    }
+  });
+
+  app.post(["/api/game/award", "/api/game/reward"], async (req, res) => {
     const payload = z.object({
       awardId: z.string().trim().min(8).max(128),
       kind: z.enum(["solo", "arcade", "vintage"]),
@@ -586,23 +838,33 @@ async function startServer() {
         }
       }
 
+      const score = payload.data.score ?? ((payload.data.level ?? 1) * 14);
+      const foundWords = payload.data.foundWords ?? [];
       const next = payload.data.kind === "arcade"
         ? applyArcadeProgress(current, payload.data.score ?? 0)
         : payload.data.kind === "vintage"
         ? applyVintageProgress(current, payload.data.level ?? 1, payload.data.score ?? 30)
+        : payload.data.daily
+        ? completeDailyProgress(
+            {
+              ...current,
+              history: Array.from(new Set([...(current.history || []), ...foundWords])).slice(-150),
+            },
+            getDailyChallenge(),
+            score,
+            foundWords.length
+          )
         : {
             ...applyMatchProgress(current, {
-              score: (payload.data.level ?? 1) * 14,
+              score,
               tempo: Math.max(1, (payload.data.level ?? 1) / 2),
               won: true,
               longWord: (payload.data.level ?? 1) >= 5,
-              foundWords: payload.data.foundWords ?? [],
+              foundWords,
             }, "solo"),
-            soloUnlockedLevel: payload.data.daily
-              ? (current.soloUnlockedLevel ?? 1)
-              : Math.min(101, Math.max(current.soloUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
+            soloUnlockedLevel: Math.min(101, Math.max(current.soloUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
           };
-      const awarded = payload.data.daily ? completeDailyProgress(next, getDailyChallenge()) : next;
+      const awarded = next;
       dbUser.progress = awarded;
       dbUser.updatedAt = new Date();
       await dbUser.save();
@@ -845,7 +1107,11 @@ async function startServer() {
 
       const dbUser = await UserModel.findOne({ openId: user.openId });
       if (dbUser && dbUser.progress) {
-        const rec = reconcilePlayerProgress({ ...DEFAULT_PROGRESS, ...dbUser.progress });
+        let prog = { ...DEFAULT_PROGRESS, ...dbUser.progress };
+        if (!Array.isArray(prog.matchHistory) || prog.matchHistory.length === 0) {
+          prog.matchHistory = backfillMatchHistoryIfEmpty(prog);
+        }
+        const rec = reconcilePlayerProgress(prog);
         dbUser.progress = rec.progress;
         dbUser.updatedAt = new Date();
         await dbUser.save();

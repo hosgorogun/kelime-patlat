@@ -4,7 +4,7 @@ import { generatePuzzle, PlacedWord } from "../shared/puzzle-generator";
 describe("Nostalji Kelime Bulmaca 20 Seviye Doğrulama Testi", () => {
   it("Bölüm 1'den Bölüm 20'ye kadar tüm seviyeleri hatasız üretir ve tamamlanabilirliğini doğrular", () => {
     for (let level = 1; level <= 20; level++) {
-      const diff = level <= 3 ? "easy" : level <= 7 ? "medium" : level <= 12 ? "hard" : "expert";
+      const diff = level <= 5 ? "easy" : level <= 10 ? "medium" : level <= 15 ? "hard" : "ultra";
       const puzzle = generatePuzzle(diff);
 
       // 1. Bulmaca nesnesi boş olmamalı ve en az 3 kelime barındırmalı

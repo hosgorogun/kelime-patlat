@@ -817,5 +817,57 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const mergedMale = mergePlayerProgress(guestWithMale, regUnspecified, { addGuestBalances: true });
     expect(mergedMale.gender).toBe("male");
   });
+
+  it("LP, XP ve Çip kazanımları lig kademelerine, serilere ve ezici galibiyete göre doğru hesaplanır", () => {
+    // 1. Giriş Kademesi (Demir): 1. galibiyet +30 LP, seri bonusu yok
+    const p1 = applyMatchProgress(DEFAULT_PROGRESS, { score: 100, tempo: 3, won: true }, "pvp");
+    expect(p1.lp).toBe(30);
+    expect(p1.pvpWinStreak).toBe(1);
+    expect(p1.lastMatchReward?.streakBonus).toBe(0);
+    expect(p1.coins).toBe(10);
+
+    // 2. galibiyet: +30 LP + 3 LP seri bonusu = +33 LP (toplam 63 LP)
+    const p2 = applyMatchProgress(p1, { score: 100, tempo: 3, won: true }, "pvp");
+    expect(p2.lp).toBe(63);
+    expect(p2.pvpWinStreak).toBe(2);
+    expect(p2.lastMatchReward?.streakBonus).toBe(3);
+
+    // 3. galibiyet: +30 LP + 7 LP seri bonusu = +37 LP (toplam 100 LP)
+    const p3 = applyMatchProgress(p2, { score: 100, tempo: 3, won: true }, "pvp");
+    expect(p3.lp).toBe(100);
+    expect(p3.pvpWinStreak).toBe(3);
+    expect(p3.lastMatchReward?.streakBonus).toBe(7);
+
+    // 4. Ezici Galibiyet (score >= 120): +30 LP + 7 LP (seri) + 5 LP (ezici) = +42 LP, 15 çip
+    const p4 = applyMatchProgress(p3, { score: 130, tempo: 3, won: true }, "pvp");
+    expect(p4.lp).toBe(142);
+    expect(p4.lastMatchReward?.isCrushingWin).toBe(true);
+    expect(p4.lastMatchReward?.coins).toBe(15);
+
+    // 5. Mağlubiyet: seriyi sıfırlar, demir liginde -10 LP, 2 çip teselli ödülü
+    const p5 = applyMatchProgress(p4, { score: 40, tempo: 1, won: false }, "pvp");
+    expect(p5.lp).toBe(132);
+    expect(p5.pvpWinStreak).toBe(0);
+    expect(p5.lastMatchReward?.coins).toBe(2);
+
+    // 6. Orta Kademe (Gümüş: 900 LP): galibiyet +25 LP, mağlubiyet -18 LP
+    const silverBase = { ...DEFAULT_PROGRESS, lp: 1000, pvpWinStreak: 0 };
+    const silverWin = applyMatchProgress(silverBase, { score: 80, tempo: 2, won: true }, "pvp");
+    expect(silverWin.lp).toBe(1025);
+    const silverLoss = applyMatchProgress(silverBase, { score: 40, tempo: 1, won: false }, "pvp");
+    expect(silverLoss.lp).toBe(982);
+
+    // 7. Üst Kademe (Elmas: 3600 LP): galibiyet +20 LP, mağlubiyet -22 LP
+    const diamondBase = { ...DEFAULT_PROGRESS, lp: 4000, pvpWinStreak: 0 };
+    const diamondWin = applyMatchProgress(diamondBase, { score: 80, tempo: 2, won: true }, "pvp");
+    expect(diamondWin.lp).toBe(4020);
+    const diamondLoss = applyMatchProgress(diamondBase, { score: 40, tempo: 1, won: false }, "pvp");
+    expect(diamondLoss.lp).toBe(3978);
+
+    // 8. 0 LP taban sınırı (Demotion Floor): 5 LP'deki oyuncu kaybettiğinde 0'ın altına inemez
+    const lowLp = { ...DEFAULT_PROGRESS, lp: 5, pvpWinStreak: 0 };
+    const floorLoss = applyMatchProgress(lowLp, { score: 20, tempo: 1, won: false }, "pvp");
+    expect(floorLoss.lp).toBe(0);
+  });
 });
 

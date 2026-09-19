@@ -142,7 +142,7 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
                 </View>
 
                 {/* 3D Rank Artwork */}
-                <View style={[styles.artworkContainer, { borderColor: isUnlocked ? item.color : "#2F2748", shadowColor: item.color }]}>
+                <View style={[styles.artworkContainer, { borderColor: isUnlocked ? item.color : "rgba(212, 180, 90, 0.2)", shadowColor: item.color }]}>
                   {imgSource ? (
                     <Image source={imgSource} style={[styles.artworkImage, !isUnlocked && { opacity: 0.35 }]} resizeMode="cover" />
                   ) : (
@@ -156,7 +156,7 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
                 </View>
 
                 {/* Title & LP Info */}
-                <Text style={[styles.cardLeagueTitle, { color: isUnlocked ? item.color : "#8B80A5" }]}>{item.name}</Text>
+                <Text style={[styles.cardLeagueTitle, { color: isUnlocked ? item.color : "#94A3B8" }]}>{item.name}</Text>
                 <Text style={styles.cardLpRange}>
                   {item.maxPoints === Number.POSITIVE_INFINITY ? `${item.minPoints}+ LP GEREKLİ` : `${item.minPoints} - ${item.maxPoints} LP`}
                 </Text>
@@ -245,21 +245,21 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
 }
 
 const styles = StyleSheet.create({
-  content: { paddingVertical: 12, paddingBottom: 60, backgroundColor: "#0C081A" },
+  content: { paddingVertical: 12, paddingBottom: 140 },
   header: { flexDirection: "row", alignItems: "center", marginBottom: 12, paddingHorizontal: 18 },
-  backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.15)", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#164536", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)", alignItems: "center", justifyContent: "center", marginRight: 10 },
   backText: { color: "#FFF9FC", fontSize: 28, lineHeight: 30, marginTop: -3 },
   headerCopy: { flex: 1 },
   overline: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
-  title: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginTop: 1 },
-  timerPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#1C1538", borderWidth: 1, borderColor: "rgba(251, 191, 36, 0.3)", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
+  title: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginTop: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
+  timerPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#164536", borderWidth: 1, borderColor: "rgba(251, 191, 36, 0.4)", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
   timerIcon: { fontSize: 12 },
   timerLabel: { color: "#FBBF24", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.8 },
   timerValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
 
   carouselContainer: { marginVertical: 8 },
-  carouselCard: { backgroundColor: "#150F2D", borderWidth: 1.5, borderColor: "rgba(255,255,255,0.1)", borderRadius: 24, padding: 16, marginRight: 14, alignItems: "center" },
-  carouselCardSelected: { backgroundColor: "#1D153B", borderWidth: 2, shadowOpacity: 0.4, shadowRadius: 14, elevation: 6 },
+  carouselCard: { backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1.5, borderColor: "rgba(212, 180, 90, 0.25)", borderRadius: 24, padding: 16, marginRight: 14, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 8, elevation: 6 },
+  carouselCardSelected: { backgroundColor: "rgba(22, 69, 54, 0.95)", borderWidth: 2, shadowOpacity: 0.5, shadowRadius: 14, elevation: 8 },
   carouselCardLocked: { opacity: 0.6 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 
@@ -270,16 +270,16 @@ const styles = StyleSheet.create({
   cardPillTextUnlocked: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
   cardPillTextLocked: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
 
-  artworkContainer: { width: 110, height: 110, borderRadius: 24, borderWidth: 2.5, backgroundColor: "#0C071C", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, position: "relative", shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 },
+  artworkContainer: { width: 110, height: 110, borderRadius: 24, borderWidth: 2.5, backgroundColor: "#0E2C22", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, position: "relative", shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 },
   artworkImage: { width: 104, height: 104, borderRadius: 20 },
-  artworkLockOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(12, 7, 28, 0.65)", alignItems: "center", justifyContent: "center" },
+  artworkLockOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(14, 44, 34, 0.65)", alignItems: "center", justifyContent: "center" },
 
-  cardLeagueTitle: { fontSize: 20, fontWeight: "900", letterSpacing: 0.6, marginBottom: 2 },
+  cardLeagueTitle: { fontSize: 20, fontWeight: "900", letterSpacing: 0.6, marginBottom: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
   cardLpRange: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginBottom: 12 },
 
-  cardDetailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#100924", paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, width: "100%", marginBottom: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  cardDetailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#0B231B", paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, width: "100%", marginBottom: 10, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.2)" },
   cardDetailBox: { flex: 1, alignItems: "center" },
-  cardDetailLabel: { color: "#64748B", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  cardDetailLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
   cardDetailValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900", marginTop: 2 },
   cardDetailRule: { width: 1, height: 20, backgroundColor: "rgba(255,255,255,0.1)" },
 
@@ -289,28 +289,28 @@ const styles = StyleSheet.create({
   cardTrack: { width: "100%", height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4, overflow: "hidden" },
   cardFill: { height: "100%", borderRadius: 3 },
 
-  detailCard: { marginHorizontal: 18, marginTop: 6, padding: 14, borderRadius: 18, backgroundColor: "#171033", borderWidth: 1.5 },
+  detailCard: { marginHorizontal: 18, marginTop: 6, padding: 14, borderRadius: 18, backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1.5, borderColor: "rgba(212, 180, 90, 0.3)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
   detailHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   detailKicker: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 1 },
   detailBadge: { fontSize: 10.5, fontWeight: "900", letterSpacing: 0.8 },
 
-  detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#110B26", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 12, marginBottom: 8, gap: 2 },
+  detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#0B231B", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 12, marginBottom: 8, gap: 2 },
   detailBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-  detailBoxLabel: { color: "#64748B", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
+  detailBoxLabel: { color: "#A8C5B5", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
   detailBoxValue: { color: "#FFFFFF", fontSize: 10.5, fontWeight: "900", marginTop: 2, textAlign: "center" },
   detailRule: { width: 1, height: 20, backgroundColor: "rgba(255,255,255,0.1)" },
 
   detailDesc: { color: "#CBD5E1", fontSize: 10.5, fontWeight: "600", lineHeight: 15, textAlign: "center" },
 
-  standingsCard: { marginHorizontal: 18, marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#150F2B", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.25)" },
+  standingsCard: { marginHorizontal: 18, marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
   standingsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  standingsTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
+  standingsTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 0.8, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   standingsBadge: { backgroundColor: "rgba(62, 232, 181, 0.15)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   standingsBadgeText: { color: "#3EE8B5", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
 
   top3Row: { flexDirection: "row", gap: 8 },
-  top3Item: { flex: 1, backgroundColor: "#0F0A21", borderWidth: 1, borderRadius: 12, padding: 8, alignItems: "center" },
+  top3Item: { flex: 1, backgroundColor: "#0B231B", borderWidth: 1, borderRadius: 12, padding: 8, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   top3Medal: { fontSize: 14, marginBottom: 2 },
-  top3Name: { color: "#FFFFFF", fontSize: 10, fontWeight: "900", width: "100%", textAlign: "center" },
+  top3Name: { color: "#FFFFFF", fontSize: 10, fontWeight: "900", width: "100%", textAlign: "center", textShadowColor: "rgba(0,0,0,0.4)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1 },
   top3Lp: { color: "#94A3B8", fontSize: 8.5, fontWeight: "800", marginTop: 1 },
 });

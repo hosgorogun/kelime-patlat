@@ -3,7 +3,7 @@ import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput
 
 import { getRank, getLeagueTier, type PlayerProgress } from "@/shared/progression";
 import { type LeaderboardEntry, BOARD_SIZES, type BoardSize } from "@/shared/game";
-import { socialManager, type FriendUser } from "@/shared/social";
+import { socialManager, type FriendUser, type FriendRequest } from "@/shared/social";
 import { triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { getApiBaseUrl } from "@/constants/oauth";
 
@@ -43,6 +43,11 @@ export function SeasonHub({
   onChallengeFriend,
   onUpdateFriends,
   onInspectUser,
+  onOpenLeagueHub,
+  pendingRequests,
+  onAcceptRequest,
+  onRejectRequest,
+  onSendFriendRequest,
 }: {
   playerId: string;
   playerName?: string;
@@ -52,15 +57,36 @@ export function SeasonHub({
   onChallengeFriend?: (friendName: string, size: BoardSize) => void;
   onUpdateFriends?: (updatedFriends: FriendUser[]) => void;
   onInspectUser?: (user: Partial<LeaderboardEntry> & { id: string; name: string }) => void;
+  onOpenLeagueHub?: () => void;
+  pendingRequests?: FriendRequest[];
+  onAcceptRequest?: (requestId: string) => void;
+  onRejectRequest?: (requestId: string) => void;
+  onSendFriendRequest?: (username: string) => Promise<{ success: boolean; message: string }>;
 }) {
   const [activeTab, setActiveTab] = useState<SeasonTab>("leaderboard");
+  const [friendsSubTab, setFriendsSubTab] = useState<"friends" | "requests">("friends");
   const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
   const [rankingType, setRankingType] = useState<RankingType>("lp");
   const [friendInput, setFriendInput] = useState("");
   const [friendsList, setFriendsList] = useState<FriendUser[]>(() => socialManager.getFriends());
+  const [pendingRequestsList, setPendingRequestsList] = useState<FriendRequest[]>(() => pendingRequests || socialManager.getPendingRequests());
   const [socialMessage, setSocialMessage] = useState<string | null>(null);
   // Board size picker modal state
   const [challengeTarget, setChallengeTarget] = useState<FriendUser | null>(null);
+
+  useEffect(() => {
+    const unsub = socialManager.subscribe(() => {
+      setFriendsList([...socialManager.getFriends()]);
+      setPendingRequestsList([...socialManager.getPendingRequests()]);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (pendingRequests) {
+      setPendingRequestsList(pendingRequests);
+    }
+  }, [pendingRequests]);
 
   useEffect(() => {
     socialManager.init().then((list) => {
@@ -100,19 +126,65 @@ export function SeasonHub({
 
   // Filtered & Sorted Leaderboard
   const displayedLeaderboard = useMemo(() => {
-    let pool = basePool;
+    let pool: LeaderboardEntry[] = basePool;
 
     if (leaderboardFilter === "friends") {
-      const friendIds = new Set(friendsList.map((f) => f.id));
-      const friendNames = new Set(friendsList.map((f) => f.name.toLocaleLowerCase("tr-TR")));
-      const friendUsernames = new Set(friendsList.map((f) => f.username.toLocaleLowerCase("tr-TR")));
-      pool = basePool.filter(
-        (entry) =>
-          entry.id === playerId ||
-          friendIds.has(entry.id) ||
-          friendNames.has(entry.name.toLocaleLowerCase("tr-TR")) ||
-          friendUsernames.has(entry.name.toLocaleLowerCase("tr-TR"))
-      );
+      const poolMap = new Map<string, LeaderboardEntry>();
+
+      // 1. Current user entry
+      const userFromBase = basePool.find((e) => e.id === playerId);
+      if (userFromBase) {
+        poolMap.set(playerId, userFromBase);
+      } else {
+        const userTier = getLeagueTier(progress);
+        poolMap.set(playerId, {
+          id: playerId,
+          name: playerName,
+          score: progress.xp ?? 0,
+          wins: progress.wins ?? 0,
+          matches: progress.matches ?? 0,
+          bestRound: progress.bestScore ?? 0,
+          lp: progress.lp ?? 0,
+          tier: userTier.tier,
+          avatarPhoto: progress.avatarPhoto,
+          selectedTitle: progress.selectedTitle,
+          level: Math.floor((progress.xp ?? 0) / 200) + 1,
+        });
+      }
+
+      // 2. All friends in friendsList (real-time synchronized)
+      friendsList.forEach((f) => {
+        poolMap.set(f.id, {
+          id: f.id,
+          name: f.name || f.username,
+          score: f.xp ?? (f.level ? (f.level - 1) * 200 : 0),
+          wins: f.wins ?? 0,
+          matches: f.matches ?? 0,
+          bestRound: f.bestScore ?? 0,
+          lp: f.lp ?? 0,
+          tier: f.tier || "DEMİR",
+          avatar: f.avatar || "spark",
+          avatarPhoto: f.avatarPhoto,
+          selectedTitle: f.selectedTitle || "[ÇAYLAK]",
+          level: f.level || 1,
+        });
+      });
+
+      // 3. If any friend was also in basePool with higher/more detailed scores, merge them
+      basePool.forEach((entry) => {
+        if (
+          friendsList.some(
+            (f) =>
+              f.id === entry.id ||
+              f.name.toLocaleLowerCase("tr-TR") === entry.name.toLocaleLowerCase("tr-TR") ||
+              f.username.toLocaleLowerCase("tr-TR") === entry.name.toLocaleLowerCase("tr-TR")
+          )
+        ) {
+          poolMap.set(entry.id, entry);
+        }
+      });
+
+      pool = Array.from(poolMap.values());
     }
 
     return [...pool].sort((a, b) => {
@@ -127,7 +199,7 @@ export function SeasonHub({
       const lpB = b.lp ?? b.score;
       return lpB - lpA;
     });
-  }, [basePool, leaderboardFilter, rankingType, friendsList, playerId]);
+  }, [basePool, leaderboardFilter, rankingType, friendsList, playerId, playerName, progress]);
 
   // Current user's standing in the leaderboard
   const userEntryIndex = displayedLeaderboard.findIndex((e) => e.id === playerId);
@@ -182,43 +254,56 @@ export function SeasonHub({
       return;
     }
 
+    // Call onSendFriendRequest if provided
+    if (onSendFriendRequest) {
+      const res = await onSendFriendRequest(cleanInput);
+      setSocialMessage(res.message);
+      if (res.success) {
+        triggerHapticSuccess();
+        setFriendInput("");
+      } else {
+        triggerHapticError();
+      }
+      setTimeout(() => setSocialMessage(null), 3500);
+      return;
+    }
+
     // Try finding real user profile from server
     try {
-      const resp = await fetch(`${getApiBaseUrl()}/api/user/profile/${encodeURIComponent(cleanInput)}`);
-      if (resp.ok) {
-        const profileData = await resp.json();
-        const res = socialManager.addFriend({
-          id: profileData.id,
-          name: profileData.name,
-          username: profileData.username,
-          avatar: profileData.avatar,
-          avatarPhoto: profileData.avatarPhoto,
-          selectedTitle: profileData.selectedTitle,
-          xp: profileData.xp,
-          level: profileData.level,
-          lp: profileData.lp,
-          tier: profileData.tier,
-          wins: profileData.wins,
-          matches: profileData.matches,
-          streak: profileData.streak,
-          bestScore: profileData.bestScore,
-          bestTempo: profileData.bestTempo,
-        });
-        setSocialMessage(res.message);
-        if (res.success) {
-          triggerHapticSuccess();
-          const updated = [...socialManager.getFriends()];
-          setFriendsList(updated);
-          onUpdateFriends?.(updated);
-          setFriendInput("");
-        } else {
-          triggerHapticError();
-        }
+      const resp = await fetch(`${getApiBaseUrl()}/api/friends/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toUsername: cleanInput,
+          fromPlayerId: playerId,
+          fromPlayerName: playerName,
+          profile: {
+            username: playerName,
+            avatar: progress.selectedAvatar,
+            avatarPhoto: progress.avatarPhoto,
+            selectedTitle: progress.selectedTitle,
+            level: Math.floor((progress.xp ?? 0) / 200) + 1,
+            tier: getLeagueTier(progress).tier,
+            lp: progress.lp || 0,
+            xp: progress.xp || 0,
+          },
+        }),
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        triggerHapticSuccess();
+        setSocialMessage(data.message || "Arkadaşlık isteği gönderildi!");
+        setFriendInput("");
+        setTimeout(() => setSocialMessage(null), 3500);
+        return;
+      } else if (data.error) {
+        triggerHapticError();
+        setSocialMessage(data.error);
         setTimeout(() => setSocialMessage(null), 3500);
         return;
       }
     } catch {
-      // offline or server error, fallback to local object
+      // offline fallback
     }
 
     const res = socialManager.addFriend(cleanInput);
@@ -359,6 +444,43 @@ export function SeasonHub({
             )}
           </Pressable>
         </View>
+
+        {onOpenLeagueHub && (
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              onOpenLeagueHub();
+            }}
+            style={({ pressed }) => [
+              {
+                marginTop: 10,
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+                borderRadius: 16,
+                backgroundColor: "rgba(62, 232, 181, 0.12)",
+                borderWidth: 1.5,
+                borderColor: "#3EE8B5",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              },
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Text style={{ fontSize: 18 }}>👑</Text>
+              <View>
+                <Text style={{ color: "#3EE8B5", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 }}>
+                  LİGLER & KADEMELER REHBERİ
+                </Text>
+                <Text style={{ color: "#94A3B8", fontSize: 9.5, fontWeight: "700" }}>
+                  Demir'den Radian'a tüm ligleri ve LP hedeflerini incele
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: "#3EE8B5", fontSize: 16, fontWeight: "900" }}>→</Text>
+          </Pressable>
+        )}
 
         {/* TAB 1: Leaderboard */}
         {activeTab === "leaderboard" && (
@@ -685,65 +807,169 @@ export function SeasonHub({
               {socialMessage && <Text style={styles.socialMsg}>{socialMessage}</Text>}
             </View>
 
-            <View style={styles.sectionHead}>
-              <Text style={styles.sectionTitle}>ARKADAŞ LİSTESİ</Text>
-              <Text style={styles.sectionMeta}>{onlineFriendsCount} ÇEVRİM İÇİ</Text>
-            </View>
-
-            <View style={styles.friendsBoard}>
-              {friendsList.length === 0 && (
-                <View style={styles.emptyBoard}>
-                  <Text style={styles.emptyTitle}>LİSTE BOŞ</Text>
-                  <Text style={styles.emptyCopy}>Yukarıdan kullanıcı adı girerek arkadaş ekleyebilirsin.</Text>
-                </View>
-              )}
-              {friendsList.map((f) => (
-                <View key={f.id} style={styles.friendRow}>
-                  {/* Top row: avatar + info + status dot + remove */}
-                  <View style={styles.friendRowTop}>
-                    <Pressable
-                      style={{ flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0, gap: 10 }}
-                      onPress={() => {
-                        triggerHapticSelection();
-                        onInspectUser?.(f);
-                      }}
-                    >
-                      <Text style={styles.friendAvatarText}>{f.avatar}</Text>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
-                          <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
-                            <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {f.level ?? Math.floor(f.xp / 200) + 1}</Text>
-                          </View>
-                        </View>
-                        <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.tier ?? "DEMİR"} ({f.lp ?? f.xp} LP) · {f.xp} XP</Text>
-                      </View>
-                    </Pressable>
-                    <View style={styles.statusWrap}>
-                      <View style={[styles.onlineDot, f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline]} />
-                      <Text style={styles.onlineStatusText}>{f.isOnline ? "ÇEVRİM İÇİ" : "ÇEVRİM DIŞI"}</Text>
-                    </View>
-                    <Pressable
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      onPress={() => handleRemoveFriend(f)}
-                      style={({ pressed }) => [styles.removeFriendBtn, pressed && { opacity: 0.6 }]}
-                    >
-                      <Text style={styles.removeFriendText}>✕</Text>
-                    </Pressable>
+            {/* Sub-tab switcher: Arkadaşlarım vs Gelen İstekler */}
+            <View style={styles.subTabContainer}>
+              <Pressable
+                onPress={() => { triggerHapticSelection(); setFriendsSubTab("friends"); }}
+                style={[styles.subTabBtn, friendsSubTab === "friends" && styles.subTabBtnActive]}
+              >
+                <Text style={[styles.subTabText, friendsSubTab === "friends" && styles.subTabTextActive]}>
+                  ARKADAŞLAR ({friendsList.length})
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { triggerHapticSelection(); setFriendsSubTab("requests"); }}
+                style={[styles.subTabBtn, friendsSubTab === "requests" && styles.subTabBtnActive]}
+              >
+                <Text style={[styles.subTabText, friendsSubTab === "requests" && styles.subTabTextActive]}>
+                  GELEN İSTEKLER ({pendingRequestsList.length})
+                </Text>
+                {pendingRequestsList.length > 0 && (
+                  <View style={styles.requestBadgeDot}>
+                    <Text style={styles.requestBadgeText}>{pendingRequestsList.length}</Text>
                   </View>
-
-                  {/* Bottom row: challenge button */}
-                  {onChallengeFriend && (
-                    <Pressable
-                      onPress={() => handleDuelPress(f)}
-                      style={({ pressed }) => [styles.challengeBtn, pressed && { opacity: 0.8 }]}
-                    >
-                      <Text style={styles.challengeBtnText}>⚡ DÜELLO GÖNDERİ OLUŞTUR</Text>
-                    </Pressable>
-                  )}
-                </View>
-              ))}
+                )}
+              </Pressable>
             </View>
+
+            {friendsSubTab === "friends" && (
+              <>
+                <View style={styles.sectionHead}>
+                  <Text style={styles.sectionTitle}>ARKADAŞ LİSTESİ</Text>
+                  <Text style={styles.sectionMeta}>{onlineFriendsCount} ÇEVRİM İÇİ</Text>
+                </View>
+
+                <View style={styles.friendsBoard}>
+                  {friendsList.length === 0 && (
+                    <View style={styles.emptyBoard}>
+                      <Text style={styles.emptyTitle}>LİSTE BOŞ</Text>
+                      <Text style={styles.emptyCopy}>Yukarıdan kullanıcı adı girerek arkadaş ekleyebilirsin.</Text>
+                    </View>
+                  )}
+                  {friendsList.map((f) => (
+                    <View key={f.id} style={styles.friendRow}>
+                      {/* Top row: avatar + info + status dot + remove */}
+                      <View style={styles.friendRowTop}>
+                        <Pressable
+                          style={{ flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0, gap: 10 }}
+                          onPress={() => {
+                            triggerHapticSelection();
+                            onInspectUser?.(f);
+                          }}
+                        >
+                          <Text style={styles.friendAvatarText}>{f.avatar}</Text>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                              <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
+                              <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                                <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {f.level ?? Math.floor(f.xp / 200) + 1}</Text>
+                              </View>
+                            </View>
+                            <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.tier ?? "DEMİR"} ({f.lp ?? f.xp} LP) · {f.xp} XP</Text>
+                          </View>
+                        </Pressable>
+                        <View style={styles.statusWrap}>
+                          <View style={[styles.onlineDot, f.isOnline ? styles.onlineDotActive : styles.onlineDotOffline]} />
+                          <Text style={styles.onlineStatusText}>{f.isOnline ? "ÇEVRİM İÇİ" : "ÇEVRİM DIŞI"}</Text>
+                        </View>
+                        <Pressable
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          onPress={() => handleRemoveFriend(f)}
+                          style={({ pressed }) => [styles.removeFriendBtn, pressed && { opacity: 0.6 }]}
+                        >
+                          <Text style={styles.removeFriendText}>✕</Text>
+                        </Pressable>
+                      </View>
+
+                      {/* Bottom row: challenge button */}
+                      {onChallengeFriend && (
+                        <Pressable
+                          onPress={() => handleDuelPress(f)}
+                          style={({ pressed }) => [styles.challengeBtn, pressed && { opacity: 0.8 }]}
+                        >
+                          <Text style={styles.challengeBtnText}>⚡ DÜELLO GÖNDERİ OLUŞTUR</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {friendsSubTab === "requests" && (
+              <>
+                <View style={styles.sectionHead}>
+                  <Text style={styles.sectionTitle}>BEKLEYEN İSTEKLER</Text>
+                  <Text style={styles.sectionMeta}>{pendingRequestsList.length} İSTEK</Text>
+                </View>
+
+                <View style={styles.friendsBoard}>
+                  {pendingRequestsList.length === 0 && (
+                    <View style={styles.emptyBoard}>
+                      <Text style={styles.emptyTitle}>BEKLEYEN İSTEK YOK</Text>
+                      <Text style={styles.emptyCopy}>Şu anda sana gönderilen yeni bir arkadaşlık isteği bulunmuyor.</Text>
+                    </View>
+                  )}
+                  {pendingRequestsList.map((req) => (
+                    <View key={req.id} style={styles.requestRow}>
+                      <View style={styles.friendRowTop}>
+                        <Text style={styles.friendAvatarText}>{req.fromAvatar || "🎮"}</Text>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            <Text numberOfLines={1} style={styles.friendNameText}>{req.fromName}</Text>
+                            <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                              <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {req.fromLevel ?? 1}</Text>
+                            </View>
+                          </View>
+                          <Text numberOfLines={1} style={styles.friendXpText}>@{req.fromUsername} · {req.fromTier ?? "DEMİR"} ({req.fromLp ?? 0} LP)</Text>
+                        </View>
+                      </View>
+                      <View style={styles.requestActionRow}>
+                        <Pressable
+                          style={({ pressed }) => [styles.acceptBtn, pressed && { opacity: 0.8 }]}
+                          onPress={() => {
+                            triggerHapticSuccess();
+                            if (onAcceptRequest) {
+                              onAcceptRequest(req.id);
+                            } else {
+                              socialManager.addFriend({
+                                id: req.fromUserId,
+                                name: req.fromName,
+                                username: req.fromUsername,
+                                avatar: req.fromAvatar,
+                                level: req.fromLevel,
+                                tier: req.fromTier,
+                                lp: req.fromLp,
+                                xp: req.fromXp,
+                              });
+                              socialManager.removePendingRequest(req.id);
+                              setPendingRequestsList([...socialManager.getPendingRequests()]);
+                              setFriendsList([...socialManager.getFriends()]);
+                            }
+                          }}
+                        >
+                          <Text style={styles.acceptBtnText}>✓ KABUL ET</Text>
+                        </Pressable>
+                        <Pressable
+                          style={({ pressed }) => [styles.rejectBtn, pressed && { opacity: 0.8 }]}
+                          onPress={() => {
+                            triggerHapticSelection();
+                            if (onRejectRequest) {
+                              onRejectRequest(req.id);
+                            } else {
+                              socialManager.removePendingRequest(req.id);
+                              setPendingRequestsList([...socialManager.getPendingRequests()]);
+                            }
+                          }}
+                        >
+                          <Text style={styles.rejectBtnText}>✕ REDDET</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         )}
       </ScrollView>
@@ -753,25 +979,27 @@ export function SeasonHub({
 
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingBottom: 130 },
+  content: { flexGrow: 1, paddingBottom: 140 },
   header: { flexDirection: "row", alignItems: "center", gap: 11 },
   back: {
     width: 38,
     height: 38,
     borderRadius: 13,
-    backgroundColor: "#251E45",
+    backgroundColor: "#164536",
+    borderWidth: 1,
+    borderColor: "rgba(212, 180, 90, 0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
   backText: { color: "#FFF9FC", fontSize: 30, lineHeight: 30 },
-  overline: { color: "#B7AAD1", fontSize: 8, letterSpacing: 0.8, fontWeight: "900" },
+  overline: { color: "#A8C5B5", fontSize: 8, letterSpacing: 0.8, fontWeight: "900" },
   title: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", marginTop: 2, letterSpacing: 0.2 },
   rankOrb: {
     width: 35,
     height: 35,
     borderRadius: 18,
     marginLeft: "auto",
-    backgroundColor: "#493477",
+    backgroundColor: "#164536",
     borderWidth: 1,
     borderColor: "#FFC24A",
     alignItems: "center",
@@ -782,12 +1010,12 @@ const styles = StyleSheet.create({
   /* Modern Segmented Tab Controller */
   segmentedTabContainer: {
     flexDirection: "row",
-    backgroundColor: "rgba(16, 11, 32, 0.95)",
+    backgroundColor: "rgba(8, 28, 22, 0.95)",
     borderRadius: 20,
     padding: 5,
     marginTop: 16,
     borderWidth: 1.5,
-    borderColor: "rgba(212, 180, 90, 0.3)",
+    borderColor: "rgba(212, 180, 90, 0.35)",
     gap: 4,
   },
   segmentedTabBtn: {
@@ -802,9 +1030,11 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   segmentedTabBtnActive: {
-    backgroundColor: "#6D28D9",
-    shadowColor: "#C9A227",
-    shadowOpacity: 0.55,
+    backgroundColor: "rgba(244, 208, 111, 0.18)",
+    borderWidth: 1.5,
+    borderColor: "#F4D06F",
+    shadowColor: "#F4D06F",
+    shadowOpacity: 0.45,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -812,14 +1042,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   segmentedTabText: {
-    color: "#6B5E88",
+    color: "#A8C5B5",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.6,
     flexShrink: 1,
   },
   segmentedTabTextActive: {
-    color: "#FFFFFF",
+    color: "#F4D06F",
   },
   onlineBadgeDot: {
     position: "absolute",
@@ -830,7 +1060,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: "#22C55E",
     borderWidth: 1.5,
-    borderColor: "#0C081A",
+    borderColor: "#06140F",
   },
 
   /* Compact Filter Toolbar */
@@ -843,10 +1073,10 @@ const styles = StyleSheet.create({
   toolbarSegment: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "rgba(16, 11, 32, 0.8)",
+    backgroundColor: "rgba(8, 28, 22, 0.8)",
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
+    borderColor: "rgba(212, 180, 90, 0.2)",
     padding: 3,
     gap: 3,
   },
@@ -859,7 +1089,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   toolbarPillText: {
-    color: "#6B5E88",
+    color: "#A8C5B5",
     fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.4,
@@ -883,8 +1113,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   toolbarPillActiveScope: {
-    backgroundColor: "#1E3A5F",
-    shadowColor: "#38BDF8",
+    backgroundColor: "#164536",
+    shadowColor: "#3EE8B5",
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 2,
@@ -895,47 +1125,55 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 18,
     borderRadius: 24,
-    backgroundColor: "#34275E",
-    borderWidth: 1,
-    borderColor: "#7B63C9",
+    backgroundColor: "rgba(22, 28, 14, 0.95)",
+    borderWidth: 1.5,
+    borderColor: "#F4D06F",
+    shadowColor: "#F4D06F",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
   heroKicker: { color: "#FFD37F", fontSize: 8, letterSpacing: 1, fontWeight: "900" },
-  heroTitle: { color: "#FFF9FC", fontSize: 25, fontWeight: "900", marginTop: 6 },
-  heroBody: { color: "#D8CDEB", fontSize: 11, marginTop: 4 },
+  heroTitle: { color: "#FFF9FC", fontSize: 25, fontWeight: "900", marginTop: 6, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
+  heroBody: { color: "#A8C5B5", fontSize: 11, marginTop: 4 },
   heroStats: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#5B4B90",
+    borderTopColor: "rgba(212, 180, 90, 0.2)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  statLabel: { color: "#BEB1D7", fontSize: 7, fontWeight: "900", letterSpacing: 0.7 },
-  statValue: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 3 },
-  statRule: { width: 1, height: 27, backgroundColor: "#5C4D90" },
+  statLabel: { color: "#A8C5B5", fontSize: 7, fontWeight: "900", letterSpacing: 0.7 },
+  statValue: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
+  statRule: { width: 1, height: 27, backgroundColor: "rgba(212, 180, 90, 0.2)" },
 
   /* Social Hero */
   socialHero: {
     marginTop: 14,
     padding: 18,
     borderRadius: 24,
-    backgroundColor: "rgba(35, 25, 68, 0.9)",
+    backgroundColor: "rgba(10, 32, 42, 0.95)",
     borderWidth: 1.5,
-    borderColor: "rgba(62, 232, 181, 0.35)",
+    borderColor: "#38BDF8",
+    shadowColor: "#38BDF8",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  socialHeroKicker: { color: "#3EE8B5", fontSize: 8, letterSpacing: 1, fontWeight: "900" },
-  socialHeroTitle: { color: "#FFF9FC", fontSize: 23, fontWeight: "900", marginTop: 6 },
-  socialHeroBody: { color: "#D8CDEB", fontSize: 11, marginTop: 4 },
+  socialHeroKicker: { color: "#38BDF8", fontSize: 8, letterSpacing: 1, fontWeight: "900" },
+  socialHeroTitle: { color: "#FFF9FC", fontSize: 23, fontWeight: "900", marginTop: 6, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
+  socialHeroBody: { color: "#A8C5B5", fontSize: 11, marginTop: 4 },
 
   /* Mystery Card */
   mysteryCard: {
     marginTop: 12,
     padding: 14,
     borderRadius: 20,
-    backgroundColor: "#261A46",
-    borderWidth: 1,
-    borderColor: "#D4B45A",
+    backgroundColor: "rgba(36, 26, 8, 0.95)",
+    borderWidth: 1.5,
+    borderColor: "#FFC24A",
   },
   mysteryHeader: {
     flexDirection: "row",
@@ -959,13 +1197,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 14,
     borderRadius: 20,
-    backgroundColor: "rgba(30, 22, 58, 0.95)",
+    backgroundColor: "rgba(14, 44, 34, 0.95)",
     borderWidth: 1.5,
-    borderColor: "#6D28D9",
+    borderColor: "rgba(244, 208, 111, 0.4)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#6D28D9",
+    shadowColor: "#F4D06F",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -997,6 +1235,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "900",
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   userRankBadge: {
     backgroundColor: "rgba(62, 232, 181, 0.15)",
@@ -1180,6 +1421,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 8,
     textAlign: "center",
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   tierBadge: {
     marginTop: 3,
@@ -1217,6 +1461,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "900",
     marginTop: 2,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   podiumBar1: {
     width: "100%",
@@ -1278,10 +1525,15 @@ const styles = StyleSheet.create({
   /* Board & Rows */
   board: {
     borderRadius: 20,
-    backgroundColor: "#1E1836",
+    backgroundColor: "#0E2C22",
     borderWidth: 1,
-    borderColor: "#403360",
+    borderColor: "rgba(212, 180, 90, 0.25)",
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 6,
   },
   row: {
     minHeight: 54,
@@ -1290,7 +1542,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 9,
     borderBottomWidth: 1,
-    borderBottomColor: "#30254C",
+    borderBottomColor: "rgba(212, 180, 90, 0.15)",
   },
   rowUser: {
     backgroundColor: "rgba(62, 232, 181, 0.08)",
@@ -1343,7 +1595,7 @@ const styles = StyleSheet.create({
     width: 23,
     height: 23,
     borderRadius: 8,
-    backgroundColor: "#392C5D",
+    backgroundColor: "#164536",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1361,9 +1613,9 @@ const styles = StyleSheet.create({
   },
   playerMarkText: { color: "#FFC24A", fontSize: 11, fontWeight: "900" },
   playerCopy: { flex: 1 },
-  playerName: { color: "#F9F5FF", fontSize: 11, fontWeight: "900" },
+  playerName: { color: "#F9F5FF", fontSize: 11, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   playerMeta: { color: "#9F93B6", fontSize: 7, marginTop: 3, fontWeight: "800" },
-  score: { color: "#55E6B2", fontSize: 13, fontWeight: "900" },
+  score: { color: "#55E6B2", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
   emptyBoard: { padding: 22, alignItems: "center" },
   emptyTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900" },
   emptyCopy: { color: "#B8ADCD", fontSize: 10, textAlign: "center", marginTop: 5 },
@@ -1371,11 +1623,16 @@ const styles = StyleSheet.create({
   /* Add Friend Card */
   addCard: {
     marginTop: 12,
-    backgroundColor: "rgba(22, 16, 42, 0.85)",
+    backgroundColor: "rgba(14, 44, 34, 0.95)",
     borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#2C2250",
+    borderColor: "rgba(212, 180, 90, 0.25)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   addCardLabel: {
     color: "#8FBAAB",
@@ -1387,14 +1644,14 @@ const styles = StyleSheet.create({
   addFriendRow: { flexDirection: "row", gap: 8 },
   addFriendInput: {
     flex: 1,
-    backgroundColor: "#0E2C22",
+    backgroundColor: "#0A241C",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
     color: "#FFF",
     fontSize: 12,
     borderWidth: 1,
-    borderColor: "#2D2254",
+    borderColor: "rgba(212, 180, 90, 0.25)",
   },
   addFriendBtn: {
     backgroundColor: "#C9A227",
@@ -1421,12 +1678,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   friendRow: {
-    backgroundColor: "rgba(22, 16, 42, 0.85)",
+    backgroundColor: "rgba(14, 44, 34, 0.95)",
     padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#2A204C",
+    borderColor: "rgba(212, 180, 90, 0.25)",
     gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
   },
   friendRowTop: {
     flexDirection: "row",
@@ -1434,8 +1696,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   friendAvatarText: { fontSize: 24 },
-  friendNameText: { color: "#FFF", fontSize: 13, fontWeight: "900" },
-  friendXpText: { color: "#7E7299", fontSize: 9.5, marginTop: 2 },
+  friendNameText: { color: "#FFF", fontSize: 13, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
+  friendXpText: { color: "#8FBAAB", fontSize: 9.5, marginTop: 2 },
   statusWrap: { alignItems: "flex-end", gap: 3 },
   onlineDot: { width: 8, height: 8, borderRadius: 4 },
   onlineDotActive: {
@@ -1481,6 +1743,109 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
+  /* Sub Tab Container */
+  subTabContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(10, 32, 24, 0.9)",
+    borderRadius: 14,
+    padding: 3,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(212, 180, 90, 0.2)",
+    gap: 4,
+  },
+  subTabBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 11,
+    position: "relative",
+    gap: 6,
+  },
+  subTabBtnActive: {
+    backgroundColor: "rgba(244, 208, 111, 0.18)",
+    borderWidth: 1,
+    borderColor: "#F4D06F",
+  },
+  subTabText: {
+    color: "#8FBAAB",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  subTabTextActive: {
+    color: "#F4D06F",
+    fontWeight: "900",
+  },
+  requestBadgeDot: {
+    backgroundColor: "#FF647C",
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  requestBadgeText: {
+    color: "#FFF",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+
+  /* Request Row */
+  requestRow: {
+    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(212, 180, 90, 0.25)",
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  requestActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  acceptBtn: {
+    flex: 1,
+    backgroundColor: "rgba(62, 232, 181, 0.18)",
+    borderWidth: 1.5,
+    borderColor: "#3EE8B5",
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  acceptBtnText: {
+    color: "#3EE8B5",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  rejectBtn: {
+    flex: 1,
+    backgroundColor: "rgba(255, 100, 124, 0.15)",
+    borderWidth: 1.5,
+    borderColor: "#FF647C",
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rejectBtnText: {
+    color: "#FF647C",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+
   /* Board Size Picker Modal */
   modalOverlay: {
     flex: 1,
@@ -1492,11 +1857,11 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 340,
-    backgroundColor: "#1D1635",
+    backgroundColor: "#0E2C22",
     borderRadius: 22,
     padding: 20,
     borderWidth: 1.5,
-    borderColor: "#6B4A18",
+    borderColor: "#D4B45A",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,

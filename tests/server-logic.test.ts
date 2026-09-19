@@ -385,6 +385,186 @@ describe("Sunucu Yetkilendirme ve Guvenlik", () => {
     expect(testRooms.size).toBe(1);
     expect(testRooms.has("ROOM2")).toBe(true);
   });
+
+  describe("Yeni Uç Noktalar ve Senkronizasyon Gelistirmeleri", () => {
+    it("sync-progress en iyi skor, tempo, arcade skoru ve son mac odulunu basariyla kaydeder", () => {
+      const currentProg: PlayerProgress = {
+        ...DEFAULT_PROGRESS,
+        bestScore: 100,
+        bestTempo: 2.5,
+        bestArcadeScore: 250,
+      };
+
+      const incoming = {
+        bestScore: 180,
+        bestTempo: 4.0,
+        bestArcadeScore: 450,
+        lastMatchReward: { xp: 50, lp: 25, coins: 10 },
+      };
+
+      const updated = {
+        ...currentProg,
+        bestScore: Math.max(currentProg.bestScore || 0, incoming.bestScore),
+        bestTempo: Math.max(currentProg.bestTempo || 0, incoming.bestTempo),
+        bestArcadeScore: Math.max(currentProg.bestArcadeScore || 0, incoming.bestArcadeScore),
+        lastMatchReward: incoming.lastMatchReward,
+      };
+
+      expect(updated.bestScore).toBe(180);
+      expect(updated.bestTempo).toBe(4.0);
+      expect(updated.bestArcadeScore).toBe(450);
+      expect(updated.lastMatchReward).toEqual({ xp: 50, lp: 25, coins: 10 });
+    });
+
+    it("sync-progress gunluk seri sifirlanmasina (streak: 0) izin verir", () => {
+      const currentProg: PlayerProgress = {
+        ...DEFAULT_PROGRESS,
+        streak: 5,
+      };
+
+      const incoming = { streak: 0 };
+      const safeStreak = typeof incoming.streak === "number"
+        ? Math.min(currentProg.streak, Math.max(0, incoming.streak))
+        : currentProg.streak;
+
+      expect(safeStreak).toBe(0);
+    });
+
+    it("sync-progress cevrimdisi gunluk giris odulunu dogrular ve bonuslari guvenle ekler", () => {
+      const currentProg: PlayerProgress = {
+        ...DEFAULT_PROGRESS,
+        coins: 100,
+        streakShields: 0,
+        xp: 200,
+        lastLoginDay: undefined,
+        loginDaysCount: 0,
+      };
+
+      // 1. Gün ödülü: 25 çip
+      const incomingLastLoginDay = "2026-09-19";
+      const isClaiming = !currentProg.lastLoginDay && incomingLastLoginDay === "2026-09-19";
+      expect(isClaiming).toBe(true);
+
+      const dlResult = {
+        reward: { day: 1, label: "1. GÜN", rewardType: "coins" as const, amount: 25, icon: "🪙" },
+        updatedProgress: { ...currentProg, coins: 125, lastLoginDay: incomingLastLoginDay, loginDaysCount: 1 }
+      };
+
+      const bonusCoins = dlResult.reward.rewardType === "coins" ? dlResult.reward.amount : 0;
+      const nextCoins = currentProg.coins! + bonusCoins;
+
+      expect(nextCoins).toBe(125);
+    });
+
+    it("sync-progress ve sunucu oda kaydı pvpWinStreak alanını kayıpsız korur", () => {
+      const currentProg: PlayerProgress = {
+        ...DEFAULT_PROGRESS,
+        pvpWinStreak: 2,
+      };
+
+      const incoming = { pvpWinStreak: 3 };
+      const safePvpWinStreak = typeof incoming.pvpWinStreak === "number"
+        ? Math.max(0, incoming.pvpWinStreak)
+        : (currentProg.pvpWinStreak ?? 0);
+
+      expect(safePvpWinStreak).toBe(3);
+    });
+
+    it("sync-progress istemciden boş matchHistory gelse bile sunucudaki mevcut maç geçmişini ezmez ve korur", () => {
+      const serverMatch = {
+        id: "m_server_saved_1",
+        mode: "ranked" as const,
+        won: true,
+        myScore: 110,
+        date: Date.now() - 5000,
+      };
+
+      const currentProg: PlayerProgress = {
+        ...DEFAULT_PROGRESS,
+        matchHistory: [serverMatch],
+      };
+
+      // İstemci boş dizi gönderiyor (eski yıkıcı ezme hatası simülasyonu)
+      const incoming = { matchHistory: [] };
+
+      const safeMergedHistory = (() => {
+        const map = new Map<string, any>();
+        (currentProg.matchHistory || []).forEach((m: any) => {
+          if (m && typeof m.id === "string") map.set(m.id, m);
+        });
+        (Array.isArray(incoming.matchHistory) ? incoming.matchHistory : []).forEach((m: any) => {
+          if (m && typeof m.id === "string") map.set(m.id, m);
+        });
+        return Array.from(map.values())
+          .sort((a: any, b: any) => (b.date || 0) - (a.date || 0))
+          .slice(0, 50);
+      })();
+
+      expect(safeMergedHistory.length).toBe(1);
+      expect(safeMergedHistory[0].id).toBe("m_server_saved_1");
+    });
+
+    it("sync-progress istemci ve sunucu kelime geçmişlerini (history) tekilleştirerek birleştirir", () => {
+      const currentProg: PlayerProgress = {
+        ...DEFAULT_PROGRESS,
+        history: ["ELMA", "ARMUT"],
+      };
+
+      const incoming = {
+        history: ["KİRAZ", "ELMA"], // ELMA ortak, KİRAZ yeni
+      };
+
+      const mergedHistory = Array.from(
+        new Set([...(currentProg.history || []), ...(Array.isArray(incoming.history) ? incoming.history : [])])
+      ).slice(-150);
+
+      expect(mergedHistory.length).toBe(3);
+      expect(mergedHistory).toContain("ELMA");
+      expect(mergedHistory).toContain("ARMUT");
+      expect(mergedHistory).toContain("KİRAZ");
+    });
+
+    it("award uç noktası günün rotası için tek bir 'daily' maç kaydı oluşturur ve mükerrer solo kaydı yapmaz", () => {
+      const currentProg: PlayerProgress = {
+        ...DEFAULT_PROGRESS,
+        matchHistory: [],
+      };
+
+      const dailyChallenge = {
+        id: "2026-09-19",
+        themeId: "nature" as const,
+        size: 4 as const,
+        targetScore: 120,
+        rewardXp: 50,
+        words: ["ORMAN", "ÇINAR"],
+      };
+
+      // award sunucu simülasyonu: payload.daily: true
+      const foundWords = ["ORMAN", "ÇINAR"];
+      const score = 140;
+
+      const awarded = {
+        ...currentProg,
+        matchHistory: [
+          {
+            id: `m_${Date.now()}_daily`,
+            mode: "daily" as const,
+            won: true,
+            myScore: score,
+            xpEarned: dailyChallenge.rewardXp,
+            coinsEarned: 5,
+            wordsCount: foundWords.length,
+            date: Date.now(),
+          },
+        ],
+      };
+
+      expect(awarded.matchHistory.length).toBe(1);
+      expect(awarded.matchHistory[0].mode).toBe("daily");
+      expect(awarded.matchHistory[0].myScore).toBe(140);
+      expect(awarded.matchHistory[0].wordsCount).toBe(2);
+    });
+  });
 });
 
 

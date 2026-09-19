@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
@@ -256,6 +256,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     setRadarCooldown(0); setRadarCharges(3 + (radarChargesBonus || 0)); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
     setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
     hasFinishedRef.current = false;
+    hasAutoInspectedRef.current = false;
     isDecryptingRef.current = false;
   }, [challenge, radarChargesBonus]);
 
@@ -293,6 +294,27 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
   }, [status]);
 
   const hasFinishedRef = useRef(false);
+  const hasAutoInspectedRef = useRef(false);
+
+  // Oyun tamamlandığında veya süre bittiğinde ilk kelimenin rotasını ve yön oklarını tahtada otomatik göster
+  useEffect(() => {
+    if (status === "playing") {
+      hasAutoInspectedRef.current = false;
+      return;
+    }
+    if (challenge.words.length > 0 && !hasAutoInspectedRef.current) {
+      hasAutoInspectedRef.current = true;
+      const targetWord = found[0] || challenge.words[0]!;
+      const path = challenge.routes[targetWord];
+      const wIdx = challenge.words.indexOf(targetWord);
+      const palette = APP_WORD_PALETTE[(wIdx >= 0 ? wIdx : 0) % APP_WORD_PALETTE.length]!;
+      if (path) {
+        setInspectedPath(path);
+        setInspectedColor(palette.border);
+        setSelectedWordInfo({ word: targetWord, definition: getWordDefinition(targetWord) });
+      }
+    }
+  }, [status, challenge.words, challenge.routes, found]);
 
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused) return;
@@ -678,6 +700,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         <View style={{ position: "absolute", left: 0, right: 0, top: "75%", height: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
       </View>
 
+      {/* Canlı sürükleme çizgisi ve okları */}
       {selected.slice(0, -1).map((cellIdx, i) => {
         const nextCellIdx = selected[i + 1]!;
         const start = getCellCenter(cellIdx);
@@ -690,24 +713,59 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
             x2={end.x}
             y2={end.y}
             color={activeTheme.accentColor}
+            showArrow
           />
         );
       })}
 
-      {status !== "playing" && inspectedPath && inspectedPath.slice(0, -1).map((cellIdx, i) => {
-        const nextCellIdx = inspectedPath[i + 1]!;
-        const start = getCellCenter(cellIdx);
-        const end = getCellCenter(nextCellIdx);
-        return (
-          <ConnectLine
-            key={`inspect-line-${i}`}
-            x1={start.x}
-            y1={start.y}
-            x2={end.x}
-            y2={end.y}
-            color={inspectedColor || activeTheme.accentColor}
-          />
-        );
+      {/* Oyun sürerken bulunan kelimelerin tahtadaki rotaları */}
+      {status === "playing" && foundPaths.map((path, pIdx) => {
+        const palette = APP_WORD_PALETTE[pIdx % APP_WORD_PALETTE.length]!;
+        return path.slice(0, -1).map((cellIdx, i) => {
+          const nextCellIdx = path[i + 1]!;
+          const start = getCellCenter(cellIdx);
+          const end = getCellCenter(nextCellIdx);
+          return (
+            <ConnectLine
+              key={`found-live-line-${pIdx}-${i}`}
+              x1={start.x}
+              y1={start.y}
+              x2={end.x}
+              y2={end.y}
+              color={palette.border}
+              opacity={0.65}
+              showArrow
+            />
+          );
+        });
+      })}
+
+      {/* Oyun tamamlandığında veya süre bittiğinde: Tahtadaki TÜM kelimelerin rotalarını ve yön oklarını hemen çiz */}
+      {status !== "playing" && challenge.words.map((word, wIdx) => {
+        const path = challenge.routes[word];
+        if (!path || path.length < 2) return null;
+        const palette = APP_WORD_PALETTE[wIdx % APP_WORD_PALETTE.length]!;
+        const isCurrentInspected = Boolean(inspectedPath && inspectedPath.length === path.length && inspectedPath.every((c, ci) => c === path[ci]));
+        const lineOpacity = inspectedPath ? (isCurrentInspected ? 1 : 0.35) : 0.88;
+        const lineColor = isCurrentInspected ? (inspectedColor || palette.border) : palette.border;
+
+        return path.slice(0, -1).map((cellIdx, i) => {
+          const nextCellIdx = path[i + 1]!;
+          const start = getCellCenter(cellIdx);
+          const end = getCellCenter(nextCellIdx);
+          return (
+            <ConnectLine
+              key={`finished-line-${wIdx}-${i}`}
+              x1={start.x}
+              y1={start.y}
+              x2={end.x}
+              y2={end.y}
+              color={lineColor}
+              opacity={lineOpacity}
+              showArrow
+            />
+          );
+        });
       })}
 
       {challenge.board.map((letter, index) => {
@@ -805,7 +863,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                     position: "absolute",
                     top: challenge.size >= 8 ? 1 : 2,
                     right: challenge.size >= 8 ? 1 : 2,
-                    backgroundColor: isInspectedStart ? "#059669" : "rgba(8, 28, 22, 0.9)",
+                    backgroundColor: isInspectedStart ? "#059669" : isInspectedEnd ? "#DC2626" : "rgba(8, 28, 22, 0.9)",
                     borderRadius: challenge.size >= 8 ? 4 : 6,
                     minWidth: challenge.size >= 8 ? 12 : 16,
                     height: challenge.size >= 8 ? 12 : 16,
@@ -813,7 +871,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                     alignItems: "center",
                     paddingHorizontal: 2,
                     borderWidth: 1,
-                    borderColor: isInspectedStart ? "#34D399" : "rgba(255, 255, 255, 0.35)",
+                    borderColor: isInspectedStart ? "#34D399" : isInspectedEnd ? "#F87171" : "rgba(255, 255, 255, 0.35)",
                     zIndex: 6,
                   }}
                 >
@@ -826,7 +884,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
                       textAlign: "center",
                     }}
                   >
-                    {inspectedOrder + 1}
+                    {isInspectedStart ? "1" : isInspectedEnd ? "✓" : inspectedOrder + 1}
                   </Text>
                 </View>
               )}
@@ -873,6 +931,73 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         {feedback === "invalid" ? "Kırmızı rota birazdan temizlenecek." : "Yalnız yatay ve dikey ilerle; geri dönmek için önceki hücreye sürükle."}
       </Text>
     </View>
+
+    {/* Aktif Kelime Rotası ve Harf Yön Akışı Kartı */}
+    {selectedWordInfo && inspectedPath && (
+      <View style={[styles.activeRouteCard, { borderColor: inspectedColor || activeTheme.accentColor }]}>
+        <View style={styles.activeRouteHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={{ fontSize: 14 }}>🧭</Text>
+            <Text style={styles.activeRouteTitle}>KELİME ROTASI & YÖNÜ</Text>
+            <View style={[styles.activeRouteBadge, { backgroundColor: inspectedColor ? `${inspectedColor}25` : "rgba(45, 212, 191, 0.2)" }]}>
+              <Text style={[styles.activeRouteBadgeText, { color: inspectedColor || activeTheme.accentColor }]}>
+                {selectedWordInfo.word.length} HARF
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              setSelectedWordInfo(null);
+              setInspectedPath(null);
+              setInspectedColor(null);
+            }}
+            style={({ pressed }) => [styles.activeRouteClose, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.activeRouteCloseText}>✕ Rotayı Kapat</Text>
+          </Pressable>
+        </View>
+
+        {/* Harf akışı ve oklar */}
+        <View style={styles.activeRouteFlow}>
+          {selectedWordInfo.word.split("").map((ch, idx, arr) => (
+            <React.Fragment key={`route-ch-${idx}`}>
+              <View style={[
+                styles.activeRouteChip,
+                idx === 0 && styles.activeRouteChipStart,
+                idx === arr.length - 1 && styles.activeRouteChipEnd,
+              ]}>
+                <Text style={[
+                  styles.activeRouteChipText,
+                  idx === 0 && styles.activeRouteChipTextStart,
+                  idx === arr.length - 1 && styles.activeRouteChipTextEnd,
+                ]}>
+                  {ch}
+                </Text>
+                <Text style={[
+                  styles.activeRouteChipSub,
+                  idx === 0 && { color: "#34D399" },
+                  idx === arr.length - 1 && { color: "#F87171" },
+                ]}>
+                  {idx === 0 ? "BAŞLANGIÇ" : idx === arr.length - 1 ? "BİTİŞ" : idx + 1}
+                </Text>
+              </View>
+              {idx < arr.length - 1 && (
+                <Text style={[styles.activeRouteArrow, { color: inspectedColor || activeTheme.accentColor }]}>➔</Text>
+              )}
+            </React.Fragment>
+          ))}
+        </View>
+
+        {selectedWordInfo.definition ? (
+          <View style={styles.activeRouteDefBox}>
+            <Text style={[styles.activeRouteDefLabel, { color: inspectedColor || activeTheme.accentColor }]}>TDK ANLAMI</Text>
+            <Text style={styles.activeRouteDefText}>{selectedWordInfo.definition}</Text>
+          </View>
+        ) : null}
+      </View>
+    )}
+
     <View style={[styles.found, { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder }]}>
       <Text style={[styles.foundLabel, { color: activeTheme.headerText }]}>BULDUKLARIN (ROTA VE SÖZLÜK İÇİN TIKLA)</Text>
       <View style={styles.tags}>
@@ -1065,19 +1190,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       )}
       </ScrollView>
 
-      {selectedWordInfo && (
-        <Modal visible transparent animationType="fade" onRequestClose={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
-          <Pressable style={styles.modalOverlay} onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }}>
-            <Pressable style={[styles.modalContent, { backgroundColor: activeTheme.surface, borderColor: inspectedColor || activeTheme.accentColor }]} onPress={(e) => e.stopPropagation()}>
-              <Text style={[styles.modalTitle, { color: inspectedColor || activeTheme.accentColor }]}>{selectedWordInfo.word}</Text>
-              <Text style={styles.modalBody}>{selectedWordInfo.definition}</Text>
-              <Pressable onPress={() => { setSelectedWordInfo(null); setInspectedPath(null); setInspectedColor(null); }} style={({ pressed }) => [styles.modalCloseButton, { backgroundColor: inspectedColor || activeTheme.accentColor }, pressed && { opacity: 0.8 }]}>
-                <Text style={styles.modalCloseText}>KAPAT</Text>
-              </Pressable>
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
+
 
       {isPaused && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setIsPaused(false)}>
@@ -1150,7 +1263,26 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900" }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3 }, hint: { color: "#8FBAAB", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900" }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative", shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 5, elevation: 3 }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FFC24A", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3 }, radarUsedBtn: { backgroundColor: "#1A1530", borderColor: "#413660", opacity: 0.6 }, radarText: { color: "#FFC24A", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" }, cellRadar: { backgroundColor: "#4E3A1D", borderColor: "#FFC24A", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#E9FFF8", fontSize: 13, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, letterRadar: { color: "#FFC24A" }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, hint: { color: "#8FBAAB", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(8, 28, 22, 0.95)", borderWidth: 1.5, borderColor: "#2DD4BF", padding: 14, shadowColor: "#2DD4BF", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
+  activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  activeRouteTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
+  activeRouteBadge: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: "rgba(45, 212, 191, 0.4)" },
+  activeRouteBadgeText: { fontSize: 10, fontWeight: "900" },
+  activeRouteClose: { backgroundColor: "rgba(239, 68, 68, 0.15)", borderWidth: 1, borderColor: "rgba(239, 68, 68, 0.35)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  activeRouteCloseText: { color: "#FCA5A5", fontSize: 10, fontWeight: "800" },
+  activeRouteFlow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 5, paddingVertical: 4 },
+  activeRouteChip: { flexDirection: "column", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(30, 41, 59, 0.8)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.25)", borderRadius: 10, minWidth: 36, paddingHorizontal: 6, paddingVertical: 4 },
+  activeRouteChipStart: { backgroundColor: "rgba(5, 150, 105, 0.25)", borderColor: "#10B981", borderWidth: 1.5 },
+  activeRouteChipEnd: { backgroundColor: "rgba(220, 38, 38, 0.25)", borderColor: "#EF4444", borderWidth: 1.5 },
+  activeRouteChipText: { color: "#F1F5F9", fontSize: 14, fontWeight: "900" },
+  activeRouteChipTextStart: { color: "#34D399" },
+  activeRouteChipTextEnd: { color: "#F87171" },
+  activeRouteChipSub: { color: "#94A3B8", fontSize: 8, fontWeight: "800", marginTop: 1 },
+  activeRouteArrow: { fontSize: 14, fontWeight: "900", marginHorizontal: 1 },
+  activeRouteDefBox: { marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(148, 163, 184, 0.15)" },
+  activeRouteDefLabel: { color: "#2DD4BF", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  activeRouteDefText: { color: "#CBD5E1", fontSize: 12, lineHeight: 18, marginTop: 2, fontWeight: "500" },
   modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", zIndex: 100 },
   modalContent: { width: "86%", borderRadius: 20, borderWidth: 1.5, padding: 22, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
   modalTitle: { fontSize: 22, fontWeight: "900", letterSpacing: 1.5, marginBottom: 12 },

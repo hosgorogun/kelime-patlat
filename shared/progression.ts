@@ -22,11 +22,14 @@ export type SeasonMission = {
 
 export type DailyChallenge = {
   id: string;
-  variation: number;
-  level: number;
+  variation?: number;
+  level?: number;
   themeId: ThemePackId;
-  title: string;
+  title?: string;
   rewardXp: number;
+  targetScore?: number;
+  size?: number;
+  words?: string[];
 };
 
 export * from "./missions-catalog";
@@ -54,7 +57,11 @@ export type PlayerProgress = {
     xp: number;
     lp: number;
     coins: number;
+    streakBonus?: number;
+    pvpWinStreak?: number;
+    isCrushingWin?: boolean;
   };
+  pvpWinStreak?: number;
   lastLoginDay?: string;
   loginDaysCount?: number;
   lastStreakCheckDate?: string;
@@ -94,6 +101,24 @@ export type PlayerProgress = {
     wins?: number;
     matches?: number;
   }>;
+  matchHistory?: MatchHistoryEntry[];
+};
+
+export type MatchHistoryEntry = {
+  id: string;
+  mode: "ranked" | "friend" | "bot" | "solo" | "arcade" | "vintage" | "daily";
+  size?: number;
+  opponentName?: string;
+  opponentAvatar?: string;
+  won: boolean;
+  isDraw?: boolean;
+  myScore: number;
+  opponentScore?: number;
+  lpChange?: number;
+  xpEarned?: number;
+  coinsEarned?: number;
+  wordsCount?: number;
+  date: number;
 };
 
 export type VintageProgress = {
@@ -166,6 +191,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   lp: 0,
   dailyCompletedId: null,
   streak: 0,
+  pvpWinStreak: 0,
   wins: 0,
   matches: 0,
   bestScore: 0,
@@ -199,6 +225,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   lives: MAX_LIVES,
   lastLifeRegenTimestamp: Date.now(),
   friends: [],
+  matchHistory: [],
 };
 
 export function getCalculatedLives(progress: Partial<PlayerProgress>): {
@@ -385,13 +412,27 @@ export function getRank(progress: PlayerProgress) {
 
 export function applyMatchProgress(
   progress: PlayerProgress,
-  result: { score: number; tempo: number; won: boolean; isDraw?: boolean; longWord?: boolean; foundWords?: string[]; arcadeScore?: number; size?: number },
-  type: "pvp" | "bot" | "solo" = "pvp"
+  result: {
+    score: number;
+    tempo: number;
+    won: boolean;
+    isDraw?: boolean;
+    longWord?: boolean;
+    foundWords?: string[];
+    arcadeScore?: number;
+    size?: number;
+    opponentName?: string;
+    opponentAvatar?: string;
+    opponentScore?: number;
+    isFriendGame?: boolean;
+  },
+  type: "pvp" | "bot" | "solo" | "daily" = "pvp"
 ) {
+  const isFriend = Boolean(result.isFriendGame);
   const previousDuels = progress.missions?.duels ?? 0;
   const previousWordsmith = progress.missions?.wordsmith ?? 0;
 
-  const duelProgress = Math.min(2, previousDuels + (type !== "solo" ? 1 : 0));
+  const duelProgress = Math.min(2, previousDuels + (type !== "solo" && type !== "daily" && !isFriend ? 1 : 0));
   const hasLongWord = result.longWord || (result.foundWords && result.foundWords.some((w) => w.length >= 7));
   const wordsmithProgress = Math.min(1, previousWordsmith + (hasLongWord ? 1 : 0));
   const newHistory = [...(progress.history || []), ...(result.foundWords || [])].slice(-150);
@@ -401,16 +442,38 @@ export function applyMatchProgress(
   const tierInfo = getLeagueTier(currentLp);
   const isHighTier = tierInfo.tier === "ELMAS" || tierInfo.tier === "YÜCELİK" || tierInfo.tier === "ÖLÜMSÜZLÜK" || tierInfo.tier === "RADIAN";
   const isEntryTier = tierInfo.tier === "DEMİR" || tierInfo.tier === "BRONZ";
+  const isCrushingWin = Boolean(result.won && (result.score >= 120 || (result.tempo && result.tempo >= 3.5)));
+
+  // Galibiyet Serisi (Win Streak) hesaplaması
+  let pvpWinStreak = progress.pvpWinStreak ?? 0;
+  let streakBonus = 0;
+  if (type === "pvp" && !isFriend) {
+    if (result.won) {
+      pvpWinStreak += 1;
+      if (pvpWinStreak >= 3) {
+        streakBonus = 7;
+      } else if (pvpWinStreak === 2) {
+        streakBonus = 3;
+      }
+    } else if (!result.isDraw) {
+      pvpWinStreak = 0;
+    }
+  }
 
   let baseXP = 0;
   let lpGain = 0;
-  if (type === "pvp") {
+  if (isFriend) {
+    // Arkadaş maçları özel dostluk maçıdır; LP, XP ve Çip kazandırmaz
+    baseXP = 0;
+    lpGain = 0;
+  } else if (type === "pvp") {
     if (result.won) {
       baseXP = 25;
       lpGain = isEntryTier ? 30 : isHighTier ? 20 : 25;
-      if (result.score >= 120 || (result.tempo && result.tempo >= 3.5)) {
+      if (isCrushingWin) {
         lpGain += 5; // Ezici galibiyet bonusu
       }
+      lpGain += streakBonus; // Galibiyet serisi bonusu (2. galibiyette +3 LP, 3+ galibiyette +7 LP)
     } else if (result.isDraw) {
       baseXP = 12;
       lpGain = 0;
@@ -436,47 +499,61 @@ export function applyMatchProgress(
 
   // 2. Kelime Dağarcığı ve Harf Uzunluğu Bonusu (Harf Başı İlerleme)
   let wordLengthBonus = 0;
-  if (result.foundWords && result.foundWords.length > 0) {
-    result.foundWords.forEach((w) => {
-      if (w.length >= 7) wordLengthBonus += 8; // 7+ Harfli efsanevi kelime
-      else if (w.length >= 5) wordLengthBonus += 3; // 5-6 Harfli kelime
-      else if (w.length >= 3) wordLengthBonus += 1; // 3-4 Harfli kelime
-    });
-    wordLengthBonus = Math.min(25, wordLengthBonus); // Maksimum uzunluk bonus tavanı: +25 XP
-  } else if (result.longWord) {
-    wordLengthBonus = 10;
+  if (!isFriend) {
+    if (result.foundWords && result.foundWords.length > 0) {
+      result.foundWords.forEach((w) => {
+        if (w.length >= 7) wordLengthBonus += 8; // 7+ Harfli efsanevi kelime
+        else if (w.length >= 5) wordLengthBonus += 3; // 5-6 Harfli kelime
+        else if (w.length >= 3) wordLengthBonus += 1; // 3-4 Harfli kelime
+      });
+      wordLengthBonus = Math.min(25, wordLengthBonus); // Maksimum uzunluk bonus tavanı: +25 XP
+    } else if (result.longWord) {
+      wordLengthBonus = 10;
+    }
   }
 
   // 3. Hız ve Tempo Bonusu (Saniye ve Çözüm Hızına Göre)
   let speedBonus = 0;
-  if (result.won && result.tempo) {
+  if (!isFriend && result.won && result.tempo) {
     if (result.tempo >= 3.5) speedBonus = 20; // Şimşek Hızı (< 20 saniye)
     else if (result.tempo >= 2.0) speedBonus = 10; // Seri Çözüm (< 40 saniye)
     else if (result.tempo >= 1.0) speedBonus = 5; // Normal Çözüm (< 60 saniye)
   }
 
-  let xpGain = baseXP + wordLengthBonus + speedBonus;
+  let xpGain = isFriend ? 0 : (baseXP + wordLengthBonus + speedBonus);
 
-  // Mission completion XP rewards
-  if (previousDuels < 2 && duelProgress >= 2) {
-    xpGain += 50;
-  }
-  if (previousWordsmith < 1 && wordsmithProgress >= 1) {
-    xpGain += 50;
+  // Mission completion XP rewards (arkadaş maçında görev ilerlemez)
+  if (!isFriend) {
+    if (previousDuels < 2 && duelProgress >= 2) {
+      xpGain += 50;
+    }
+    if (previousWordsmith < 1 && wordsmithProgress >= 1) {
+      xpGain += 50;
+    }
+
+    // Daily Mystery Word bonus (+150 XP)
+    const mystery = getDailyMysteryWord();
+    if (result.foundWords && result.foundWords.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
+      xpGain += mystery.rewardXp;
+    }
   }
 
-  // Daily Mystery Word bonus (+150 XP)
-  const mystery = getDailyMysteryWord();
-  if (result.foundWords && result.foundWords.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
-    xpGain += mystery.rewardXp;
-  }
-
-  // Coin earnings (Dengeli Çip İlerlemesi)
+  // Coin earnings (Dengeli Çip İlerlemesi - arkadaş maçında 0)
   let coinsEarned = 0;
-  if (result.won) {
-    coinsEarned = type === "pvp" ? 10 : type === "bot" ? 4 : 3;
-  } else {
-    coinsEarned = 1;
+  if (!isFriend) {
+    if (result.won) {
+      if (type === "pvp") {
+        coinsEarned = isCrushingWin ? 15 : 10;
+      } else if (type === "bot") {
+        coinsEarned = isCrushingWin ? 6 : 4;
+      } else {
+        coinsEarned = 3;
+      }
+    } else if (result.isDraw) {
+      coinsEarned = type === "pvp" ? 3 : 1;
+    } else {
+      coinsEarned = type === "pvp" ? 2 : 1;
+    }
   }
 
   let nextMissions: Record<string, number> = {
@@ -490,59 +567,85 @@ export function applyMatchProgress(
   const weekId = getWeekId();
   const activeCatalogMissions = [...getDailyMissions(todayId), ...getWeeklyMissions(weekId)];
 
-  // Update duel_play
-  if (type !== "solo") {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_play", 1, result.size);
-  }
-  // Update duel_win
-  if (result.won && type !== "solo") {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_win", 1, result.size);
-  }
-  // Update solo_progress
-  if (type === "solo" && result.won) {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "solo_progress", 1);
-  }
-  // Update word_count
-  const foundWordsCount = result.foundWords?.length || (result.score > 0 ? 1 : 0);
-  if (foundWordsCount > 0) {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_count", foundWordsCount);
-  }
-  // Update word_length
-  if (result.foundWords && result.foundWords.length > 0) {
-    for (const w of result.foundWords) {
-      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_length", 1, w.length);
+  if (!isFriend) {
+    // Update duel_play
+    if (type !== "solo" && type !== "daily") {
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_play", 1, result.size);
     }
-  } else if (result.longWord) {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_length", 1, 7);
-  }
-  // Update combo_count
-  if (result.tempo && result.tempo >= 2.0) {
-    const comboIncrement = result.tempo >= 3.5 ? 2 : 1;
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "combo_count", comboIncrement);
-  }
-  // Update earn_chips
-  if (coinsEarned > 0) {
-    nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "earn_chips", coinsEarned);
+    // Update duel_win
+    if (result.won && type !== "solo" && type !== "daily") {
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_win", 1, result.size);
+    }
+    // Update solo_progress
+    if (type === "solo" && result.won) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "solo_progress", 1);
+    }
+    // Update word_count
+    const foundWordsCount = result.foundWords?.length || (result.score > 0 ? 1 : 0);
+    if (foundWordsCount > 0) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_count", foundWordsCount);
+    }
+    // Update word_length
+    if (result.foundWords && result.foundWords.length > 0) {
+      for (const w of result.foundWords) {
+        nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_length", 1, w.length);
+      }
+    } else if (result.longWord) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "word_length", 1, 7);
+    }
+    // Update combo_count
+    if (result.tempo && result.tempo >= 2.0) {
+      const comboIncrement = result.tempo >= 3.5 ? 2 : 1;
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "combo_count", comboIncrement);
+    }
+    // Update earn_chips
+    if (coinsEarned > 0) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "earn_chips", coinsEarned);
+    }
   }
 
   const nextLp = Math.max(0, currentLp + lpGain);
+
+  const matchHistoryItem: MatchHistoryEntry = {
+    id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    mode: isFriend ? "friend" : type === "pvp" ? "ranked" : type === "bot" ? "bot" : type === "daily" ? "daily" : "solo",
+    size: result.size,
+    opponentName: result.opponentName,
+    opponentAvatar: result.opponentAvatar,
+    won: result.won,
+    isDraw: result.isDraw,
+    myScore: result.score,
+    opponentScore: result.opponentScore,
+    lpChange: isFriend ? 0 : lpGain,
+    xpEarned: isFriend ? 0 : xpGain,
+    coinsEarned: isFriend ? 0 : coinsEarned,
+    wordsCount: (result.foundWords || []).length,
+    date: Date.now(),
+  };
+
+  const updatedMatchHistory = [matchHistoryItem, ...(progress.matchHistory || [])].slice(0, 50);
 
   return {
     ...progress,
     xp: progress.xp + xpGain,
     lp: nextLp,
     coins: (progress.coins ?? 0) + coinsEarned,
-    wins: progress.wins + (result.won ? 1 : 0),
-    matches: progress.matches + (type !== "solo" ? 1 : 0),
+    pvpWinStreak: type === "pvp" && !isFriend ? pvpWinStreak : (progress.pvpWinStreak ?? 0),
+    wins: progress.wins + (result.won && !isFriend ? 1 : 0),
+    matches: progress.matches + (type !== "solo" && type !== "daily" && !isFriend ? 1 : 0),
     bestScore: Math.max(progress.bestScore, result.score),
     bestTempo: Math.max(progress.bestTempo, result.tempo),
     bestArcadeScore: Math.max(progress.bestArcadeScore || 0, result.arcadeScore || 0),
     missions: nextMissions,
     history: newHistory,
+    matchHistory: updatedMatchHistory,
     lastMatchReward: {
       xp: xpGain,
       lp: lpGain,
       coins: coinsEarned,
+      streakBonus,
+      pvpWinStreak: type === "pvp" && !isFriend ? pvpWinStreak : undefined,
+      isCrushingWin,
     },
   };
 }
@@ -558,12 +661,24 @@ export function applyArcadeProgress(progress: PlayerProgress, score: number) {
     nextMissions = updateMissionAction(nextMissions, activeCatalog, "earn_chips", coinsGain);
   }
 
+  const arcadeHistoryItem: MatchHistoryEntry = {
+    id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    mode: "arcade",
+    won: score >= 50,
+    myScore: score,
+    xpEarned: xpGain,
+    coinsEarned: coinsGain,
+    wordsCount: Math.floor(score / 15),
+    date: Date.now(),
+  };
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
     coins: (progress.coins ?? 0) + coinsGain,
     bestArcadeScore: newBest,
     missions: nextMissions,
+    matchHistory: [arcadeHistoryItem, ...(progress.matchHistory || [])].slice(0, 50),
   };
 }
 
@@ -585,6 +700,17 @@ export function applyVintageProgress(
   const nextCompleted = Array.from(new Set([...(currentVintage?.completedLevels ?? []), level])).sort((a, b) => a - b);
   const nextScore = (currentVintage?.score ?? 0) + (score >= 100 ? score : 100);
 
+  const vintageHistoryItem: MatchHistoryEntry = {
+    id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    mode: "vintage",
+    won: true,
+    myScore: score,
+    xpEarned: xpGain,
+    coinsEarned: coinsGain,
+    wordsCount: 1,
+    date: Date.now(),
+  };
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
@@ -595,7 +721,105 @@ export function applyVintageProgress(
       completedLevels: nextCompleted,
       score: nextScore,
     },
+    matchHistory: [vintageHistoryItem, ...(progress.matchHistory || [])].slice(0, 50),
   };
+}
+
+export function backfillMatchHistoryIfEmpty(progress: PlayerProgress): MatchHistoryEntry[] {
+  if (Array.isArray(progress.matchHistory) && progress.matchHistory.length > 0) {
+    return progress.matchHistory;
+  }
+  const entries: MatchHistoryEntry[] = [];
+  const now = Date.now();
+
+  // 1. Günün Rotası (Eğer tamamlanmışsa)
+  if (progress.dailyCompletedId) {
+    entries.push({
+      id: `m_backfill_daily_${progress.dailyCompletedId}`,
+      mode: "daily",
+      won: true,
+      myScore: 120,
+      xpEarned: 50,
+      coinsEarned: 5,
+      wordsCount: 5,
+      date: now - 35 * 60 * 1000,
+    });
+  }
+
+  // 2. Solo Seviyeler (Mevcut açık seviyeye kadar önceki tamamlanan seviyeler)
+  const soloLevel = progress.soloUnlockedLevel ?? 1;
+  if (soloLevel > 1) {
+    const count = Math.min(5, soloLevel - 1);
+    for (let i = 0; i < count; i++) {
+      const lvl = soloLevel - 1 - i;
+      entries.push({
+        id: `m_backfill_solo_${lvl}`,
+        mode: "solo",
+        won: true,
+        myScore: lvl * 14,
+        xpEarned: 15,
+        coinsEarned: 3,
+        wordsCount: Math.min(6, 2 + Math.floor(lvl / 2)),
+        date: now - (i + 1) * 50 * 60 * 1000,
+      });
+    }
+  }
+
+  // 3. Skor Hücumu (Arcade)
+  const arcadeScore = progress.bestArcadeScore ?? 0;
+  if (arcadeScore > 0) {
+    entries.push({
+      id: `m_backfill_arcade_${arcadeScore}`,
+      mode: "arcade",
+      won: arcadeScore >= 50,
+      myScore: arcadeScore,
+      xpEarned: Math.max(5, Math.floor(arcadeScore / 10)),
+      coinsEarned: Math.floor(arcadeScore / 40),
+      wordsCount: Math.max(1, Math.floor(arcadeScore / 15)),
+      date: now - 2 * 60 * 60 * 1000,
+    });
+  }
+
+  // 4. Düello Galibiyetleri
+  const wins = progress.wins ?? 0;
+  if (wins > 0) {
+    const count = Math.min(3, wins);
+    for (let i = 0; i < count; i++) {
+      entries.push({
+        id: `m_backfill_ranked_${i}`,
+        mode: "ranked",
+        won: true,
+        myScore: 110 + i * 5,
+        opponentScore: 75 - i * 5,
+        opponentName: i === 0 ? "Siber Şampiyon" : "Rakip Oyuncu",
+        opponentAvatar: "⚡",
+        lpChange: 25,
+        xpEarned: 35,
+        coinsEarned: 10,
+        wordsCount: 5,
+        date: now - (i + 1) * 3 * 60 * 60 * 1000,
+      });
+    }
+  }
+
+  // 5. Gazete Bulmacası (Vintage)
+  const vintageCompleted = progress.vintageProgress?.completedLevels ?? [];
+  if (vintageCompleted.length > 0) {
+    vintageCompleted.slice(-3).reverse().forEach((lvl, idx) => {
+      entries.push({
+        id: `m_backfill_vintage_${lvl}`,
+        mode: "vintage",
+        won: true,
+        myScore: 60,
+        xpEarned: 60,
+        coinsEarned: 6,
+        wordsCount: 1,
+        date: now - (idx + 1) * 4 * 60 * 60 * 1000,
+      });
+    });
+  }
+
+  return entries.sort((a, b) => b.date - a.date).slice(0, 50);
 }
 
 export function mergePlayerProgress(
@@ -663,6 +887,23 @@ export function mergePlayerProgress(
     return Array.from(map.values());
   })();
 
+  const mergedMatchHistory = (() => {
+    const map = new Map<string, MatchHistoryEntry>();
+    (local.matchHistory ?? []).forEach((m) => {
+      if (m && typeof m.id === "string") map.set(m.id, m);
+    });
+    (cleanRemote.matchHistory ?? []).forEach((m: any) => {
+      if (m && typeof m.id === "string") map.set(m.id, m);
+    });
+    const combined = Array.from(map.values())
+      .sort((a, b) => (b.date || 0) - (a.date || 0))
+      .slice(0, 50);
+    if (combined.length === 0) {
+      return backfillMatchHistoryIfEmpty({ ...DEFAULT_PROGRESS, ...local, ...cleanRemote });
+    }
+    return combined;
+  })();
+
   return {
     ...DEFAULT_PROGRESS,
     ...local,
@@ -678,6 +919,7 @@ export function mergePlayerProgress(
       : safeNum(typeof cleanRemote.lives === "number" && typeof local.lives === "number" ? Math.min(local.lives, cleanRemote.lives) : (cleanRemote.lives ?? local.lives ?? MAX_LIVES), MAX_LIVES, MAX_LIVES),
     lastLifeRegenTimestamp: typeof cleanRemote.lastLifeRegenTimestamp === "number" ? cleanRemote.lastLifeRegenTimestamp : (typeof local.lastLifeRegenTimestamp === "number" ? local.lastLifeRegenTimestamp : Date.now()),
     streak: safeNum(Math.max(local.streak, cleanRemote.streak ?? 0), local.streak, 3650),
+    pvpWinStreak: safeNum(cleanRemote.pvpWinStreak !== undefined ? cleanRemote.pvpWinStreak : (local.pvpWinStreak ?? 0), local.pvpWinStreak ?? 0, 1000),
     wins: addGuest
       ? safeNum((local.wins ?? 0) + (cleanRemote.wins ?? 0), local.wins)
       : safeNum(Math.max(local.wins, cleanRemote.wins ?? 0), local.wins),
@@ -717,6 +959,7 @@ export function mergePlayerProgress(
       ...(local.dailyClaimed ?? {}),
     },
     history: Array.from(new Set([...(local.history ?? []), ...(cleanRemote.history ?? [])])).slice(-150),
+    matchHistory: mergedMatchHistory,
     selectedAvatar: local.selectedAvatar || cleanRemote.selectedAvatar || "spark",
     selectedTheme: local.selectedTheme || cleanRemote.selectedTheme || "nature",
     selectedTitle: local.selectedTitle || cleanRemote.selectedTitle || "[ÇAYLAK]",
@@ -755,18 +998,43 @@ export function mergePlayerProgress(
   };
 }
 
-export function completeDailyProgress(progress: PlayerProgress, daily: DailyChallenge) {
+export function completeDailyProgress(
+  progress: PlayerProgress,
+  daily: DailyChallenge,
+  score?: number,
+  wordsCount?: number
+) {
   if (progress.dailyCompletedId === daily.id && (progress.missions?.daily ?? 0) >= 1) return progress;
   const activeCatalog = [...getDailyMissions(daily.id), ...getWeeklyMissions(getWeekId())];
   const updatedMissions = updateMissionAction({ ...progress.missions, daily: 1 }, activeCatalog, "daily_route", 1);
 
+  // Check if a daily match history item was already added in this exact session
+  const alreadyHasDaily = progress.matchHistory?.[0]?.mode === "daily" && Date.now() - (progress.matchHistory[0].date || 0) < 5000;
+
+  const dailyHistoryItem: MatchHistoryEntry = {
+    id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    mode: "daily",
+    won: true,
+    myScore: score || daily.targetScore || 100,
+    xpEarned: daily.rewardXp,
+    coinsEarned: 5,
+    wordsCount: wordsCount ?? (daily.words?.length || 5),
+    date: Date.now(),
+  };
+
+  const nextHistory = alreadyHasDaily
+    ? (progress.matchHistory || [])
+    : [dailyHistoryItem, ...(progress.matchHistory || [])].slice(0, 50);
+
   return {
     ...progress,
     xp: progress.xp + daily.rewardXp,
+    coins: (progress.coins ?? 0) + 5,
     dailyCompletedId: daily.id,
     lastStreakCheckDate: daily.id,
     streak: progress.streak + 1,
     missions: updatedMissions,
+    matchHistory: nextHistory,
   };
 }
 

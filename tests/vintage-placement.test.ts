@@ -188,7 +188,7 @@ describe("Vintage Bulmaca Yerleştirme Doğrulama (checkPlacement) Testleri", ()
   });
 
   it("generatePuzzle tüm zorluklarda en az 3 kesişen kelimeli geçerli bir bulmaca üretir", () => {
-    const difficulties = ["easy", "medium", "hard", "expert"] as const;
+    const difficulties = ["easy", "medium", "hard", "expert", "ultra"] as const;
     for (const diff of difficulties) {
       const p = generatePuzzle(diff);
       expect(p.words.length).toBeGreaterThanOrEqual(3);

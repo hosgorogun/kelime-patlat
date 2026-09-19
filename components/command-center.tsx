@@ -8,8 +8,10 @@ import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { palette } from "@/shared/palette";
 import { GameButton, GameIcon, GemChip, ICONS, JewelTitle, OrnatePanel, SectionLabel } from "@/components/game-ui";
+import { MatchHistoryModal } from "@/components/match-history-modal";
+import { DailyTreasureModal } from "@/components/daily-treasure-modal";
 
-type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions";
+type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends";
 
 type CommandCenterProps = {
   playerName: string;
@@ -29,6 +31,7 @@ type CommandCenterProps = {
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
   onOpenModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo") => void;
   onOpenLivesModal?: () => void;
+  onOpenHistory?: () => void;
 };
 
 function InfoMini({ color, onPress }: { color: string; onPress: () => void }) {
@@ -61,10 +64,13 @@ export function CommandCenter({
   onShowToast,
   onOpenModeInfo,
   onOpenLivesModal,
+  onOpenHistory,
 }: CommandCenterProps) {
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
+  const hasAutoOpenedDailyRewardRef = useRef(false);
   const orbit = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0.25)).current;
-  const dailyRewardClaimingRef = useRef(false);
   const [livesCalc, setLivesCalc] = useState(() => getCalculatedLives(progress));
   const [imgError, setImgError] = useState(false);
 
@@ -105,6 +111,16 @@ export function CommandCenter({
   };
 
   useEffect(() => {
+    if (!isClaimedToday && !hasAutoOpenedDailyRewardRef.current) {
+      hasAutoOpenedDailyRewardRef.current = true;
+      const timer = setTimeout(() => {
+        setShowDailyRewardModal(true);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isClaimedToday]);
+
+  useEffect(() => {
     const orbitLoop = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 7_500, easing: Easing.linear, useNativeDriver: true }));
     const shimmerLoop = Animated.loop(Animated.sequence([
       Animated.timing(shimmer, { toValue: 0.86, duration: 1_250, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
@@ -116,40 +132,11 @@ export function CommandCenter({
   }, [orbit, shimmer]);
 
   const orbitSpin = orbit.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  const currentLevel = getPlayerLevel(progress.xp);
-  const isLocked6 = currentLevel < 5;
-  const isLocked8 = currentLevel < 8;
-  const isLocked10 = currentLevel < 10;
-
-  const makeLockedHandler = (size: 6 | 8 | 10, requiredLevel: number, action: () => void) => () => {
-    if (currentLevel < requiredLevel) {
-      if (onShowToast) {
-        onShowToast(
-          `🔒 SEVİYE ${requiredLevel} GEREKLİ`,
-          `${size}×${size} modu Seviye ${requiredLevel}'de açılır (Şu an: Seviye ${currentLevel}).`,
-          "🔒",
-          "#EF4444"
-        );
-      } else {
-        Alert.alert(
-          `🔒 Seviye ${requiredLevel} Gerekli`,
-          `${size}×${size} modu Seviye ${requiredLevel}'de açılır. Şu anki seviyeniz: ${currentLevel}.`
-        );
-      }
-    } else {
-      action();
-    }
-  };
-
-  const handlePlayBot6 = makeLockedHandler(6, 5, () => onPlayBot(6));
-  const handlePlayBot8 = makeLockedHandler(8, 8, () => onPlayBot(8));
-  const handlePlayBot10 = makeLockedHandler(10, 10, () => onPlayBot(10));
-
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
   const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
   const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || palette.emerald);
 
-  const [infoModal, setInfoModal] = useState<"shield" | "radar" | "lives" | "rotani" | null>(null);
+  const [infoModal, setInfoModal] = useState<"shield" | "radar" | "lives" | "rotani" | "mystery" | null>(null);
 
   return <>
     <Modal
@@ -163,27 +150,28 @@ export function CommandCenter({
           <OrnatePanel contentStyle={{ alignItems: "center", paddingVertical: 22 }}>
             <View style={[
               styles.modalIconBadge,
-              infoModal === "shield" ? styles.modalIconBadgeShield : infoModal === "radar" ? styles.modalIconBadgeRadar : infoModal === "lives" ? styles.modalIconBadgeLives : styles.modalIconBadgeRotani
+              infoModal === "shield" ? styles.modalIconBadgeShield : infoModal === "radar" ? styles.modalIconBadgeRadar : infoModal === "lives" ? styles.modalIconBadgeLives : infoModal === "mystery" ? styles.modalIconBadgeMystery : styles.modalIconBadgeRotani
             ]}>
               {infoModal === "shield" ? <Image source={ICONS.shield} style={styles.modalIconImg} /> :
                 infoModal === "radar" ? <Image source={ICONS.radar} style={styles.modalIconImg} /> :
                 infoModal === "lives" ? <Image source={ICONS.heart} style={styles.modalIconImg} /> :
+                infoModal === "mystery" ? <Text style={{ fontSize: 24 }}>🔍</Text> :
                 <Image source={ICONS.play} style={styles.modalIconImg} />}
             </View>
 
             <Text style={styles.modalKicker}>
-              {infoModal === "shield" ? "SAVUNMA YÜZÜĞÜ" : infoModal === "radar" ? "KEŞİF KRİSTALİ" : infoModal === "lives" ? "YAŞAM ALEVİ" : "MACERA MERKEZİ · SEZON 01"}
+              {infoModal === "shield" ? "SAVUNMA YÜZÜĞÜ" : infoModal === "radar" ? "KEŞİF KRİSTALİ" : infoModal === "lives" ? "YAŞAM ALEVİ" : infoModal === "mystery" ? "GÜNLÜK ÖZEL GÖREV" : "MACERA MERKEZİ · SEZON 01"}
             </Text>
             <Text style={styles.modalTitle}>
-              {infoModal === "shield" ? "Seri Kalkanı" : infoModal === "radar" ? "Siber Radar" : infoModal === "lives" ? "Siber Can" : "Rotanı Ateşle Nedir?"}
+              {infoModal === "shield" ? "Seri Kalkanı" : infoModal === "radar" ? "Siber Radar" : infoModal === "lives" ? "Siber Can" : infoModal === "mystery" ? "Gizemli Kelime" : "Rotanı Ateşle Nedir?"}
             </Text>
 
             <View style={styles.modalCountPill}>
               <Text style={styles.modalCountLabel}>
-                {infoModal === "rotani" ? "MEVCUT LİG KADEMEN:" : "MEVCUT MİKTAR:"}
+                {infoModal === "rotani" ? "MEVCUT LİG KADEMEN:" : infoModal === "mystery" ? "GÖREV ÖDÜLÜ:" : "MEVCUT MİKTAR:"}
               </Text>
-              <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: palette.gemBlue } : infoModal === "radar" ? { color: palette.emerald } : infoModal === "lives" ? { color: palette.gemGreen } : { color: league.color }]}>
-                {infoModal === "shield" ? (progress.streakShields ?? 1) : infoModal === "radar" ? (3 + (progress.radarChargesBonus ?? 0)) : infoModal === "lives" ? `${livesCalc.lives}/5` : `${league.name} (${league.currentTierPoints} LP)`}
+              <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: palette.gemBlue } : infoModal === "radar" ? { color: palette.emerald } : infoModal === "lives" ? { color: palette.gemGreen } : infoModal === "mystery" ? { color: "#38BDF8" } : { color: league.color }]}>
+                {infoModal === "shield" ? (progress.streakShields || 0) : infoModal === "radar" ? (3 + (progress.radarChargesBonus || 0)) : infoModal === "lives" ? `${livesCalc.lives}/5` : infoModal === "mystery" ? `+${mystery.rewardXp} XP` : `${league.name} (${league.currentTierPoints} LP)`}
               </Text>
             </View>
 
@@ -194,11 +182,15 @@ export function CommandCenter({
                 ? "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
                 : infoModal === "lives"
                 ? "Tek oyunculu solo seviyelerde veya zamana karşı denemelerde başarısız olduğunda 1 Can kaybedersin. Canların bittiğinde 15 dakikada bir otomatik dolar veya Çip ile anında yenileyebilirsin."
-                : "Rotanı Ateşle güverte kartı, oyunun ana rekabet merkezidir! 4x4 ile 10x10 arası hızlı bot düellolarına girebilir, Günün Rotası sabit tahtasını çözebilir veya Lig & Kademe merdiveninde 3D amblemler kazanmak için LP biriktirebilirsin."}
+                : infoModal === "mystery"
+                ? `Günün İpucu: "${mystery.definition}"\n\nBu tanıma uyan kelimeyi herhangi bir oyun tahtasında (Düello, Seviye veya Günün Rotası) bulup bağladığında anında +${mystery.rewardXp} XP kazanırsın!`
+                : "Rotanı Ateşle güverte kartı, oyunun ana rekabet merkezidir! Dereceli düelloya katılabilir, arkadaşınla eşleşebilir, Günün Rotası sabit tahtasını çözebilir veya Lig & Kademe merdiveninde LP biriktirebilirsin."}
             </Text>
 
             <View style={styles.modalTipBox}>
-              <Text style={styles.modalTipTitle}>💡 REKABET REHBERİ</Text>
+              <Text style={styles.modalTipTitle}>
+                {infoModal === "mystery" ? "💡 GİZEMLİ KELİME REHBERİ" : "💡 REKABET REHBERİ"}
+              </Text>
               <Text style={styles.modalTipText}>
                 {infoModal === "shield"
                   ? "• Mağaza'dan Çip ile satın alabilirsin.\n• Haftalık görevleri tamamlayarak kazanabilirsin.\n• 7 günlük giriş zincirinin son gününde epik hediye olarak verilir."
@@ -206,13 +198,15 @@ export function CommandCenter({
                   ? "• Her seviyede 3 temel hak otomatik verilir.\n• Mağaza ve görevlerden ek kalıcı bonus haklar elde edebilirsin.\n• Seviye içi gizli sandıkları çözerek ekstra hak toplayabilirsin."
                   : infoModal === "lives"
                   ? "• Her 30 dakikada 1 Can otomatik olarak ücretsiz doldurulur (Maks 5).\n• Beklemek istemiyorsan Mağaza'dan Çip ile anında doldurabilirsin.\n• Günlük giriş ve seviye ödüllerinden bedava Can kazanabilirsin."
+                  : infoModal === "mystery"
+                  ? "• Her gün gece yarısı yeni bir gizemli kelime belirlenir.\n• Kelimeyi herhangi bir oyun modunda bulduğun anda ödül XP hesabına eklenir.\n• İpucunu dikkatle incele ve tahtada harfleri birleştir!"
                   : "• Galibiyet kazanarak lig puanı (LP) topla ve Demir'den Radian'a yüksel.\n• Günün rotasında sabit tahtayı tamamlayarak ekstra Sezon XP elde et.\n• En yüksek kelime temposu (K/DK) yakalayarak liderlik sıralamasına gir."}
               </Text>
             </View>
 
             <GameButton
               label={infoModal === "shield" || infoModal === "lives" ? "MAĞAZADA İNCELE" : infoModal === "rotani" ? "LİG & KADEMELER" : "ANLADIM"}
-              variant={infoModal === "rotani" ? "emerald" : "gold"}
+              variant={infoModal === "rotani" || infoModal === "mystery" ? "emerald" : "gold"}
               size="md"
               onPress={() => {
                 const target = infoModal;
@@ -240,7 +234,7 @@ export function CommandCenter({
     </Modal>
 
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={["#1A4A38", "#0E2C22"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hud}>
+      <LinearGradient colors={["#2D2010", "#140D05"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hud, { borderColor: "#D4B45A" }]}>
         <View style={styles.hudInner}>
           <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
             <View style={[styles.avatar, { borderColor: activeFrameColor, backgroundColor: activeAvatar.surface }]}>
@@ -284,11 +278,29 @@ export function CommandCenter({
               <Text style={styles.topIconText}>❓</Text>
             </Pressable>
             <Pressable
-              onPress={() => onNavigate("profile")}
+              onPress={() => {
+                triggerHapticSelection();
+                setShowDailyRewardModal(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [styles.topIconBtn, !isClaimedToday && styles.topIconBtnGlow, pressed && styles.pressed]}
+            >
+              <Text style={styles.topIconText}>🎁</Text>
+              {!isClaimedToday && <View style={styles.topNotificationDot} />}
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                if (onOpenHistory) {
+                  onOpenHistory();
+                } else {
+                  setShowHistoryModal(true);
+                }
+              }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
             >
-              <Text style={styles.topIconText}>⚙️</Text>
+              <Text style={styles.topIconText}>📜</Text>
             </Pressable>
           </View>
         </View>
@@ -298,14 +310,14 @@ export function CommandCenter({
         <GemChip
           iconSource={ICONS.shield}
           label="KALKAN"
-          value={progress.streakShields ?? 1}
+          value={progress.streakShields || 0}
           color={palette.gemBlue}
           onPress={() => { triggerHapticSelection(); setInfoModal("shield"); }}
         />
         <GemChip
           iconSource={ICONS.radar}
           label="RADAR"
-          value={progress.radarChargesBonus ?? 0}
+          value={3 + (progress.radarChargesBonus || 0)}
           color={palette.emerald}
           onPress={() => { triggerHapticSelection(); setInfoModal("radar"); }}
         />
@@ -320,6 +332,22 @@ export function CommandCenter({
         />
       </View>
 
+      {!isClaimedToday && (
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            setShowDailyRewardModal(true);
+          }}
+          style={({ pressed }) => [styles.dailyMiniPill, pressed && styles.pressed]}
+        >
+          <Text style={styles.dailyMiniIcon}>🎁</Text>
+          <Text style={styles.dailyMiniText}>
+            GÜNLÜK HAZİNEN HAZIR! · GÜN {displayDayNumber}/7
+          </Text>
+          <Text style={styles.dailyMiniAction}>TOPLA ➔</Text>
+        </Pressable>
+      )}
+
       {progress.streak > 0 && !dailyDone && (
         <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.streakWarningPill, pressed && styles.pressed]}>
           <Text style={styles.streakWarningIcon}>🔥</Text>
@@ -330,12 +358,12 @@ export function CommandCenter({
         </Pressable>
       )}
 
-      <OrnatePanel style={{ marginTop: 12 }}>
+      <OrnatePanel accent="sapphire" showJewels={false} style={{ marginTop: 12 }}>
         <Animated.View style={[styles.orbit, { transform: [{ rotate: orbitSpin }] }]}><View style={styles.orbitNode} /></Animated.View>
         <Animated.View style={[
           styles.radarRing,
           {
-            borderColor: palette.gold,
+            borderColor: palette.gemBlue,
             transform: [
               { scale: shimmer.interpolate({ inputRange: [0.25, 0.86], outputRange: [0.95, 1.55] }) }
             ],
@@ -343,304 +371,234 @@ export function CommandCenter({
           }
         ]} />
         <View style={styles.heroHead}>
-          <Text style={styles.deckEyebrow}>KELİME MACERASI · SEZON 01</Text>
-          <InfoMini color={palette.gold} onPress={() => setInfoModal("rotani")} />
+          <Text style={[styles.deckEyebrow, { color: "#38BDF8" }]}>KELİME MACERASI · SEZON 01</Text>
+          <InfoMini color="#38BDF8" onPress={() => setInfoModal("rotani")} />
         </View>
         <JewelTitle>ROTANI{"\n"}ATEŞLE</JewelTitle>
-        <Text style={styles.deckBody}>Hızlı düello seç, günün rotasını bitir veya lig merdivenine tırman.</Text>
+        <Text style={styles.deckBody}>Dereceli düello seç, günün rotasını bitir veya lig merdivenine tırman.</Text>
 
-        <View style={styles.xpPanel}>
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            onNavigate("league");
+          }}
+          style={({ pressed }) => [styles.xpPanel, { borderColor: "rgba(56, 189, 248, 0.35)", backgroundColor: "rgba(8, 20, 36, 0.85)" }, pressed && styles.pressed]}
+        >
           <View style={styles.xpHead}>
-            <Text style={styles.xpLabel}>LİG · {league.name}</Text>
-            <Text style={styles.xpValue}>{league.currentTierPoints} / {league.targetTierPoints} LP</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <Text style={[styles.xpLabel, { color: "#7DD3FC" }]}>LİG · {league.name}</Text>
+              <Text style={{ color: "#38BDF8", fontSize: 10, fontWeight: "900" }}>➔</Text>
+            </View>
+            <Text style={[styles.xpValue, { color: "#38BDF8" }]}>{league.currentTierPoints} / {league.targetTierPoints} LP</Text>
           </View>
           <View style={styles.track}>
             <LinearGradient
-              colors={[league.color, palette.goldHi]}
+              colors={[league.color, "#38BDF8"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[styles.trackFill, { width: `${Math.max(8, leagueProgressPercent)}%` }]}
             />
           </View>
-        </View>
+        </Pressable>
 
         <View style={styles.heroActions}>
           <GameButton
-            label="HIZLI DÜELLO"
+            label="DERECELİ DÜELLO"
             iconSource={ICONS.play}
-            onPress={() => onPlayBot(4)}
-            style={{ flex: 1.15 }}
+            variant="gold"
+            onPress={() => onNavigate("online")}
+            style={{ flex: 1 }}
           />
           <GameButton
-            label="DAVET ET"
+            label="ARKADAŞLA OYNA"
             icon="🤝"
-            variant="dark"
-            onPress={() => onNavigate("online")}
+            variant="sapphire"
+            onPress={() => onNavigate("friends")}
             style={{ flex: 1 }}
           />
         </View>
 
-        <View style={styles.signalFooter}>
+        <View style={[styles.signalFooter, { borderTopColor: "rgba(56, 189, 248, 0.2)" }]}>
           <View style={styles.footerCol}>
-            <Text style={styles.signalLabel}>ORT. TEMPO</Text>
+            <Text style={[styles.signalLabel, { color: "#7DD3FC" }]}>ORT. TEMPO</Text>
             <Text style={styles.signalValue}>{progress.bestTempo || 0} <Text style={styles.signalUnit}>K/DK</Text></Text>
           </View>
-          <View style={styles.signalRule} />
+          <View style={[styles.signalRule, { backgroundColor: "rgba(56, 189, 248, 0.2)" }]} />
           <Pressable onPress={() => onNavigate("league")} style={styles.footerCol}>
-            <Text style={styles.signalLabel}>GALİBİYET</Text>
+            <Text style={[styles.signalLabel, { color: "#7DD3FC" }]}>GALİBİYET</Text>
             <Text style={styles.signalValue}>{progress.wins} <Text style={styles.signalUnit}>MAÇ</Text></Text>
           </Pressable>
         </View>
       </OrnatePanel>
 
-      <OrnatePanel style={{ marginTop: 12 }} contentStyle={{ padding: 14 }}>
-        <View style={styles.dailyRewardHeader}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={styles.dailyRewardTitle}>🎁 GÜNLÜK HAZİNE</Text>
-            <View style={styles.dailyRewardDayPill}>
-              <Text style={styles.dailyRewardDayPillText}>GÜN {displayDayNumber}/7</Text>
-            </View>
-          </View>
-          <View style={[styles.dailyStatusBadge, isClaimedToday ? styles.dailyStatusBadgeClaimed : styles.dailyStatusBadgeReady]}>
-            <Text style={[styles.dailyStatusBadgeText, isClaimedToday ? { color: palette.emerald } : { color: palette.gold }]}>
-              {isClaimedToday ? "✓ ALINDI" : "⚡ HAZIR"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.dailyDaysRow}>
-          {DAILY_LOGIN_REWARDS.map((item, index) => {
-            const isPast = isClaimedToday ? index <= activeDayIndex : index < activeDayIndex;
-            const isToday = index === activeDayIndex;
-            const isTodayClaimable = isToday && !isClaimedToday;
-            const isEpic = index === 6;
-
-            return (
-              <Pressable
-                key={item.day}
-                onPress={() => {
-                  if (isTodayClaimable) {
-                    triggerHapticSelection();
-                    onClaimDailyReward?.();
-                  }
-                }}
-                style={[
-                  styles.dailyDayCard,
-                  isPast && styles.dailyDayCardPast,
-                  isTodayClaimable && styles.dailyDayCardActive,
-                  isToday && isClaimedToday && styles.dailyDayCardClaimedToday,
-                  isEpic && styles.dailyDayCardEpic,
-                ]}
-              >
-                {isEpic && (
-                  <View style={styles.epicTag}>
-                    <Text style={styles.epicTagText}>EPİK</Text>
-                  </View>
-                )}
-                <Text style={[styles.dailyDayLabel, isTodayClaimable && { color: palette.gold, fontWeight: "900" }]}>
-                  {item.day}G
-                </Text>
-                <Text style={styles.dailyDayIcon}>{item.icon}</Text>
-                <Text style={[styles.dailyDayAmount, isEpic && { color: palette.gold }]}>
-                  +{item.amount}
-                </Text>
-                {isPast && (
-                  <View style={styles.dailyDayCheck}>
-                    <Text style={styles.dailyDayCheckText}>✓</Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {!isClaimedToday ? (
-          <GameButton
-            label={`ÖDÜLÜ TOPLA  +${todayReward.amount} ${getRewardUnitName(todayReward.rewardType)}`}
-            icon="🎁"
-            size="md"
-            onPress={() => {
-              if (dailyRewardClaimingRef.current || isClaimedToday) return;
-              dailyRewardClaimingRef.current = true;
-              triggerHapticSelection();
-              onClaimDailyReward?.();
-            }}
-            style={{ marginTop: 12 }}
-          />
-        ) : (
-          <View style={styles.dailyClaimedBar}>
-            <Text style={styles.dailyClaimedBarText}>
-              ✓ Bugünkü ödülünü aldın! Yarın: {nextReward.icon} +{nextReward.amount} {getRewardUnitName(nextReward.rewardType)}
-            </Text>
-          </View>
-        )}
-      </OrnatePanel>
-
       <SectionLabel title="ETKİNLİKLER" meta="ÖZEL GÖREVLER" />
 
-      <OrnatePanel accent="emerald" contentStyle={{ padding: 14 }}>
-        <View style={styles.mysteryHeader}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-            <Text style={styles.mysteryKicker}>🔍 GİZEMLİ KELİME</Text>
-            <View style={styles.mysteryPill}>
-              <Text style={styles.mysteryPillText}>İPUCU</Text>
+      <Pressable
+        onPress={() => {
+          triggerHapticSelection();
+          setInfoModal("mystery");
+        }}
+        style={({ pressed }) => [styles.mysteryStripWrap, pressed && styles.pressed]}
+      >
+        <LinearGradient
+          colors={["#0C2B47", "#051424"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.mysteryStrip}
+        >
+          <View style={styles.mysteryStripLeft}>
+            <View style={styles.mysteryIconBadge}>
+              <Text style={styles.mysteryIconText}>🔍</Text>
+            </View>
+            <View style={styles.mysteryStripTextCol}>
+              <View style={styles.mysteryStripEyebrowRow}>
+                <Text style={styles.mysteryStripEyebrow}>GİZEMLİ KELİME</Text>
+                <View style={styles.mysteryStripDot} />
+                <Text style={styles.mysteryStripReward}>+{mystery.rewardXp} XP</Text>
+              </View>
+              <Text style={styles.mysteryStripDef}>
+                "{mystery.definition}"
+              </Text>
             </View>
           </View>
-          <Text style={styles.mysteryReward}>+{mystery.rewardXp} XP</Text>
-        </View>
-        <Text style={styles.mysteryDef}>"{mystery.definition}"</Text>
-        <Text style={styles.mysteryHint}>
-          💡 Bu tanıma uyan kelimeyi herhangi bir tahtada bul ve extra XP kazan!
-        </Text>
-      </OrnatePanel>
+
+          <View style={styles.mysteryStripInfoBtn}>
+            <Text style={styles.mysteryStripInfoIcon}>ℹ️</Text>
+          </View>
+        </LinearGradient>
+      </Pressable>
 
       <View style={styles.cardsRow}>
         <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
-          <LinearGradient colors={["#1A4A38", "#0C2A20"]} style={[styles.columnCard, { borderColor: dailyDone ? palette.bronzeDark : activeTheme.accent }]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-              <View style={[styles.cardIconCircle, { borderColor: dailyDone ? palette.bronze : activeTheme.accent, backgroundColor: dailyDone ? palette.panelInner : activeTheme.glow }]}>
-                <Text style={[styles.cardIconText, { color: dailyDone ? palette.muted : activeTheme.accent }]}>{activeTheme.icon}</Text>
+          <LinearGradient colors={["#0C382C", "#041C15"]} style={[styles.columnCard, { borderColor: dailyDone ? palette.bronzeDark : "#2DD4BF" }]}>
+            <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
+              <View style={styles.cardRibbonMint}>
+                <Text style={styles.cardRibbonText}>✦ GÜNÜN ROTASI ✦</Text>
               </View>
-              <InfoMini color={activeTheme.accent} onPress={() => onOpenModeInfo?.("daily")} />
+              {onOpenModeInfo && (
+                <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
+                  <InfoMini color="#2DD4BF" onPress={() => onOpenModeInfo("daily")} />
+                </View>
+              )}
             </View>
-            <Text style={[styles.cardKicker, { color: dailyDone ? palette.muted : activeTheme.accent }]}>{dailyDone ? "SABİT ROTA" : "BUGÜNÜN ROTASI"}</Text>
-            <Text style={styles.cardTitle}>{dailyDone ? "TAMAMLANDI" : daily.title.toLocaleUpperCase("tr-TR")}</Text>
-            <Text style={styles.cardBody}>{dailyDone ? "Günün rotasını tekrar incele." : "Kelime paketini seç ve günün rotasını başlat!"}</Text>
+            <View style={{ alignItems: "center", marginVertical: 4 }}>
+              <View style={[styles.cardIconCircle, { borderColor: dailyDone ? palette.bronze : "#2DD4BF", backgroundColor: dailyDone ? palette.panelInner : "rgba(45, 212, 191, 0.16)" }]}>
+                <Text style={[styles.cardIconText, { color: dailyDone ? palette.muted : "#2DD4BF" }]}>{activeTheme.icon}</Text>
+              </View>
+            </View>
+            <Text style={[styles.cardTitle, { textAlign: "center" }]}>{dailyDone ? "TAMAMLANDI" : (daily.title || "GÜNÜN ROTASI").toLocaleUpperCase("tr-TR")}</Text>
+            <Text style={[styles.cardBody, { textAlign: "center" }]}>{dailyDone ? "Günün rotasını tekrar incele." : "Kelime paketini seç ve rotayı başlat!"}</Text>
+            <View style={{ marginTop: "auto", paddingTop: 6, width: "100%" }}>
+              <GameButton
+                label={dailyDone ? "İNCELE" : "OYNA ▶"}
+                size="sm"
+                variant="emerald"
+                onPress={onPlayDaily}
+              />
+            </View>
           </LinearGradient>
         </Pressable>
 
         <Pressable onPress={() => onNavigate("arcade")} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
-          <LinearGradient colors={["#3A2A12", "#1A1408"]} style={[styles.columnCard, { borderColor: palette.gold }]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-              <View style={[styles.cardIconCircle, { borderColor: palette.gold, backgroundColor: "rgba(244, 208, 111, 0.16)" }]}>
-                <Text style={[styles.cardIconText, { color: palette.gold }]}>⚡</Text>
+          <LinearGradient colors={["#3D1E04", "#1F0E02"]} style={[styles.columnCard, { borderColor: "#FB923C" }]}>
+            <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
+              <View style={styles.cardRibbonAmber}>
+                <Text style={styles.cardRibbonText}>⚡ REKOR YARIŞI ⚡</Text>
               </View>
-              <InfoMini color={palette.gold} onPress={() => onOpenModeInfo?.("arcade")} />
-            </View>
-            <Text style={[styles.cardKicker, { color: palette.gold }]}>ARCADE</Text>
-            <Text style={styles.cardTitle}>SKOR YARIŞI</Text>
-            <Text style={styles.cardBody}>Süre dolmadan en çok kelimeyi bağla ve rekor kır!</Text>
-          </LinearGradient>
-        </Pressable>
-      </View>
-
-      <SectionLabel title="TEK OYUNCU" meta="SEVİYE YOLU" />
-      <Pressable onPress={onSolo} style={({ pressed }) => [pressed && styles.pressed]}>
-        <OrnatePanel contentStyle={styles.soloSkin}>
-          <GameIcon source={ICONS.trophy} size={48} />
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-                <Text style={styles.soloEyebrow}>KLASİK MOD</Text>
-                {unclaimedMilestonesCount > 0 && (
-                  <View style={styles.milestoneBadgePill}>
-                    <Text style={styles.milestoneBadgeText}>🎁 {unclaimedMilestonesCount} SANDIK</Text>
-                  </View>
-                )}
-              </View>
-              <InfoMini color={palette.emerald} onPress={() => onOpenModeInfo?.("solo")} />
-            </View>
-            <Text style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
-            <Text style={styles.soloDesc}>
-              {unclaimedMilestonesCount > 0
-                ? `${unclaimedMilestonesCount} adet açılmayı bekleyen ödül sandığı seni bekliyor!`
-                : "Seviye seviye zorlaşan kelime operasyonları. Ustalık kazan ve tüm seviyeleri aç."}
-            </Text>
-          </View>
-          <Text style={styles.soloArrow}>›</Text>
-        </OrnatePanel>
-      </Pressable>
-
-      <SectionLabel title="NOSTALJİ" meta="GAZETE BULMACASI" />
-      <Pressable onPress={() => onNavigate("vintage" as any)} style={({ pressed }) => [pressed && styles.pressed]}>
-        <OrnatePanel contentStyle={styles.soloSkin}>
-          <GameIcon emoji="🗞️" size={48} glow={palette.warning} />
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-                <Text style={[styles.soloEyebrow, { color: palette.warning }]}>KARE BULMACA</Text>
-                <View style={[styles.milestoneBadgePill, { backgroundColor: palette.warning }]}>
-                  <Text style={styles.milestoneBadgeText}>20 BÖLÜM</Text>
+              {onOpenModeInfo && (
+                <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
+                  <InfoMini color="#FB923C" onPress={() => onOpenModeInfo("arcade")} />
                 </View>
+              )}
+            </View>
+            <View style={{ alignItems: "center", marginVertical: 4 }}>
+              <View style={[styles.cardIconCircle, { borderColor: "#FB923C", backgroundColor: "rgba(251, 146, 60, 0.16)" }]}>
+                <Text style={[styles.cardIconText, { color: "#FB923C" }]}>⚡</Text>
               </View>
-              <InfoMini color={palette.warning} onPress={() => onOpenModeInfo?.("vintage")} />
             </View>
-            <Text style={styles.soloHeading}>GAZETE BULMACASI</Text>
-            <Text style={styles.soloDesc}>
-              Gazetedeki kare bulmaca ipuçlarını çöz, harf taşlarını 10×10 tahtaya yerleştir ve bonus XP kazan!
-            </Text>
-          </View>
-          <Text style={[styles.soloArrow, { color: palette.warning }]}>›</Text>
-        </OrnatePanel>
-      </Pressable>
-
-      <SectionLabel title="DERECELİ DÜELLO" />
-      <View style={styles.modeGrid}>
-        <Pressable onPress={() => onPlayBot(4)} style={({ pressed }) => [styles.modeNodeWrap, pressed && styles.pressed]}>
-          <LinearGradient colors={["#165C48", "#0C2A20"]} style={[styles.modeNode, { borderColor: palette.emerald }]}>
-            <View style={styles.modeNodeHeader}>
-              <Text numberOfLines={1} style={[styles.modeSize, { color: palette.emerald }]}>4×4</Text>
-              <View style={[styles.modeMiniDot, { backgroundColor: palette.emerald }]} />
+            <Text style={[styles.cardTitle, { textAlign: "center" }]}>SKOR HÜCUMU</Text>
+            <Text style={[styles.cardBody, { textAlign: "center" }]}>Süre dolmadan en çok kelimeyi bağla ve rekor kır!</Text>
+            <View style={{ marginTop: "auto", paddingTop: 6, width: "100%" }}>
+              <GameButton
+                label="YARIŞ ▶"
+                size="sm"
+                variant="gold"
+                onPress={() => onNavigate("arcade")}
+              />
             </View>
-            <Text numberOfLines={1} style={styles.modeTitle}>Hızlı</Text>
-            <Text numberOfLines={1} style={styles.modeMeta}>55 SN</Text>
-          </LinearGradient>
-        </Pressable>
-
-        <Pressable onPress={handlePlayBot6} style={({ pressed }) => [styles.modeNodeWrap, { opacity: isLocked6 ? 0.75 : 1 }, pressed && styles.pressed]}>
-          <LinearGradient colors={["#1E4A3C", "#0C2A20"]} style={[styles.modeNode, { borderColor: isLocked6 ? "#3D5C4A" : palette.gemBlue }]}>
-            <View style={styles.modeNodeHeader}>
-              <Text numberOfLines={1} style={[styles.modeSize, { color: isLocked6 ? "#6B7280" : palette.gemBlue }]}>{isLocked6 ? "🔒 6×6" : "6×6"}</Text>
-              <View style={[styles.modeMiniDot, { backgroundColor: isLocked6 ? "#6B7280" : palette.gemBlue }]} />
-            </View>
-            <Text numberOfLines={1} style={styles.modeTitle}>{isLocked6 ? "Kilitli" : "Akış"}</Text>
-            <Text numberOfLines={1} style={styles.modeMeta}>{isLocked6 ? `Sev. ${currentLevel}/5` : "75 SN"}</Text>
-            {isLocked6 && (
-              <View style={styles.lockTrack}>
-                <View style={{ width: `${Math.min(100, (currentLevel / 5) * 100)}%`, height: "100%", backgroundColor: palette.gemBlue }} />
-              </View>
-            )}
-          </LinearGradient>
-        </Pressable>
-
-        <Pressable onPress={handlePlayBot8} style={({ pressed }) => [styles.modeNodeWrap, { opacity: isLocked8 ? 0.75 : 1 }, pressed && styles.pressed]}>
-          <LinearGradient colors={["#3A2A12", "#1A1408"]} style={[styles.modeNode, { borderColor: isLocked8 ? "#3D5C4A" : palette.gold }]}>
-            <View style={styles.modeNodeHeader}>
-              <Text numberOfLines={1} style={[styles.modeSize, { color: isLocked8 ? "#6B7280" : palette.gold }]}>{isLocked8 ? "🔒 8×8" : "8×8"}</Text>
-              <View style={[styles.modeMiniDot, { backgroundColor: isLocked8 ? "#6B7280" : palette.gold }]} />
-            </View>
-            <Text numberOfLines={1} style={styles.modeTitle}>{isLocked8 ? "Kilitli" : "Derin"}</Text>
-            <Text numberOfLines={1} style={styles.modeMeta}>{isLocked8 ? `Sev. ${currentLevel}/8` : "90 SN"}</Text>
-            {isLocked8 && (
-              <View style={styles.lockTrack}>
-                <View style={{ width: `${Math.min(100, (currentLevel / 8) * 100)}%`, height: "100%", backgroundColor: palette.gold }} />
-              </View>
-            )}
-          </LinearGradient>
-        </Pressable>
-
-        <Pressable onPress={handlePlayBot10} style={({ pressed }) => [styles.modeNodeWrap, { opacity: isLocked10 ? 0.75 : 1 }, pressed && styles.pressed]}>
-          <LinearGradient colors={["#3A1A22", "#1A0C12"]} style={[styles.modeNode, { borderColor: isLocked10 ? "#3D5C4A" : palette.gemRuby }]}>
-            <View style={styles.modeNodeHeader}>
-              <Text numberOfLines={1} style={[styles.modeSize, { color: isLocked10 ? "#6B7280" : palette.gemRuby }]}>{isLocked10 ? "🔒 10×10" : "10×10"}</Text>
-              <View style={[styles.modeMiniDot, { backgroundColor: isLocked10 ? "#6B7280" : palette.gemRuby }]} />
-            </View>
-            <Text numberOfLines={1} style={styles.modeTitle}>{isLocked10 ? "Kilitli" : "Usta"}</Text>
-            <Text numberOfLines={1} style={styles.modeMeta}>{isLocked10 ? `Sev. ${currentLevel}/10` : "110 SN"}</Text>
-            {isLocked10 && (
-              <View style={styles.lockTrack}>
-                <View style={{ width: `${Math.min(100, (currentLevel / 10) * 100)}%`, height: "100%", backgroundColor: palette.gemRuby }} />
-              </View>
-            )}
           </LinearGradient>
         </Pressable>
       </View>
+
+      <SectionLabel title="TEK OYUNCU" meta="MACERA & BULMACA" />
+      <View style={{ gap: 8, width: "100%" }}>
+        <Pressable onPress={onSolo} style={({ pressed }) => [pressed && styles.pressed]}>
+          <OrnatePanel accent="emerald" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
+            <GameIcon source={ICONS.trophy} size={42} glow="#3EE8B5" />
+            <View style={styles.soloMetaCol}>
+              <View style={styles.soloEyebrowRow}>
+                <Text style={[styles.soloEyebrowText, { color: "#3EE8B5" }]}>
+                  {unclaimedMilestonesCount > 0 ? `🎁 ${unclaimedMilestonesCount} SANDIK BEKLİYOR` : "✦ 100 SEVİYE · MACERA ✦"}
+                </Text>
+              </View>
+              <Text numberOfLines={1} style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
+              <Text numberOfLines={1} style={styles.soloDesc}>
+                Aşamalı kelime operasyonları
+              </Text>
+            </View>
+            {onOpenModeInfo && (
+              <InfoMini color="#3EE8B5" onPress={() => onOpenModeInfo("solo")} />
+            )}
+            <GameButton label="BAŞLA ▶" size="sm" variant="emerald" onPress={onSolo} style={styles.soloActionBtn} />
+          </OrnatePanel>
+        </Pressable>
+
+        <Pressable onPress={() => onNavigate("vintage" as any)} style={({ pressed }) => [pressed && styles.pressed]}>
+          <OrnatePanel accent="ruby" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
+            <GameIcon emoji="🗞️" size={42} glow="#FB7185" />
+            <View style={styles.soloMetaCol}>
+              <View style={styles.soloEyebrowRow}>
+                <Text style={[styles.soloEyebrowText, { color: "#FB7185" }]}>
+                  ✦ 20 BÖLÜM · NOSTALJİ ✦
+                </Text>
+              </View>
+              <Text numberOfLines={1} style={styles.soloHeading}>GAZETE BULMACASI</Text>
+              <Text numberOfLines={1} style={styles.soloDesc}>
+                Kare bulmaca ipuçlarını çöz
+              </Text>
+            </View>
+            {onOpenModeInfo && (
+              <InfoMini color="#FB7185" onPress={() => onOpenModeInfo("vintage")} />
+            )}
+            <GameButton label="ÇÖZ ▶" size="sm" variant="ruby" onPress={() => onNavigate("vintage" as any)} style={styles.soloActionBtn} />
+          </OrnatePanel>
+        </Pressable>
+      </View>
+
+      <MatchHistoryModal
+        visible={showHistoryModal}
+        progress={progress}
+        onClose={() => setShowHistoryModal(false)}
+        onPlayNow={() => {
+          setShowHistoryModal(false);
+          onNavigate("online");
+        }}
+      />
+
+      <DailyTreasureModal
+        visible={showDailyRewardModal}
+        onClose={() => setShowDailyRewardModal(false)}
+        progress={progress}
+        onClaim={() => {
+          onClaimDailyReward?.();
+        }}
+      />
     </ScrollView>
   </>;
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingBottom: 148 },
+  content: { flexGrow: 1, paddingBottom: 170 },
   hud: {
     borderRadius: 22,
     borderWidth: 2,
@@ -690,6 +648,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   topIconText: { fontSize: 13 },
+  topIconBtnGlow: {
+    borderColor: "#FFC24A",
+    backgroundColor: "rgba(255, 194, 74, 0.25)",
+    shadowColor: "#FFC24A",
+    shadowOpacity: 0.7,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  topNotificationDot: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+    borderWidth: 1.5,
+    borderColor: "#0E2C22",
+  },
+  dailyMiniPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 194, 74, 0.14)",
+    borderWidth: 1.5,
+    borderColor: "#FFC24A",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 8,
+    shadowColor: "#FFC24A",
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  dailyMiniIcon: { fontSize: 15 },
+  dailyMiniText: { flex: 1, color: "#FFDF85", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
+  dailyMiniAction: { color: "#FFC24A", fontSize: 11, fontWeight: "900" },
   livesHeaderPill: {
     height: 30,
     flexDirection: "row",
@@ -727,6 +724,7 @@ const styles = StyleSheet.create({
   modalIconBadgeRadar: { borderColor: palette.emerald },
   modalIconBadgeLives: { borderColor: palette.heart },
   modalIconBadgeRotani: { borderColor: palette.gold },
+  modalIconBadgeMystery: { borderColor: "#38BDF8", backgroundColor: "rgba(56, 189, 248, 0.16)" },
   modalIconImg: { width: 64, height: 64 },
   modalKicker: {
     color: palette.gold,
@@ -822,65 +820,210 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 68,
     borderRadius: 14,
-    backgroundColor: palette.panelInner,
+    backgroundColor: "rgba(36, 22, 6, 0.85)",
     borderWidth: 1.5,
-    borderColor: palette.bronzeDark,
+    borderColor: "rgba(255, 194, 74, 0.25)",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 5,
     position: "relative",
   },
   dailyDayCardActive: {
-    borderColor: palette.gold,
-    backgroundColor: "#1A3A20",
+    borderColor: "#FFC24A",
+    backgroundColor: "rgba(70, 42, 8, 0.95)",
     borderWidth: 2,
-    shadowColor: palette.gold,
-    shadowOpacity: 0.5,
+    shadowColor: "#FFC24A",
+    shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 5,
   },
-  dailyDayCardPast: { opacity: 0.7, borderColor: "rgba(62, 232, 181, 0.4)", backgroundColor: "#0C221A" },
-  dailyDayCardClaimedToday: { borderColor: palette.emerald, backgroundColor: "#0E3330" },
-  dailyDayCardEpic: { borderColor: palette.gold },
-  epicTag: { position: "absolute", top: -6, backgroundColor: palette.gold, paddingHorizontal: 4, borderRadius: 5 },
+  dailyDayCardPast: { opacity: 0.7, borderColor: "rgba(255, 194, 74, 0.3)", backgroundColor: "rgba(24, 14, 4, 0.8)" },
+  dailyDayCardClaimedToday: { borderColor: "#FBBF24", backgroundColor: "rgba(50, 30, 6, 0.9)" },
+  dailyDayCardEpic: { borderColor: "#FFD700" },
+  epicTag: { position: "absolute", top: -6, backgroundColor: "#FFD700", paddingHorizontal: 4, borderRadius: 5 },
   epicTagText: { color: "#3A2408", fontSize: 6.5, fontWeight: "900" },
-  dailyDayLabel: { color: palette.muted, fontSize: 8, fontWeight: "800" },
+  dailyDayLabel: { color: "#E8D5A3", fontSize: 8, fontWeight: "800" },
   dailyDayIcon: { fontSize: 14, marginVertical: 2 },
   dailyDayAmount: { color: palette.cream, fontSize: 8.5, fontWeight: "900" },
-  dailyDayCheck: { position: "absolute", bottom: 2, right: 3, backgroundColor: palette.emerald, width: 12, height: 12, borderRadius: 6, alignItems: "center", justifyContent: "center" },
+  dailyDayCheck: { position: "absolute", bottom: 2, right: 3, backgroundColor: "#FFC24A", width: 12, height: 12, borderRadius: 6, alignItems: "center", justifyContent: "center" },
   dailyDayCheckText: { color: "#071A14", fontSize: 8, fontWeight: "900", lineHeight: 10 },
-  dailyClaimedBar: { marginTop: 10, backgroundColor: "rgba(62, 232, 181, 0.08)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.28)", borderRadius: 10, paddingVertical: 7, paddingHorizontal: 10, alignItems: "center" },
-  dailyClaimedBarText: { color: palette.mint, fontSize: 8.5, fontWeight: "800", letterSpacing: 0.3 },
+  dailyClaimedBar: { marginTop: 10, backgroundColor: "rgba(255, 194, 74, 0.08)", borderWidth: 1, borderColor: "rgba(255, 194, 74, 0.3)", borderRadius: 10, paddingVertical: 7, paddingHorizontal: 10, alignItems: "center" },
+  dailyClaimedBarText: { color: "#FFD000", fontSize: 8.5, fontWeight: "800", letterSpacing: 0.3 },
 
   cardsRow: { flexDirection: "row", gap: 10, width: "100%", marginTop: 4 },
   columnCardWrap: { flex: 1 },
   columnCard: {
-    minHeight: 148,
-    borderRadius: 20,
+    flex: 1,
+    minHeight: 160,
+    borderRadius: 18,
     borderWidth: 2,
-    padding: 12,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.4,
+    shadowRadius: 7,
+    elevation: 5,
+    position: "relative",
+    overflow: "hidden",
   },
-  cardIconCircle: { width: 38, height: 38, borderRadius: 19, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  cardIconText: { fontSize: 18, fontWeight: "900" },
-  cardKicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.8, marginTop: 12 },
-  cardTitle: { color: palette.cream, fontSize: 13, fontWeight: "900", marginTop: 4, textShadowColor: "rgba(0,0,0,0.4)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-  cardBody: { color: palette.muted, fontSize: 9.5, lineHeight: 13, marginTop: 4 },
+  cardRibbonWrap: { width: "100%", alignItems: "center" },
+  cardRibbonMint: {
+    alignSelf: "center",
+    backgroundColor: "rgba(45, 212, 191, 0.2)",
+    borderWidth: 1,
+    borderColor: "#2DD4BF",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 7,
+  },
+  cardRibbonAmber: {
+    alignSelf: "center",
+    backgroundColor: "rgba(251, 146, 60, 0.2)",
+    borderWidth: 1,
+    borderColor: "#FB923C",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 7,
+  },
+  cardRibbonText: {
+    color: "#FFFFFF",
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  cardIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardIconText: { fontSize: 16, fontWeight: "900" },
+  cardKicker: {
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginTop: 12,
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  cardTitle: {
+    color: palette.cream,
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 3,
+    letterSpacing: 0.5,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
+  },
+  cardBody: { color: palette.muted, fontSize: 9, lineHeight: 12, marginTop: 3 },
 
+  soloHorizontalSkin: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+  },
+  soloMetaCol: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  soloEyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  soloEyebrowText: {
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  soloHeading: {
+    color: palette.cream,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1.5 },
+    textShadowRadius: 2,
+  },
+  soloDesc: {
+    color: palette.muted,
+    fontSize: 9.5,
+    lineHeight: 13,
+    marginTop: 1,
+    fontWeight: "600",
+  },
+  soloActionBtn: {
+    minWidth: 80,
+    flexShrink: 0,
+  },
   soloSkin: { flexDirection: "row", alignItems: "center", padding: 12, gap: 12 },
-  soloEyebrow: { color: palette.gold, fontSize: 8, fontWeight: "900", letterSpacing: 0.9 },
-  soloHeading: { color: palette.cream, fontSize: 14, fontWeight: "900", marginTop: 2 },
-  soloDesc: { color: palette.muted, fontSize: 9.5, lineHeight: 13, marginTop: 3 },
-  soloArrow: { color: palette.gold, fontSize: 26, fontWeight: "300" },
+  soloEyebrow: { color: palette.gold, fontSize: 8.5, fontWeight: "900", letterSpacing: 1 },
+  soloArrow: { color: palette.gold, fontSize: 26, fontWeight: "900" },
 
   modeGrid: { flexDirection: "row", gap: 6, width: "100%" },
   modeNodeWrap: { flex: 1 },
-  modeNode: { minHeight: 100, borderRadius: 16, padding: 8, borderWidth: 2, justifyContent: "space-between" },
-  modeNodeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  modeSize: { fontSize: 14, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.35)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-  modeMiniDot: { width: 7, height: 7, borderRadius: 4, shadowOpacity: 0.8, shadowRadius: 4 },
-  modeTitle: { color: palette.cream, fontSize: 11, fontWeight: "900", marginTop: 4 },
-  modeMeta: { color: palette.mutedGold, fontSize: 8, fontWeight: "800", marginTop: 1 },
-  lockTrack: { width: "100%", height: 3, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 2, marginTop: 3, overflow: "hidden" },
+  modeNode: {
+    minHeight: 106,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  modeNodeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    width: "100%",
+  },
+  modeSize: {
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    textAlign: "center",
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 2,
+  },
+  modeMiniDot: { width: 6, height: 6, borderRadius: 3, shadowOpacity: 0.9, shadowRadius: 4 },
+  modeTitle: {
+    color: palette.cream,
+    fontSize: 11,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 3,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  modeMetaPill: {
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 3,
+  },
+  modeMeta: { fontSize: 8, fontWeight: "800", textAlign: "center" },
+  lockTrack: { width: "90%", height: 4, backgroundColor: "rgba(0,0,0,0.4)", borderRadius: 2, marginTop: 4, overflow: "hidden" },
 
   streakWarningPill: {
     flexDirection: "row",
@@ -914,20 +1057,99 @@ const styles = StyleSheet.create({
   },
   milestoneBadgeText: { color: "#3A2408", fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
 
-  mysteryHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  mysteryKicker: { color: palette.mint, fontSize: 9.5, fontWeight: "900", letterSpacing: 0.8 },
-  mysteryPill: {
-    backgroundColor: "rgba(62, 232, 181, 0.18)",
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.45)",
+  mysteryStripWrap: {
+    width: "100%",
+    marginBottom: 8,
   },
-  mysteryPillText: { color: palette.mint, fontSize: 7.5, fontWeight: "900", letterSpacing: 0.5 },
-  mysteryReward: { color: palette.gold, fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
-  mysteryDef: { color: palette.cream, fontSize: 13, fontWeight: "700", fontStyle: "italic", lineHeight: 18 },
-  mysteryHint: { color: palette.muted, fontSize: 8.5, fontWeight: "800", marginTop: 6 },
+  mysteryStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#38BDF8",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  mysteryStripLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
+  mysteryIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(56, 189, 248, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  mysteryIconText: {
+    fontSize: 14,
+  },
+  mysteryStripTextCol: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+  },
+  mysteryStripEyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  mysteryStripEyebrow: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#38BDF8",
+    letterSpacing: 0.8,
+  },
+  mysteryStripDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "#38BDF8",
+  },
+  mysteryStripReward: {
+    fontSize: 8.5,
+    fontWeight: "900",
+    color: palette.gold,
+    letterSpacing: 0.4,
+  },
+  mysteryStripDef: {
+    fontSize: 11.5,
+    fontStyle: "italic",
+    fontWeight: "700",
+    color: palette.cream,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  mysteryStripInfoBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+    flexShrink: 0,
+  },
+  mysteryStripInfoIcon: {
+    fontSize: 12,
+    color: "#38BDF8",
+    fontWeight: "900",
+  },
 
   infoMini: {
     width: 26,

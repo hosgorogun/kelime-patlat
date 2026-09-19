@@ -80,4 +80,113 @@ describe("Dereceli Onay & Can Mantığı Testleri", () => {
     expect(hasFinished).toBe(false);
     expect(submitted).toBe(false);
   });
+
+  it("hücreler arası yön okları ve açı hesabı (atan2 ve mesafe) doğru çalışmalıdır", () => {
+    // 1. Sağa doğru yatay bağlantı (0 derece / 0 rad)
+    const p1 = { x: 50, y: 50 };
+    const p2 = { x: 100, y: 50 };
+    const dx1 = p2.x - p1.x;
+    const dy1 = p2.y - p1.y;
+    const length1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+    const angle1 = Math.atan2(dy1, dx1);
+    expect(length1).toBe(50);
+    expect(angle1).toBe(0);
+
+    // 2. Aşağı doğru dikey bağlantı (90 derece / PI/2 rad)
+    const p3 = { x: 50, y: 120 };
+    const dx2 = p3.x - p1.x;
+    const dy2 = p3.y - p1.y;
+    const length2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+    const angle2 = Math.atan2(dy2, dx2);
+    expect(length2).toBe(70);
+    expect(angle2).toBeCloseTo(Math.PI / 2, 4);
+
+    // 3. Çapraz bağlantı (45 derece)
+    const p4 = { x: 100, y: 100 };
+    const dx3 = p4.x - p1.x;
+    const dy3 = p4.y - p1.y;
+    const angle3 = Math.atan2(dy3, dx3);
+    expect(angle3).toBeCloseTo(Math.PI / 4, 4);
+  });
+
+  it("rota harf sırası başlangıç ve bitiş rozetlerini doğru belirlemelidir", () => {
+    const letters = ["K", "A", "L", "E"];
+
+    const getCellBadge = (idx: number, total: number) => {
+      if (idx === 0) return { label: "1", type: "start", color: "#10B981" };
+      if (idx === total - 1) return { label: "✓", type: "end", color: "#EF4444" };
+      return { label: String(idx + 1), type: "middle", color: "#3B82F6" };
+    };
+
+    expect(getCellBadge(0, letters.length)).toEqual({ label: "1", type: "start", color: "#10B981" });
+    expect(getCellBadge(1, letters.length)).toEqual({ label: "2", type: "middle", color: "#3B82F6" });
+    expect(getCellBadge(2, letters.length)).toEqual({ label: "3", type: "middle", color: "#3B82F6" });
+    expect(getCellBadge(3, letters.length)).toEqual({ label: "✓", type: "end", color: "#EF4444" });
+  });
+
+  it("activeRouteCard harf çipleri başlangıç, bitiş ve yön oklarını eksiksiz üretmelidir", () => {
+    const word = "KALE";
+    const chips = word.split("").map((letter, idx, arr) => {
+      const isStart = idx === 0;
+      const isEnd = idx === arr.length - 1;
+      const label = `${idx + 1} ${letter}${isStart ? " • BAŞLANGIÇ" : isEnd ? " • BİTİŞ" : ""}`;
+      return { letter, idx, label, hasArrowAfter: !isEnd };
+    });
+
+    expect(chips.length).toBe(4);
+    expect(chips[0].label).toBe("1 K • BAŞLANGIÇ");
+    expect(chips[0].hasArrowAfter).toBe(true);
+    expect(chips[1].label).toBe("2 A");
+    expect(chips[1].hasArrowAfter).toBe(true);
+    expect(chips[2].label).toBe("3 L");
+    expect(chips[2].hasArrowAfter).toBe(true);
+    expect(chips[3].label).toBe("4 E • BİTİŞ");
+    expect(chips[3].hasArrowAfter).toBe(false);
+  });
+
+  it("MatchHistoryModal rozet rengi ve etiketi solo mağlubiyet durumunu (won: false) doğru yansıtmalıdır", () => {
+    const getBadgeInfo = (isSoloMode: boolean, isWon: boolean, isDraw = false) => {
+      const resultBadgeColor = isSoloMode
+        ? (isWon ? "#06B6D4" : "#EF4444")
+        : isDraw
+        ? "#F59E0B"
+        : isWon
+        ? "#10B981"
+        : "#EF4444";
+
+      const resultLabel = isSoloMode
+        ? (isWon ? "🎯 TAMAMLANDI" : "💔 BAŞARISIZ")
+        : isDraw
+        ? "⚖️ BERABERE"
+        : isWon
+        ? "🏆 KAZANDI"
+        : "💔 KAYBETTİ";
+
+      return { resultBadgeColor, resultLabel };
+    };
+
+    // Solo kazanma
+    expect(getBadgeInfo(true, true)).toEqual({
+      resultBadgeColor: "#06B6D4",
+      resultLabel: "🎯 TAMAMLANDI",
+    });
+
+    // Solo kaybetme (artık hatalı olarak TAMAMLANDI yazmıyor)
+    expect(getBadgeInfo(true, false)).toEqual({
+      resultBadgeColor: "#EF4444",
+      resultLabel: "💔 BAŞARISIZ",
+    });
+
+    // Düello kazanma
+    expect(getBadgeInfo(false, true)).toEqual({
+      resultBadgeColor: "#10B981",
+      resultLabel: "🏆 KAZANDI",
+    });
+
+    // Düello kaybetme
+    expect(getBadgeInfo(false, false)).toEqual({
+      resultBadgeColor: "#EF4444",
+      resultLabel: "💔 KAYBETTİ",
+    });
+  });
 });

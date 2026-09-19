@@ -98,35 +98,83 @@ export function GameAtmosphere({ dim = 0.55 }: { dim?: number }) {
   );
 }
 
-function CornerJewel({ style }: { style: ViewStyle }) {
+function CornerJewel({ style, colors }: { style: ViewStyle; colors?: readonly [string, string] }) {
   return (
     <View style={[styles.cornerJewel, style]}>
-      <LinearGradient colors={[palette.goldHi, palette.goldDeep]} style={styles.cornerJewelInner} />
+      <LinearGradient colors={colors || [palette.goldHi, palette.goldDeep]} style={styles.cornerJewelInner} />
     </View>
   );
 }
+
+export type OrnatePanelAccent = "gold" | "emerald" | "ruby" | "cyan" | "amber" | "sapphire" | "purple";
 
 export function OrnatePanel({
   children,
   style,
   contentStyle,
   accent = "gold",
+  showJewels = true,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
-  accent?: "gold" | "emerald";
+  accent?: OrnatePanelAccent;
+  showJewels?: boolean;
 }) {
-  const frame = accent === "emerald" ? ([palette.mint, palette.emeraldDeep, palette.bronzeDark, palette.teal] as const) : FRAME_GRADIENT;
+  const frame =
+    accent === "ruby"
+      ? (["#FDA4AF", "#FB7185", "#881337", "#E11D48"] as const)
+      : accent === "cyan"
+      ? (["#A5F3FC", "#38BDF8", "#0369A1", "#0284C7"] as const)
+      : accent === "amber"
+      ? (["#FFE08A", "#FFC24A", "#B45309", "#78350F"] as const)
+      : accent === "sapphire"
+      ? (["#BAE6FD", "#38BDF8", "#0284C7", "#0C4A6E"] as const)
+      : accent === "purple"
+      ? (["#E9D5FF", "#C084FC", "#7E22CE", "#581C87"] as const)
+      : accent === "emerald"
+      ? ([palette.mint, palette.emeraldDeep, palette.bronzeDark, palette.teal] as const)
+      : FRAME_GRADIENT;
+
+  const innerBg =
+    accent === "gold"
+      ? "rgba(34, 26, 12, 0.96)"
+      : accent === "amber"
+      ? "rgba(42, 26, 6, 0.96)"
+      : accent === "sapphire"
+      ? "rgba(10, 24, 44, 0.96)"
+      : accent === "ruby"
+      ? "rgba(44, 14, 22, 0.96)"
+      : accent === "cyan"
+      ? "rgba(10, 32, 44, 0.96)"
+      : accent === "purple"
+      ? "rgba(32, 12, 44, 0.96)"
+      : "rgba(10, 38, 28, 0.96)";
+
+  const jewelColors: readonly [string, string] =
+    accent === "ruby"
+      ? ["#FDA4AF", "#BE123C"]
+      : accent === "cyan" || accent === "sapphire"
+      ? ["#BAE6FD", "#0284C7"]
+      : accent === "emerald"
+      ? [palette.mint, palette.emeraldDeep]
+      : accent === "purple"
+      ? ["#E9D5FF", "#7E22CE"]
+      : [palette.goldHi, palette.goldDeep];
+
   return (
     <View style={[styles.panelOuter, style]}>
       <LinearGradient colors={[...frame]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.panelFrame}>
-        <View style={[styles.panelInner, contentStyle]}>
+        <View style={[styles.panelInner, { backgroundColor: innerBg }, contentStyle]}>
           <LinearGradient colors={[...PANEL_SHEEN]} style={styles.panelSheen} pointerEvents="none" />
-          <CornerJewel style={styles.jewelTL} />
-          <CornerJewel style={styles.jewelTR} />
-          <CornerJewel style={styles.jewelBL} />
-          <CornerJewel style={styles.jewelBR} />
+          {showJewels && (
+            <>
+              <CornerJewel style={styles.jewelTL} colors={jewelColors} />
+              <CornerJewel style={styles.jewelTR} colors={jewelColors} />
+              <CornerJewel style={styles.jewelBL} colors={jewelColors} />
+              <CornerJewel style={styles.jewelBR} colors={jewelColors} />
+            </>
+          )}
           {children}
         </View>
       </LinearGradient>
@@ -134,7 +182,7 @@ export function OrnatePanel({
   );
 }
 
-type GameButtonVariant = "gold" | "emerald" | "dark";
+type GameButtonVariant = "gold" | "emerald" | "ruby" | "sapphire" | "dark";
 
 export function GameButton({
   label,
@@ -157,9 +205,50 @@ export function GameButton({
 }) {
   const height = size === "lg" ? 56 : size === "md" ? 46 : 38;
   const radius = height / 2;
+
   const colors =
-    variant === "gold" ? GOLD_BUTTON_GRADIENT : variant === "emerald" ? EMERALD_GRADIENT : (["#1E4A3C", "#0E2C22", "#071A14"] as const);
-  const labelColor = variant === "dark" ? palette.goldHi : "#3A2408";
+    variant === "gold"
+      ? (["#FFE885", "#F5BE2C", "#C48616"] as const)
+      : variant === "emerald"
+      ? (["#6EE7B7", "#10B981", "#059669"] as const)
+      : variant === "ruby"
+      ? (["#FB7185", "#E11D48", "#BE123C"] as const)
+      : variant === "sapphire"
+      ? (["#38BDF8", "#0EA5E9", "#0284C7"] as const)
+      : (["#1E4A3C", "#0E2C22", "#071A14"] as const);
+
+  const bottomBorderColor =
+    variant === "gold"
+      ? "#8B5E14"
+      : variant === "emerald"
+      ? "#064E3B"
+      : variant === "ruby"
+      ? "#881337"
+      : variant === "sapphire"
+      ? "#0369A1"
+      : "#05160E";
+
+  const labelColor =
+    variant === "gold"
+      ? "#3A2408"
+      : variant === "emerald"
+      ? "#06281C"
+      : variant === "sapphire"
+      ? "#042033"
+      : variant === "dark"
+      ? palette.goldHi
+      : "#FFFFFF";
+
+  const shadowGlowColor =
+    variant === "gold"
+      ? "rgba(245, 190, 44, 0.45)"
+      : variant === "emerald"
+      ? "rgba(16, 185, 129, 0.4)"
+      : variant === "ruby"
+      ? "rgba(244, 63, 94, 0.4)"
+      : variant === "sapphire"
+      ? "rgba(14, 165, 233, 0.4)"
+      : "rgba(0, 0, 0, 0.6)";
 
   return (
     <Pressable
@@ -167,18 +256,44 @@ export function GameButton({
       disabled={disabled}
       style={({ pressed }) => [
         styles.btnWrap,
-        { height, borderRadius: radius, opacity: disabled ? 0.55 : 1 },
+        { height, borderRadius: radius, opacity: disabled ? 0.55 : 1, shadowColor: shadowGlowColor },
         pressed && styles.btnPressed,
         style,
       ]}
     >
-      <View style={[styles.btnRing, { borderRadius: radius, height }]}>
+      <View
+        style={[
+          styles.btnRing,
+          {
+            borderRadius: radius,
+            height,
+            borderBottomColor: bottomBorderColor,
+            borderBottomWidth: size === "sm" ? 3 : 4,
+          },
+        ]}
+      >
         <LinearGradient colors={[...colors]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={[styles.btnFill, { borderRadius: radius - 2 }]}>
           <View style={styles.btnGloss} />
           <View style={styles.btnRow}>
             {iconSource ? <Image source={iconSource} style={styles.btnIconImg} /> : null}
             {icon && !iconSource ? <Text style={styles.btnEmoji}>{icon}</Text> : null}
-            <Text style={[styles.btnLabel, { color: labelColor, fontSize: size === "lg" ? 15 : size === "md" ? 13 : 11 }]}>{label}</Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit={true}
+              minimumFontScale={0.72}
+              style={[
+                styles.btnLabel,
+                {
+                  color: labelColor,
+                  fontSize: size === "lg" ? 13.5 : size === "md" ? 12 : 10.5,
+                  textShadowColor: variant === "dark" || variant === "ruby" ? "#000" : "rgba(255,255,255,0.45)",
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 1,
+                },
+              ]}
+            >
+              {label}
+            </Text>
           </View>
         </LinearGradient>
       </View>
@@ -216,7 +331,7 @@ export function GameIcon({
       }}
     >
       {source ? (
-        <Image source={source} style={{ width: size, height: size }} />
+        <Image source={source} style={{ width: size * 0.75, height: size * 0.75 }} resizeMode="contain" />
       ) : (
         <Text style={{ fontSize: size * 0.46 }}>{emoji}</Text>
       )}
@@ -243,17 +358,38 @@ export function GemChip({
   plus?: boolean;
   badge?: boolean;
 }) {
+  const bgColors =
+    color === palette.gemBlue || color === "#38BDF8"
+      ? (["#0E3248", "#061824"] as const)
+      : color === palette.gold || color === "#F4D06F" || color === "#FFC24A"
+      ? (["#382408", "#1A1003"] as const)
+      : (["#10382B", "#061C14"] as const);
+
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.chip, pressed && { transform: [{ scale: 0.96 }] }]}>
-      <LinearGradient colors={["#1A4A3A", "#0C2A20"]} style={styles.chipFill}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        {
+          borderColor: `${color}55`,
+          shadowColor: color,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          elevation: 3,
+        },
+        pressed && { transform: [{ scale: 0.96 }] },
+      ]}
+    >
+      <LinearGradient colors={[...bgColors]} style={styles.chipFill}>
         {iconSource ? <Image source={iconSource} style={styles.chipIcon} /> : <Text style={styles.chipEmoji}>{icon}</Text>}
         <View style={{ flex: 1, minWidth: 0 }}>
           {label ? <Text numberOfLines={1} style={styles.chipLabel}>{label}</Text> : null}
           <Text style={[styles.chipValue, { color }]}>{value}</Text>
         </View>
         {plus ? (
-          <View style={styles.plusBubble}>
-            <Text style={styles.plusText}>+</Text>
+          <View style={[styles.plusBubble, { backgroundColor: color }]}>
+            <Text style={[styles.plusText, { color: "#06140F" }]}>+</Text>
           </View>
         ) : null}
         {badge ? <View style={styles.chipBadge} /> : null}
@@ -274,8 +410,12 @@ export function SectionLabel({ title, meta }: { title: string; meta?: string }) 
   return (
     <View style={styles.sectionHead}>
       <View style={styles.sectionRule} />
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {meta ? <Text style={styles.sectionMeta}>{meta}</Text> : <View style={styles.sectionRule} />}
+      <View style={styles.sectionTitleWrap}>
+        <Text style={styles.sectionDiamond}>✦</Text>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {meta ? <Text style={styles.sectionMeta}>· {meta}</Text> : null}
+        <Text style={styles.sectionDiamond}>✦</Text>
+      </View>
       <View style={styles.sectionRule} />
     </View>
   );
@@ -390,17 +530,18 @@ const styles = StyleSheet.create({
   btnRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    maxWidth: "100%",
   },
   btnEmoji: { fontSize: 16 },
-  btnIconImg: { width: 22, height: 22, borderRadius: 11 },
+  btnIconImg: { width: 20, height: 20, borderRadius: 10 },
   btnLabel: {
     fontWeight: "900",
-    letterSpacing: 0.8,
-    textShadowColor: "rgba(255,255,255,0.35)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 0,
+    letterSpacing: 0.5,
+    textAlign: "center",
+    flexShrink: 1,
   },
   chip: {
     flex: 1,
@@ -457,15 +598,28 @@ const styles = StyleSheet.create({
   sectionHead: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    gap: 10,
     marginTop: 20,
     marginBottom: 10,
+  },
+  sectionTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  sectionDiamond: {
+    color: palette.gold,
+    fontSize: 8,
+    opacity: 0.85,
   },
   sectionTitle: {
     color: palette.goldBright,
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 1.4,
+    textAlign: "center",
   },
   sectionMeta: {
     color: palette.muted,

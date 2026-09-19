@@ -19,7 +19,7 @@ export function PremiumDock({
 }) {
   return (
     <View style={styles.dockWrap}>
-      <LinearGradient colors={["#1E4A38", "#0A241C"]} style={styles.dock}>
+      <LinearGradient colors={["#0F382B", "#0A281E", "#051610"]} style={styles.dock}>
         <DockTab
           emoji="🛒"
           label="MAĞAZA"
@@ -38,10 +38,10 @@ export function PremiumDock({
         <Pressable onPress={() => onNavigate("home")} style={({ pressed }) => [styles.centerTab, pressed && styles.pressed]}>
           <View style={[styles.centerGem, active === "home" && styles.centerGemActive]}>
             <LinearGradient
-              colors={active === "home" ? ["#FFF1B0", "#F0C24A", "#C48A1C"] : ["#2A5C48", "#12362B"]}
+              colors={active === "home" ? ["#FFF8D6", "#F5BE2C", "#C48616"] : ["#1B543F", "#0E3628", "#071F17"]}
               style={styles.centerGemFill}
             >
-              <Image source={ICONS.play} style={styles.centerIcon} />
+              <Image source={ICONS.play} style={styles.centerIcon} resizeMode="contain" />
             </LinearGradient>
           </View>
           <Text style={[styles.centerLabel, active === "home" && styles.centerLabelActive]}>OYNA</Text>
@@ -107,17 +107,19 @@ function DockTab({
 const styles = StyleSheet.create({
   dockWrap: {
     borderRadius: 28,
-    borderWidth: 2.5,
-    borderColor: palette.bronzeBorder,
-    shadowColor: "#000",
-    shadowOpacity: 0.55,
+    borderWidth: 1.5,
+    borderColor: "rgba(62, 232, 181, 0.55)",
+    backgroundColor: "#051610",
+    shadowColor: "#10B981",
+    shadowOpacity: 0.35,
     shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 6 },
     elevation: 16,
     overflow: "visible",
   },
   dock: {
     height: 74,
+    borderRadius: 25,
     overflow: "visible",
     paddingHorizontal: 6,
     paddingVertical: 6,
@@ -134,7 +136,10 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   tabActive: {
-    backgroundColor: "rgba(244, 208, 111, 0.12)",
+    backgroundColor: "rgba(62, 232, 181, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(62, 232, 181, 0.45)",
+    borderRadius: 14,
   },
   iconBox: {
     height: 28,
@@ -143,17 +148,28 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   iconBubble: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.18)",
+    backgroundColor: "rgba(10, 36, 28, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 2,
   },
   iconBubbleActive: {
-    backgroundColor: "rgba(244, 208, 111, 0.2)",
-    borderWidth: 1,
-    borderColor: palette.gold,
+    backgroundColor: "rgba(62, 232, 181, 0.28)",
+    borderWidth: 1.5,
+    borderColor: "#3EE8B5",
+    shadowColor: "#3EE8B5",
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tabBadge: {
     position: "absolute",
@@ -183,45 +199,53 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 16,
     lineHeight: 20,
-    opacity: 0.75,
+    opacity: 0.95,
   },
   iconActive: {
     opacity: 1,
-    transform: [{ scale: 1.08 }],
+    transform: [{ scale: 1.15 }],
   },
   label: {
-    color: palette.muted,
-    fontSize: 8,
+    color: "#BCE3D4",
+    fontSize: 8.5,
     fontWeight: "900",
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
     marginTop: 3,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   labelActive: {
-    color: palette.goldHi,
+    color: "#3EE8B5",
+    textShadowColor: "rgba(62, 232, 181, 0.6)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 5,
   },
   centerTab: {
     flex: 1.2,
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -18,
+    marginTop: -20,
   },
   centerGem: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     borderWidth: 3,
-    borderColor: palette.bronzeDark,
+    borderColor: "#3EE8B5",
     overflow: "hidden",
-    shadowColor: palette.gold,
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowColor: "#3EE8B5",
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 12,
   },
   centerGemActive: {
-    borderColor: palette.goldHi,
-    shadowOpacity: 0.85,
+    borderColor: "#FFF4B8",
+    shadowColor: "#F5BE2C",
+    shadowOpacity: 0.95,
+    shadowRadius: 16,
   },
   centerGemFill: {
     flex: 1,
@@ -233,14 +257,19 @@ const styles = StyleSheet.create({
     height: 42,
   },
   centerLabel: {
-    color: palette.mutedGold,
-    fontSize: 8.5,
+    color: "#7FF5D0",
+    fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.7,
+    letterSpacing: 0.8,
     marginTop: 2,
+    textShadowColor: "rgba(0,0,0,0.9)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   centerLabelActive: {
-    color: palette.goldHi,
+    color: "#FFE08A",
+    textShadowColor: "rgba(245, 190, 44, 0.8)",
+    textShadowRadius: 6,
   },
   pressed: {
     opacity: 0.8,

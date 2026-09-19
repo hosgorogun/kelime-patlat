@@ -97,6 +97,8 @@ export type RoomSnapshot = {
   botSelection?: number[];
   combos?: Record<string, number>;
   disconnectExpiresAt?: number | null;
+  isCustom?: boolean;
+  isRanked?: boolean;
 };
 
 export type LeaderboardEntry = {

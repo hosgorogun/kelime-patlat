@@ -21,9 +21,9 @@ import {
 } from "../../shared/game";
 import { createSoloBoard } from "../../shared/solo";
 import { catalogWordsForBoard } from "../../shared/word-catalog";
-import { DEFAULT_PROGRESS, getLeagueTier } from "../../shared/progression";
+import { DEFAULT_PROGRESS, getLeagueTier, applyMatchProgress, type PlayerProgress } from "../../shared/progression";
 import { getRandomBotPersona } from "../../shared/botPersonas";
-import { UserModel } from "../db";
+import { UserModel, createFriendRequest, getPendingFriendRequests, updateFriendRequestStatus, findFriendRequestById, type FriendRequest } from "../db";
 import { loadLeaderboard, recordLeaderboardRounds } from "./mongo-store";
 
 type PlayerRecord = GamePlayer & { socketId: string | null };
@@ -52,6 +52,8 @@ type Room = {
   disconnectPlayerId?: string | null;
   disconnectExpiresAt?: number | null;
   rematchTimer?: NodeJS.Timeout | null;
+  isCustom?: boolean;
+  isRanked?: boolean;
 };
 
 type QueueEntry = {
@@ -87,9 +89,20 @@ const playerProfileSchema = z.object({
 
 const matchmakingJoinSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema, profile: playerProfileSchema });
 const matchmakingLeaveSchema = z.object({ playerId: playerIdSchema, size: sizeSchema });
-const roomCreateSchema = z.object({ playerId: playerIdSchema, playerName: playerNameSchema, size: sizeSchema, immediateBot: z.boolean().optional(), profile: playerProfileSchema });
+const roomCreateSchema = z.object({
+  playerId: playerIdSchema,
+  playerName: playerNameSchema,
+  size: sizeSchema,
+  immediateBot: z.boolean().optional(),
+  profile: playerProfileSchema,
+  inviteTarget: z.object({
+    toPlayerId: z.string(),
+    toUsername: z.string().optional(),
+  }).optional(),
+});
 const roomJoinSchema = z.object({ code: codeSchema, playerId: playerIdSchema, playerName: playerNameSchema, profile: playerProfileSchema });
 const roomPlayerActionSchema = z.object({ code: codeSchema, playerId: playerIdSchema });
+const roomEmoteSchema = z.object({ code: codeSchema, playerId: playerIdSchema, emote: z.string().min(1).max(10) });
 const wordSubmitSchema = z.object({ code: codeSchema, playerId: playerIdSchema, selection: z.array(z.number().int().min(0).max(99)).min(2).max(100) });
 
 function isValidPayload<T>(schema: z.ZodType<T>, payload: unknown): payload is T {
@@ -312,6 +325,8 @@ function snapshot(room: Room, viewerId: string): RoomSnapshot {
     botSelection: undefined, // Bot seçimi oyuncu ekranında gösterilmez
     combos: room.comboCount,
     disconnectExpiresAt: room.disconnectExpiresAt ?? null,
+    isCustom: room.isCustom ?? false,
+    isRanked: room.isRanked ?? false,
   };
 }
 
@@ -339,25 +354,20 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
   const activeHumanPlayers = [room.host, room.guest].filter((player): player is PlayerRecord => Boolean(player && !player.isBot));
   const isBotMatch = Boolean(room.guest?.isBot);
   const isDraw = !finalWinnerId;
+  const isUnrankedFriendly = Boolean(room.isCustom || !room.isRanked);
+
+  // Calculate elapsed round time and words
+  const elapsedSeconds = room.startedAt ? Math.max(1, Math.floor((Date.now() - room.startedAt) / 1000)) : 60;
 
   // Process and update authoritative LP/XP/Coins on DB for each player
   const roundsToRecord = await Promise.all(
     activeHumanPlayers.map(async (player) => {
       const roundScore = finalScores[player.id] ?? 0;
       const won = finalWinnerId === player.id;
-
-      let lpDelta = 0;
-      let xpDelta = 0;
-      let coinsDelta = 0;
-      if (isBotMatch) {
-        if (won) { lpDelta = 15; xpDelta = 35; coinsDelta = 4; }
-        else if (isDraw) { lpDelta = 0; xpDelta = 20; coinsDelta = 1; }
-        else { lpDelta = -10; xpDelta = 20; coinsDelta = 1; }
-      } else {
-        if (won) { lpDelta = 25; xpDelta = 60; coinsDelta = 10; }
-        else if (isDraw) { lpDelta = 0; xpDelta = 40; coinsDelta = 1; }
-        else { lpDelta = -20; xpDelta = 35; coinsDelta = 1; }
-      }
+      const myWords = room.foundWords.filter((w) => w.playerId === player.id).map((w) => w.word);
+      const tempo = Math.round((myWords.length * 60 / elapsedSeconds) * 10) / 10;
+      const opponentPlayer = [room.host, room.guest].find((p) => p && p.id !== player.id);
+      const opponentScore = opponentPlayer ? (finalScores[opponentPlayer.id] ?? 0) : 0;
 
       let currentLp = 0;
       let currentTier = "DEMİR";
@@ -369,36 +379,34 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
       try {
         const dbUser = await UserModel.findOne({ openId: player.id });
         if (dbUser) {
-          const prevProgress = dbUser.progress || {};
-          const prevLp = typeof prevProgress.lp === "number" ? prevProgress.lp : 0;
-          const nextLp = Math.max(0, prevLp + lpDelta);
-
-          const updatedUser = await UserModel.findOneAndUpdate(
-            { openId: player.id },
+          const prevProgress = { ...DEFAULT_PROGRESS, ...(dbUser.progress || {}) } as PlayerProgress;
+          const nextProgress = applyMatchProgress(
+            prevProgress,
             {
-              $set: {
-                "progress.lp": nextLp,
-                updatedAt: new Date(),
-              },
-              $inc: {
-                "progress.xp": xpDelta,
-                "progress.coins": coinsDelta,
-                "progress.wins": won ? 1 : 0,
-                "progress.matches": 1,
-              },
-              $max: {
-                "progress.bestScore": roundScore,
-              },
+              score: roundScore,
+              tempo,
+              won,
+              isDraw,
+              foundWords: myWords,
+              size: room.size,
+              opponentName: opponentPlayer?.name || (isBotMatch ? "Siber Bot" : "Rakip"),
+              opponentAvatar: opponentPlayer?.avatar,
+              opponentScore,
+              isFriendGame: isUnrankedFriendly,
             },
-            { returnDocument: 'after' }
+            isBotMatch ? "bot" : "pvp"
           );
 
-          currentLp = nextLp;
-          currentTier = getLeagueTier(nextLp).tier;
-          userAvatar = updatedUser?.progress?.selectedAvatar || prevProgress.selectedAvatar || player.avatar;
-          userAvatarPhoto = updatedUser?.progress?.avatarPhoto || prevProgress.avatarPhoto || player.avatarPhoto;
-          userSelectedTitle = updatedUser?.progress?.selectedTitle || prevProgress.selectedTitle || player.selectedTitle;
-          userSelectedFrame = updatedUser?.progress?.selectedFrame || prevProgress.selectedFrame || player.selectedFrame;
+          dbUser.progress = nextProgress;
+          dbUser.updatedAt = new Date();
+          await dbUser.save();
+
+          currentLp = isUnrankedFriendly ? (prevProgress.lp ?? 0) : (nextProgress.lp ?? 0);
+          currentTier = getLeagueTier(currentLp).tier;
+          userAvatar = nextProgress.selectedAvatar || player.avatar;
+          userAvatarPhoto = nextProgress.avatarPhoto || player.avatarPhoto;
+          userSelectedTitle = nextProgress.selectedTitle || player.selectedTitle;
+          userSelectedFrame = nextProgress.selectedFrame || player.selectedFrame;
         } else {
           currentTier = getLeagueTier(0).tier;
           userAvatar = player.avatar;
@@ -410,24 +418,26 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
         console.error(`[Leaderboard] Error updating user ${player.id} progress:`, err);
       }
 
-      // In-memory leaderboard
-      const previous = leaderboard.get(player.id) ?? { id: player.id, name: player.name, score: 0, wins: 0, matches: 0, bestRound: 0 };
-      const nextScore = previous.score + roundScore;
-      leaderboard.set(player.id, {
-        ...previous,
-        name: player.name,
-        score: nextScore,
-        wins: previous.wins + (won ? 1 : 0),
-        matches: previous.matches + 1,
-        bestRound: Math.max(previous.bestRound, roundScore),
-        lp: currentLp,
-        tier: currentTier,
-        avatar: userAvatar,
-        avatarPhoto: userAvatarPhoto,
-        selectedTitle: userSelectedTitle,
-        selectedFrame: userSelectedFrame,
-        level: Math.floor(nextScore / 200) + 1,
-      });
+      if (!isUnrankedFriendly) {
+        // In-memory leaderboard (sadece dereceli eşleşmeler için)
+        const previous = leaderboard.get(player.id) ?? { id: player.id, name: player.name, score: 0, wins: 0, matches: 0, bestRound: 0 };
+        const nextScore = previous.score + roundScore;
+        leaderboard.set(player.id, {
+          ...previous,
+          name: player.name,
+          score: nextScore,
+          wins: previous.wins + (won ? 1 : 0),
+          matches: previous.matches + 1,
+          bestRound: Math.max(previous.bestRound, roundScore),
+          lp: currentLp,
+          tier: currentTier,
+          avatar: userAvatar,
+          avatarPhoto: userAvatarPhoto,
+          selectedTitle: userSelectedTitle,
+          selectedFrame: userSelectedFrame,
+          level: Math.floor(nextScore / 200) + 1,
+        });
+      }
 
       return {
         id: player.id,
@@ -444,10 +454,12 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
     })
   );
 
-  publishLeaderboard(io);
-  void recordLeaderboardRounds(roundsToRecord).then((persisted) => {
-    if (persisted) io.emit("leaderboard:update", persisted);
-  });
+  if (!isUnrankedFriendly) {
+    publishLeaderboard(io);
+    void recordLeaderboardRounds(roundsToRecord).then((persisted) => {
+      if (persisted) io.emit("leaderboard:update", persisted);
+    });
+  }
 }
 
 function fail(socket: Socket, message: string) {
@@ -727,6 +739,39 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
   scheduleBotFill(io, room);
 }
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const userSocketMap = new Map<string, Set<string>>();
+
+function registerUserSocket(identifier: string, socketId: string) {
+  if (!identifier) return;
+  const key = identifier.trim().toLowerCase();
+  let set = userSocketMap.get(key);
+  if (!set) {
+    set = new Set();
+    userSocketMap.set(key, set);
+  }
+  set.add(socketId);
+}
+
+function unregisterUserSocket(identifier: string, socketId: string) {
+  if (!identifier) return;
+  const key = identifier.trim().toLowerCase();
+  const set = userSocketMap.get(key);
+  if (set) {
+    set.delete(socketId);
+    if (set.size === 0) userSocketMap.delete(key);
+  }
+}
+
+function getSocketsForUser(identifier: string): string[] {
+  if (!identifier) return [];
+  const set = userSocketMap.get(identifier.trim().toLowerCase());
+  return set ? Array.from(set) : [];
+}
+
 export function registerGameRooms(io: Server) {
   io.use(async (socket, next) => {
     const token = typeof socket.handshake.auth?.token === "string" ? socket.handshake.auth.token : undefined;
@@ -836,6 +881,8 @@ export function registerGameRooms(io: Server) {
           code,
           size: payload.size,
           status: "lobby",
+          isCustom: false,
+          isRanked: true,
           board: [],
           words: [],
           routes: {},
@@ -884,7 +931,7 @@ export function registerGameRooms(io: Server) {
         socket.emit("matchmaking:status", { status: "searching" });
         const timer = setTimeout(() => {
           matchmakingTimers.delete(socket.id);
-          // If socket disconnected during the 5s wait, skip room creation
+          // If socket disconnected during the search, skip room creation
           if (!io.sockets.sockets.get(socket.id)?.connected) return;
           const currentQueue = matchmakingQueue.get(payload.size) || [];
           const idx = currentQueue.findIndex(p => p.playerId === payload.playerId && p.socketId === socket.id);
@@ -893,10 +940,17 @@ export function registerGameRooms(io: Server) {
             currentQueue.splice(idx, 1);
             matchmakingQueue.set(payload.size, currentQueue);
             const code = makeCode();
+            const botPersona = getRandomBotPersona({
+              id: payload.playerId,
+              name: payload.playerName,
+              ...(queueEntry.profile || payload.profile || {}),
+            });
             const room: Room = {
               code,
               size: payload.size,
-              status: "waiting",
+              status: "lobby",
+              isCustom: false,
+              isRanked: true,
               board: [],
               words: [],
               routes: {},
@@ -912,10 +966,17 @@ export function registerGameRooms(io: Server) {
                 rematch: false,
                 ...(queueEntry.profile || payload.profile || {}),
               },
-              guest: null,
+              guest: {
+                ...botPersona,
+                id: `bot:${code}`,
+                socketId: null,
+                connected: true,
+                ready: false,
+                rematch: false,
+              },
               winnerId: null,
               startedAt: null,
-              message: "Bot düellosu hazırlanıyor...",
+              message: "Rakip bulundu! Maç başlamak üzere...",
               touchedAt: Date.now(),
               botFillToken: 0,
               roundToken: 0,
@@ -923,9 +984,8 @@ export function registerGameRooms(io: Server) {
             rooms.set(code, room);
             socket.join(`room:${code}`);
             emitRoom(io, room);
-            scheduleBotFill(io, room);
           }
-        }, 5000);
+        }, 4000);
         matchmakingTimers.set(socket.id, timer);
       }
     });
@@ -959,6 +1019,8 @@ export function registerGameRooms(io: Server) {
         code,
         size: payload.size,
         status: "waiting",
+        isCustom: true,
+        isRanked: false,
         board: [],
         words: [],
         routes: {},
@@ -987,6 +1049,48 @@ export function registerGameRooms(io: Server) {
       emitRoom(io, room);
       if (payload.immediateBot) {
         scheduleBotFill(io, room);
+      } else if (payload.inviteTarget) {
+        const { toPlayerId, toUsername } = payload.inviteTarget;
+        const targetSockets = [
+          ...getSocketsForUser(toPlayerId),
+          ...(toUsername ? getSocketsForUser(toUsername) : [])
+        ];
+        const uniqueSockets = Array.from(new Set(targetSockets));
+        for (const sId of uniqueSockets) {
+          io.to(sId).emit("friend:duel:incoming", {
+            fromPlayerId: payload.playerId,
+            fromPlayerName: payload.playerName,
+            roomCode: code,
+            size: payload.size,
+          });
+        }
+        if (uniqueSockets.length === 0) {
+          const isMockFriend = toPlayerId.startsWith("f") || toPlayerId.startsWith("mock") || toPlayerId.startsWith("bot");
+          if (isMockFriend) {
+            socket.emit("friend:duel:sent", { success: true, message: `${toUsername || "Arkadaşınız"} daveti aldı, katılıyor...` });
+            setTimeout(() => {
+              const currentRoom = rooms.get(code);
+              if (currentRoom && currentRoom.status === "waiting" && !currentRoom.guest) {
+                const friendName = toUsername || "Arkadaş";
+                currentRoom.guest = {
+                  id: `friend:${toPlayerId}`,
+                  name: friendName,
+                  isBot: true,
+                  socketId: null,
+                  connected: true,
+                  ready: true,
+                  rematch: false,
+                  selectedTitle: "[DÜELLOCU]",
+                  avatar: "⚡",
+                };
+                currentRoom.status = "lobby";
+                currentRoom.message = `${friendName} düello davetini kabul etti!`;
+                socket.emit("friend:duel:accepted", { fromPlayerName: friendName, roomCode: code });
+                emitRoom(io, currentRoom);
+              }
+            }, 1600);
+          }
+        }
       }
     });
 
@@ -1059,6 +1163,10 @@ export function registerGameRooms(io: Server) {
       if (!room || !player || !room.guest) return fail(socket, "Önce iki oyuncunun da odaya katılması gerekiyor.");
       if (room.status !== "lobby") return;
       player.ready = true;
+      const otherPlayer = player === room.host ? room.guest : room.host;
+      if (otherPlayer && (otherPlayer.isBot || otherPlayer.id.startsWith("f") || otherPlayer.id.startsWith("friend:") || otherPlayer.id.startsWith("bot:") || otherPlayer.id.startsWith("mock:"))) {
+        otherPlayer.ready = true;
+      }
       if (room.host.ready && room.guest.ready) return startRound(io, room);
       room.message = `${player.name} hazır. Rakip bekleniyor.`;
       emitRoom(io, room);
@@ -1146,7 +1254,370 @@ export function registerGameRooms(io: Server) {
       if (room && playerForSocket(room, socket, payload.playerId)) leaveRoom(io, socket, room, payload.playerId);
     });
 
+    socket.on("room:emote", (payload: { code: string; playerId: string; emote: string }) => {
+      if (!isValidPayload(roomEmoteSchema, payload)) return fail(socket, "Geçersiz tepki isteği.");
+      if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
+      const room = rooms.get(payload.code.trim().toUpperCase());
+      if (!room) return;
+      const player = playerForSocket(room, socket, payload.playerId);
+      if (!player) return;
+
+      io.to(`room:${room.code}`).emit("room:emote:received", {
+        playerId: player.id,
+        playerName: player.name,
+        emote: payload.emote,
+      });
+
+      // Bot rakip varsa duruma göre tepki verme ihtimali
+      const other = room.host.id === player.id ? room.guest : room.host;
+      if (other && other.isBot && room.status === "playing") {
+        if (Math.random() > 0.35) {
+          setTimeout(() => {
+            const currentRoom = rooms.get(room.code);
+            if (!currentRoom || currentRoom.status === "finished") return;
+            const botEmotes = ["🔥", "👏", "⚡", "😎", "🤝", "🤖"];
+            const botEmote = botEmotes[Math.floor(Math.random() * botEmotes.length)]!;
+            io.to(`room:${room.code}`).emit("room:emote:received", {
+              playerId: other.id,
+              playerName: other.name,
+              emote: botEmote,
+            });
+          }, 1000 + Math.random() * 800);
+        }
+      }
+    });
+
+    // --- SOSYAL VE ARKADAŞLIK SOKETLERİ ---
+    if (socket.data.userId) {
+      registerUserSocket(socket.data.userId, socket.id);
+    }
+
+    socket.on("player:identify", (payload: { playerId: string; username?: string }) => {
+      if (payload?.playerId) {
+        registerUserSocket(payload.playerId, socket.id);
+      }
+      if (payload?.username) {
+        registerUserSocket(payload.username, socket.id);
+      }
+    });
+
+    socket.on("friend:request:send", async (payload: {
+      toUsername: string;
+      fromPlayerId: string;
+      fromPlayerName: string;
+      profile?: any;
+    }) => {
+      try {
+        const toUsername = payload?.toUsername?.trim();
+        if (!toUsername) {
+          return socket.emit("friend:error", { message: "Geçerli bir kullanıcı adı girin." });
+        }
+        const fromId = payload.fromPlayerId;
+        const fromName = payload.fromPlayerName || "OYUNCU";
+        const fromUsername = payload.profile?.username || fromName;
+
+        registerUserSocket(fromId, socket.id);
+        registerUserSocket(fromUsername, socket.id);
+
+        // Kendi kendine istek gönderemez
+        if (toUsername.toLowerCase() === fromName.toLowerCase() || toUsername.toLowerCase() === fromUsername.toLowerCase()) {
+          return socket.emit("friend:error", { message: "Kendinize arkadaşlık isteği gönderemezsiniz." });
+        }
+
+        // Hedef kullanıcıyı veritabanında ara
+        let targetUser = await UserModel.findOne({
+          $or: [
+            { username: toUsername.toLowerCase() },
+            { openId: toUsername },
+            { name: new RegExp(`^${escapeRegex(toUsername)}$`, "i") }
+          ]
+        }).lean();
+
+        const targetUserId = targetUser?.openId || toUsername;
+        const targetUsernameClean = targetUser?.username || targetUser?.name || toUsername;
+        const targetNameClean = targetUser?.name || targetUser?.username || toUsername;
+
+        // Hedef kullanıcının arkadaş listesinde zaten var mı?
+        if (targetUser?.progress?.friends && Array.isArray(targetUser.progress.friends)) {
+          const isAlreadyFriend = targetUser.progress.friends.some(
+            (f: any) => (typeof f === "string" ? f === fromId : f.id === fromId || f.username?.toLowerCase() === fromUsername.toLowerCase())
+          );
+          if (isAlreadyFriend) {
+            return socket.emit("friend:error", { message: "Bu kullanıcı zaten arkadaş listenizde." });
+          }
+        }
+
+        // Bekleyen istek var mı?
+        const existingRequests = await getPendingFriendRequests(targetUserId);
+        const alreadyPending = existingRequests.some(
+          r => (r.fromUserId === fromId || r.fromUsername.toLowerCase() === fromUsername.toLowerCase()) && r.status === "pending"
+        );
+        if (alreadyPending) {
+          return socket.emit("friend:error", { message: "Bu kullanıcıya daha önce istek gönderilmiş." });
+        }
+
+        const newRequest = await createFriendRequest({
+          fromUserId: fromId,
+          fromUsername: fromUsername,
+          fromName: fromName,
+          fromAvatar: payload.profile?.avatar || "spark",
+          fromAvatarPhoto: payload.profile?.avatarPhoto,
+          fromSelectedTitle: payload.profile?.selectedTitle || "[ÇAYLAK]",
+          fromLevel: payload.profile?.level || 1,
+          fromTier: payload.profile?.tier || "DEMİR",
+          fromLp: payload.profile?.lp || 0,
+          fromXp: payload.profile?.xp || 0,
+          toUserId: targetUserId,
+          toUsername: targetUsernameClean,
+          toName: targetNameClean,
+        });
+
+        socket.emit("friend:request:sent", {
+          success: true,
+          message: `${targetNameClean} kullanıcısına arkadaşlık isteği gönderildi!`,
+          request: newRequest
+        });
+
+        // Hedef kullanıcının aktif soketlerini bul ve anında bildir
+        const targetSockets = [
+          ...getSocketsForUser(targetUserId),
+          ...getSocketsForUser(targetUsernameClean),
+          ...getSocketsForUser(toUsername)
+        ];
+        const uniqueTargetSockets = Array.from(new Set(targetSockets));
+        for (const sId of uniqueTargetSockets) {
+          io.to(sId).emit("friend:request:received", newRequest);
+        }
+      } catch (err: any) {
+        socket.emit("friend:error", { message: err?.message || "İstek gönderilemedi." });
+      }
+    });
+
+    socket.on("friend:requests:get", async (payload: { playerId: string; username?: string }) => {
+      try {
+        if (!payload?.playerId) return;
+        registerUserSocket(payload.playerId, socket.id);
+        if (payload.username) registerUserSocket(payload.username, socket.id);
+
+        const requestsByUserId = await getPendingFriendRequests(payload.playerId);
+        let requestsByUsername: any[] = [];
+        if (payload.username) {
+          requestsByUsername = await getPendingFriendRequests(payload.username);
+        }
+
+        const map = new Map<string, any>();
+        requestsByUserId.forEach((r) => map.set(r.id, r));
+        requestsByUsername.forEach((r) => map.set(r.id, r));
+
+        socket.emit("friend:requests:list", Array.from(map.values()));
+      } catch (err) {
+        socket.emit("friend:requests:list", []);
+      }
+    });
+
+    socket.on("friend:request:respond", async (payload: {
+      requestId: string;
+      action: "accept" | "reject";
+      playerId: string;
+      playerName?: string;
+      profile?: any;
+    }) => {
+      try {
+        const { requestId, action, playerId } = payload;
+        const req = await findFriendRequestById(requestId);
+        if (!req) {
+          return socket.emit("friend:error", { message: "İstek bulunamadı." });
+        }
+
+        if (action === "reject") {
+          await updateFriendRequestStatus(requestId, "rejected");
+          socket.emit("friend:request:rejected", { requestId, success: true });
+          return;
+        }
+
+        if (action === "accept") {
+          await updateFriendRequestStatus(requestId, "accepted");
+
+          // Arkadaş kayıtlarını hazırla
+          const friendForAcceptor = {
+            id: req.fromUserId,
+            name: req.fromName,
+            username: req.fromUsername,
+            avatar: req.fromAvatar || "spark",
+            avatarPhoto: req.fromAvatarPhoto,
+            selectedTitle: req.fromSelectedTitle || "[ÇAYLAK]",
+            level: req.fromLevel || 1,
+            tier: req.fromTier || "DEMİR",
+            lp: req.fromLp || 0,
+            xp: req.fromXp || 0,
+            isOnline: true,
+          };
+
+          const friendForRequester = {
+            id: playerId,
+            name: payload.playerName || req.toName || "OYUNCU",
+            username: req.toUsername,
+            avatar: payload.profile?.avatar || "spark",
+            avatarPhoto: payload.profile?.avatarPhoto,
+            selectedTitle: payload.profile?.selectedTitle || "[ÇAYLAK]",
+            level: payload.profile?.level || 1,
+            tier: payload.profile?.tier || "DEMİR",
+            lp: payload.profile?.lp || 0,
+            xp: payload.profile?.xp || 0,
+            isOnline: true,
+          };
+
+          // Veritabanında güncelle
+          try {
+            await UserModel.findOneAndUpdate(
+              { openId: req.toUserId },
+              { $push: { "progress.friends": friendForAcceptor } }
+            );
+            await UserModel.findOneAndUpdate(
+              { openId: req.fromUserId },
+              { $push: { "progress.friends": friendForRequester } }
+            );
+          } catch (e) {
+            console.warn("[Friend] DB update friends error:", e);
+          }
+
+          // Kabul edene bildir
+          socket.emit("friend:request:accepted", {
+            requestId,
+            newFriend: friendForAcceptor,
+            message: `${friendForAcceptor.name} ile artık arkadaşsınız!`
+          });
+
+          // İstek atanın aktif soketlerine bildir
+          const requesterSockets = [
+            ...getSocketsForUser(req.fromUserId),
+            ...getSocketsForUser(req.fromUsername)
+          ];
+          const uniqueRequesterSockets = Array.from(new Set(requesterSockets));
+          for (const sId of uniqueRequesterSockets) {
+            io.to(sId).emit("friend:request:accepted", {
+              requestId,
+              newFriend: friendForRequester,
+              message: `${friendForRequester.name} arkadaşlık isteğinizi kabul etti!`
+            });
+          }
+        }
+      } catch (err: any) {
+        socket.emit("friend:error", { message: err?.message || "İşlem gerçekleştirilemedi." });
+      }
+    });
+
+    socket.on("friend:remove", async (payload: { friendId: string; playerId: string }) => {
+      try {
+        const { friendId, playerId } = payload;
+        try {
+          await UserModel.findOneAndUpdate(
+            { openId: playerId },
+            { $pull: { "progress.friends": { $or: [{ id: friendId }, { username: friendId }] } } }
+          );
+        } catch (e) {
+          console.warn("[Friend] DB remove friend error:", e);
+        }
+        socket.emit("friend:removed", { friendId, success: true });
+
+        // Karşı tarafın soketine de bildirim gönder
+        const friendSockets = getSocketsForUser(friendId);
+        for (const sId of friendSockets) {
+          io.to(sId).emit("friend:removed", { friendId: playerId, success: true });
+        }
+      } catch (err: any) {
+        socket.emit("friend:error", { message: err?.message || "Arkadaş silinemedi." });
+      }
+    });
+
+    socket.on("friend:duel:invite", (payload: {
+      toPlayerId: string;
+      toUsername?: string;
+      fromPlayerId: string;
+      fromPlayerName: string;
+      roomCode: string;
+      size: BoardSize;
+    }) => {
+      const { toPlayerId, toUsername, fromPlayerId, fromPlayerName, roomCode, size } = payload;
+      const targetSockets = [
+        ...getSocketsForUser(toPlayerId),
+        ...(toUsername ? getSocketsForUser(toUsername) : [])
+      ];
+      const uniqueSockets = Array.from(new Set(targetSockets));
+
+      if (uniqueSockets.length === 0) {
+        // Mock friend veya offline friend ile test ediliyorsa:
+        // Kullanıcının düello akışını test edebilmesi için daveti kabul eden simüle arkadaş eklenir
+        const isMockFriend = toPlayerId.startsWith("f") || toPlayerId.startsWith("mock") || toPlayerId.startsWith("bot");
+        if (isMockFriend) {
+          const room = rooms.get(roomCode);
+          if (room && room.status === "waiting" && !room.guest) {
+            socket.emit("friend:duel:sent", { success: true, message: `${toUsername || "Arkadaşınız"} daveti aldı, katılıyor...` });
+            setTimeout(() => {
+              const currentRoom = rooms.get(roomCode);
+              if (currentRoom && currentRoom.status === "waiting" && !currentRoom.guest) {
+                const friendName = toUsername || "Arkadaş";
+                currentRoom.guest = {
+                  id: `friend:${toPlayerId}`,
+                  name: friendName,
+                  isBot: true,
+                  socketId: null,
+                  connected: true,
+                  ready: true,
+                  rematch: false,
+                  selectedTitle: "[DÜELLOCU]",
+                  avatar: "⚡",
+                };
+                currentRoom.status = "lobby";
+                currentRoom.message = `${friendName} düello davetini kabul etti!`;
+                socket.emit("friend:duel:accepted", { fromPlayerName: friendName, roomCode });
+                emitRoom(io, currentRoom);
+              }
+            }, 1600);
+            return;
+          }
+        }
+
+        socket.emit("friend:duel:failed", { message: "Arkadaşınız şu an çevrim dışı görünüyor." });
+        return;
+      }
+
+      for (const sId of uniqueSockets) {
+        io.to(sId).emit("friend:duel:incoming", {
+          fromPlayerId,
+          fromPlayerName,
+          roomCode,
+          size,
+        });
+      }
+
+      socket.emit("friend:duel:sent", { success: true, message: "Düello daveti gönderildi!" });
+    });
+
+    socket.on("friend:duel:respond", (payload: {
+      toPlayerId: string;
+      fromPlayerName: string;
+      roomCode: string;
+      accepted: boolean;
+    }) => {
+      const { toPlayerId, fromPlayerName, roomCode, accepted } = payload;
+      const targetSockets = getSocketsForUser(toPlayerId);
+      for (const sId of targetSockets) {
+        if (accepted) {
+          io.to(sId).emit("friend:duel:accepted", { fromPlayerName, roomCode });
+        } else {
+          io.to(sId).emit("friend:duel:rejected", { fromPlayerName, roomCode });
+        }
+      }
+    });
+
     socket.on("disconnect", () => {
+      for (const [key, set] of userSocketMap.entries()) {
+        if (set.has(socket.id)) {
+          set.delete(socket.id);
+          if (set.size === 0) userSocketMap.delete(key);
+        }
+      }
       const pendingMatchmakingTimer = matchmakingTimers.get(socket.id);
       if (pendingMatchmakingTimer) {
         clearTimeout(pendingMatchmakingTimer);

@@ -258,14 +258,26 @@ export function CyberStore({
 
       <View style={styles.tabs}>
         {([
-          ["equipment", "EKİPMAN"],
-          ["cosmetics", "KOZMETİK"],
-          ["chips", "ÇİP YÜKLE"],
-        ] as const).map(([tab, label]) => (
-          <Pressable key={tab} onPress={() => { triggerHapticSelection(); setActiveTab(tab); }} style={[styles.tab, activeTab === tab && styles.tabActive]}>
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{label}</Text>
-          </Pressable>
-        ))}
+          ["equipment", "EKİPMAN", "#3EE8B5"],
+          ["cosmetics", "KOZMETİK", "#C084FC"],
+          ["chips", "ÇİP YÜKLE", "#F4D06F"],
+        ] as const).map(([tab, label, activeColor]) => {
+          const isActive = activeTab === tab;
+          return (
+            <Pressable
+              key={tab}
+              onPress={() => { triggerHapticSelection(); setActiveTab(tab); }}
+              style={[
+                styles.tab,
+                isActive && { backgroundColor: activeColor, borderColor: activeColor }
+              ]}
+            >
+              <Text style={[styles.tabText, isActive && { color: tab === "chips" ? "#071A14" : tab === "cosmetics" ? "#0F071F" : "#0E0922" }]}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={styles.storeList}>
@@ -329,7 +341,7 @@ export function CyberStore({
                   )}
                   {isShield && (
                     <View style={styles.inventoryCountBadge}>
-                      <Text style={styles.inventoryCountText}>Sahip: {progress?.streakShields ?? 1}</Text>
+                      <Text style={styles.inventoryCountText}>Sahip: {progress?.streakShields ?? 0}</Text>
                     </View>
                   )}
                   {isRadar && (
@@ -572,34 +584,33 @@ export function CyberStore({
 const styles = StyleSheet.create({
   container: { flexGrow: 1, paddingHorizontal: 0, paddingTop: 4, paddingBottom: 136 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  backButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#1F1936", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.25)", alignItems: "center", justifyContent: "center" },
+  backButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#0A241C", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF", fontSize: 26, lineHeight: 28 },
   headerTitleWrap: { flex: 1, marginLeft: 12, marginRight: 8 },
   headerKicker: { color: "#D4B45A", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
-  headerTitle: { color: "#FFF", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.3 },
-  coinBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(39, 30, 68, 0.95)", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 14, borderWidth: 1.5, borderColor: "#FFC24A", gap: 4 },
+  headerTitle: { color: "#FFF", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
+  coinBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(10, 36, 28, 0.95)", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 14, borderWidth: 1.5, borderColor: "#FFC24A", gap: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 5, elevation: 3 },
   coinIcon: { fontSize: 14 },
   coinText: { color: "#FFC24A", fontSize: 14, fontWeight: "900" },
   coinUnit: { color: "#DCE8DC", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
 
-  msgBanner: { backgroundColor: "#271E44", padding: 12, borderRadius: 14, borderWidth: 1, borderColor: "#3EE8B5", marginBottom: 12 },
+  msgBanner: { backgroundColor: "#0E2C22", padding: 12, borderRadius: 14, borderWidth: 1, borderColor: "#3EE8B5", marginBottom: 12 },
   msgBannerText: { color: "#3EE8B5", fontSize: 11, fontWeight: "800", textAlign: "center" },
 
   storeList: { gap: 10 },
-  tabs: { flexDirection: "row", backgroundColor: "#17112D", borderRadius: 14, padding: 4, marginBottom: 14, borderWidth: 1, borderColor: "#30264F" },
+  tabs: { flexDirection: "row", backgroundColor: "#0A241C", borderRadius: 14, padding: 4, marginBottom: 14, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)" },
   tab: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 10 },
   tabActive: { backgroundColor: "#3EE8B5" },
   tabText: { color: "#8FBAAB", fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
   tabTextActive: { color: "#0E0922" },
-  tabIntro: { padding: 14, borderRadius: 16, backgroundColor: "#1B1533", borderWidth: 1, borderColor: "#493B70" },
+  tabIntro: { padding: 14, borderRadius: 16, backgroundColor: "#0E2C22", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)" },
   tabIntroTitle: { color: "#FFF", fontSize: 13, fontWeight: "900" },
   tabIntroText: { color: "#A49BBF", fontSize: 10, marginTop: 4 },
   cosmeticGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, width: "100%" },
 
   /* Kompakt Grid Kartlar */
   cosmeticCard: {
-    flex: 1,
-    minWidth: 95,
+    width: "31%",
     minHeight: 120,
     borderRadius: 16,
     borderWidth: 1.5,
@@ -607,6 +618,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#0E2C22",
     alignItems: "center",
     justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   cosmeticRing: {
     width: 48,
@@ -723,24 +739,24 @@ const styles = StyleSheet.create({
   sectionTitleHeader: { color: "#DCE8DC", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.8 },
   sectionSubHeader: { color: "#766D89", fontSize: 8, fontWeight: "900" },
 
-  adBannerCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(26, 21, 58, 0.95)", padding: 14, borderRadius: 20, borderWidth: 1.5, borderColor: "#3EE8B5" },
+  adBannerCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(10, 36, 28, 0.95)", padding: 14, borderRadius: 20, borderWidth: 1.5, borderColor: "#3EE8B5", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
   adIconCircle: { width: 44, height: 44, borderRadius: 15, backgroundColor: "rgba(62, 232, 181, 0.12)", borderWidth: 1, borderColor: "#3EE8B5", alignItems: "center", justifyContent: "center", marginRight: 12 },
   adBannerKicker: { color: "#3EE8B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.8 },
   adFreeBadge: { backgroundColor: "rgba(62, 232, 181, 0.2)", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 },
   adFreeText: { color: "#3EE8B5", fontSize: 7, fontWeight: "900" },
-  adBannerTitle: { color: "#FFF", fontSize: 13, fontWeight: "900", marginTop: 2 },
+  adBannerTitle: { color: "#FFF", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   adBannerDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2 },
   adButton: { backgroundColor: "#3EE8B5", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 64 },
   adButtonText: { color: "#0E0922", fontSize: 12, fontWeight: "900" },
 
-  productCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(27, 21, 51, 0.9)", padding: 14, borderRadius: 18, borderWidth: 1, borderColor: "#372B5E" },
-  iapCard: { borderColor: "rgba(212, 180, 90, 0.35)", backgroundColor: "rgba(25, 18, 48, 0.9)" },
-  productIconWrap: { width: 46, height: 46, borderRadius: 16, backgroundColor: "#251C45", borderWidth: 1.5, borderColor: "#4F3C80", alignItems: "center", justifyContent: "center", marginRight: 12, position: "relative" },
+  productCard: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(14, 44, 34, 0.9)", padding: 14, borderRadius: 18, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.25)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
+  iapCard: { borderColor: "rgba(212, 180, 90, 0.45)", backgroundColor: "rgba(10, 36, 28, 0.95)" },
+  productIconWrap: { width: 46, height: 46, borderRadius: 16, backgroundColor: "#0A241C", borderWidth: 1.5, borderColor: "rgba(212, 180, 90, 0.3)", alignItems: "center", justifyContent: "center", marginRight: 12, position: "relative" },
   productEmblemDot: { position: "absolute", top: 3, right: 3, width: 6, height: 6, borderRadius: 3 },
   iapIconWrap: { borderColor: "#D4B45A", backgroundColor: "rgba(212, 180, 90, 0.15)" },
   productIcon: { fontSize: 24 },
   productInfo: { flex: 1, marginRight: 10 },
-  productName: { color: "#FFF", fontSize: 13, fontWeight: "900" },
+  productName: { color: "#FFF", fontSize: 13, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   inventoryCountBadge: {
     backgroundColor: "rgba(96, 165, 250, 0.12)",
     paddingHorizontal: 6,
@@ -757,7 +773,7 @@ const styles = StyleSheet.create({
   productDesc: { color: "#A49BBF", fontSize: 10, marginTop: 2, lineHeight: 14 },
 
   chipBuyButton: { backgroundColor: "#3EE8B5", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 72, shadowColor: "#3EE8B5", shadowOpacity: 0.35, shadowRadius: 6, elevation: 3 },
-  chipBuyButtonDisabled: { backgroundColor: "#261E3E", borderWidth: 1, borderColor: "#3D3360", shadowOpacity: 0, elevation: 0 },
+  chipBuyButtonDisabled: { backgroundColor: "#0A241C", borderWidth: 1, borderColor: "#164536", shadowOpacity: 0, elevation: 0 },
   chipBuyButtonOwned: { backgroundColor: "rgba(62, 232, 181, 0.12)", borderWidth: 1, borderColor: "#3EE8B5", shadowOpacity: 0, elevation: 0 },
   chipBuyButtonText: { color: "#071A14", fontSize: 11.5, fontWeight: "900" },
 
@@ -767,7 +783,7 @@ const styles = StyleSheet.create({
   /* Satın Alma Onay Modalı Stilleri */
   confirmOverlay: {
     flex: 1,
-    backgroundColor: "rgba(8, 5, 20, 0.86)",
+    backgroundColor: "rgba(4, 16, 12, 0.88)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -779,7 +795,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 22,
     borderWidth: 1.5,
-    borderColor: "#6B4A18",
+    borderColor: "#D4B45A",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
@@ -817,6 +833,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 4,
     marginBottom: 10,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
   },
   confirmCostPill: {
     flexDirection: "row",
@@ -841,7 +860,7 @@ const styles = StyleSheet.create({
   },
   confirmBalanceInfo: {
     width: "100%",
-    backgroundColor: "rgba(12, 42, 34, 0.8)",
+    backgroundColor: "rgba(10, 36, 28, 0.8)",
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
@@ -863,9 +882,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: "#241B42",
+    backgroundColor: "#0A241C",
     borderWidth: 1,
-    borderColor: "#6B4A18",
+    borderColor: "rgba(212, 180, 90, 0.35)",
     alignItems: "center",
     justifyContent: "center",
   },

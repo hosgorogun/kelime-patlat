@@ -229,6 +229,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   iconText: {
     fontSize: 28,
@@ -240,6 +245,9 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 6,
     textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   titleText: {
     color: "#FFFFFF",
@@ -248,6 +256,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 25,
     marginBottom: 8,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
   },
   messageText: {
     color: "#A8C5B5",

@@ -255,13 +255,13 @@ export function SoloLevels({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#06140F" },
-  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 120, backgroundColor: "#06140F", flexGrow: 1 },
+  container: { flex: 1 },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 140, flexGrow: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
   back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#164036", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },
   overline: { color: "#E8C36A", fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
-  title: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 },
+  title: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", marginTop: 2, letterSpacing: 0.5, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
 
   sectionTitle: { color: "#DCE8DC", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginTop: 10, marginBottom: 16 },
 
@@ -354,6 +354,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     color: "#8FA4CF",
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   nodeTextCompleted: {
     color: "#4ADE80",
@@ -414,6 +417,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 4,
     letterSpacing: 0.5,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -497,6 +503,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.8,
+    textShadowColor: "rgba(255, 255, 255, 0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   launchTextLocked: {
     color: "#4B445E",
@@ -524,6 +533,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   milestoneBoxReady: {
     borderColor: "#FFC24A",
@@ -546,6 +560,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 3,
   },
   milestoneIcon: {
     fontSize: 22,
@@ -555,6 +574,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 0.5,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   milestoneBadge: {
     color: "#4ADE80",

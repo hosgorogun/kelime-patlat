@@ -297,7 +297,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
 
   // Yeni Bulmaca Yükle
   const loadNewPuzzleForLevel = useCallback((targetLevel: number) => {
-    const diff = targetLevel <= 3 ? "easy" : targetLevel <= 7 ? "medium" : targetLevel <= 12 ? "hard" : "expert";
+    const diff = targetLevel <= 5 ? "easy" : targetLevel <= 10 ? "medium" : targetLevel <= 15 ? "hard" : "ultra";
     const generated = generatePuzzle(diff);
     setPuzzle(generated);
 
@@ -684,8 +684,8 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
             {Array.from({ length: 20 }, (_, i) => i + 1).map((lvl) => {
               const isCompleted = completedLevels.has(lvl);
               const isUnlocked = lvl <= maxUnlockedLevel;
-              const diffTag = lvl <= 3 ? "KOLAY" : lvl <= 7 ? "ORTA" : lvl <= 12 ? "ZOR" : "UZMAN";
-              const diffColor = lvl <= 3 ? "#10B981" : lvl <= 7 ? "#F59E0B" : lvl <= 12 ? "#F97316" : "#EF4444";
+              const diffTag = lvl <= 5 ? "KOLAY" : lvl <= 10 ? "ORTA" : lvl <= 15 ? "ZOR" : "ULTRA ZOR";
+              const diffColor = lvl <= 5 ? "#10B981" : lvl <= 10 ? "#F59E0B" : lvl <= 15 ? "#F97316" : "#8B5CF6";
 
               return (
                 <Pressable
@@ -795,7 +795,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
                 <Text style={styles.activeClueBadgeTag}>
                   {activeWordItem.isCenter ? "⭐ ANKOR: MERKEZ KELİME" : `İPUCU (${completedCount}/${totalCount})`}
                 </Text>
-                <Text style={styles.activeClueLengthText}>{activeWordItem.length} HARF • [{activeWordItem.category}]</Text>
+                <Text style={styles.activeClueLengthText}>{activeWordItem.length} HARF</Text>
                 <View style={styles.dirRowCompactInline}>
                   <Pressable
                     onPress={() => handleSelectDirection("horizontal")}
@@ -843,7 +843,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
                   ]}
                 >
                   <Text style={[styles.targetWordText, isSolved && styles.targetWordTextCompleted]}>
-                    {w.isCenter ? `⭐ ` : ""}{isSolved ? `✓ ${w.answer}` : `❓ ${w.length}H [${w.category}]`}
+                    {w.isCenter ? `⭐ ` : ""}{isSolved ? `✓ ${w.answer}` : `❓ ${w.length} HARF`}
                   </Text>
                 </Pressable>
               );
@@ -1027,6 +1027,9 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: "900",
     letterSpacing: 0.5,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 3,
   },
   scorePill: {
     backgroundColor: "rgba(255, 194, 74, 0.15)",
@@ -1148,6 +1151,11 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 6,
     minHeight: 52,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
   activeClueBannerCardEmpty: {
     backgroundColor: "#E8DEC9",
@@ -1379,15 +1387,16 @@ const styles = StyleSheet.create({
     height: 36,
     backgroundColor: "#FFF",
     borderWidth: 1.5,
+    borderBottomWidth: 3,
     borderColor: "#3D302B",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 1,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 4,
   },
   letterTilePressed: {
     transform: [{ scale: 0.92 }],
@@ -1397,6 +1406,9 @@ const styles = StyleSheet.create({
     color: "#1E1B18",
     fontSize: 15,
     fontWeight: "900",
+    textShadowColor: "rgba(0,0,0,0.2)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   winOverlay: {
     ...StyleSheet.absoluteFill,
@@ -1494,6 +1506,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginBottom: 12,
     padding: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 6,
   },
   mapHeroTitle: {
     color: "#FFC24A",
@@ -1501,6 +1518,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
     marginBottom: 4,
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   mapHeroSubtitle: {
     color: "#94A3B8",
@@ -1549,6 +1569,11 @@ const styles = StyleSheet.create({
     padding: 12,
     minHeight: 90,
     justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
   },
   levelCardCompleted: {
     borderColor: "#059669",
@@ -1589,6 +1614,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
     marginVertical: 4,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   levelNumberLockedText: {
     color: "#64748B",

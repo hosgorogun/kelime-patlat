@@ -39,7 +39,7 @@ import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
 import { setHapticsEnabled as setSoloHapticsEnabled, triggerHapticSelection, triggerHapticSuccess } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
-import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES } from "./shared/progression";
+import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, type MatchHistoryEntry, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "./shared/solo";
 import { getWordDefinition } from "./shared/dictionary";
@@ -52,13 +52,13 @@ import { TermsModal } from "./components/terms-modal";
 import { consentManager, notificationManager, reviewManager } from "./lib/engagement";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "./constants/oauth";
 import { VintagePuzzle } from "./components/vintage-puzzle";
-import { socialManager } from "./shared/social";
+import { socialManager, type FriendRequest, type FriendUser } from "./shared/social";
 import { UserProfileModal, type InspectableUser } from "./components/user-profile-modal";
 import { LivesModal } from "./components/lives-modal";
 import { ErrorBoundary } from "./components/error-boundary";
 import { ModernAlertModal, type ModernAlertData } from "./components/modern-alert-modal";
 
-type Screen = "home" | "online" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
+type Screen = "home" | "online" | "friends" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
@@ -217,6 +217,8 @@ function HomeScreen() {
     return { pageX: ne.pageX ?? 0, pageY: ne.pageY ?? 0 };
   };
   const [screen, setScreen] = useState<Screen>("home");
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
   const [globalAlert, setGlobalAlert] = useState<ModernAlertData | null>(null);
   const [playerName, setPlayerName] = useState("OYUNCU");
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -232,6 +234,17 @@ function HomeScreen() {
   const [sfxOn, setSfxOn] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
   const [isSocketConnected, setIsSocketConnected] = useState(() => getGameSocket().connected);
+  const [friendsList, setFriendsList] = useState<FriendUser[]>(() => socialManager.getFriends());
+  const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>(() => socialManager.getPendingRequests());
+  const [incomingDuelInvite, setIncomingDuelInvite] = useState<{ fromPlayerId: string; fromPlayerName: string; roomCode: string; size: BoardSize } | null>(null);
+
+  useEffect(() => {
+    const unsub = socialManager.subscribe(() => {
+      setPendingRequests([...socialManager.getPendingRequests()]);
+      setFriendsList([...socialManager.getFriends()]);
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem("kelime-patlat:sfx-enabled").then((val) => {
@@ -292,7 +305,7 @@ function HomeScreen() {
   };
 
   const [isSelecting, setIsSelecting] = useState(false);
-  const [notice, setNotice] = useState("Bir oda kur ve rakibini davet et.");
+  const [notice, setNotice] = useState("");
   const [selectionFeedback, setSelectionFeedback] = useState<"idle" | "invalid" | "accepted">("idle");
   const [soloLevel, setSoloLevel] = useState(1);
   const [soloUnlockedLevel, setSoloUnlockedLevel] = useState(1);
@@ -351,6 +364,11 @@ function HomeScreen() {
   const [inspectedUser, setInspectedUser] = useState<InspectableUser | null>(null);
   const prevStartedAtRef = useRef<number | null>(null);
   const prevOpponentWordCountRef = useRef(0);
+  const [matchmakingState, setMatchmakingState] = useState<{ size: BoardSize; elapsedSeconds: number } | null>(null);
+  const matchmakingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [activeEmote, setActiveEmote] = useState<{ id: string; playerId: string; playerName: string; emote: string } | null>(null);
+  const emoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingDuelInviteRef = useRef<{ targetId: string; targetUsername?: string; size: BoardSize } | null>(null);
 
   // Oyun bittiğinde tüm bulunan ve bulunamayan kelimelerin birleşik listesi (Unconditional Hook)
   const allFinishedWords = useMemo(() => {
@@ -521,9 +539,10 @@ function HomeScreen() {
   const scoreDifference = myScore - opponentScore;
   const scoreLeadLabel = scoreDifference === 0 ? "EŞİT" : scoreDifference > 0 ? `+${scoreDifference} ÖNDE` : `${scoreDifference} GERİDE`;
   const isBotMatch = Boolean(room?.players.some((p) => p.isBot));
-  const matchXpEarned = progress.lastMatchReward?.xp ?? (iWon ? (isBotMatch ? 35 : 60) : isDraw ? (isBotMatch ? 20 : 40) : (isBotMatch ? 20 : 35));
-  const matchLpEarned = progress.lastMatchReward?.lp ?? (iWon ? (isBotMatch ? 15 : 25) : isDraw ? 0 : (isBotMatch ? -10 : -20));
-  const matchCoinsEarned = progress.lastMatchReward?.coins ?? (iWon ? (isBotMatch ? 4 : 10) : 1);
+  const isCustomRoom = Boolean(room?.isCustom || !room?.isRanked);
+  const matchXpEarned = isCustomRoom ? 0 : (progress.lastMatchReward?.xp ?? (iWon ? (isBotMatch ? 35 : 60) : isDraw ? (isBotMatch ? 20 : 40) : (isBotMatch ? 20 : 35)));
+  const matchLpEarned = isCustomRoom ? 0 : (progress.lastMatchReward?.lp ?? (iWon ? (isBotMatch ? 15 : 25) : isDraw ? 0 : (isBotMatch ? -10 : -20)));
+  const matchCoinsEarned = isCustomRoom ? 0 : (progress.lastMatchReward?.coins ?? (iWon ? (isBotMatch ? 4 : 10) : 1));
 
   useEffect(() => {
     if (room?.status !== "playing" || !room.startedAt) return;
@@ -699,7 +718,7 @@ function HomeScreen() {
         setScreen("home");
         return true;
       }
-      if (screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "league" || screen === "missions" || screen === "profile" || screen === "online" || screen === "auth" || screen === "store" || screen === "vintage") {
+      if (screen === "daily-lobby" || screen === "levels" || screen === "season" || screen === "league" || screen === "missions" || screen === "profile" || screen === "online" || screen === "friends" || screen === "auth" || screen === "store" || screen === "vintage") {
         setScreen("home");
         return true;
       }
@@ -790,7 +809,7 @@ function HomeScreen() {
     return () => { active = false; };
   }, []);
 
-  const syncProgressToCloud = useCallback(async (currentProgress: PlayerProgress) => {
+  const syncProgressToCloud = useCallback(async (currentProgress: PlayerProgress, customName?: string) => {
     try {
       const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
       if (!token || token === "guest") return;
@@ -800,12 +819,15 @@ function HomeScreen() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ progress: currentProgress })
+        body: JSON.stringify({
+          progress: currentProgress,
+          name: customName || safeName,
+        })
       });
     } catch {
       // Çevrimdışı veya sunucuya ulaşılamayan durumlarda ilerleme yerel AsyncStorage içinde güvenle korunur.
     }
-  }, []);
+  }, [safeName]);
 
   const awardProgressOnServer = useCallback(async (payload: { kind: "solo" | "arcade" | "vintage"; level?: number; score?: number; foundWords?: string[]; daily?: boolean }, fallback: (current: PlayerProgress) => PlayerProgress) => {
     const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
@@ -1135,8 +1157,32 @@ function HomeScreen() {
     if (currentIWon) {
       void reviewManager.recordVictoryAndCheckPrompt(progress.wins + 1);
     }
-    
-    setProgress((current) => applyMatchProgress(current, { score: currentMyScore, tempo: currentTempo, won: currentIWon, isDraw: currentIsDraw, longWord: foundLongWord, foundWords: myFoundWords, size: room.size }, isBotMatch ? "bot" : "pvp"));
+
+    const opponent = room.players.find((p) => p.id !== playerId);
+    const opponentScore = opponent ? (room.scores[opponent.id] ?? 0) : 0;
+    const isFriendGame = Boolean((room as any).isFriendGame || (room as any).isCustom);
+
+    setProgress((current) => {
+      const updated = applyMatchProgress(
+        current,
+        {
+          score: currentMyScore,
+          tempo: currentTempo,
+          won: currentIWon,
+          isDraw: currentIsDraw,
+          longWord: foundLongWord,
+          foundWords: myFoundWords,
+          size: room.size,
+          opponentName: opponent?.name || (isBotMatch ? "Siber Bot" : "Rakip"),
+          opponentAvatar: opponent?.avatar,
+          opponentScore: opponentScore,
+          isFriendGame: isFriendGame,
+        },
+        isBotMatch ? "bot" : "pvp"
+      );
+      void syncProgressToCloud(updated);
+      return updated;
+    });
   }, [room, playerId, progress.wins]);
 
   useEffect(() => {
@@ -1215,15 +1261,44 @@ function HomeScreen() {
 
   useEffect(() => {
     const socket = getGameSocket();
-    const onRoomUpdate = (next: RoomSnapshot) => setRoomFromServer(next);
+    const onRoomUpdate = (next: RoomSnapshot) => {
+      if (matchmakingIntervalRef.current) {
+        clearInterval(matchmakingIntervalRef.current);
+        matchmakingIntervalRef.current = null;
+      }
+      setMatchmakingState(null);
+      setRoomFromServer(next);
+
+      if (pendingDuelInviteRef.current && next.status === "waiting") {
+        const { targetId, targetUsername, size } = pendingDuelInviteRef.current;
+        pendingDuelInviteRef.current = null;
+        socket.emit("friend:duel:invite", {
+          toPlayerId: targetId,
+          toUsername: targetUsername,
+          fromPlayerId: playerId,
+          fromPlayerName: safeName,
+          roomCode: next.code,
+          size,
+        });
+      }
+    };
     const onRoomError = (payload: { message?: string }) => {
       haptics.error();
       const msg = payload.message ?? "Odayla ilgili bir sorun oluştu.";
       setNotice(msg);
+      setGlobalToast({
+        id: `room-err-${Date.now()}`,
+        title: "ODA HATASI",
+        subtitle: msg,
+        icon: "⚠️",
+        accentColor: "#FF647C",
+      });
       if (msg.includes("Oda süresi") || msg.includes("sonlandırıldı") || msg.includes("bulunamadı")) {
         activeRoomCodeRef.current = null;
         setRoom(null);
-        setScreen("home");
+        if (screenRef.current === "room" || screenRef.current === "game") {
+          setScreen("home");
+        }
       }
     };
     const onRejected = (payload?: { word?: string; reason?: string }) => {
@@ -1244,11 +1319,104 @@ function HomeScreen() {
       clearFeedbackLater();
     };
     const onLeaderboardUpdate = (next: LeaderboardEntry[]) => setLeaderboard(next);
+    const onFriendRequestReceived = (req: FriendRequest) => {
+      socialManager.addPendingRequest(req);
+      setPendingRequests([...socialManager.getPendingRequests()]);
+      gameSfx.tap();
+      haptics.success();
+      setGlobalToast({
+        id: `freq-${Date.now()}`,
+        title: "ARKADAŞLIK İSTEĞİ",
+        subtitle: `${req.fromName} sana arkadaşlık isteği gönderdi!`,
+        icon: "👥",
+        accentColor: "#3EE8B5",
+      });
+    };
+    const onFriendRequestAccepted = (payload: { requestId?: string; newFriend: FriendUser; message?: string }) => {
+      if (payload.requestId) {
+        socialManager.removePendingRequest(payload.requestId);
+        setPendingRequests([...socialManager.getPendingRequests()]);
+      }
+      socialManager.addFriend(payload.newFriend);
+      const updated = [...socialManager.getFriends()];
+      setProgress((curr) => ({ ...curr, friends: updated }));
+      gameSfx.victory();
+      haptics.success();
+      setGlobalToast({
+        id: `freq-acc-${Date.now()}`,
+        title: "İSTEK KABUL EDİLDİ",
+        subtitle: payload.message || `${payload.newFriend.name} arkadaşlık isteğini kabul etti!`,
+        icon: "🎉",
+        accentColor: "#3EE8B5",
+      });
+    };
+    const onFriendRequestsList = (list: FriendRequest[]) => {
+      if (Array.isArray(list)) {
+        socialManager.setPendingRequests(list);
+        setPendingRequests([...socialManager.getPendingRequests()]);
+      }
+    };
+    const onFriendRemoved = (payload: { friendId: string }) => {
+      socialManager.removeFriend(payload.friendId);
+      const updated = [...socialManager.getFriends()];
+      setProgress((curr) => ({ ...curr, friends: updated }));
+    };
+    const onDuelIncoming = (payload: { fromPlayerId: string; fromPlayerName: string; roomCode: string; size: BoardSize }) => {
+      gameSfx.tap();
+      haptics.success();
+      setIncomingDuelInvite(payload);
+    };
+    const onDuelAccepted = (payload: { fromPlayerName: string; roomCode: string }) => {
+      gameSfx.victory();
+      haptics.success();
+      setGlobalToast({
+        id: `duel-acc-${Date.now()}`,
+        title: "DÜELLO KABUL EDİLDİ! ⚔️",
+        subtitle: `${payload.fromPlayerName} davetini kabul etti, odaya katılıyor!`,
+        icon: "⚔️",
+        accentColor: "#3EE8B5",
+      });
+    };
+    const onDuelRejected = (payload: { fromPlayerName: string }) => {
+      setGlobalToast({
+        id: `duel-rej-${Date.now()}`,
+        title: "DÜELLO REDDEDİLDİ",
+        subtitle: `${payload.fromPlayerName} düello davetini reddetti.`,
+        icon: "⚔️",
+        accentColor: "#FF647C",
+      });
+    };
+    const onDuelFailed = (payload: { message: string }) => {
+      setGlobalToast({
+        id: `duel-fail-${Date.now()}`,
+        title: "DAVET İLETİLEMEDİ",
+        subtitle: payload.message || "Rakibe ulaşılamadı.",
+        icon: "⚠️",
+        accentColor: "#FF647C",
+      });
+    };
+    const onEmoteReceived = (payload: { playerId: string; playerName: string; emote: string }) => {
+      setActiveEmote({
+        id: `${Date.now()}-${Math.random()}`,
+        playerId: payload.playerId,
+        playerName: payload.playerName,
+        emote: payload.emote,
+      });
+      gameSfx.tap();
+      haptics.light();
+      if (emoteTimeoutRef.current) clearTimeout(emoteTimeoutRef.current);
+      emoteTimeoutRef.current = setTimeout(() => {
+        setActiveEmote(null);
+      }, 2500);
+    };
+
     const onReconnect = () => {
       setIsSocketConnected(true);
       if (activeRoomCodeRef.current) {
         socket.emit("room:reconnect", { code: activeRoomCodeRef.current, playerId });
       }
+      socket.emit("player:identify", { playerId, username: safeName });
+      socket.emit("friend:requests:get", { playerId, username: safeName });
     };
     const onDisconnect = () => {
       setIsSocketConnected(false);
@@ -1260,7 +1428,20 @@ function HomeScreen() {
     socket.on("connect", onReconnect);
     socket.on("disconnect", onDisconnect);
     socket.on("leaderboard:update", onLeaderboardUpdate);
+    socket.on("friend:request:received", onFriendRequestReceived);
+    socket.on("friend:request:accepted", onFriendRequestAccepted);
+    socket.on("friend:requests:list", onFriendRequestsList);
+    socket.on("friend:removed", onFriendRemoved);
+    socket.on("friend:duel:incoming", onDuelIncoming);
+    socket.on("friend:duel:accepted", onDuelAccepted);
+    socket.on("friend:duel:rejected", onDuelRejected);
+    socket.on("friend:duel:failed", onDuelFailed);
+    socket.on("room:emote:received", onEmoteReceived);
+
     socket.emit("leaderboard:request");
+    socket.emit("player:identify", { playerId, username: safeName });
+    socket.emit("friend:requests:get", { playerId, username: safeName });
+
     return () => {
       socket.off("room:update", onRoomUpdate);
       socket.off("room:error", onRoomError);
@@ -1268,9 +1449,18 @@ function HomeScreen() {
       socket.off("connect", onReconnect);
       socket.off("disconnect", onDisconnect);
       socket.off("leaderboard:update", onLeaderboardUpdate);
+      socket.off("friend:request:received", onFriendRequestReceived);
+      socket.off("friend:request:accepted", onFriendRequestAccepted);
+      socket.off("friend:requests:list", onFriendRequestsList);
+      socket.off("friend:removed", onFriendRemoved);
+      socket.off("friend:duel:incoming", onDuelIncoming);
+      socket.off("friend:duel:accepted", onDuelAccepted);
+      socket.off("friend:duel:rejected", onDuelRejected);
+      socket.off("friend:duel:failed", onDuelFailed);
+      socket.off("room:emote:received", onEmoteReceived);
       if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
     };
-  }, [clearFeedbackLater, setRoomFromServer, playerId]);
+  }, [clearFeedbackLater, setRoomFromServer, playerId, safeName]);
 
   const ensureConnectedSocket = async (): Promise<any> => {
     const socket = getGameSocket();
@@ -1305,7 +1495,7 @@ function HomeScreen() {
     });
   };
 
-  const createRoom = async (size = selectedSize) => {
+  const createRoom = async (size = selectedSize, inviteTarget?: { toPlayerId: string; toUsername?: string }) => {
     setInspectedPath(null);
     setSelectedWordInfo(null);
     haptics.light();
@@ -1336,7 +1526,7 @@ function HomeScreen() {
       bestScore: progress.bestScore || 0,
       bestTempo: progress.bestTempo || 0,
     };
-    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: false, profile: myProfile });
+    socket.emit("room:create", { playerId, playerName: safeName, size, immediateBot: false, profile: myProfile, inviteTarget });
     setNotice("Odan hazırlanıyor…");
   };
 
@@ -1390,6 +1580,86 @@ function HomeScreen() {
     });
   };
 
+  const startMatchmaking = async (size: BoardSize) => {
+    setPendingMatchConfirm(null);
+    const socket = await ensureConnectedSocket();
+    if (!socket || !socket.connected) {
+      setGlobalToast({
+        id: `mm-err-${Date.now()}`,
+        title: "BAĞLANTI HATASI",
+        subtitle: "Sunucuya bağlanılamadı. İnternet bağlantını kontrol et.",
+        icon: "📡",
+        accentColor: "#FF647C",
+      });
+      return;
+    }
+
+    const myProfile = {
+      avatar: progress.selectedAvatar,
+      avatarPhoto: progress.avatarPhoto,
+      selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      selectedFrame: progress.selectedFrame || "signal",
+      level: getPlayerLevel(progress.xp),
+      tier: getLeagueTier(progress).tier,
+      lp: progress.lp || 0,
+      wins: progress.wins || 0,
+      matches: progress.matches || 0,
+      streak: progress.streak || 0,
+      bestScore: progress.bestScore || 0,
+      bestTempo: progress.bestTempo || 0,
+    };
+
+    setMatchmakingState({ size, elapsedSeconds: 0 });
+    socket.emit("matchmaking:join", { playerId, playerName: safeName, size, profile: myProfile });
+
+    if (matchmakingIntervalRef.current) clearInterval(matchmakingIntervalRef.current);
+    matchmakingIntervalRef.current = setInterval(() => {
+      setMatchmakingState((prev) => (prev ? { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 } : null));
+    }, 1000);
+  };
+
+  const cancelMatchmaking = () => {
+    if (matchmakingIntervalRef.current) {
+      clearInterval(matchmakingIntervalRef.current);
+      matchmakingIntervalRef.current = null;
+    }
+    if (matchmakingState) {
+      const socket = getGameSocket();
+      socket.emit("matchmaking:leave", { playerId, size: matchmakingState.size });
+    }
+    setMatchmakingState(null);
+    triggerHapticSelection();
+  };
+
+  const sendEmote = (emote: string) => {
+    if (!room) return;
+    const socket = getGameSocket();
+    socket.emit("room:emote", { code: room.code, playerId, emote });
+    gameSfx.tap();
+    haptics.light();
+  };
+
+  const handleChallengeTarget = async (target: InspectableUser, size: BoardSize = 4) => {
+    setInspectedUser(null);
+    if (target.isBot) {
+      startBotDuel(size);
+    } else {
+      pendingDuelInviteRef.current = {
+        targetId: target.id,
+        targetUsername: target.username || target.name,
+        size,
+      };
+      setGlobalToast({
+        id: `duel-sent-${Date.now()}`,
+        title: "DÜELLO DAVETİ GÖNDERİLDİ ⚔️",
+        subtitle: `${target.name || target.username} oyuncusuna davet iletildi. Katılması bekleniyor...`,
+        icon: "⚔️",
+        accentColor: "#3EE8B5",
+      });
+      createRoom(size, { toPlayerId: target.id, toUsername: target.username || target.name });
+    }
+  };
+
   const shareRoomInvite = async () => {
     if (!room) return;
     const url = Linking.createURL("room", { queryParams: { code: room.code } });
@@ -1401,11 +1671,18 @@ function HomeScreen() {
     }
   };
 
-  const joinRoom = async () => {
-    const code = roomCodeInput.trim().toUpperCase();
+  const joinRoom = async (targetCode?: string) => {
+    const code = (targetCode || roomCodeInput).trim().toUpperCase();
     if (code.length < 5) {
       haptics.error();
       setNotice("5 karakterli oda kodunu yaz.");
+      setGlobalToast({
+        id: `code-short-${Date.now()}`,
+        title: "EKSİK KOD",
+        subtitle: "Lütfen 5 haneli oda kodunu eksiksiz girin.",
+        icon: "⚠️",
+        accentColor: "#FF647C",
+      });
       return;
     }
     setInspectedPath(null);
@@ -1442,6 +1719,118 @@ function HomeScreen() {
     setNotice("Odaya katılıyorsun…");
   };
 
+  const handleSendFriendRequest = async (toUsername: string): Promise<{ success: boolean; message: string }> => {
+    const socket = await ensureConnectedSocket();
+    if (!socket || !socket.connected) {
+      return { success: false, message: "Sunucuya bağlanılamadı. İnternet bağlantını kontrol et." };
+    }
+    const myProfile = {
+      username: safeName,
+      avatar: progress.selectedAvatar,
+      avatarPhoto: progress.avatarPhoto,
+      selectedTitle: progress.selectedTitle || "[ÇAYLAK]",
+      level: getPlayerLevel(progress.xp),
+      tier: getLeagueTier(progress).tier,
+      lp: progress.lp || 0,
+      xp: progress.xp || 0,
+    };
+    return new Promise((resolve) => {
+      let resolved = false;
+      const onSent = (res: { success: boolean; message: string }) => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        resolve(res);
+      };
+      const onError = (err: { message: string }) => {
+        if (resolved) return;
+        resolved = true;
+        cleanup();
+        resolve({ success: false, message: err?.message || "İstek gönderilemedi." });
+      };
+      const cleanup = () => {
+        socket.off("friend:request:sent", onSent);
+        socket.off("friend:error", onError);
+      };
+      socket.once("friend:request:sent", onSent);
+      socket.once("friend:error", onError);
+      socket.emit("friend:request:send", {
+        toUsername,
+        fromPlayerId: playerId,
+        fromPlayerName: safeName,
+        profile: myProfile,
+      });
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          resolve({ success: true, message: `${toUsername} kullanıcısına istek iletildi!` });
+        }
+      }, 3500);
+    });
+  };
+
+  const handleAcceptFriendRequest = async (requestId: string) => {
+    const socket = await ensureConnectedSocket();
+    if (socket && socket.connected) {
+      socket.emit("friend:request:respond", {
+        requestId,
+        action: "accept",
+        playerId,
+        playerName: safeName,
+        profile: {
+          avatar: progress.selectedAvatar,
+          avatarPhoto: progress.avatarPhoto,
+          selectedTitle: progress.selectedTitle,
+          level: getPlayerLevel(progress.xp),
+          tier: getLeagueTier(progress).tier,
+          lp: progress.lp || 0,
+          xp: progress.xp || 0,
+        },
+      });
+    }
+  };
+
+  const handleRejectFriendRequest = async (requestId: string) => {
+    socialManager.removePendingRequest(requestId);
+    setPendingRequests([...socialManager.getPendingRequests()]);
+    const socket = await ensureConnectedSocket();
+    if (socket && socket.connected) {
+      socket.emit("friend:request:respond", {
+        requestId,
+        action: "reject",
+        playerId,
+      });
+    }
+  };
+
+  const handleAcceptDuelInvite = () => {
+    if (!incomingDuelInvite) return;
+    const invite = incomingDuelInvite;
+    setIncomingDuelInvite(null);
+    const socket = getGameSocket();
+    socket.emit("friend:duel:respond", {
+      toPlayerId: invite.fromPlayerId,
+      fromPlayerName: safeName,
+      roomCode: invite.roomCode,
+      accepted: true,
+    });
+    joinRoom(invite.roomCode);
+  };
+
+  const handleRejectDuelInvite = () => {
+    if (!incomingDuelInvite) return;
+    const invite = incomingDuelInvite;
+    setIncomingDuelInvite(null);
+    const socket = getGameSocket();
+    socket.emit("friend:duel:respond", {
+      toPlayerId: invite.fromPlayerId,
+      fromPlayerName: safeName,
+      roomCode: invite.roomCode,
+      accepted: false,
+    });
+  };
+
   const leaveRoom = () => {
     if (room) getGameSocket().emit("room:leave", { code: room.code, playerId });
     getGameSocket().emit("matchmaking:leave", { playerId, size: selectedSize });
@@ -1449,6 +1838,7 @@ function HomeScreen() {
     setShowLeaveDuelModal(false);
     activeRoomCodeRef.current = null;
     prevStartedAtRef.current = null;
+    recordedRoundRef.current = null;
     setGameCountdown(null);
     setInspectedPath(null);
     setRoom(null);
@@ -1813,8 +2203,20 @@ function HomeScreen() {
 
   const completeSoloLevel = (level: number, foundWords: string[] = [], won = true) => {
     if (!won) {
+      const soloLossItem: MatchHistoryEntry = {
+        id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        mode: "solo",
+        won: false,
+        myScore: Math.max(10, (foundWords || []).length * 10),
+        wordsCount: (foundWords || []).length,
+        date: Date.now(),
+      };
       setProgress((curr) => {
-        const updated = deductLife(curr);
+        const withLoss = {
+          ...curr,
+          matchHistory: [soloLossItem, ...(curr.matchHistory || [])].slice(0, 50),
+        };
+        const updated = deductLife(withLoss);
         void syncProgressToCloud(updated);
         const calc = getCalculatedLives(updated);
         if (calc.lives <= 0) {
@@ -1846,7 +2248,11 @@ function HomeScreen() {
     setSoloUnlockedLevel(next);
     AsyncStorage.setItem(SOLO_UNLOCK_KEY, String(next)).catch(() => undefined);
     setProgress((curr) => {
-      const updated = { ...curr, soloUnlockedLevel: next };
+      const localProgress = applyMatchProgress(curr, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo");
+      const updated = {
+        ...localProgress,
+        soloUnlockedLevel: next,
+      };
       void syncProgressToCloud(updated);
       return updated;
     });
@@ -1866,13 +2272,32 @@ function HomeScreen() {
 
   const completeDailyChallenge = (level: number, foundWords: string[] = [], won = true) => {
     if (won) {
-      const updated = completeDailyProgress(applyMatchProgress(progress, { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords }, "solo"), daily);
-      setProgress(updated);
+      const dailyScore = Math.max(level * 14, (foundWords || []).length * 15, daily.targetScore || 100);
+      const updated = completeDailyProgress(
+        progress,
+        daily,
+        dailyScore,
+        (foundWords || []).length
+      );
+      const withWords = {
+        ...updated,
+        history: Array.from(new Set([...(updated.history || []), ...(foundWords || [])])).slice(-150),
+      };
+      setProgress(withWords);
+      void syncProgressToCloud(withWords);
       void awardProgressOnServer(
-        { kind: "solo", level, foundWords, daily: true },
-        () => updated,
+        { kind: "solo", level, foundWords, daily: true, score: dailyScore },
+        () => withWords,
       );
     } else {
+      const dailyLossItem: MatchHistoryEntry = {
+        id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        mode: "daily",
+        won: false,
+        myScore: Math.max(10, (foundWords || []).length * 10),
+        wordsCount: (foundWords || []).length,
+        date: Date.now(),
+      };
       setProgress((current) => {
         const availableShields = current.streakShields || 0;
         if (availableShields >= 1) {
@@ -1883,25 +2308,61 @@ function HomeScreen() {
             icon: "🛡️",
             accentColor: "#E8C36A",
           });
-          return {
+          const updated = {
             ...current,
             dailyCompletedId: daily.id,
             streakShields: availableShields - 1,
             lastStreakCheckDate: daily.id,
+            matchHistory: [dailyLossItem, ...(current.matchHistory || [])].slice(0, 50),
           };
+          void syncProgressToCloud(updated);
+          return updated;
         }
-        return {
+        const updated = {
           ...current,
           dailyCompletedId: daily.id,
           streak: 0,
           lastStreakCheckDate: daily.id,
+          matchHistory: [dailyLossItem, ...(current.matchHistory || [])].slice(0, 50),
         };
+        void syncProgressToCloud(updated);
+        return updated;
       });
     }
   };
 
-  const handleClaimDailyReward = () => {
+  const handleClaimDailyReward = async () => {
     const todayId = getDayId();
+    const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+    if (token && token !== "guest") {
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/api/game/daily-login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (response.ok && data.progress) {
+          setProgress(data.progress);
+          await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(data.progress)).catch(() => undefined);
+          haptics.success();
+          gameSfx.victory();
+          const reward = data.reward;
+          const rewardName = reward.rewardType === "coins" ? "SİBER ÇİP" : reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
+          setGlobalToast({
+            id: `daily-reward-${Date.now()}`,
+            title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
+            subtitle: `${reward.label} tamamlandı! +${reward.amount} ${rewardName} hesabına eklendi.`,
+            icon: reward.icon,
+            accentColor: "#3EE8B5",
+            badge: `+${reward.amount}`,
+          });
+          return;
+        }
+      } catch {
+        // Fallback to local
+      }
+    }
+
     const res = checkDailyLoginReward(progress, todayId);
     if (!res) return;
     setProgress(res.updatedProgress);
@@ -1927,7 +2388,7 @@ function HomeScreen() {
 
   if (screen === "home") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking}>
         <StatusBar style="light" />
         <CommandCenter
           playerName={safeName}
@@ -2142,7 +2603,7 @@ function HomeScreen() {
                     if (pendingMatchConfirm) {
                       const size = pendingMatchConfirm.size;
                       setPendingMatchConfirm(null);
-                      startBotDuel(size);
+                      startMatchmaking(size);
                     }
                   }}
                   style={({ pressed }) => ({
@@ -2161,7 +2622,7 @@ function HomeScreen() {
                   onPress={() => setPendingMatchConfirm(null)}
                   style={({ pressed }) => ({
                     width: "100%",
-                    height: 46,
+                    height: 44,
                     borderRadius: 14,
                     backgroundColor: "rgba(255,255,255,0.06)",
                     borderWidth: 1,
@@ -2171,7 +2632,7 @@ function HomeScreen() {
                     opacity: pressed ? 0.7 : 1,
                   })}
                 >
-                  <Text style={{ color: "#94A3B8", fontSize: 14, fontWeight: "700" }}>Vazgeç</Text>
+                  <Text style={{ color: "#94A3B8", fontSize: 13, fontWeight: "700" }}>Vazgeç</Text>
                 </Pressable>
               </View>
             </Pressable>
@@ -2311,17 +2772,35 @@ function HomeScreen() {
   if (screen === "daily-lobby") {
     const dailyDone = progress.dailyCompletedId === daily.id;
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
             <Pressable onPress={() => setScreen("home")} style={styles.backButton}>
               <Text style={styles.backText}>‹</Text>
             </Pressable>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.subHeaderKicker}>ETKİNLİK MERKEZİ</Text>
               <Text style={styles.subHeaderTitle}>SABİT ROTA SEÇİMİ</Text>
             </View>
+            <Pressable
+              onPress={() => setSelectedModeInfo("daily")}
+              style={({ pressed }) => [
+                {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  backgroundColor: "rgba(232, 195, 106, 0.12)",
+                  borderWidth: 1.5,
+                  borderColor: "#E8C36A",
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={{ fontSize: 16, color: "#E8C36A", fontWeight: "900" }}>ℹ️</Text>
+            </Pressable>
           </View>
 
           <Text style={styles.modeIntro}>
@@ -2389,7 +2868,7 @@ function HomeScreen() {
                 ...daily,
                 themeId: progress.selectedTheme
               });
-              setSoloLevel(daily.level);
+              setSoloLevel(daily.level ?? 20);
               setScreen("solo");
             }}
             style={({ pressed }) => [
@@ -2415,7 +2894,7 @@ function HomeScreen() {
 
   if (screen === "season") {
     return (
-      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
         <StatusBar style="light" />
         <SeasonHub
           playerId={playerId}
@@ -2423,9 +2902,36 @@ function HomeScreen() {
           progress={progress}
           leaderboard={leaderboard}
           onBack={() => setScreen("home")}
-          onChallengeFriend={(friendName, size) => {
-            createRoom(size || 4);
-            setNotice(`${friendName} ile ${size}×${size} düellosu için oda oluşturuldu! Davet kodunu paylaş.`);
+          onOpenLeagueHub={() => setScreen("league")}
+          pendingRequests={pendingRequests}
+          onAcceptRequest={handleAcceptFriendRequest}
+          onRejectRequest={handleRejectFriendRequest}
+          onSendFriendRequest={handleSendFriendRequest}
+          onChallengeFriend={async (friendName, size) => {
+            const targetFriend = socialManager.getFriends().find(
+              (f) => f.name.toLowerCase() === friendName.toLowerCase() || f.username.toLowerCase() === friendName.toLowerCase()
+            );
+            const targetSize = size || 4;
+            const inviteTarget = targetFriend ? {
+              toPlayerId: targetFriend.id,
+              toUsername: targetFriend.username || targetFriend.name,
+            } : undefined;
+            if (targetFriend) {
+              pendingDuelInviteRef.current = {
+                targetId: targetFriend.id,
+                targetUsername: targetFriend.username || targetFriend.name,
+                size: targetSize,
+              };
+            }
+            createRoom(targetSize, inviteTarget);
+            setNotice(`${friendName} ile ${targetSize}×${targetSize} düellosu başlatıldı! Davet gönderildi.`);
+            setGlobalToast({
+              id: `duel-sent-${Date.now()}`,
+              title: "DÜELLO DAVETİ GÖNDERİLDİ ⚔️",
+              subtitle: `${friendName} oyuncusuna davet iletildi. Katılması bekleniyor...`,
+              icon: "⚔️",
+              accentColor: "#3EE8B5",
+            });
           }}
           onUpdateFriends={(updatedFriends) => {
             setProgress((current) => ({
@@ -2441,40 +2947,18 @@ function HomeScreen() {
           isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
           isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
-          onAddFriend={(target) => {
-            const res = socialManager.addFriend({
-              id: target.id,
-              name: target.name,
-              username: target.username || target.name,
-              avatar: target.avatar,
-              avatarPhoto: target.avatarPhoto,
-              selectedTitle: target.selectedTitle,
-              level: target.level,
-              tier: target.tier,
-              lp: target.lp,
-              wins: target.wins,
-              matches: target.matches,
-              streak: target.streak,
-              bestScore: target.bestScore,
-              bestTempo: target.bestTempo,
-            });
+          onAddFriend={async (target) => {
+            const targetName = target.username || target.name;
+            const res = await handleSendFriendRequest(targetName);
             setGlobalToast({
               id: `friend-${Date.now()}`,
-              title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+              title: res.success ? "İSTEK GÖNDERİLDİ" : "BİLGİ",
               subtitle: res.message,
               icon: res.success ? "👥" : "ℹ️",
               accentColor: res.success ? "#3EE8B5" : "#FFC24A",
             });
           }}
-          onChallenge={(target) => {
-            setInspectedUser(null);
-            if (target.isBot) {
-              startBotDuel(4);
-            } else {
-              createRoom(4);
-              setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
-            }
-          }}
+          onChallenge={handleChallengeTarget}
         />
       </MainShell>
     );
@@ -2482,7 +2966,7 @@ function HomeScreen() {
 
   if (screen === "league") {
     return (
-      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
         <StatusBar style="light" />
         <LeagueHub playerId={playerId} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} />
       </MainShell>
@@ -2571,7 +3055,7 @@ function HomeScreen() {
 
   if (screen === "store") {
     return (
-      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
         <StatusBar style="light" />
         <CyberStore
           coins={progress.coins ?? 0}
@@ -2726,17 +3210,35 @@ function HomeScreen() {
     if (!arcadeStarted) {
       const bestScore = progress.bestArcadeScore || 0;
       return (
-        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
           <StatusBar style="light" />
           <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.subHeader}>
               <Pressable onPress={() => setScreen("home")} style={styles.backButton}>
                 <Text style={styles.backText}>‹</Text>
               </Pressable>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.subHeaderKicker}>ARCADE MODU</Text>
                 <Text style={styles.subHeaderTitle}>ZAMANA KARŞI HÜCUM</Text>
               </View>
+              <Pressable
+                onPress={() => setSelectedModeInfo("arcade")}
+                style={({ pressed }) => [
+                  {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 12,
+                    backgroundColor: "rgba(255, 208, 0, 0.12)",
+                    borderWidth: 1.5,
+                    borderColor: "#FFD000",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={{ fontSize: 16, color: "#FFD000", fontWeight: "900" }}>ℹ️</Text>
+              </Pressable>
             </View>
 
             <View style={styles.arcadeHeroCard}>
@@ -2809,6 +3311,11 @@ function HomeScreen() {
         <ArcadeChallenge
           onExit={() => setArcadeStarted(false)}
           onComplete={(score) => {
+            setProgress((current) => {
+              const updated = applyArcadeProgress(current, score);
+              void syncProgressToCloud(updated);
+              return updated;
+            });
             void awardProgressOnServer({ kind: "arcade", score }, (current) => applyArcadeProgress(current, score));
           }}
         />
@@ -2818,20 +3325,38 @@ function HomeScreen() {
 
   if (screen === "online") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
             <Pressable onPress={() => setScreen("home")} style={styles.backButton}>
               <Text style={styles.backText}>‹</Text>
             </Pressable>
-            <View>
-              <Text style={styles.subHeaderKicker}>CANLI ARENA</Text>
-              <Text style={styles.subHeaderTitle}>DÜELLO VE EŞLEŞME</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.subHeaderKicker}>DERECELİ ARENA</Text>
+              <Text style={styles.subHeaderTitle}>DERECELİ DÜELLO</Text>
             </View>
+            <Pressable
+              onPress={() => setSelectedModeInfo("pvp")}
+              style={({ pressed }) => [
+                {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  backgroundColor: "rgba(62, 232, 181, 0.12)",
+                  borderWidth: 1.5,
+                  borderColor: "#3EE8B5",
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text style={{ fontSize: 16, color: "#3EE8B5", fontWeight: "900" }}>ℹ️</Text>
+            </Pressable>
           </View>
           
-          <Text style={styles.modeIntro}>İsmini ve tahta boyutunu seç. İster anında botla antrenman yap, ister özel oda kurup arkadaşını davet et.</Text>
+          <Text style={styles.modeIntro}>İsmini ve tahta boyutunu seç. Canlı dereceli arenada rakiplerinle hemen eşleş ve lig puanı kazan.</Text>
           
           <View style={styles.nameCard}>
             <Text style={styles.inputLabel}>OYUNCU ADIN</Text>
@@ -2890,14 +3415,67 @@ function HomeScreen() {
             })}
           </View>
           
-          <Pressable onPress={() => startBotDuel(selectedSize)} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
-            <Text style={styles.primaryButtonText}>HIZLI SAVAŞI BAŞLAT</Text>
+          <Pressable onPress={() => startMatchmaking(selectedSize)} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
+            <Text style={styles.primaryButtonText}>⚔️ CANLI EŞLEŞMEYE GİR</Text>
             <Text style={styles.primaryButtonArrow}>→</Text>
           </Pressable>
+          
+          {Boolean(notice) && <Text style={styles.notice}>{notice}</Text>}
+        </ScrollView>
+      </MainShell>
+    );
+  }
 
-          <Pressable onPress={() => createRoom(selectedSize)} style={({ pressed }) => [styles.customRoomButton, pressed && styles.pressed]}>
-            <Text style={styles.customRoomButtonText}>ÖZEL ODA KUR (ARKADAŞINI DAVET ET)</Text>
-            <Text style={styles.customRoomButtonIcon}>＋</Text>
+  if (screen === "friends") {
+    return (
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking}>
+        <StatusBar style="light" />
+        <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={styles.subHeader}>
+            <Pressable onPress={() => setScreen("home")} style={styles.backButton}>
+              <Text style={styles.backText}>‹</Text>
+            </Pressable>
+            <View>
+              <Text style={styles.subHeaderKicker}>SOSYAL ARENA</Text>
+              <Text style={styles.subHeaderTitle}>ARKADAŞLA OYNA</Text>
+            </View>
+          </View>
+          
+          <Text style={styles.modeIntro}>Arkadaşlarınla özel oda kurup yarışabilir, davet koduyla odaya katılabilir veya arkadaş listendeki rakiplere doğrudan düello daveti gönderebilirsin.</Text>
+          
+          <Text style={styles.sectionLabel}>DÜELLO TAHTA BOYUTU (TÜM BOYUTLAR AÇIK)</Text>
+          <View style={styles.sizeRow}>
+            {([4, 6, 8, 10] as BoardSize[]).map((size) => {
+              return (
+                <Pressable 
+                  key={size} 
+                  onPress={() => {
+                    haptics.light();
+                    setSelectedSize(size);
+                  }} 
+                  style={({ pressed }) => [
+                    styles.sizeCard,
+                    selectedSize === size && styles.sizeCardSelected,
+                    pressed && styles.pressed
+                  ]}
+                >
+                  <Text style={[styles.sizeValue, selectedSize === size && styles.sizeValueSelected]}>
+                    {`${size}×${size}`}
+                  </Text>
+                  <Text style={styles.sizeCaption}>
+                    {size === 4 ? "Nabız (Hızlı)" : size === 6 ? "Akış (Orta)" : size === 8 ? "Derinlik (Zor)" : "Zirve (Usta)"}
+                  </Text>
+                  <Text style={styles.sizeDetail}>
+                    {size === 4 ? "4 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : size === 8 ? "8 rota · 90 sn" : "10 rota · 110 sn"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          
+          <Pressable onPress={() => createRoom(selectedSize)} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
+            <Text style={styles.primaryButtonText}>🤝 ÖZEL ODA KUR VE DAVET ET</Text>
+            <Text style={styles.primaryButtonArrow}>→</Text>
           </Pressable>
 
           <View style={styles.joinCard}>
@@ -2912,11 +3490,97 @@ function HomeScreen() {
                 placeholderTextColor="#6F879A" 
                 style={styles.codeInput} 
               />
-              <Pressable onPress={joinRoom} style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}>
+              <Pressable onPress={() => joinRoom()} style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}>
                 <Text style={styles.joinButtonText}>ODAYA GİR</Text>
               </Pressable>
             </View>
           </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 24, marginBottom: 10 }}>
+            <Text style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>
+              ARKADAŞLARINLA DÜELLO YAP ({friendsList.length})
+            </Text>
+            <Pressable onPress={() => setScreen("season")}>
+              <Text style={{ color: "#3EE8B5", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>
+                + YENİ ARKADAŞ BUL
+              </Text>
+            </Pressable>
+          </View>
+
+          {friendsList.length === 0 ? (
+            <View style={styles.emptyFriendsCard}>
+              <Text style={{ fontSize: 32, marginBottom: 8 }}>👥</Text>
+              <Text style={{ color: "#FFF", fontSize: 14, fontWeight: "900", marginBottom: 4 }}>Henüz Arkadaşın Yok</Text>
+              <Text style={styles.emptyFriendsText}>
+                Liderlik tablosundaki oyuncuları inceleyerek veya maç sonu ekranlarından rakipleri arkadaş olarak ekleyebilirsin.
+              </Text>
+              <Pressable onPress={() => setScreen("season")} style={styles.emptyFriendsButton}>
+                <Text style={styles.emptyFriendsButtonText}>🏆 LİDERLİK TABLOSUNU AÇ</Text>
+              </Pressable>
+            </View>
+          ) : (
+            friendsList.map((friend) => {
+              const inspectable: InspectableUser = {
+                id: friend.id,
+                name: friend.name,
+                username: friend.username,
+                avatar: friend.avatar,
+                avatarPhoto: friend.avatarPhoto,
+                selectedTitle: friend.selectedTitle,
+                level: friend.level,
+                tier: friend.tier,
+                lp: friend.lp,
+                wins: friend.wins,
+                matches: friend.matches,
+                streak: friend.streak,
+                bestScore: friend.bestScore,
+                bestTempo: friend.bestTempo,
+                xp: friend.xp,
+                isBot: false,
+              };
+              return (
+                <Pressable
+                  key={friend.id}
+                  onPress={() => setInspectedUser(inspectable)}
+                  style={({ pressed }) => [styles.friendDuelCard, pressed && styles.pressed]}
+                >
+                  <View style={styles.friendDuelLeft}>
+                    <View style={styles.friendAvatarWrap}>
+                      {friend.avatarPhoto ? (
+                        <Image source={{ uri: friend.avatarPhoto }} style={{ width: 38, height: 38, borderRadius: 12 }} />
+                      ) : (
+                        <Text style={{ fontSize: 20 }}>{friend.avatar || "👤"}</Text>
+                      )}
+                      <View
+                        style={[
+                          styles.friendOnlineDot,
+                          { backgroundColor: friend.isOnline ? "#10B981" : "#64748B" },
+                        ]}
+                      />
+                    </View>
+                    <View style={styles.friendDuelInfo}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text style={styles.friendDuelName} numberOfLines={1}>{friend.name}</Text>
+                        {friend.selectedTitle ? (
+                          <Text style={styles.friendDuelTag}>{friend.selectedTitle}</Text>
+                        ) : null}
+                      </View>
+                      <Text style={styles.friendDuelMeta}>
+                        {friend.isOnline ? "🟢 Çevrimiçi" : "⚪ Çevrimdışı"} · {friend.tier || "BRONZ"} ({friend.lp || 0} LP)
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    onPress={() => handleChallengeTarget(inspectable, selectedSize)}
+                    style={({ pressed }) => [styles.friendDuelButton, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.friendDuelButtonText}>⚔️ DÜELLO</Text>
+                  </Pressable>
+                </Pressable>
+              );
+            })
+          )}
           
           <Text style={styles.notice}>{notice}</Text>
         </ScrollView>
@@ -3037,6 +3701,11 @@ function HomeScreen() {
             });
           }}
           onRewardXp={(amount: number, level: number) => {
+            setProgress((current) => {
+              const updated = applyVintageProgress(current, level, amount);
+              void syncProgressToCloud(updated);
+              return updated;
+            });
             void awardProgressOnServer(
               { kind: "vintage", score: amount, level },
               (current) => applyVintageProgress(current, level, amount)
@@ -3057,7 +3726,7 @@ function HomeScreen() {
 
   if (screen === "missions") {
     return (
-      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
         <StatusBar style="light" />
         <MissionsScreen
           progress={progress}
@@ -3087,11 +3756,15 @@ function HomeScreen() {
 
   if (screen === "profile") {
     return (
-      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)}>
+      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
         <StatusBar style="light" />
         <ProfileScreen
           playerName={safeName}
-          onUpdatePlayerName={setPlayerName}
+          onUpdatePlayerName={(newName) => {
+            setPlayerName(newName);
+            AsyncStorage.setItem("kelime-patlat:player-name", newName).catch(() => undefined);
+            void syncProgressToCloud(progress, newName);
+          }}
           progress={progress}
           onShowToast={(title, subtitle, icon, color) => {
             setGlobalToast({
@@ -3250,40 +3923,18 @@ function HomeScreen() {
           isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
           isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
-          onAddFriend={(target) => {
-            const res = socialManager.addFriend({
-              id: target.id,
-              name: target.name,
-              username: target.username || target.name,
-              avatar: target.avatar,
-              avatarPhoto: target.avatarPhoto,
-              selectedTitle: target.selectedTitle,
-              level: target.level,
-              tier: target.tier,
-              lp: target.lp,
-              wins: target.wins,
-              matches: target.matches,
-              streak: target.streak,
-              bestScore: target.bestScore,
-              bestTempo: target.bestTempo,
-            });
+          onAddFriend={async (target) => {
+            const targetName = target.username || target.name;
+            const res = await handleSendFriendRequest(targetName);
             setGlobalToast({
               id: `friend-${Date.now()}`,
-              title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+              title: res.success ? "İSTEK GÖNDERİLDİ" : "BİLGİ",
               subtitle: res.message,
               icon: res.success ? "👥" : "ℹ️",
               accentColor: res.success ? "#3EE8B5" : "#FFC24A",
             });
           }}
-          onChallenge={(target) => {
-            setInspectedUser(null);
-            if (target.isBot) {
-              startBotDuel(4);
-            } else {
-              createRoom(4);
-              setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
-            }
-          }}
+          onChallenge={handleChallengeTarget}
         />
       </ScreenContainer>
     );
@@ -3356,7 +4007,16 @@ function HomeScreen() {
           <View><Text style={battleStyles.railLabel}>{isFinalPush ? "SON HAMLE" : "TUR SÜRESİ"}</Text><Text style={[battleStyles.timerValue, isFinalPush && battleStyles.timerValueFinal]}>{room.status === "playing" ? `00:${String(remainingSeconds).padStart(2, "0")}` : "00:00"}</Text></View>
           <View style={battleStyles.battleBadges}>{myMultiplier > 1 && <View style={battleStyles.multiplierBadge}><Text style={battleStyles.multiplierText}>×{myMultiplier} UZUN KELİME</Text></View>}{myWordCount >= 2 && <View style={battleStyles.streakBadge}><Text style={battleStyles.streakText}>{myWordCount} SERİ</Text></View>}</View>
         </View>
-        <View style={styles.scoreRow}>
+        <View style={[styles.scoreRow, { position: "relative" }]}>
+          {activeEmote && (
+            <View style={[
+              styles.floatingEmoteBadge,
+              activeEmote.playerId === playerId ? { left: 16 } : { right: 16 }
+            ]}>
+              <Text style={styles.floatingEmoteText}>{activeEmote.emote}</Text>
+              <Text style={{ color: "#3EE8B5", fontSize: 10, fontWeight: "900" }}>{activeEmote.playerName}</Text>
+            </View>
+          )}
           <ScoreBadge
             name={me?.name ?? safeName}
             score={myScore}
@@ -3390,6 +4050,19 @@ function HomeScreen() {
           />
         </View>
         <View style={battleStyles.statsRow}><View style={battleStyles.statCell}><Text style={battleStyles.statLabel}>PUAN FARKI</Text><Text style={[battleStyles.statValue, scoreDifference > 0 && battleStyles.statValuePositive, scoreDifference < 0 && battleStyles.statValueNegative]}>{scoreLeadLabel}</Text></View><View style={battleStyles.statDivider} /><View style={battleStyles.statCell}><Text style={battleStyles.statLabel}>TEMPO</Text><Text style={battleStyles.statValue}>{myTempo} · {opponentTempo} K/DK</Text></View></View>
+        {room.status === "playing" && (
+          <View style={styles.emoteBar}>
+            {["🔥", "👏", "⚡", "😱", "🤝", "😎"].map((emoji) => (
+              <Pressable
+                key={emoji}
+                onPress={() => sendEmote(emoji)}
+                style={({ pressed }) => [styles.emoteBtn, pressed && styles.pressed]}
+              >
+                <Text style={styles.emoteBtnText}>{emoji}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
         <View style={styles.targetCard}>
           <Text style={styles.targetLabel}>{room.status === "finished" ? "TUR TAMAMLANDI" : "GİZLİ KELİMELERİ BUL"}</Text>
           <Text style={styles.targetWord}>{room.wordsTotal} KELİME</Text>
@@ -3820,6 +4493,10 @@ function HomeScreen() {
                   xpEarned={matchXpEarned}
                   lpEarned={matchLpEarned}
                   coinsEarned={matchCoinsEarned}
+                  isCustom={isCustomRoom}
+                  streakBonus={progress.lastMatchReward?.streakBonus}
+                  pvpWinStreak={progress.lastMatchReward?.pvpWinStreak ?? progress.pvpWinStreak}
+                  isCrushingWin={progress.lastMatchReward?.isCrushingWin}
                 />
 
                 {/* 2. Ayrılmış Rota ve Performans Analizi Kartı */}
@@ -4115,40 +4792,18 @@ function HomeScreen() {
         isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
         isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
         onClose={() => setInspectedUser(null)}
-        onAddFriend={(target) => {
-          const res = socialManager.addFriend({
-            id: target.id,
-            name: target.name,
-            username: target.username || target.name,
-            avatar: target.avatar,
-            avatarPhoto: target.avatarPhoto,
-            selectedTitle: target.selectedTitle,
-            level: target.level,
-            tier: target.tier,
-            lp: target.lp,
-            wins: target.wins,
-            matches: target.matches,
-            streak: target.streak,
-            bestScore: target.bestScore,
-            bestTempo: target.bestTempo,
-          });
+        onAddFriend={async (target) => {
+          const targetName = target.username || target.name;
+          const res = await handleSendFriendRequest(targetName);
           setGlobalToast({
             id: `friend-${Date.now()}`,
-            title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+            title: res.success ? "İSTEK GÖNDERİLDİ" : "BİLGİ",
             subtitle: res.message,
             icon: res.success ? "👥" : "ℹ️",
             accentColor: res.success ? "#3EE8B5" : "#FFC24A",
           });
         }}
-        onChallenge={(target) => {
-          setInspectedUser(null);
-          if (target.isBot) {
-            startBotDuel(4);
-          } else {
-            createRoom(4);
-            setNotice(`${target.name} ile 4×4 düellosu için oda oluşturuldu!`);
-          }
-        }}
+        onChallenge={handleChallengeTarget}
       />
 
       <LivesModal
@@ -4455,7 +5110,7 @@ function ScoreBadge({
       onPress={onPress}
       style={({ pressed }) => [{ flex: 1 }, onPress && pressed && styles.pressed]}
     >
-      <View style={[styles.scoreBadge, { width: "100%", height: 88 }, won && { borderColor: accent, shadowColor: accent, shadowOpacity: 0.4, shadowRadius: 8 }]}>
+      <View style={[styles.scoreBadge, { width: "100%", minHeight: 88, paddingVertical: 6 }, won && { borderColor: accent, shadowColor: accent, shadowOpacity: 0.4, shadowRadius: 8 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginBottom: 4 }}>
           {/* Profil Fotoğrafı / Avatar Dairesi */}
           <View
@@ -4603,6 +5258,11 @@ function MainShell({
   onDismissToast,
   seasonResetModal,
   onCloseSeasonResetModal,
+  duelInvite,
+  onAcceptDuel,
+  onRejectDuel,
+  matchmakingState,
+  onCancelMatchmaking,
 }: {
   active: DockDestination;
   children: React.ReactNode;
@@ -4615,6 +5275,11 @@ function MainShell({
   onDismissToast?: () => void;
   seasonResetModal?: { newSeasonId: string; previousRank: string; previousLp: number; newLp: number } | null;
   onCloseSeasonResetModal?: () => void;
+  duelInvite?: { fromPlayerId: string; fromPlayerName: string; roomCode: string; size: BoardSize } | null;
+  onAcceptDuel?: () => void;
+  onRejectDuel?: () => void;
+  matchmakingState?: { size: BoardSize; elapsedSeconds: number } | null;
+  onCancelMatchmaking?: () => void;
 }) {
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 14, paddingTop: 6 }}>
@@ -4633,9 +5298,173 @@ function MainShell({
       {seasonResetModal && onCloseSeasonResetModal && (
         <SeasonResetModal data={seasonResetModal} onClose={onCloseSeasonResetModal} />
       )}
+      {duelInvite && onAcceptDuel && onRejectDuel && (
+        <Modal
+          visible={true}
+          transparent
+          animationType="fade"
+          onRequestClose={onRejectDuel}
+        >
+          <View style={duelModalStyles.overlay}>
+            <View style={duelModalStyles.card}>
+              <View style={duelModalStyles.iconWrap}>
+                <Text style={{ fontSize: 32 }}>⚔️</Text>
+              </View>
+              <Text style={duelModalStyles.kicker}>CANLI DÜELLO MEYDAN OKUMASI</Text>
+              <Text style={duelModalStyles.title}>{duelInvite.fromPlayerName}</Text>
+              <Text style={duelModalStyles.subtitle}>
+                Seni {duelInvite.size}×{duelInvite.size} boyutunda canlı düelloya davet etti!
+              </Text>
+              <View style={duelModalStyles.buttonRow}>
+                <Pressable
+                  style={({ pressed }) => [duelModalStyles.btn, duelModalStyles.acceptBtn, pressed && { opacity: 0.8 }]}
+                  onPress={onAcceptDuel}
+                >
+                  <Text style={duelModalStyles.acceptBtnText}>✓ KABUL ET</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [duelModalStyles.btn, duelModalStyles.rejectBtn, pressed && { opacity: 0.8 }]}
+                  onPress={onRejectDuel}
+                >
+                  <Text style={duelModalStyles.rejectBtnText}>✕ REDDET</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {matchmakingState && onCancelMatchmaking && (
+        <Modal
+          visible={true}
+          transparent
+          animationType="fade"
+          onRequestClose={onCancelMatchmaking}
+        >
+          <View style={styles.matchmakingOverlay}>
+            <View style={styles.matchmakingCard}>
+              <View style={styles.matchmakingRadarBox}>
+                <ActivityIndicator size="large" color="#3EE8B5" />
+                <Text style={styles.matchmakingRadarIcon}>📡</Text>
+              </View>
+              <Text style={styles.matchmakingKicker}>CANLI EŞLEŞTİRME</Text>
+              <Text style={styles.matchmakingTitle}>
+                {matchmakingState.size}×{matchmakingState.size} DÜELLO
+              </Text>
+              <Text style={styles.matchmakingTimer}>
+                {`00:${String(matchmakingState.elapsedSeconds).padStart(2, "0")}`}
+              </Text>
+              <Text style={styles.matchmakingStatusText}>
+                {matchmakingState.elapsedSeconds < 3
+                  ? "Uygun ligdeki rakipler taranıyor..."
+                  : "Eşleşme tamamlanıyor, arenaya bağlanılıyor..."}
+              </Text>
+              <Pressable
+                onPress={onCancelMatchmaking}
+                style={({ pressed }) => [styles.matchmakingCancelBtn, pressed && styles.pressed]}
+              >
+                <Text style={styles.matchmakingCancelText}>İPTAL ET</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
     </ScreenContainer>
   );
 }
+
+const duelModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(4, 17, 12, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: "#0E2C22",
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1.5,
+    borderColor: "#D4B45A",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 14,
+  },
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(212, 180, 90, 0.15)",
+    borderWidth: 1.5,
+    borderColor: "#D4B45A",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  kicker: {
+    color: "#3EE8B5",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    textAlign: "center",
+  },
+  title: {
+    color: "#FFF9FC",
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 6,
+    letterSpacing: 0.3,
+  },
+  subtitle: {
+    color: "#CBD5E1",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+    marginTop: 6,
+    marginBottom: 22,
+    lineHeight: 18,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  btn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  acceptBtn: {
+    backgroundColor: "rgba(62, 232, 181, 0.2)",
+    borderWidth: 1.5,
+    borderColor: "#3EE8B5",
+  },
+  acceptBtnText: {
+    color: "#3EE8B5",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  rejectBtn: {
+    backgroundColor: "rgba(255, 100, 124, 0.15)",
+    borderWidth: 1.5,
+    borderColor: "#FF647C",
+  },
+  rejectBtnText: {
+    color: "#FF647C",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+});
 
 const battleStyles = StyleSheet.create({
   gameScroll: { flexGrow: 1, paddingBottom: 50 },
@@ -4869,6 +5698,100 @@ const styles = StyleSheet.create({
   activeRouteDefLabel: { color: "#2DD4BF", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   activeRouteDefText: { color: "#CBD5E1", fontSize: 12, lineHeight: 18, marginTop: 2, fontWeight: "500" },
   routeExploreHint: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginTop: 4, marginBottom: 2, textAlign: "center" },
+
+  // Matchmaking Modal Styles
+  matchmakingOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "center", alignItems: "center", padding: 24 },
+  matchmakingCard: { width: "100%", maxWidth: 360, backgroundColor: "#0E2C22", borderRadius: 24, borderWidth: 2, borderColor: "#3EE8B5", padding: 24, alignItems: "center", shadowColor: "#3EE8B5", shadowOpacity: 0.35, shadowRadius: 20, elevation: 14 },
+  matchmakingRadarBox: { width: 72, height: 72, borderRadius: 36, backgroundColor: "rgba(62,232,181,0.12)", borderWidth: 2, borderColor: "#3EE8B5", justifyContent: "center", alignItems: "center", marginBottom: 14 },
+  matchmakingRadarIcon: { fontSize: 28, position: "absolute" },
+  matchmakingKicker: { color: "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 },
+  matchmakingTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: 0.5, marginBottom: 8, textAlign: "center" },
+  matchmakingTimer: { color: "#3EE8B5", fontSize: 32, fontWeight: "900", letterSpacing: 2, marginBottom: 10 },
+  matchmakingStatusText: { color: "#94A3B8", fontSize: 12, fontWeight: "600", textAlign: "center", marginBottom: 20, minHeight: 34 },
+  matchmakingCancelBtn: { width: "100%", height: 46, borderRadius: 14, backgroundColor: "rgba(239,68,68,0.15)", borderWidth: 1, borderColor: "rgba(239,68,68,0.4)", justifyContent: "center", alignItems: "center" },
+  matchmakingCancelText: { color: "#F87171", fontSize: 13, fontWeight: "900", letterSpacing: 1 },
+
+  // Live Duel Emote Styles
+  emoteBar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: "rgba(10,32,25,0.85)", borderRadius: 20, borderWidth: 1, borderColor: "rgba(62,232,181,0.25)", marginVertical: 6 },
+  emoteBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
+  emoteBtnText: { fontSize: 20 },
+  floatingEmoteBadge: { position: "absolute", zIndex: 99, top: -14, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 14, backgroundColor: "#0E2C22", borderWidth: 1.5, borderColor: "#3EE8B5", shadowColor: "#3EE8B5", shadowOpacity: 0.4, shadowRadius: 8, elevation: 8, flexDirection: "row", alignItems: "center", gap: 4 },
+  floatingEmoteText: { fontSize: 22 },
+
+  // Friends Screen Styles
+  friendDuelCard: {
+    backgroundColor: "rgba(8, 28, 22, 0.85)",
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(212, 180, 90, 0.25)",
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  friendDuelLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  friendAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#071A14",
+    borderWidth: 1.5,
+    borderColor: "#38BDF8",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  friendOnlineDot: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#071A14",
+  },
+  friendDuelInfo: { flex: 1 },
+  friendDuelName: { color: "#FFFFFF", fontSize: 14, fontWeight: "900", letterSpacing: 0.3 },
+  friendDuelMeta: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginTop: 2 },
+  friendDuelTag: { color: "#F4D06F", fontSize: 10, fontWeight: "800", marginTop: 1 },
+  friendDuelButton: {
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
+    borderWidth: 1.5,
+    borderColor: "#3EE8B5",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  friendDuelButtonText: { color: "#3EE8B5", fontSize: 11, fontWeight: "900", letterSpacing: 0.6 },
+  emptyFriendsCard: {
+    backgroundColor: "rgba(8, 28, 22, 0.8)",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.12)",
+    padding: 20,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  emptyFriendsText: { color: "#94A3B8", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 12 },
+  emptyFriendsButton: {
+    backgroundColor: "rgba(244, 208, 111, 0.15)",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#F4D06F",
+  },
+  emptyFriendsButtonText: { color: "#F4D06F", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
 });
 
 export default function App() {
