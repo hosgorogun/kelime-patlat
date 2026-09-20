@@ -48,8 +48,8 @@ export const MOCK_FRIENDS: FriendUser[] = [
   { id: "f5", name: "Barış Piksel", username: "baris_pixel", avatar: "🎮", selectedTitle: "[ÇAYLAK]", isOnline: false, xp: 920, level: 5, lp: 450, tier: "BRONZ", wins: 5, matches: 12, streak: 1, bestScore: 70, bestTempo: 2.2 },
 ];
 
-export const FRIENDS_STORAGE_KEY = "kelime-patlat:friends-list-v1";
-export const PENDING_REQUESTS_STORAGE_KEY = "kelime-patlat:pending-requests-v1";
+const FRIENDS_STORAGE_KEY = "kelime-patlat:friends-list-v1";
+const PENDING_REQUESTS_STORAGE_KEY = "kelime-patlat:pending-requests-v1";
 
 class SocialManager {
   private friends: FriendUser[] = [...MOCK_FRIENDS];

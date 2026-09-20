@@ -3,7 +3,6 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { LinearGradient } from "expo-linear-gradient";
 import { type MatchHistoryEntry, type PlayerProgress } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
-import { palette } from "@/shared/palette";
 
 export type MatchHistoryModalProps = {
   visible: boolean;
@@ -56,7 +55,6 @@ export function MatchHistoryModal({
   // Calculate summary stats
   const totalMatches = history.length;
   const winsCount = history.filter((m) => m.won).length;
-  const lossesCount = history.filter((m) => !m.won && !m.isDraw).length;
   const winRate = totalMatches > 0 ? Math.round((winsCount / totalMatches) * 100) : 0;
   const highestScore = history.reduce((max, m) => Math.max(max, m.myScore || 0), progress.bestScore || 0);
 

@@ -1,6 +1,4 @@
-import { WORD_BANK, WORD_CATALOG, WORD_CATALOG_DATA, type WordDifficulty, type WordEntry } from "./word-catalog";
-
-export { WORD_BANK, WORD_CATALOG, WORD_CATALOG_DATA, type WordDifficulty, type WordEntry } from "./word-catalog";
+export { WORD_CATALOG, type WordDifficulty, type WordEntry } from "./word-catalog";
 
 export const BOARD_SIZES = [4, 6, 8, 10] as const;
 export type BoardSize = (typeof BOARD_SIZES)[number];

@@ -9,10 +9,6 @@ const TERMS_ACCEPTED_KEY = "kelime-patlat:terms-accepted-v1";
  * Manages engagement local reminders for daily rewards, streaks, and lives regen
  */
 export const notificationManager = {
-  async requestPermissions(): Promise<boolean> {
-    return true;
-  },
-
   /**
    * Schedule engagement reminders safely without native build bundle errors
    */

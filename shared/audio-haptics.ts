@@ -1,18 +1,10 @@
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
-import { gameSfx, setSfxEnabled, getSfxEnabled } from "../lib/game-sfx";
-export { gameSfx, setSfxEnabled, getSfxEnabled };
+import { gameSfx, setSfxEnabled } from "../lib/game-sfx";
+export { gameSfx, setSfxEnabled };
 
 export async function initAudio() {
   // Audio uses bundled local audio assets via gameSfx
-}
-
-export function setSoundEnabled(enabled: boolean) {
-  setSfxEnabled(enabled);
-}
-
-export function getSoundEnabled() {
-  return getSfxEnabled();
 }
 
 import { getHapticsEnabled, setHapticsEnabled } from "../lib/haptics";
@@ -50,8 +42,4 @@ export function playSuccessSound() {
 
 export function playErrorSound() {
   gameSfx.rejected();
-}
-
-export function playTickingSound() {
-  gameSfx.select();
 }

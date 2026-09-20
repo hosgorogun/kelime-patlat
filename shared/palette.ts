@@ -37,7 +37,6 @@ export const palette = {
   gemRuby: "#FB7185",
 } as const;
 
-export const GOLD_GRADIENT = ["#FFF6C8", "#F4D06F", "#C9962A", "#8C6A2E"] as const;
 export const GOLD_BUTTON_GRADIENT = ["#FFF1B0", "#F0C24A", "#C48A1C"] as const;
 export const EMERALD_GRADIENT = ["#7FF5D0", "#2DD4BF", "#148F72"] as const;
 export const PANEL_SHEEN = ["rgba(255, 236, 170, 0.18)", "rgba(255, 236, 170, 0.04)", "transparent"] as const;

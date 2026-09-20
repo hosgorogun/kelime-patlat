@@ -1,6 +1,5 @@
 import React from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { palette } from "@/shared/palette";
 import { GameButton, OrnatePanel } from "@/components/game-ui";
 import { DAILY_LOGIN_REWARDS, getDayId, type PlayerProgress } from "@/shared/progression";

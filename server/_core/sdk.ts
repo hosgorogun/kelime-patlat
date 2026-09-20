@@ -1,8 +1,15 @@
 import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
-import { ForbiddenError } from "../../shared/_core/errors.js";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
+
+export class HttpError extends Error {
+  constructor(public statusCode: number, message: string) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+export const ForbiddenError = (msg: string) => new HttpError(403, msg);
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../db";
 import * as db from "../db";

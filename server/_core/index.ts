@@ -14,9 +14,10 @@ import { UserModel, hashPassword, verifyPassword, connectDb, createFriendRequest
 import { deletePlayerProfile, ProfileModel } from "../game/mongo-store";
 import { z } from "zod";
 import { randomUUID, randomInt } from "node:crypto";
-import { AVATARS, applyArcadeProgress, applyMatchProgress, applyVintageProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, backfillMatchHistoryIfEmpty, SEASON_MISSIONS, findMissionById, getLeagueTier, buyLives, deductLife, getCalculatedLives, reconcilePlayerProgress, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES, MILESTONE_REWARDS, checkDailyLoginReward, getDayId, type PlayerProgress, type GenderType } from "../../shared/progression";
+import { AVATARS, applyArcadeProgress, applyMatchProgress, applyVintageProgress, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, mergePlayerProgress, backfillMatchHistoryIfEmpty, SEASON_MISSIONS, findMissionById, getLeagueTier, buyLives, getCalculatedLives, reconcilePlayerProgress, MAX_LIVES, MILESTONE_REWARDS, checkDailyLoginReward, getDayId, type PlayerProgress, type GenderType } from "../../shared/progression";
 import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
 import type { LeaderboardEntry } from "../../shared/game";
+import { getWordDefinition } from "../../shared/dictionary";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -142,6 +143,67 @@ async function startServer() {
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });
+  });
+
+  const serverDictionaryCache = new Map<string, any>();
+
+  app.get("/api/dictionary/:word", async (req, res) => {
+    try {
+      const rawWord = req.params.word;
+      if (!rawWord || typeof rawWord !== "string") {
+        return res.status(400).json({ error: "Kelime belirtilmedi" });
+      }
+      const clean = rawWord.trim();
+      const trUpper = clean.toLocaleUpperCase("tr-TR");
+
+      if (serverDictionaryCache.has(trUpper)) {
+        return res.json(serverDictionaryCache.get(trUpper));
+      }
+
+      // TDK GTS API sorgusu
+      try {
+        const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(clean.toLocaleLowerCase("tr-TR"))}`;
+        const tdkRes = await fetch(tdkUrl, { headers: { "User-Agent": "KelimePatlat/1.0" } });
+        if (tdkRes.ok) {
+          const data = await tdkRes.json();
+          if (Array.isArray(data) && data[0]?.anlamlarListe && data[0].anlamlarListe.length > 0) {
+            const item = data[0];
+            const definitions: string[] = item.anlamlarListe.map((a: any, idx: number) => {
+              const type = a.ozelliklerListe?.[0]?.tam_adi ? `(${a.ozelliklerListe[0].tam_adi}) ` : "";
+              return item.anlamlarListe.length > 1 ? `${idx + 1}. ${type}${a.anlam}` : `${type}${a.anlam}`;
+            });
+            const firstType = item.anlamlarListe[0]?.ozelliklerListe?.[0]?.tam_adi;
+            const firstExample = item.anlamlarListe.find((a: any) => a.orneklerListe?.[0]?.ornek)?.orneklerListe?.[0]?.ornek;
+            const fullDef = definitions.join("\n");
+
+            const result = {
+              word: trUpper,
+              definition: fullDef,
+              definitions,
+              type: firstType,
+              example: firstExample,
+              source: "TDK",
+            };
+            serverDictionaryCache.set(trUpper, result);
+            return res.json(result);
+          }
+        }
+      } catch {
+        // TDK servisine ulaşılamadıysa yerel tanıma düş
+      }
+
+      const localDef = getWordDefinition(clean);
+      const fallbackResult = {
+        word: trUpper,
+        definition: localDef,
+        definitions: [localDef],
+        source: "Yerel",
+      };
+      serverDictionaryCache.set(trUpper, fallbackResult);
+      return res.json(fallbackResult);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "Sözlük hatası" });
+    }
   });
 
   app.post("/api/auth/guest", async (_req, res) => {

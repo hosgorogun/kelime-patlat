@@ -20,14 +20,6 @@ export const DIGITAL_STORE_PRODUCTS: ProductItem[] = [
 export type AdRewardType = "radar_charge" | "double_xp" | "time_boost";
 
 class MonetizationManager {
-  private isAdMobInitialized = false;
-
-  async initAdMob(): Promise<boolean> {
-    // Do not advertise or grant rewards until a real provider is configured.
-    this.isAdMobInitialized = false;
-    return false;
-  }
-
   async showRewardedAd(type: AdRewardType, onReward: () => void, onError?: (err: string) => void) {
     void type;
     if (onError) onError("Ödüllü reklam şu anda kullanılamıyor.");

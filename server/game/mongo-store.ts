@@ -135,7 +135,3 @@ export async function recordLeaderboardRounds(rounds: RoundEntry[]) {
     return loadLeaderboard();
   }, null);
 }
-
-export function normalizeStoredProgress(progress: Partial<PlayerProgress>) {
-  return normalizedProgress(progress);
-}

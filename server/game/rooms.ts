@@ -5,11 +5,8 @@ import { sdk } from "../_core/sdk";
 import {
   BOARD_SIZES,
   botThinkDelayMs,
-  fillBoardBlanks,
   getRoundDurationMs,
   isAdjacent,
-  maskOpponentFoundWords,
-  pickLiveFourWordLengths,
   wordScoreMultiplier,
   wordFromSelection,
   type BoardSize,
@@ -20,7 +17,6 @@ import {
   type RoomStatus,
 } from "../../shared/game";
 import { createSoloBoard } from "../../shared/solo";
-import { catalogWordsForBoard } from "../../shared/word-catalog";
 import { DEFAULT_PROGRESS, getLeagueTier, applyMatchProgress, type PlayerProgress } from "../../shared/progression";
 import { getRandomBotPersona } from "../../shared/botPersonas";
 import { UserModel, createFriendRequest, getPendingFriendRequests, updateFriendRequestStatus, findFriendRequestById, type FriendRequest } from "../db";
@@ -109,147 +105,11 @@ function isValidPayload<T>(schema: z.ZodType<T>, payload: unknown): payload is T
   return schema.safeParse(payload).success;
 }
 
-function randomItem<T>(items: readonly T[]) {
-  return items[Math.floor(Math.random() * items.length)]!;
-}
-
-function shuffled<T>(items: readonly T[]) {
-  const copy = [...items];
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const next = Math.floor(Math.random() * (index + 1));
-    [copy[index], copy[next]] = [copy[next]!, copy[index]!];
-  }
-  return copy;
-}
-
 function makeCode() {
   let code = "";
   do code = Math.random().toString(36).slice(2, 7).toUpperCase();
   while (rooms.has(code));
   return code;
-}
-
-function cardinalNeighbors(index: number, size: BoardSize) {
-  const row = Math.floor(index / size);
-  const column = index % size;
-  return [
-    [row - 1, column], [row + 1, column], [row, column - 1], [row, column + 1],
-  ].flatMap(([nextRow, nextColumn]) => (
-    nextRow >= 0 && nextRow < size && nextColumn >= 0 && nextColumn < size
-      ? [nextRow * size + nextColumn]
-      : []
-  ));
-}
-
-function turnCount(path: number[], _size?: any) {
-  let turns = 0;
-  for (let index = 2; index < path.length; index += 1) {
-    const previousStep = path[index - 1]! - path[index - 2]!;
-    const nextStep = path[index]! - path[index - 1]!;
-    if (previousStep !== nextStep) turns += 1;
-  }
-  return turns;
-}
-
-function routeShape(path: number[], size: BoardSize) {
-  return path.slice(1).map((index, offset) => {
-    const difference = index - path[offset]!;
-    return difference === 1 ? "R" : difference === -1 ? "L" : difference === size ? "D" : "U";
-  }).join("");
-}
-
-function fullBoardPath(size: BoardSize) {
-  const total = size * size;
-  const visit = (index: number, path: number[]): number[] | null => {
-    const nextPath = [...path, index];
-    if (nextPath.length === total) return nextPath;
-    const options = shuffled(cardinalNeighbors(index, size)).filter((next) => !nextPath.includes(next));
-    for (const next of options) {
-      const result = visit(next, nextPath);
-      if (result) return result;
-    }
-    return null;
-  };
-  for (let attempt = 0; attempt < 240; attempt += 1) {
-    const result = visit(Math.floor(Math.random() * total), []);
-    if (result) return result;
-  }
-  return null;
-}
-
-function buildFourByFourBoard(words: string[]) {
-  for (let attempt = 0; attempt < 120; attempt += 1) {
-    const path = fullBoardPath(4);
-    if (!path) continue;
-    let cursor = 0;
-    const routes = words.map((word) => {
-      const route = path.slice(cursor, cursor + word.length);
-      cursor += word.length;
-      return route;
-    });
-    if (routes.some((route) => route.length < 2 || (route.length >= 3 && turnCount(route, 4) < 1))) continue;
-    if (new Set(routes.map((route) => routeShape(route, 4))).size < 3) continue;
-    const board = Array.from({ length: 16 }, () => "");
-    const routesMap: Record<string, number[]> = {};
-    words.forEach((word, wordIndex) => {
-      routesMap[word] = routes[wordIndex]!;
-      word.split("").forEach((letter, letterIndex) => {
-        board[routes[wordIndex]![letterIndex]!] = letter;
-      });
-    });
-    return { board: fillBoardBlanks(board), words, routes: routesMap };
-  }
-  const fallbackPath = fullBoardPath(4);
-  if (!fallbackPath) {
-    // Very unlikely: 120 failed attempts — return words with empty board
-    const emptyBoard = fillBoardBlanks(Array.from({ length: 16 }, () => ""));
-    return { board: emptyBoard, words, routes: {} };
-  }
-  const board = Array.from({ length: 16 }, () => "");
-  let cursor = 0;
-  const routesMap: Record<string, number[]> = {};
-  words.forEach((word) => {
-    const route = fallbackPath.slice(cursor, cursor + word.length);
-    routesMap[word] = route;
-    word.split("").forEach((letter, letterIndex) => {
-      board[fallbackPath[cursor + letterIndex]!] = letter;
-    });
-    cursor += word.length;
-  });
-  return { board: fillBoardBlanks(board), words, routes: routesMap };
-}
-
-function pickLiveFourWords() {
-  const lengths = pickLiveFourWordLengths();
-  const difficultyOrder = shuffled(["easy", "medium", "hard"] as const);
-  const words: string[] = [];
-  for (let index = 0; index < lengths.length; index += 1) {
-    const available = catalogWordsForBoard(4).filter((entry) => entry.word.length === lengths[index] && !words.includes(entry.word));
-    const preferred = available.filter((entry) => entry.difficulty === difficultyOrder[index % difficultyOrder.length]);
-    const selected = randomItem(preferred.length ? preferred : available);
-    if (!selected) throw new Error("Canlı 4×4 kelime havuzunda istenen uzunluk için kelime bulunamadı.");
-    words.push(selected.word);
-  }
-  return words;
-}
-
-function findOpenRoute(occupied: Set<number>, size: BoardSize, length: number, usedShapes: Set<string>) {
-  const requiredTurns = length >= 6 ? 2 : 1;
-  const available = Array.from({ length: size * size }, (_, index) => index).filter((index) => !occupied.has(index));
-  for (let attempt = 0; attempt < 900; attempt += 1) {
-    const start = randomItem(available);
-    if (start === undefined) return null;
-    const path = [start];
-    while (path.length < length) {
-      const options = shuffled(cardinalNeighbors(path.at(-1)!, size)).filter((next) => !occupied.has(next) && !path.includes(next));
-      if (!options.length) break;
-      path.push(options[0]!);
-    }
-    if (path.length !== length || turnCount(path, size) < requiredTurns) continue;
-    const shape = routeShape(path, size);
-    if (!usedShapes.has(shape)) return path;
-  }
-  return null;
 }
 
 function buildBoard(size: BoardSize) {

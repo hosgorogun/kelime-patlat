@@ -11,7 +11,7 @@ import { GameButton, GameIcon, GemChip, ICONS, JewelTitle, OrnatePanel, SectionL
 import { MatchHistoryModal } from "@/components/match-history-modal";
 import { DailyTreasureModal } from "@/components/daily-treasure-modal";
 
-type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends";
+type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends" | "vintage";
 
 type CommandCenterProps = {
   playerName: string;
@@ -553,7 +553,7 @@ export function CommandCenter({
           </OrnatePanel>
         </Pressable>
 
-        <Pressable onPress={() => onNavigate("vintage" as any)} style={({ pressed }) => [pressed && styles.pressed]}>
+        <Pressable onPress={() => onNavigate("vintage")} style={({ pressed }) => [pressed && styles.pressed]}>
           <OrnatePanel accent="ruby" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
             <GameIcon emoji="🗞️" size={42} glow="#FB7185" />
             <View style={styles.soloMetaCol}>
@@ -570,7 +570,7 @@ export function CommandCenter({
             {onOpenModeInfo && (
               <InfoMini color="#FB7185" onPress={() => onOpenModeInfo("vintage")} />
             )}
-            <GameButton label="ÇÖZ ▶" size="sm" variant="ruby" onPress={() => onNavigate("vintage" as any)} style={styles.soloActionBtn} />
+            <GameButton label="ÇÖZ ▶" size="sm" variant="ruby" onPress={() => onNavigate("vintage")} style={styles.soloActionBtn} />
           </OrnatePanel>
         </Pressable>
       </View>

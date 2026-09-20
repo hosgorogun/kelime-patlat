@@ -215,6 +215,23 @@ function deaccent(str: string): string {
     .toLowerCase();
 }
 
+export type WordDetail = {
+  word: string;
+  definition: string;
+  definitions: string[];
+  type?: string;
+  example?: string;
+  source: "TDK" | "Yerel";
+};
+
+const DETAIL_CACHE = new Map<string, WordDetail>();
+
+export function getCachedWordDetail(word: string): WordDetail | null {
+  const clean = word.trim();
+  const trUpper = clean.toLocaleUpperCase("tr-TR");
+  return DETAIL_CACHE.get(trUpper) || null;
+}
+
 export function getWordDefinition(word: string): string {
   const clean = word.trim();
   const trUpper = clean.toLocaleUpperCase("tr-TR");
@@ -228,4 +245,96 @@ export function getWordDefinition(word: string): string {
   if (foundKey && WORD_DEFINITIONS[foundKey]) return WORD_DEFINITIONS[foundKey];
 
   return `${word} - Kelime Patlat ile kelime dağarcığını zenginleştir!`;
+}
+
+export async function fetchWordDefinition(word: string, apiBaseUrl?: string): Promise<string> {
+  const detail = await fetchWordDetail(word, apiBaseUrl);
+  return detail.definition;
+}
+
+export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promise<WordDetail> {
+  const clean = word.trim();
+  if (!clean) {
+    return {
+      word: "",
+      definition: "Kelime belirtilmedi.",
+      definitions: ["Kelime belirtilmedi."],
+      source: "Yerel",
+    };
+  }
+
+  const trUpper = clean.toLocaleUpperCase("tr-TR");
+  if (DETAIL_CACHE.has(trUpper)) {
+    return DETAIL_CACHE.get(trUpper)!;
+  }
+
+  // 1. Sunucu API proxy üzerinden sorgula (Hızlı, sunucu önbellekli ve CORS problemsiz)
+  if (apiBaseUrl) {
+    try {
+      const url = `${apiBaseUrl.replace(/\/$/, "")}/api/dictionary/${encodeURIComponent(clean)}`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.definition) {
+          WORD_DEFINITIONS[trUpper] = data.definition;
+          const detail: WordDetail = {
+            word: trUpper,
+            definition: data.definition,
+            definitions: data.definitions || [data.definition],
+            type: data.type,
+            example: data.example,
+            source: data.source || "TDK",
+          };
+          DETAIL_CACHE.set(trUpper, detail);
+          return detail;
+        }
+      }
+    } catch {
+      // Sunucuya erişilemediyse TDK doğrudan API veya yerel sözlüğe düş
+    }
+  }
+
+  // 2. Doğrudan TDK GTS API sorgusu
+  try {
+    const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(clean.toLocaleLowerCase("tr-TR"))}`;
+    const res = await fetch(tdkUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data[0]?.anlamlarListe && data[0].anlamlarListe.length > 0) {
+        const item = data[0];
+        const definitions: string[] = item.anlamlarListe.map((a: any, idx: number) => {
+          const type = a.ozelliklerListe?.[0]?.tam_adi ? `(${a.ozelliklerListe[0].tam_adi}) ` : "";
+          return item.anlamlarListe.length > 1 ? `${idx + 1}. ${type}${a.anlam}` : `${type}${a.anlam}`;
+        });
+        const firstType = item.anlamlarListe[0]?.ozelliklerListe?.[0]?.tam_adi;
+        const firstExample = item.anlamlarListe.find((a: any) => a.orneklerListe?.[0]?.ornek)?.orneklerListe?.[0]?.ornek;
+
+        const fullDef = definitions.join("\n");
+        WORD_DEFINITIONS[trUpper] = fullDef;
+        const detail: WordDetail = {
+          word: trUpper,
+          definition: fullDef,
+          definitions,
+          type: firstType,
+          example: firstExample,
+          source: "TDK",
+        };
+        DETAIL_CACHE.set(trUpper, detail);
+        return detail;
+      }
+    }
+  } catch {
+    // Çevrimdışı veya TDK servisi yanıt vermiyor
+  }
+
+  // 3. Yerel sözlükten dön
+  const localDef = getWordDefinition(clean);
+  const fallbackDetail: WordDetail = {
+    word: trUpper,
+    definition: localDef,
+    definitions: [localDef],
+    source: "Yerel",
+  };
+  DETAIL_CACHE.set(trUpper, fallbackDetail);
+  return fallbackDetail;
 }

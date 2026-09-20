@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { VISUAL_THEMES, getThemeForLevel } from "../shared/themes";
-import { getWordDefinition } from "../shared/dictionary";
+import { getWordDefinition, fetchWordDefinition, fetchWordDetail, getCachedWordDetail } from "../shared/dictionary";
 import { normalizeRoomCode, inviteMessage } from "../shared/invite";
 
 describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
@@ -56,6 +56,23 @@ describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
       expect(fallback).toContain("Kelime Patlat ile kelime dağarcığını zenginleştir");
       const emptyFallback = getWordDefinition("   ");
       expect(emptyFallback).toContain("Kelime Patlat");
+    });
+
+    it("fetchWordDetail ve fetchWordDefinition dinamik TDK ve önbellek mekanizmasını eksiksiz çalıştırır", async () => {
+      // 1. Tanımlı kelime için anında WordDetail üretir
+      const detailElma = await fetchWordDetail("ELMA");
+      expect(detailElma.word).toBe("ELMA");
+      expect(detailElma.definition).toContain("meyve");
+      expect(getCachedWordDetail("ELMA")).not.toBeNull();
+
+      // 2. fetchWordDefinition dizesi döner
+      const defElma = await fetchWordDefinition("ELMA");
+      expect(defElma).toContain("meyve");
+
+      // 3. Bilinmeyen/boş kelime için güvenli döner
+      const empty = await fetchWordDetail("   ");
+      expect(empty.word).toBe("");
+      expect(empty.definition).toBe("Kelime belirtilmedi.");
     });
 
     it("tüm kelime kataloğunun (WORD_CATALOG_DATA) Türkçe harfler ve min 3 uzunluğunda olduğunu doğrular", async () => {

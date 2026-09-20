@@ -277,17 +277,6 @@ export async function connectDb() {
   return connectionPromise;
 }
 
-export async function getDb() {
-  try {
-    await connectDb();
-    return mongoose.connection.db;
-  } catch (error) {
-    console.warn("[Database] Failed to connect to MongoDB:", error);
-    connectionPromise = null;
-    return null;
-  }
-}
-
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {

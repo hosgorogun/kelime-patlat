@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { ActivityIndicator, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
 import { type WordTheme } from "@/shared/word-catalog";
-import { getWordDefinition } from "../shared/dictionary";
+import { getWordDefinition, fetchWordDetail, getCachedWordDetail } from "../shared/dictionary";
 import { getThemeForLevel } from "../shared/themes";
 import {
   initAudio,
@@ -149,7 +149,49 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
 
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
-  const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
+  const [selectedWordInfo, setSelectedWordInfo] = useState<{
+    word: string;
+    definition: string;
+    type?: string;
+    example?: string;
+    source?: string;
+    loading?: boolean;
+  } | null>(null);
+
+  const inspectWord = (word: string, path: number[] | null, color: string) => {
+    triggerHapticSelection();
+    setInspectedColor(color);
+    if (path) setInspectedPath(path);
+
+    const cached = getCachedWordDetail(word);
+    const syncDef = cached ? cached.definition : getWordDefinition(word);
+    const hasRealDef = cached || (syncDef && !syncDef.includes("Kelime Patlat ile kelime dağarcığını"));
+
+    setSelectedWordInfo({
+      word,
+      definition: hasRealDef ? syncDef : "TDK sözlüğünden anlamı yükleniyor...",
+      type: cached?.type,
+      example: cached?.example,
+      source: cached?.source || "TDK",
+      loading: !hasRealDef,
+    });
+
+    fetchWordDetail(word).then((detail) => {
+      setSelectedWordInfo((prev) => {
+        if (!prev || prev.word !== word) return prev;
+        return {
+          word,
+          definition: detail.definition,
+          type: detail.type,
+          example: detail.example,
+          source: detail.source,
+          loading: false,
+        };
+      });
+    }).catch(() => {
+      setSelectedWordInfo((prev) => prev && prev.word === word ? { ...prev, loading: false } : prev);
+    });
+  };
   const [countdown, setCountdown] = useState<number | null>(3);
   const [chestState, setChestState] = useState<"closed" | "decrypting" | "opened">("closed");
   const [decryptProgress, setDecryptProgress] = useState(0);
@@ -989,10 +1031,30 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
           ))}
         </View>
 
-        {selectedWordInfo.definition ? (
+        {selectedWordInfo ? (
           <View style={styles.activeRouteDefBox}>
-            <Text style={[styles.activeRouteDefLabel, { color: inspectedColor || activeTheme.accentColor }]}>TDK ANLAMI</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={{ fontSize: 13 }}>📖</Text>
+                <Text style={[styles.activeRouteDefLabel, { color: inspectedColor || activeTheme.accentColor }]}>TDK SÖZLÜK ANLAMI</Text>
+                {selectedWordInfo.type ? (
+                  <View style={{ backgroundColor: "rgba(212, 180, 90, 0.2)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.4)" }}>
+                    <Text style={{ color: "#E8C36A", fontSize: 9, fontWeight: "800" }}>{selectedWordInfo.type}</Text>
+                  </View>
+                ) : null}
+              </View>
+              {selectedWordInfo.loading && (
+                <ActivityIndicator size="small" color={inspectedColor || activeTheme.accentColor} style={{ transform: [{ scale: 0.7 }] }} />
+              )}
+            </View>
             <Text style={styles.activeRouteDefText}>{selectedWordInfo.definition}</Text>
+            {selectedWordInfo.example ? (
+              <View style={{ marginTop: 6, padding: 6, backgroundColor: "rgba(255, 255, 255, 0.05)", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: inspectedColor || activeTheme.accentColor }}>
+                <Text style={{ color: "#94A3B8", fontSize: 11, fontStyle: "italic" }}>
+                  Örnek: "{selectedWordInfo.example}"
+                </Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -1008,10 +1070,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
             <Pressable
               key={word}
               onPress={() => {
-                triggerHapticSelection();
-                setInspectedPath(path || null);
-                setInspectedColor(palette.border);
-                setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+                inspectWord(word, path || null, palette.border);
               }}
               style={({ pressed }) => [
                 styles.tag,
@@ -1137,10 +1196,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
               <Pressable
                 key={word}
                 onPress={() => {
-                  triggerHapticSelection();
-                  setInspectedPath(path || null);
-                  setInspectedColor(palette.border);
-                  setSelectedWordInfo({ word, definition: getWordDefinition(word) });
+                  inspectWord(word, path || null, palette.border);
                 }}
                 style={[
                   styles.solutionTag,

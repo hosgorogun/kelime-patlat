@@ -174,12 +174,6 @@ export const SEASON_MISSIONS: SeasonMission[] = [
   { id: "wordsmith", title: "UZUN ROTA", description: "Yedi harfli bir kelime bul.", target: 1, rewardXp: 70, icon: "◌" },
 ];
 
-export const SEASON_LEADERBOARD = [
-  { rank: 1, name: "LÂL", score: 2480, tag: "USTA", accent: "#FFC24A" },
-  { rank: 2, name: "ROTAKURT", score: 2260, tag: "EFSANE", accent: "#A78BFA" },
-  { rank: 3, name: "MİNTY", score: 2140, tag: "SEÇKİN", accent: "#50E3C2" },
-  { rank: 4, name: "KIVRIM", score: 1980, tag: "UZMAN", accent: "#79C8FF" },
-] as const;
 
 export const MAX_LIVES = 5;
 export const LIVES_REGEN_INTERVAL_MS = 15 * 60 * 1000; // 15 dakika

@@ -9,7 +9,6 @@ import {
   useWindowDimensions,
   View,
   ActivityIndicator,
-  Alert,
   Animated,
   AppState,
   BackHandler,
@@ -39,10 +38,10 @@ import { haptics, setHapticsEnabled } from "./lib/haptics";
 import { gameSfx, setSfxEnabled } from "./lib/game-sfx";
 import { setHapticsEnabled as setSoloHapticsEnabled, triggerHapticSelection, triggerHapticSuccess } from "./shared/audio-haptics";
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
-import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, type MatchHistoryEntry, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, COST_PER_LIFE, COST_REFILL_ALL, MAX_LIVES } from "./shared/progression";
+import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, type MatchHistoryEntry, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, MAX_LIVES } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "./shared/solo";
-import { getWordDefinition } from "./shared/dictionary";
+import { getWordDefinition, fetchWordDetail, getCachedWordDetail } from "./shared/dictionary";
 import { initManusRuntime } from "./lib/_core/manus-runtime";
 import { AuthScreen } from "./components/auth-screen";
 import { MissionsScreen } from "./components/missions-screen";
@@ -224,7 +223,14 @@ function HomeScreen() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [playerId, setPlayerId] = useState<string>(() => `player-${Math.random().toString(36).slice(2, 10)}`);
-  const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; definition: string } | null>(null);
+  const [selectedWordInfo, setSelectedWordInfo] = useState<{
+    word: string;
+    definition: string;
+    type?: string;
+    example?: string;
+    source?: string;
+    loading?: boolean;
+  } | null>(null);
   const [inspectedPath, setInspectedPath] = useState<number[] | null>(null);
   const [inspectedColor, setInspectedColor] = useState<string>("#F59E0B");
   const [roomCodeInput, setRoomCodeInput] = useState("");
@@ -389,6 +395,41 @@ function HomeScreen() {
     return list;
   }, [room, playerId]);
 
+  const inspectWord = useCallback((word: string, path: number[] | null, color: string) => {
+    haptics.light();
+    setInspectedColor(color);
+    if (path) setInspectedPath(path);
+
+    const cached = getCachedWordDetail(word);
+    const syncDef = cached ? cached.definition : getWordDefinition(word);
+    const hasRealDef = cached || (syncDef && !syncDef.includes("Kelime Patlat ile kelime dağarcığını"));
+
+    setSelectedWordInfo({
+      word,
+      definition: hasRealDef ? syncDef : "TDK sözlüğünden anlamı yükleniyor...",
+      type: cached?.type,
+      example: cached?.example,
+      source: cached?.source || "TDK",
+      loading: !hasRealDef,
+    });
+
+    fetchWordDetail(word, getApiBaseUrl()).then((detail) => {
+      setSelectedWordInfo((prev) => {
+        if (!prev || prev.word !== word) return prev;
+        return {
+          word,
+          definition: detail.definition,
+          type: detail.type,
+          example: detail.example,
+          source: detail.source,
+          loading: false,
+        };
+      });
+    }).catch(() => {
+      setSelectedWordInfo((prev) => prev && prev.word === word ? { ...prev, loading: false } : prev);
+    });
+  }, []);
+
   // Oyun tamamlandığı anda ilk kelimenin rotasını ve oklarını tahtada otomatik aç; oyun sürerken rotaları kesinlikle sıfırla
   useEffect(() => {
     if (room?.status !== "finished") {
@@ -398,11 +439,9 @@ function HomeScreen() {
     }
     if (room.status === "finished" && allFinishedWords.length > 0 && !inspectedPath) {
       const first = allFinishedWords[0]!;
-      setInspectedPath(first.path);
-      setInspectedColor(first.color);
-      setSelectedWordInfo({ word: first.word, definition: getWordDefinition(first.word) });
+      inspectWord(first.word, first.path, first.color);
     }
-  }, [room?.status, allFinishedWords, inspectedPath, selectedWordInfo]);
+  }, [room?.status, allFinishedWords, inspectedPath, selectedWordInfo, inspectWord]);
 
   const openUserProfile = useCallback(async (target: Partial<InspectableUser> & { id: string; name: string }) => {
     // Önce eldeki hazır bilgileri anında göster
@@ -2386,6 +2425,102 @@ function HomeScreen() {
     AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
   };
 
+  if (authLoading) {
+    return (
+      <ScreenContainer style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color="#3EE8B5" />
+      </ScreenContainer>
+    );
+  }
+
+  if (screen === "auth" || !authToken) {
+    return (
+      <AuthScreen
+        onCancel={async () => {
+          if (!authToken) {
+            try {
+              const response = await fetch(`${getApiBaseUrl()}/api/auth/guest`, { method: "POST" });
+              const data = await response.json();
+              if (response.ok && data.token && data.user?.openId) {
+                const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
+                const finalGuestName = data.user?.name || fallbackGuestName;
+                setAuthToken(data.token);
+                setPlayerId(data.user.openId);
+                setPlayerName(finalGuestName);
+                await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
+                await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
+                await AsyncStorage.setItem("kelime-patlat:player-name", finalGuestName);
+                if (data.user.progress) setProgress(data.user.progress);
+              } else {
+                const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
+                setAuthToken("guest");
+                setPlayerName(fallbackGuestName);
+                await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+                await AsyncStorage.setItem("kelime-patlat:player-name", fallbackGuestName);
+              }
+            } catch {
+              const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
+              setAuthToken("guest");
+              setPlayerName(fallbackGuestName);
+              await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+              await AsyncStorage.setItem("kelime-patlat:player-name", fallbackGuestName);
+            }
+          }
+          reconnectGameSocket();
+          setScreen("home");
+        }}
+        onSuccess={async (token, username, cloudProgress, openId, previousGuestToken) => {
+          setAuthToken(token);
+          setPlayerId(openId);
+          setPlayerName(username);
+          await AsyncStorage.setItem("kelime-patlat:player-id", openId);
+          await AsyncStorage.setItem("kelime-patlat:player-name", username);
+          
+          const guestTokenToClaim = (previousGuestToken && previousGuestToken !== "guest" && previousGuestToken !== token)
+            ? previousGuestToken
+            : (authToken && authToken !== "guest" && authToken !== token ? authToken : null);
+
+          if (guestTokenToClaim) {
+            try {
+              const transferResponse = await fetch(`${getApiBaseUrl()}/api/auth/claim-guest`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ guestToken: guestTokenToClaim }),
+              });
+              const transferData = await transferResponse.json();
+              if (transferResponse.ok && transferData.progress) {
+                setProgress(transferData.progress);
+                await syncProgressToCloud(transferData.progress);
+                reconnectGameSocket();
+                setScreen("home");
+                return;
+              }
+            } catch {
+              // Fall back to the local/cloud merge below when transfer is unavailable.
+            }
+          }
+
+          // Seamless guest to registered account progress merge (prefer cloud account balances when logging in)
+          const mergedProgress = mergePlayerProgress(progress, cloudProgress, { preferRemoteBalances: true });
+
+          setProgress(mergedProgress);
+          await syncProgressToCloud(mergedProgress);
+          reconnectGameSocket();
+          setScreen("home");
+
+          const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
+          const seen = await AsyncStorage.getItem(key);
+          if (!seen && !mergedProgress.welcomeRewardClaimed) {
+            setTimeout(() => {
+              setShowWelcomeModal(true);
+            }, 300);
+          }
+        }}
+      />
+    );
+  }
+
   if (screen === "home") {
     return (
       <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking}>
@@ -3588,102 +3723,6 @@ function HomeScreen() {
     );
   }
 
-  if (authLoading) {
-    return (
-      <ScreenContainer style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#3EE8B5" />
-      </ScreenContainer>
-    );
-  }
-
-  if (screen === "auth" || !authToken) {
-    return (
-      <AuthScreen
-        onCancel={async () => {
-          if (!authToken) {
-            try {
-              const response = await fetch(`${getApiBaseUrl()}/api/auth/guest`, { method: "POST" });
-              const data = await response.json();
-              if (response.ok && data.token && data.user?.openId) {
-                const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
-                const finalGuestName = data.user?.name || fallbackGuestName;
-                setAuthToken(data.token);
-                setPlayerId(data.user.openId);
-                setPlayerName(finalGuestName);
-                await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
-                await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
-                await AsyncStorage.setItem("kelime-patlat:player-name", finalGuestName);
-                if (data.user.progress) setProgress(data.user.progress);
-              } else {
-                const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
-                setAuthToken("guest");
-                setPlayerName(fallbackGuestName);
-                await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
-                await AsyncStorage.setItem("kelime-patlat:player-name", fallbackGuestName);
-              }
-            } catch {
-              const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
-              setAuthToken("guest");
-              setPlayerName(fallbackGuestName);
-              await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
-              await AsyncStorage.setItem("kelime-patlat:player-name", fallbackGuestName);
-            }
-          }
-          reconnectGameSocket();
-          setScreen("home");
-        }}
-        onSuccess={async (token, username, cloudProgress, openId, previousGuestToken) => {
-          setAuthToken(token);
-          setPlayerId(openId);
-          setPlayerName(username);
-          await AsyncStorage.setItem("kelime-patlat:player-id", openId);
-          await AsyncStorage.setItem("kelime-patlat:player-name", username);
-          
-          const guestTokenToClaim = (previousGuestToken && previousGuestToken !== "guest" && previousGuestToken !== token)
-            ? previousGuestToken
-            : (authToken && authToken !== "guest" && authToken !== token ? authToken : null);
-
-          if (guestTokenToClaim) {
-            try {
-              const transferResponse = await fetch(`${getApiBaseUrl()}/api/auth/claim-guest`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ guestToken: guestTokenToClaim }),
-              });
-              const transferData = await transferResponse.json();
-              if (transferResponse.ok && transferData.progress) {
-                setProgress(transferData.progress);
-                await syncProgressToCloud(transferData.progress);
-                reconnectGameSocket();
-                setScreen("home");
-                return;
-              }
-            } catch {
-              // Fall back to the local/cloud merge below when transfer is unavailable.
-            }
-          }
-
-          // Seamless guest to registered account progress merge (prefer cloud account balances when logging in)
-          const mergedProgress = mergePlayerProgress(progress, cloudProgress, { preferRemoteBalances: true });
-
-          setProgress(mergedProgress);
-          await syncProgressToCloud(mergedProgress);
-          reconnectGameSocket();
-          setScreen("home");
-
-          const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
-          const seen = await AsyncStorage.getItem(key);
-          if (!seen && !mergedProgress.welcomeRewardClaimed) {
-            setTimeout(() => {
-              setShowWelcomeModal(true);
-            }, 300);
-          }
-        }}
-      />
-    );
-  }
-
   if (screen === "vintage") {
     return (
       <ScreenContainer style={{ flex: 1 }}>
@@ -3879,6 +3918,7 @@ function HomeScreen() {
             setScreen("auth");
           }}
         />
+        <ModernAlertModal alert={globalAlert} onDismiss={() => setGlobalAlert(null)} />
       </MainShell>
     );
   }
@@ -3940,7 +3980,11 @@ function HomeScreen() {
     );
   }
 
-  if (!room) return null;
+  if (!room) {
+    // Oda verisi kayboldu - güvenli geri dönüş
+    setScreen("home");
+    return null;
+  }
   const selectionSet = new Set(selectedCells);
   const foundCellOwners = new Map<number, string>();
   const myFoundWords = room.foundWords.filter((entry) => entry.playerId === playerId);
@@ -4267,10 +4311,30 @@ function HomeScreen() {
             ))}
           </View>
 
-          {selectedWordInfo.definition ? (
+          {selectedWordInfo ? (
             <View style={styles.activeRouteDefBox}>
-              <Text style={styles.activeRouteDefLabel}>TDK ANLAMI</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{ fontSize: 13 }}>📖</Text>
+                  <Text style={styles.activeRouteDefLabel}>TDK SÖZLÜK ANLAMI</Text>
+                  {selectedWordInfo.type ? (
+                    <View style={{ backgroundColor: "rgba(212, 180, 90, 0.2)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.4)" }}>
+                      <Text style={{ color: "#E8C36A", fontSize: 9, fontWeight: "800" }}>{selectedWordInfo.type}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                {selectedWordInfo.loading && (
+                  <ActivityIndicator size="small" color="#2DD4BF" style={{ transform: [{ scale: 0.7 }] }} />
+                )}
+              </View>
               <Text style={styles.activeRouteDefText}>{selectedWordInfo.definition}</Text>
+              {selectedWordInfo.example ? (
+                <View style={{ marginTop: 6, padding: 6, backgroundColor: "rgba(255, 255, 255, 0.05)", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: "#2DD4BF" }}>
+                  <Text style={{ color: "#94A3B8", fontSize: 11, fontStyle: "italic" }}>
+                    Örnek: "{selectedWordInfo.example}"
+                  </Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
         </View>
@@ -4294,10 +4358,7 @@ function HomeScreen() {
                   <Pressable
                     key={`mine-${index}`}
                     onPress={() => {
-                      haptics.light();
-                      setInspectedColor(palette.border);
-                      setInspectedPath(entry.path);
-                      setSelectedWordInfo({ word: entry.word, definition: getWordDefinition(entry.word) });
+                      inspectWord(entry.word, entry.path, palette.border);
                     }}
                     style={({ pressed }) => [
                       styles.foundTag,
@@ -4334,10 +4395,7 @@ function HomeScreen() {
                   <Pressable
                     key={`missed-${index}`}
                     onPress={() => {
-                      haptics.light();
-                      setInspectedColor(palette.border);
-                      setInspectedPath(entry.path);
-                      setSelectedWordInfo({ word: entry.word, definition: getWordDefinition(entry.word) });
+                      inspectWord(entry.word, entry.path, palette.border);
                     }}
                     style={({ pressed }) => [
                       styles.foundTag,
@@ -4509,6 +4567,89 @@ function HomeScreen() {
                   opponentTempo={opponentTempo}
                   bestScore={progress.bestScore}
                 />
+
+                {/* 3. Maç Kelimeleri & TDK Anlamları Kartı */}
+                {allFinishedWords.length > 0 && (
+                  <View style={{
+                    width: "100%",
+                    marginTop: 12,
+                    backgroundColor: "rgba(10, 32, 25, 0.95)",
+                    borderRadius: 16,
+                    padding: 12,
+                    borderWidth: 1.5,
+                    borderColor: "rgba(212, 180, 90, 0.3)",
+                  }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 13 }}>📖</Text>
+                      <Text style={{ color: "#E8C36A", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 }}>
+                        MAÇTAKİ TÜM KELİMELER & TDK ANLAMLARI
+                      </Text>
+                    </View>
+                    <Text style={{ color: "#94A3B8", fontSize: 10, fontWeight: "600", marginBottom: 8 }}>
+                      TDK sözlük anlamını ve tahtadaki rotasını görmek için bir kelimeye dokun:
+                    </Text>
+
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                      {allFinishedWords.map((item, idx) => {
+                        const isMine = myFoundWords.some((m) => m.word === item.word);
+                        const isSelected = selectedWordInfo?.word === item.word;
+                        return (
+                          <Pressable
+                            key={`modal-w-${idx}`}
+                            onPress={() => {
+                              inspectWord(item.word, item.path, item.color);
+                            }}
+                            style={({ pressed }) => [
+                              {
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 10,
+                                backgroundColor: isSelected ? "rgba(45, 212, 191, 0.25)" : isMine ? "rgba(45, 212, 191, 0.12)" : "rgba(251, 113, 133, 0.12)",
+                                borderWidth: 1.5,
+                                borderColor: isSelected ? "#2DD4BF" : isMine ? "rgba(45, 212, 191, 0.35)" : "rgba(251, 113, 133, 0.35)",
+                              },
+                              pressed && { opacity: 0.7 },
+                            ]}
+                          >
+                            <Text style={{ color: isMine ? "#2DD4BF" : "#FB7185", fontSize: 11, fontWeight: "800" }}>
+                              {isMine ? "✓" : "✗"} {item.word}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    {selectedWordInfo ? (
+                      <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(212, 180, 90, 0.2)" }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            <Text style={{ color: "#2DD4BF", fontSize: 13, fontWeight: "900" }}>
+                              {selectedWordInfo.word}
+                            </Text>
+                            {selectedWordInfo.type ? (
+                              <View style={{ backgroundColor: "rgba(212, 180, 90, 0.2)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)" }}>
+                                <Text style={{ color: "#E8C36A", fontSize: 9, fontWeight: "800" }}>{selectedWordInfo.type}</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          {selectedWordInfo.loading && (
+                            <ActivityIndicator size="small" color="#2DD4BF" style={{ transform: [{ scale: 0.7 }] }} />
+                          )}
+                        </View>
+                        <Text style={{ color: "#CBD5E1", fontSize: 12, lineHeight: 18, fontWeight: "500" }}>
+                          {selectedWordInfo.definition}
+                        </Text>
+                        {selectedWordInfo.example ? (
+                          <View style={{ marginTop: 6, padding: 6, backgroundColor: "rgba(255, 255, 255, 0.05)", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: "#2DD4BF" }}>
+                            <Text style={{ color: "#94A3B8", fontSize: 11, fontStyle: "italic" }}>
+                              Örnek: "{selectedWordInfo.example}"
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </View>
+                )}
 
                 {/* Action Buttons */}
                 {!iWon && !isDraw && (

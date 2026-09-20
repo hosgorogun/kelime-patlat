@@ -89,18 +89,6 @@ function handleMessage(event: MessageEvent<unknown>): void {
 }
 
 /**
- * Subscribe to safe area updates from the parent container.
- */
-export function subscribeSafeAreaInsets(callback: SafeAreaCallback): () => void {
-  safeAreaCallback = callback;
-  return () => {
-    if (safeAreaCallback === callback) {
-      safeAreaCallback = null;
-    }
-  };
-}
-
-/**
  * Initialize Manus Runtime - just notifies parent that app is ready
  */
 export function initManusRuntime(): void {
@@ -111,11 +99,4 @@ export function initManusRuntime(): void {
   log("initManusRuntime called");
   window.addEventListener("message", handleMessage);
   sendToParent("appDevServerReady", {});
-}
-
-/**
- * Check if running inside preview iframe
- */
-export function isRunningInPreviewIframe(): boolean {
-  return isWeb() && isInIframe();
 }

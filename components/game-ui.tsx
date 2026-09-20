@@ -16,12 +16,11 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { EMERALD_GRADIENT, FRAME_GRADIENT, GOLD_BUTTON_GRADIENT, PANEL_SHEEN, palette } from "@/shared/palette";
+import { FRAME_GRADIENT, PANEL_SHEEN, palette } from "@/shared/palette";
 
 const BG = require("../assets/ui/game-bg-forest.png");
 export const ICONS = {
   coin: require("../assets/ui/icon-coin.png"),
-  gem: require("../assets/ui/icon-gem.png"),
   heart: require("../assets/ui/icon-heart.png"),
   radar: require("../assets/ui/icon-radar.png"),
   shield: require("../assets/ui/icon-shield.png"),

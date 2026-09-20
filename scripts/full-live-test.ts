@@ -161,7 +161,7 @@ async function runFullLiveTest() {
     date: Date.now(),
   };
   currentProgress = { ...currentProgress, matchHistory: [soloLossItem, ...(currentProgress.matchHistory || [])] };
-  assert(currentProgress.matchHistory[0].mode === "solo" && currentProgress.matchHistory[0].won === false, "Solo mağlubiyet kaydı hatalı!");
+  assert(currentProgress.matchHistory![0].mode === "solo" && currentProgress.matchHistory![0].won === false, "Solo mağlubiyet kaydı hatalı!");
   console.log("[MATCH HISTORY] 2. Solo Seviye Mağlubiyeti kaydedildi ✅");
 
   // 2.3 Günün Rotası Galibiyeti
@@ -174,7 +174,7 @@ async function runFullLiveTest() {
     words: ["ORMAN", "ÇINAR", "BULUT"],
   };
   currentProgress = completeDailyProgress(currentProgress, dailyChallenge, 150, 3);
-  assert(currentProgress.matchHistory[0].mode === "daily" && currentProgress.matchHistory[0].won === true, "Günün Rotası galibiyeti hatalı!");
+  assert(currentProgress.matchHistory![0].mode === "daily" && currentProgress.matchHistory![0].won === true, "Günün Rotası galibiyeti hatalı!");
   console.log("[MATCH HISTORY] 3. Günün Rotası Galibiyeti kaydedildi ✅");
 
   // 2.4 Günün Rotası Mağlubiyeti
@@ -187,17 +187,17 @@ async function runFullLiveTest() {
     date: Date.now(),
   };
   currentProgress = { ...currentProgress, matchHistory: [dailyLossItem, ...(currentProgress.matchHistory || [])] };
-  assert(currentProgress.matchHistory[0].mode === "daily" && currentProgress.matchHistory[0].won === false, "Günün Rotası mağlubiyeti hatalı!");
+  assert(currentProgress.matchHistory![0].mode === "daily" && currentProgress.matchHistory![0].won === false, "Günün Rotası mağlubiyeti hatalı!");
   console.log("[MATCH HISTORY] 4. Günün Rotası Mağlubiyeti kaydedildi ✅");
 
   // 2.5 Skor Hücumu (Arcade)
   currentProgress = applyArcadeProgress(currentProgress, 380);
-  assert(currentProgress.matchHistory[0].mode === "arcade" && currentProgress.matchHistory[0].myScore === 380, "Skor Hücumu kaydı hatalı!");
+  assert(currentProgress.matchHistory![0].mode === "arcade" && currentProgress.matchHistory![0].myScore === 380, "Skor Hücumu kaydı hatalı!");
   console.log("[MATCH HISTORY] 5. Skor Hücumu (380 Puan) kaydedildi ✅");
 
   // 2.6 Nostalji Gazete Bulmacası (Vintage)
   currentProgress = applyVintageProgress(currentProgress, 3, 110);
-  assert(currentProgress.matchHistory[0].mode === "vintage" && currentProgress.matchHistory[0].myScore === 110, "Gazete Bulmacası kaydı hatalı!");
+  assert(currentProgress.matchHistory![0].mode === "vintage" && currentProgress.matchHistory![0].myScore === 110, "Gazete Bulmacası kaydı hatalı!");
   console.log("[MATCH HISTORY] 6. Nostalji Gazete Bulmacası (Seviye 3, 110 Puan) kaydedildi ✅");
 
   // 2.7 Dereceli Düello (Ranked) Galibiyeti
@@ -215,9 +215,9 @@ async function runFullLiveTest() {
     },
     "pvp"
   );
-  assert(currentProgress.matchHistory[0].mode === "ranked" && currentProgress.matchHistory[0].won === true, "Dereceli galibiyet kaydı hatalı!");
-  assert(currentProgress.matchHistory[0].opponentName === "SiberGladyator", "Rakip adı hatalı!");
-  console.log(`[MATCH HISTORY] 7. Dereceli Düello Galibiyeti kaydedildi (+${currentProgress.matchHistory[0].lpChange} LP) ✅`);
+  assert(currentProgress.matchHistory![0].mode === "ranked" && currentProgress.matchHistory![0].won === true, "Dereceli galibiyet kaydı hatalı!");
+  assert(currentProgress.matchHistory![0].opponentName === "SiberGladyator", "Rakip adı hatalı!");
+  console.log(`[MATCH HISTORY] 7. Dereceli Düello Galibiyeti kaydedildi (+${currentProgress.matchHistory![0].lpChange} LP) ✅`);
 
   // 2.8 Dereceli Düello (Ranked) Mağlubiyeti
   currentProgress = applyMatchProgress(
@@ -234,8 +234,8 @@ async function runFullLiveTest() {
     },
     "pvp"
   );
-  assert(currentProgress.matchHistory[0].mode === "ranked" && currentProgress.matchHistory[0].won === false, "Dereceli mağlubiyet kaydı hatalı!");
-  console.log(`[MATCH HISTORY] 8. Dereceli Düello Mağlubiyeti kaydedildi (${currentProgress.matchHistory[0].lpChange} LP) ✅`);
+  assert(currentProgress.matchHistory![0].mode === "ranked" && currentProgress.matchHistory![0].won === false, "Dereceli mağlubiyet kaydı hatalı!");
+  console.log(`[MATCH HISTORY] 8. Dereceli Düello Mağlubiyeti kaydedildi (${currentProgress.matchHistory![0].lpChange} LP) ✅`);
 
   // 2.9 Bot Karşılaşması
   currentProgress = applyMatchProgress(
@@ -249,11 +249,10 @@ async function runFullLiveTest() {
       opponentAvatar: "🤖",
       opponentScore: 80,
       foundWords: ["KOD", "VERİ"],
-      isBot: true,
     },
     "bot"
   );
-  assert(currentProgress.matchHistory[0].mode === "bot", "Bot maçı 'bot' moduyla kaydedilmedi!");
+  assert(currentProgress.matchHistory![0].mode === "bot", "Bot maçı 'bot' moduyla kaydedilmedi!");
   console.log("[MATCH HISTORY] 9. Bot Karşılaşması Galibiyeti kaydedildi ✅");
 
   // 2.10 Arkadaş Karşılaşması (Friend Match - 0 LP, 0 XP, 0 Çip Garantisi)
@@ -271,9 +270,9 @@ async function runFullLiveTest() {
     },
     "pvp"
   );
-  assert(currentProgress.matchHistory[0].mode === "friend", "Arkadaş maçı 'friend' moduyla kaydedilmedi!");
-  assert(currentProgress.matchHistory[0].lpChange === 0, "Arkadaş maçında LP değişti!");
-  assert(currentProgress.matchHistory[0].xpEarned === 0, "Arkadaş maçında XP değişti!");
+  assert(currentProgress.matchHistory![0].mode === "friend", "Arkadaş maçı 'friend' moduyla kaydedilmedi!");
+  assert(currentProgress.matchHistory![0].lpChange === 0, "Arkadaş maçında LP değişti!");
+  assert(currentProgress.matchHistory![0].xpEarned === 0, "Arkadaş maçında XP değişti!");
   console.log("[MATCH HISTORY] 10. Arkadaş Karşılaşması kaydedildi (0 LP, 0 XP, 0 Çip garantisi doğrulandı) ✅");
 
   // 2.11 50 Kayıt Sınırı ve MongoDB Kalıcılığı
@@ -292,7 +291,7 @@ async function runFullLiveTest() {
       matchHistory: [dummy, ...(currentProgress.matchHistory || [])].slice(0, 50),
     };
   }
-  assert(currentProgress.matchHistory.length === 50, "50 maç tavan sınırı aşıldı!");
+  assert(currentProgress.matchHistory!.length === 50, "50 maç tavan sınırı aşıldı!");
   
   // MongoDB'ye kaydet ve tekrar çekerek teyit et
   await UserModel.updateOne({ openId: testOpenId }, { $set: { progress: currentProgress } });
@@ -313,7 +312,7 @@ async function runFullLiveTest() {
     vintageProgress: { maxUnlockedLevel: 4, completedLevels: [1, 2, 3], score: 250 },
     bestArcadeScore: 450,
     dailyCompletedId: getDayId(),
-    dailyStreak: 3,
+    streak: 3,
     matches: 30,
     wins: 20,
     matchHistory: [], // Boş dizi
@@ -334,12 +333,12 @@ async function runFullLiveTest() {
     matchHistory: [], // Hatalı veya eski istemci verisi
   };
   const safeMerged = mergePlayerProgress(clientEmptyPayload, currentProgress);
-  assert(safeMerged.matchHistory.length === 50, "İstemci boş dizisi sunucudaki 50 geçmişi sildi!");
+  assert(safeMerged.matchHistory!.length === 50, "İstemci boş dizisi sunucudaki 50 geçmişi sildi!");
   
   // Düşük seviye/LP ezilme koruması
   const lowClient = { ...currentProgress, soloUnlockedLevel: 2, lp: 10, coins: 5 };
   const mergedHigh = mergePlayerProgress(lowClient, currentProgress);
-  assert(mergedHigh.soloUnlockedLevel >= currentProgress.soloUnlockedLevel, "Düşük istemci seviyesi sunucuyu geriletti!");
+  assert((mergedHigh.soloUnlockedLevel ?? 1) >= (currentProgress.soloUnlockedLevel ?? 1), "Düşük istemci seviyesi sunucuyu geriletti!");
   console.log("[SYNC SECURITY] İstemci boş dizi & düşük veri saldırılarına karşı %100 korundu ✅\n");
   totalCategoriesPassed++;
 
@@ -453,7 +452,7 @@ async function runFullLiveTest() {
   console.log("--- 6. CAN SİSTEMİ, MAĞAZA EKİPMANLARI & KOZMETİK ENVANTERİ ---");
 
   // 6.1 Can Düşürme ve 0 Alt Sınırı
-  let livesState = { ...DEFAULT_PROGRESS, lives: 5 };
+  let livesState: PlayerProgress = { ...DEFAULT_PROGRESS, lives: 5 };
   for (let i = 0; i < 6; i++) {
     livesState = deductLife(livesState);
   }
@@ -721,9 +720,18 @@ async function runFullLiveTest() {
   console.log("   10. Çok Oyunculu Bot Personaları & Sosyal Arkadaşlık: %100 GEÇTİ ✅");
   console.log("   11. Türkçe Sözlük, Komşuluk, Seçim & Maskeleme: %100 GEÇTİ ✅");
   console.log("=======================================================================\n");
+
+  try {
+    const mongoose = (await import("mongoose")).default;
+    await mongoose.disconnect();
+  } catch (e) {}
 }
 
-runFullLiveTest().catch((err) => {
-  console.error("CANLI TEST BAŞARISIZ:", err);
-  process.exit(1);
-});
+runFullLiveTest()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("CANLI TEST BAŞARISIZ:", err);
+    process.exit(1);
+  });
