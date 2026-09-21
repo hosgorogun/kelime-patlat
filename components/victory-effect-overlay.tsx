@@ -356,25 +356,25 @@ export function VictoryEffectOverlay({
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "rgba(10, 26, 20, 0.94)",
+            backgroundColor: "rgba(10, 26, 20, 0.98)",
             borderRadius: 20,
-            paddingVertical: 8,
-            paddingHorizontal: 16,
+            paddingVertical: 10,
+            paddingHorizontal: 18,
             borderWidth: 2,
             borderColor: meta.color,
             shadowColor: meta.color,
-            shadowOpacity: 0.5,
-            shadowRadius: 12,
-            elevation: 10,
-            gap: 8,
+            shadowOpacity: 0.6,
+            shadowRadius: 14,
+            elevation: 12,
+            gap: 10,
           }}
         >
-          <Text style={{ fontSize: 20 }}>{meta.glyph}</Text>
+          <Text style={{ fontSize: 22 }}>{meta.glyph}</Text>
           <View>
-            <Text style={{ color: meta.color, fontSize: 11, fontWeight: "900", letterSpacing: 1.5 }}>
+            <Text style={{ color: meta.color, fontSize: 12, fontWeight: "900", letterSpacing: 1.5 }}>
               {meta.label} AKTİF
             </Text>
-            <Text style={{ color: "#CBD5E1", fontSize: 9, fontWeight: "700" }}>
+            <Text style={{ color: "#CBD5E1", fontSize: 10, fontWeight: "700", marginTop: 1 }}>
               {meta.description}
             </Text>
           </View>

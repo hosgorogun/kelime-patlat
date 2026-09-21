@@ -127,6 +127,94 @@ function ConnectLine({
   );
 }
 
+function FloatingTimeBonus({ text }: { text: string | null }) {
+  const animVal = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (text) {
+      animVal.setValue(0);
+      Animated.sequence([
+        Animated.spring(animVal, {
+          toValue: 1,
+          friction: 6,
+          tension: 90,
+          useNativeDriver: true,
+        }),
+        Animated.delay(900),
+        Animated.timing(animVal, {
+          toValue: 2,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [text]);
+
+  if (!text) return null;
+
+  const translateY = animVal.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [6, -6, -26],
+  });
+
+  const scale = animVal.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [0.6, 1.05, 0.9],
+  });
+
+  const opacity = animVal.interpolate({
+    inputRange: [0, 0.2, 1, 2],
+    outputRange: [0, 1, 1, 0],
+  });
+
+  const isCombo = text.includes("KOMBO") || text.includes("🔥") || text.includes("⚡") || text.includes("🚀");
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top: -30,
+        right: -4,
+        transform: [{ translateY }, { scale }],
+        opacity,
+        zIndex: 150,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: isCombo ? "rgba(35, 20, 10, 0.96)" : "rgba(8, 28, 22, 0.96)",
+          borderWidth: 1.5,
+          borderColor: isCombo ? "#FFC24A" : "#3EE8B5",
+          borderRadius: 12,
+          paddingHorizontal: 9,
+          paddingVertical: 4,
+          shadowColor: isCombo ? "#FFC24A" : "#3EE8B5",
+          shadowOpacity: 0.6,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
+        <Text
+          style={{
+            color: isCombo ? "#FFC24A" : "#3EE8B5",
+            fontSize: 11,
+            fontWeight: "900",
+            letterSpacing: 0.5,
+            textShadowColor: "rgba(0,0,0,0.8)",
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 3,
+          }}
+        >
+          {text}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 type Feedback = "idle" | "invalid" | "accepted";
 
 export function ArcadeChallenge({
@@ -720,7 +808,7 @@ export function ArcadeChallenge({
       <View style={styles.scoreContainer}><Text style={styles.scoreLabel}>SKOR</Text><Text style={styles.scoreValue}>{score}</Text></View>
       <View style={[styles.timer, seconds <= 8 && styles.timerUrgent]}>
         <Text style={styles.timerText}>{seconds}s</Text>
-        {timeBonusText && <Text style={styles.bonusText}>{timeBonusText}</Text>}
+        <FloatingTimeBonus text={timeBonusText} />
       </View>
       <Pressable
         onPress={() => {
@@ -1262,7 +1350,7 @@ export function ArcadeChallenge({
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#06140F" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, progressMeta: { color: "#A8C5B5", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, backgroundColor: "#30264D", borderWidth: 2, borderColor: "#594884", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" },  check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, comboPill: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: "rgba(255, 194, 74, 0.2)", borderWidth: 1, borderColor: "#FFC24A" }, comboPillText: { color: "#FFC24A", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 }, foundLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12, textShadowColor: "#000", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#06140F" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative", overflow: "visible" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, progressMeta: { color: "#A8C5B5", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, backgroundColor: "#30264D", borderWidth: 2, borderColor: "#594884", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" },  check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, comboPill: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: "rgba(255, 194, 74, 0.2)", borderWidth: 1, borderColor: "#FFC24A" }, comboPillText: { color: "#FFC24A", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 }, foundLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12, textShadowColor: "#000", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
   activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(8, 28, 22, 0.95)", borderWidth: 1.5, borderColor: "#FFC24A", padding: 14, shadowColor: "#FFC24A", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
   activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   activeRouteTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
