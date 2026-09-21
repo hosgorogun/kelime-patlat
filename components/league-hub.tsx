@@ -1,12 +1,23 @@
 import { useState, useRef, useEffect } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, Dimensions, FlatList } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
-import { getLeagueTier, getSeasonRemainingTime, type LeagueTierInfo, type PlayerProgress } from "@/shared/progression";
+import {
+  LEAGUE_TIERS,
+  getLeagueTier,
+  getSeasonRemainingTime,
+  getMinLpForTier,
+  type LeagueTierInfo,
+  type PlayerProgress,
+} from "@/shared/progression";
 import { type LeaderboardEntry } from "@/shared/game";
-import { triggerHapticSelection } from "@/shared/audio-haptics";
+import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = SCREEN_WIDTH * 0.78;
+const CARD_WIDTH = Math.round(SCREEN_WIDTH * 0.76);
+const CARD_GAP = 14;
+const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
+const HORIZONTAL_PADDING = Math.max(0, (SCREEN_WIDTH - CARD_WIDTH) / 2);
 
 const RANK_IMAGES: Record<string, any> = {
   DEMİR: require("../assets/ranks/iron.jpg"),
@@ -20,19 +31,44 @@ const RANK_IMAGES: Record<string, any> = {
   RADIAN: require("../assets/ranks/radian.jpg"),
 };
 
-const LEAGUES: LeagueTierInfo[] = [
-  { name: "DEMİR LİGİ", tier: "DEMİR", icon: "🛡️", image: "", color: "#94A3B8", badge: "DEMİR", minPoints: 0, maxPoints: 349, currentTierPoints: 0, targetTierPoints: 350, totalPoints: 0 },
-  { name: "BRONZ LİGİ", tier: "BRONZ", icon: "🛡️", image: "", color: "#F97316", badge: "BRONZ", minPoints: 350, maxPoints: 899, currentTierPoints: 0, targetTierPoints: 550, totalPoints: 0 },
-  { name: "GÜMÜŞ LİGİ", tier: "GÜMÜŞ", icon: "🛡️", image: "", color: "#38BDF8", badge: "GÜMÜŞ", minPoints: 900, maxPoints: 1599, currentTierPoints: 0, targetTierPoints: 700, totalPoints: 0 },
-  { name: "ALTIN LİGİ", tier: "ALTIN", icon: "🦅", image: "", color: "#FBBF24", badge: "ALTIN", minPoints: 1600, maxPoints: 2499, currentTierPoints: 0, targetTierPoints: 900, totalPoints: 0 },
-  { name: "PLATİN LİGİ", tier: "PLATİN", icon: "🪽", image: "", color: "#67E8F9", badge: "PLATİN", minPoints: 2500, maxPoints: 3599, currentTierPoints: 0, targetTierPoints: 1100, totalPoints: 0 },
-  { name: "ELMAS LİGİ", tier: "ELMAS", icon: "💎", image: "", color: "#60A5FA", badge: "ELMAS", minPoints: 3600, maxPoints: 4999, currentTierPoints: 0, targetTierPoints: 1400, totalPoints: 0 },
-  { name: "YÜCELİK LİGİ", tier: "YÜCELİK", icon: "🔮", image: "", color: "#C084FC", badge: "YÜCELİK", minPoints: 5000, maxPoints: 6999, currentTierPoints: 0, targetTierPoints: 2000, totalPoints: 0 },
-  { name: "ÖLÜMSÜZLÜK LİGİ", tier: "ÖLÜMSÜZLÜK", icon: "🔥", image: "", color: "#FB7185", badge: "ÖLÜMSÜZLÜK", minPoints: 7000, maxPoints: 9999, currentTierPoints: 0, targetTierPoints: 3000, totalPoints: 0 },
-  { name: "RADIAN LİGİ", tier: "RADIAN", icon: "👑", image: "", color: "#FDE047", badge: "RADIAN", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY, currentTierPoints: 0, targetTierPoints: 1000, totalPoints: 0 },
+const LEAGUES: LeagueTierInfo[] = LEAGUE_TIERS.map((tier, idx) => {
+  const next = LEAGUE_TIERS[idx + 1];
+  return {
+    name: tier.name,
+    tier: tier.tier,
+    icon: tier.icon,
+    image: tier.image,
+    color: tier.color,
+    badge: tier.tier,
+    minPoints: tier.minPoints,
+    maxPoints: tier.maxPoints,
+    currentTierPoints: 0,
+    targetTierPoints: next ? next.minPoints - tier.minPoints : 1000,
+    totalPoints: tier.minPoints,
+  };
+});
+
+const MOCK_STANDINGS: LeaderboardEntry[] = [
+  { id: "mock-1", name: "Radyant_Yalçın", score: 9200, wins: 84, matches: 92, bestRound: 580, lp: 10450, tier: "RADIAN", level: 32 },
+  { id: "mock-2", name: "Ege Neon", score: 4850, wins: 38, matches: 45, bestRound: 420, lp: 7800, tier: "ÖLÜMSÜZLÜK", level: 24 },
+  { id: "mock-3", name: "Kraliçe_Bora", score: 6100, wins: 52, matches: 64, bestRound: 490, lp: 5900, tier: "YÜCELİK", level: 29 },
 ];
 
-export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerId: string; progress: PlayerProgress; leaderboard: LeaderboardEntry[]; onBack: () => void }) {
+export function LeagueHub({
+  playerId,
+  progress,
+  leaderboard,
+  onBack,
+  onPlayRanked,
+  embedded = false,
+}: {
+  playerId: string;
+  progress: PlayerProgress;
+  leaderboard: LeaderboardEntry[];
+  onBack?: () => void;
+  onPlayRanked?: () => void;
+  embedded?: boolean;
+}) {
   const current = getLeagueTier(progress);
   const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
   const currentIndex = LEAGUES.findIndex((league) => league.tier === current.tier);
@@ -50,31 +86,37 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
   const selectedLeague = LEAGUES[selectedLeagueIndex] ?? LEAGUES[0]!;
   const isSelectedCurrent = selectedLeague.tier === current.tier;
   const isSelectedUnlocked = selectedLeagueIndex <= currentIndex;
 
   const flatListRef = useRef<FlatList>(null);
+  const effectiveStandings = leaderboard && leaderboard.length > 0 ? leaderboard : MOCK_STANDINGS;
 
-  return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Header Bar */}
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.backButton} hitSlop={8}>
-          <Text style={styles.backText}>‹</Text>
-        </Pressable>
-        <View style={styles.headerCopy}>
-          <Text style={styles.overline}>SEZON REKABET HATTI</Text>
-          <Text style={styles.title}>LİGLER & KADEMELER</Text>
-        </View>
-        <View style={styles.timerPill}>
-          <Text style={styles.timerIcon}>⏳</Text>
-          <View>
-            <Text style={styles.timerLabel}>SIFIRLANMA</Text>
-            <Text style={styles.timerValue}>{remaining.formatted}</Text>
+  const content = (
+    <View style={embedded ? styles.embeddedContainer : undefined}>
+      {/* Standalone Header Bar */}
+      {!embedded && (
+        <View style={styles.header}>
+          {onBack && (
+            <Pressable onPress={onBack} style={styles.backButton} hitSlop={8}>
+              <Text style={styles.backText}>‹</Text>
+            </Pressable>
+          )}
+          <View style={styles.headerCopy}>
+            <Text style={styles.overline}>SEZON REKABET HATTI</Text>
+            <Text style={styles.title}>LİGLER & KADEMELER</Text>
+          </View>
+          <View style={styles.timerPill}>
+            <Text style={styles.timerIcon}>⏳</Text>
+            <View>
+              <Text style={styles.timerLabel}>SIFIRLANMA</Text>
+              <Text style={styles.timerValue}>{remaining.formatted}</Text>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {/* Showcase Horizontal Carousel */}
       <View style={styles.carouselContainer}>
@@ -83,7 +125,8 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
           data={LEAGUES}
           horizontal
           showsHorizontalScrollIndicator={false}
-          snapToInterval={CARD_WIDTH + 14}
+          snapToInterval={SNAP_INTERVAL}
+          snapToAlignment="center"
           decelerationRate="fast"
           initialScrollIndex={currentIndex !== -1 ? currentIndex : 0}
           onScrollToIndexFailed={(info) => {
@@ -91,13 +134,20 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
               flatListRef.current?.scrollToIndex({ index: info.index, animated: false });
             }, 100);
           }}
-          getItemLayout={(_, index) => ({ length: CARD_WIDTH + 14, offset: (CARD_WIDTH + 14) * index, index })}
-          contentContainerStyle={{ paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2 - 18 }}
+          getItemLayout={(_, index) => ({
+            length: SNAP_INTERVAL,
+            offset: SNAP_INTERVAL * index,
+            index,
+          })}
+          contentContainerStyle={{
+            paddingHorizontal: HORIZONTAL_PADDING,
+          }}
           onMomentumScrollEnd={(e) => {
-            const index = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + 14));
-            if (index >= 0 && index < LEAGUES.length && index !== selectedLeagueIndex) {
+            const rawIndex = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+            const clampedIndex = Math.max(0, Math.min(LEAGUES.length - 1, rawIndex));
+            if (clampedIndex !== selectedLeagueIndex) {
               triggerHapticSelection();
-              setSelectedLeagueIndex(index);
+              setSelectedLeagueIndex(clampedIndex);
             }
           }}
           keyExtractor={(item) => item.tier}
@@ -112,7 +162,7 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
                 onPress={() => {
                   triggerHapticSelection();
                   setSelectedLeagueIndex(index);
-                  flatListRef.current?.scrollToIndex({ index, animated: true });
+                  flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
                 }}
                 style={({ pressed }) => [
                   styles.carouselCard,
@@ -179,7 +229,7 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
         />
       </View>
 
-      {/* Bottom Selected League Detail Card */}
+      {/* Selected League Detail Card */}
       <View style={[styles.detailCard, { borderColor: `${selectedLeague.color}55` }]}>
         <View style={styles.detailHeader}>
           <Text style={styles.detailKicker}>KADEME DETAYI & AVANTAJLARI</Text>
@@ -214,6 +264,37 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
         </Text>
       </View>
 
+      {/* Direct Ranked Match CTA Button */}
+      {onPlayRanked && (
+        <Pressable
+          onPress={() => {
+            triggerHapticSuccess();
+            onPlayRanked();
+          }}
+          style={({ pressed }) => [styles.playCtaButton, pressed && styles.pressed]}
+        >
+          <LinearGradient
+            colors={["#166548", "#0E3F30", "#08291F"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.playCtaGradient}
+          >
+            <View style={styles.playCtaLeft}>
+              <View style={styles.playCtaIconOrb}>
+                <Text style={{ fontSize: 20 }}>⚔️</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.playCtaTitle}>DERECELİ DÜELLO OYNA</Text>
+                <Text style={styles.playCtaSubtitle}>Canlı eşleş, LP kazan ve kademe atla!</Text>
+              </View>
+            </View>
+            <View style={styles.playCtaArrowOrb}>
+              <Text style={styles.playCtaArrow}>→</Text>
+            </View>
+          </LinearGradient>
+        </Pressable>
+      )}
+
       {/* Season Leaderboard Quick Standings Widget */}
       <View style={styles.standingsCard}>
         <View style={styles.standingsHeader}>
@@ -222,30 +303,44 @@ export function LeagueHub({ playerId, progress, leaderboard, onBack }: { playerI
             <Text style={styles.standingsTitle}>SEZON LİDERLERİ</Text>
           </View>
           <View style={styles.standingsBadge}>
-            <Text style={styles.standingsBadgeText}>{playerRank > 0 ? `#${playerRank}. SIRADASIN` : "LİSTEDESİN"}</Text>
+            <Text style={styles.standingsBadgeText}>
+              {playerRank > 0 ? `#${playerRank}. SIRADASIN` : "DERECELİ LİSTE"}
+            </Text>
           </View>
         </View>
 
         <View style={styles.top3Row}>
-          {leaderboard.slice(0, 3).map((entry, idx) => {
+          {effectiveStandings.slice(0, 3).map((entry, idx) => {
             const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
             const borderCol = idx === 0 ? "#FFD000" : idx === 1 ? "#94A3B8" : "#F97316";
+            const displayLp = entry.lp ?? (entry.tier ? getMinLpForTier(entry.tier) : 0);
             return (
               <View key={entry.id || idx} style={[styles.top3Item, { borderColor: borderCol }]}>
                 <Text style={styles.top3Medal}>{medal}</Text>
                 <Text numberOfLines={1} style={styles.top3Name}>{entry.name}</Text>
-                <Text style={styles.top3Lp}>{entry.lp ?? entry.score} LP</Text>
+                <Text style={styles.top3Lp}>{displayLp} LP</Text>
               </View>
             );
           })}
         </View>
       </View>
+    </View>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {content}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingVertical: 12, paddingBottom: 140 },
+  embeddedContainer: { paddingTop: 4, paddingBottom: 24 },
   header: { flexDirection: "row", alignItems: "center", marginBottom: 12, paddingHorizontal: 18 },
   backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#164536", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)", alignItems: "center", justifyContent: "center", marginRight: 10 },
   backText: { color: "#FFF9FC", fontSize: 28, lineHeight: 30, marginTop: -3 },
@@ -277,12 +372,6 @@ const styles = StyleSheet.create({
   cardLeagueTitle: { fontSize: 20, fontWeight: "900", letterSpacing: 0.6, marginBottom: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
   cardLpRange: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginBottom: 12 },
 
-  cardDetailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#0B231B", paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, width: "100%", marginBottom: 10, borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.2)" },
-  cardDetailBox: { flex: 1, alignItems: "center" },
-  cardDetailLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
-  cardDetailValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900", marginTop: 2 },
-  cardDetailRule: { width: 1, height: 20, backgroundColor: "rgba(255,255,255,0.1)" },
-
   cardLiveProgress: { width: "100%", marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" },
   cardLiveLabel: { color: "#94A3B8", fontSize: 9.5, fontWeight: "700" },
   cardLiveValue: { fontSize: 10.5, fontWeight: "900" },
@@ -302,7 +391,70 @@ const styles = StyleSheet.create({
 
   detailDesc: { color: "#CBD5E1", fontSize: 10.5, fontWeight: "600", lineHeight: 15, textAlign: "center" },
 
-  standingsCard: { marginHorizontal: 18, marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
+  playCtaButton: {
+    marginHorizontal: 18,
+    marginTop: 12,
+    borderRadius: 18,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#3EE8B5",
+    shadowColor: "#3EE8B5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  playCtaGradient: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  playCtaLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+    marginRight: 10,
+  },
+  playCtaIconOrb: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "rgba(62, 232, 181, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(62, 232, 181, 0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playCtaTitle: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  playCtaSubtitle: {
+    color: "#A8C5B5",
+    fontSize: 9.5,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  playCtaArrowOrb: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#3EE8B5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playCtaArrow: {
+    color: "#071A14",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  standingsCard: { marginHorizontal: 18, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
   standingsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   standingsTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 0.8, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   standingsBadge: { backgroundColor: "rgba(62, 232, 181, 0.15)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
@@ -312,5 +464,5 @@ const styles = StyleSheet.create({
   top3Item: { flex: 1, backgroundColor: "#0B231B", borderWidth: 1, borderRadius: 12, padding: 8, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
   top3Medal: { fontSize: 14, marginBottom: 2 },
   top3Name: { color: "#FFFFFF", fontSize: 10, fontWeight: "900", width: "100%", textAlign: "center", textShadowColor: "rgba(0,0,0,0.4)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1 },
-  top3Lp: { color: "#94A3B8", fontSize: 8.5, fontWeight: "800", marginTop: 1 },
+  top3Lp: { color: "#3EE8B5", fontSize: 8.5, fontWeight: "800", marginTop: 1 },
 });

@@ -50,7 +50,7 @@ export function getApiBaseUrl(): string {
   }
 
   if (process.env.NODE_ENV === "production") {
-    throw new Error("EXPO_PUBLIC_API_BASE_URL must be configured for production mobile builds.");
+    console.warn("[API] EXPO_PUBLIC_API_BASE_URL is not configured for production mobile builds. Falling back to local network host.");
   }
 
   // Check Expo Metro host IP if available (dynamically resolves Metro host for Android emulator or physical device)

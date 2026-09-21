@@ -137,18 +137,6 @@ export function registerOAuthRoutes(app: Express) {
     res.json({ success: true });
   });
 
-  // Get current authenticated user - works with both cookie (web) and Bearer token (mobile)
-  app.get("/api/auth/me", async (req: Request, res: Response) => {
-    try {
-      const user = await sdk.authenticateRequest(req);
-      const savedUser = user?.openId ? await getUserByOpenId(user.openId) : undefined;
-      res.json({ user: buildUserResponse(savedUser ?? user) });
-    } catch (error) {
-      console.error("[Auth] /api/auth/me failed:", error);
-      res.status(401).json({ error: "Not authenticated", user: null });
-    }
-  });
-
   // Establish session cookie from Bearer token
   // Used by iframe preview: frontend receives token via postMessage, then calls this endpoint
   // to get a proper Set-Cookie response from the backend (3000-xxx domain)

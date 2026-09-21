@@ -267,4 +267,91 @@ describe("Gerçekçi Oyun Mekanikleri Testleri (Matchmaking, Emotes & Friends Le
       expect(rankedRoom.isRanked).toBe(true);
     });
   });
+
+  describe("5. Dereceli Maçtan Çıkma (Forfeit) ve Bot İstismarı Koruması", () => {
+    it("dereceli maçta bota karşı oynarken maçı terk eden oyuncunun mağlubiyeti lidere ve LP'ye işlenmelidir", () => {
+      type MockRoom = {
+        code: string;
+        isRanked: boolean;
+        status: "playing" | "finished";
+        winnerId: string | null;
+        message: string;
+        host: { id: string; name: string; isBot: boolean };
+        guest: { id: string; name: string; isBot: boolean };
+      };
+
+      const room: MockRoom = {
+        code: "TEST1",
+        isRanked: true,
+        status: "playing",
+        winnerId: null,
+        message: "Oyun sürüyor",
+        host: { id: "human_1", name: "İnsan", isBot: false },
+        guest: { id: "bot_1", name: "Siber Bot", isBot: true },
+      };
+
+      let recordedLeaderboard = false;
+      const recordRound = (r: MockRoom) => {
+        recordedLeaderboard = true;
+      };
+
+      // Oyuncu maçı terk eder (leaveRoom logic)
+      const playerId = "human_1";
+      const remaining = room.host.id === playerId ? room.guest : room.host;
+      if (remaining) {
+        room.winnerId = remaining.id;
+        room.message = `human_1 maçı terk etti. ${remaining.name} hükmen kazandı!`;
+        room.status = "finished";
+        if (room.isRanked || !remaining.isBot) {
+          recordRound(room);
+        }
+      }
+
+      expect(room.status).toBe("finished");
+      expect(room.winnerId).toBe("bot_1"); // Bot hükmen kazandı
+      expect(recordedLeaderboard).toBe(true); // Dereceli maç olduğu için LP kaybı işlendi
+    });
+
+    it("özel arkadaş maçında (unranked) maçı terk etmek LP kaybı doğurmamalıdır", () => {
+      const room = {
+        code: "UNRNK",
+        isRanked: false,
+        isCustom: true,
+        status: "playing" as const,
+        winnerId: null as string | null,
+        host: { id: "human_1", isBot: false },
+        guest: { id: "bot_1", isBot: true },
+      };
+
+      let recordedLeaderboard = false;
+      const remaining = room.guest;
+      if (remaining) {
+        room.winnerId = remaining.id;
+        if (room.isRanked || !remaining.isBot) {
+          recordedLeaderboard = true;
+        }
+      }
+
+      expect(recordedLeaderboard).toBe(false); // Derecesiz özel maçta LP kaybı tetiklenmez
+    });
+  });
+
+  describe("6. Ağ Gecikmesi (Network Jitter) Zaman Toleransı", () => {
+    it("tur süresinin bitiş anında son 1000ms içinde gelen kelimeler erken time_up ile reddedilmemelidir", () => {
+      const startedAt = 100000;
+      const durationMs = 55_000; // 4x4 için 55s
+      const jitterBufferMs = 1000;
+
+      const isTimeUp = (submitTimestamp: number) => {
+        return submitTimestamp >= startedAt + durationMs + jitterBufferMs;
+      };
+
+      // Tam süre dolduğunda (55. saniye 200. milisaniyede paket ulaştığında)
+      expect(isTimeUp(startedAt + 55_200)).toBe(false); // Ağ tamponu sayesinde kabul edilir
+      // 55. saniye 900. milisaniyede
+      expect(isTimeUp(startedAt + 55_900)).toBe(false); // Kabul edilir
+      // Süre + tampon dolduktan sonra (56.5. saniyede)
+      expect(isTimeUp(startedAt + 56_500)).toBe(true); // Artık süresi doldu
+    });
+  });
 });

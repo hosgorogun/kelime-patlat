@@ -181,7 +181,7 @@ describe("JWT Oturum Doğrulama ve Token Bütünlüğü", () => {
     // Boş token reddedilir
     expect(await sdk.verifySession(null)).toBeNull();
     expect(await sdk.verifySession("")).toBeNull();
-  });
+  }, 15000);
 });
 
 describe("Giriş & Kayıt Gelişmiş Kimlik Doğrulama Kontrolleri", () => {

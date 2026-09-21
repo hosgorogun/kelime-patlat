@@ -9,6 +9,8 @@ export type FriendUser = {
   avatar: string;
   avatarPhoto?: string;
   selectedTitle?: string;
+  selectedFrame?: string;
+  isBot?: boolean;
   isOnline: boolean;
   xp: number;
   level?: number;

@@ -1,8 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { ActivityIndicator, Alert, AppState, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
-import { createSoloBoard, APP_WORD_PALETTE } from "@/shared/solo";
+import {
+  createSoloBoard,
+  APP_WORD_PALETTE,
+  ARCADE_INITIAL_TIME,
+  MAX_ARCADE_TIME,
+  getNextArcadeSeed,
+  getArcadeBoardClearBonus,
+  calculateArcadeCombo,
+} from "@/shared/solo";
 import { getWordDefinition, fetchWordDetail, getCachedWordDetail } from "../shared/dictionary";
 import {
   initAudio,
@@ -16,6 +24,7 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
+import { VictoryEffectOverlay } from "./victory-effect-overlay";
 
 function ConnectLine({
   x1,
@@ -120,20 +129,35 @@ function ConnectLine({
 
 type Feedback = "idle" | "invalid" | "accepted";
 
-export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; onComplete: (score: number) => void }) {
+export function ArcadeChallenge({
+  onExit,
+  onComplete,
+  boardSkinColor,
+  selectedVictoryEffect,
+}: {
+  onExit: () => void;
+  onComplete: (score: number, wordsCount?: number, isDoubled?: boolean, comboCount?: number, foundWords?: string[]) => void;
+  boardSkinColor?: string;
+  selectedVictoryEffect?: string;
+}) {
   const { width } = useWindowDimensions();
   const [levelSeed, setLevelSeed] = useState(() => Math.floor(Math.random() * 15) + 1);
   const [variation, setVariation] = useState(() => Math.floor(Math.random() * 1_000_000));
   
   const challenge = useMemo(() => createSoloBoard(levelSeed, variation, "general"), [levelSeed, variation]);
+  const totalWordsFoundRef = useRef(0);
+  const totalCombosRef = useRef(0);
+  const allFoundWordsRef = useRef<string[]>([]);
   
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
   const [inspectedPath, setInspectedPath] = useState<number[] | null>(null);
   const [inspectedColor, setInspectedColor] = useState<string | null>(null);
-  const [seconds, setSeconds] = useState(30); // Start with 30s
+  const [seconds, setSeconds] = useState(ARCADE_INITIAL_TIME); // Start with 40s (approachable warm-up)
   const [score, setScore] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const lastWordTimeRef = useRef<number>(0);
   const [feedback, setFeedback] = useState<Feedback>("idle");
   const [status, setStatus] = useState<"playing" | "lost">("playing");
   const [doubled, setDoubled] = useState(false);
@@ -248,7 +272,10 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     return { pageX: ne.pageX ?? 0, pageY: ne.pageY ?? 0 };
   };
 
-  const boardWidth = Math.min(width - (challenge.size === 6 ? 32 : 36), challenge.size === 6 ? 374 : 356);
+  const boardWidth = Math.min(
+    width - (challenge.size === 10 ? 20 : challenge.size === 8 ? 32 : challenge.size === 6 ? 32 : 36),
+    challenge.size === 10 ? 410 : challenge.size === 8 ? 392 : challenge.size === 6 ? 374 : 356
+  );
   const activeWord = wordFromSelection(challenge.board, selected);
 
   const scoreRef = useRef(score);
@@ -271,9 +298,11 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     return () => sub.remove();
   }, [status]);
 
-  // Time Countdown
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  // Time Countdown (pauses when paused, countdown is active, or exit confirmation modal is open)
   useEffect(() => {
-    if (status !== "playing" || countdown !== null || isPaused) return;
+    if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
     const timer = setInterval(() => setSeconds((value) => {
       if (value <= 1) {
         clearInterval(timer);
@@ -282,20 +311,47 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         playErrorSound();
         savedRef.current = true;
         setTimeout(() => {
-          onCompleteRef.current(scoreRef.current);
+          onCompleteRef.current(scoreRef.current, totalWordsFoundRef.current, false, totalCombosRef.current, allFoundWordsRef.current);
         }, 0);
         return 0;
       }
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, countdown, isPaused]);
+  }, [status, countdown, isPaused, showExitModal]);
+
+  // Donanım geri tuşu kontrolü (Android BackHandler)
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isPaused) {
+        setIsPaused(false);
+        return true;
+      }
+      if (showExitModal) {
+        setShowExitModal(false);
+        return true;
+      }
+      if (status === "playing") {
+        if (score > 0) {
+          setShowExitModal(true);
+        } else {
+          onExit();
+        }
+        return true;
+      }
+      onExit();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [isPaused, showExitModal, status, score, onExit]);
 
   useEffect(() => () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
     if (!savedRef.current && scoreRef.current > 0) {
       savedRef.current = true;
-      onCompleteRef.current(scoreRef.current);
+      onCompleteRef.current(scoreRef.current, totalWordsFoundRef.current, false, totalCombosRef.current, allFoundWordsRef.current);
     }
   }, []);
 
@@ -417,7 +473,22 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     if (!challenge.words.includes(word) || found.includes(word)) { showInvalid("Bu rota hedef kelimelerden biri değil."); return; }
     
     const nextFound = [...found, word];
-    const scoreGain = word.length * 10;
+    totalWordsFoundRef.current += 1;
+    allFoundWordsRef.current.push(word);
+
+    // Combo streak calculation (words found within 7 seconds)
+    const now = Date.now();
+    const elapsedSinceLastWord = lastWordTimeRef.current > 0 ? (now - lastWordTimeRef.current) / 1000 : 999;
+    lastWordTimeRef.current = now;
+    const nextCombo = elapsedSinceLastWord <= 7.0 ? combo + 1 : 1;
+    if (nextCombo >= 2) {
+      totalCombosRef.current += 1;
+    }
+    setCombo(nextCombo);
+    const comboInfo = calculateArcadeCombo(nextCombo);
+
+    const baseScoreGain = word.length * 10;
+    const scoreGain = baseScoreGain + comboInfo.bonusScore;
     setScore((s) => s + scoreGain);
     setFound(nextFound);
     setFoundPaths((current) => [...current, path]);
@@ -425,14 +496,19 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     clearSelection();
     explodeParticles(path);
 
-    // Time extension reward!
-    const bonus = Math.min(8, word.length);
-    setSeconds((s) => s + bonus);
-    setTimeBonusText(`+${bonus}s`);
+    // Time extension reward with MAX_ARCADE_TIME ceiling
+    const baseBonus = Math.min(8, word.length);
+    const totalBonus = baseBonus + comboInfo.bonusSeconds;
+    setSeconds((s) => Math.min(MAX_ARCADE_TIME, s + totalBonus));
+    if (comboInfo.bonusSeconds > 0) {
+      setTimeBonusText(`+${totalBonus}s (${comboInfo.label})`);
+    } else {
+      setTimeBonusText(`+${totalBonus}s`);
+    }
     setTimeout(() => setTimeBonusText(null), 1200);
 
     playSuccessSound();
-    if (word.length >= 6) {
+    if (word.length >= 6 || comboInfo.bonusSeconds > 0) {
       triggerHapticLongWord();
     } else {
       triggerHapticSuccess();
@@ -443,23 +519,27 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       explodeConfetti();
       gameSfx.victory();
       triggerHapticLongWord();
-      const boardClearBonus = challenge.size === 4 ? 6 : 12;
-      setSeconds((s) => s + boardClearBonus);
-      setTimeBonusText(`TAHTA TEMİZLENDİ! +${boardClearBonus}s ⚡`);
+      const nextScore = score + scoreGain;
+      const nextSeed = getNextArcadeSeed(nextScore, levelSeed);
+      const nextSize = nextSeed <= 15 ? 4 : nextSeed <= 45 ? 6 : nextSeed <= 75 ? 8 : 10;
+      const boardClearBonus = getArcadeBoardClearBonus(challenge.size, nextSize);
+      const isGraduating = nextSize > challenge.size;
+
+      setSeconds((s) => Math.min(MAX_ARCADE_TIME, s + boardClearBonus));
+      setTimeBonusText(
+        isGraduating
+          ? `${nextSize}x${nextSize} KADEMESİ! +${boardClearBonus}s 🚀`
+          : `TAHTA TEMİZLENDİ! +${boardClearBonus}s ⚡`
+      );
 
       setTimeout(() => {
         setFound([]);
         setFoundPaths([]);
-        // Smooth scaling: Keep 4x4 (levels 1-15) for fast tempo until score reaches 250, then graduate to 6x6!
-        setLevelSeed((current) => {
-          const nextScore = score + scoreGain;
-          if (nextScore < 250) {
-            return (current % 15) + 1;
-          }
-          return 16 + ((current + 1) % 10);
-        });
+        setLevelSeed(nextSeed);
         setVariation((v) => v + 1);
         setFeedback("idle");
+        setCombo(0);
+        lastWordTimeRef.current = 0;
       }, 700);
     } else {
       setTimeout(() => setFeedback("idle"), 360);
@@ -470,13 +550,16 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     triggerHapticSelection();
     savedRef.current = false;
     setDoubled(false);
+    totalWordsFoundRef.current = 0;
     setLevelSeed(() => Math.floor(Math.random() * 15) + 1);
     setVariation((v) => v + 1);
     setSelected([]);
     setFound([]);
     setFoundPaths([]);
-    setSeconds(30);
+    setSeconds(ARCADE_INITIAL_TIME);
     setScore(0);
+    setCombo(0);
+    lastWordTimeRef.current = 0;
     setFeedback("idle");
     setStatus("playing");
     setIsSelecting(false);
@@ -490,8 +573,6 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
     hasAutoInspectedRef.current = false;
     setCountdown(3);
   };
-
-  const [showExitModal, setShowExitModal] = useState(false);
 
   const handleExitPress = () => {
     if (status === "playing" && score > 0) {
@@ -651,9 +732,38 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         <Text style={{ fontSize: 13 }}>⏸️</Text>
       </Pressable>
     </View>
-    <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={styles.progressMeta}>Her kelime ek süre kazandırır</Text></View>
+    <View style={styles.progress}>
+      <Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text>
+      <Text style={styles.progressMeta}>{challenge.size}x{challenge.size} Izgara · Her kelime ek süre kazandırır</Text>
+      {combo >= 2 && (
+        <View style={styles.comboPill}>
+          <Text style={styles.comboPillText}>
+            {combo >= 4 ? `💥 SERİ KOMBO x${combo}! (+3s)` : combo === 3 ? "⚡ KOMBO x3! (+2s)" : "🔥 KOMBO x2! (+1s)"}
+          </Text>
+        </View>
+      )}
+    </View>
     
-    <Animated.View ref={boardRef} onLayout={measureBoard} style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative", transform: [{ translateX: shakeAnim }] }, isUrgent && styles.boardUrgent]}>
+    <Animated.View
+      ref={boardRef}
+      onLayout={measureBoard}
+      style={[
+        styles.board,
+        {
+          width: boardWidth,
+          height: boardWidth,
+          position: "relative",
+          borderColor: boardSkinColor ? `${boardSkinColor}99` : undefined,
+          borderWidth: boardSkinColor ? 2.5 : undefined,
+          shadowColor: boardSkinColor || "#FFC24A",
+          shadowOpacity: boardSkinColor ? 0.4 : 0.2,
+          shadowRadius: 10,
+          elevation: 5,
+          transform: [{ translateX: shakeAnim }],
+        },
+        isUrgent && styles.boardUrgent,
+      ]}
+    >
       {/* HUD Matrix Grid Backing */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={{ position: "absolute", top: 0, bottom: 0, left: "25%", width: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
@@ -676,7 +786,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
             y1={start.y}
             x2={end.x}
             y2={end.y}
-            color="#FFC24A"
+            color={boardSkinColor || "#FFC24A"}
             showArrow
           />
         );
@@ -745,7 +855,18 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
         const isInspectedEnd = (status !== "playing" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
         
         return (
-          <View key={`${letter}-${index}`} pointerEvents="none" style={[styles.cellWrap, { width: `${100 / challenge.size}%`, height: `${100 / challenge.size}%` }]}>
+          <View
+            key={`${letter}-${index}`}
+            pointerEvents="none"
+            style={[
+              styles.cellWrap,
+              {
+                width: `${100 / challenge.size}%`,
+                height: `${100 / challenge.size}%`,
+                padding: challenge.size === 10 ? 1.5 : challenge.size === 8 ? 2 : challenge.size === 6 ? 3 : 4,
+              },
+            ]}
+          >
             <View style={[
               styles.cell,
               isFound && styles.cellFound,
@@ -790,10 +911,22 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
               <Text selectable={false} style={[
                 styles.letter,
                 challenge.size === 6 && styles.letterMedium,
+                challenge.size === 8 && styles.letterSmall,
+                challenge.size === 10 && styles.letterExtraSmall,
                 foundColor && { color: foundColor.text },
                 missedColor && { color: missedColor.text },
               ]}>{letter}</Text>
-              {isSelected && <Text selectable={false} style={styles.order}>{order + 1}</Text>}
+              {isSelected && (
+                <Text
+                  selectable={false}
+                  style={[
+                    styles.order,
+                    challenge.size >= 8 && { fontSize: 7, top: 1, right: 2 },
+                  ]}
+                >
+                  {order + 1}
+                </Text>
+              )}
               {!isSelected && inspectedOrder >= 0 && (
                 <View
                   style={{
@@ -998,7 +1131,9 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
       )}
     </View>
     {status === "lost" && (
-      <View style={styles.result}>
+      <>
+        {score > 0 && <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "lost"} />}
+        <View style={[styles.result, boardSkinColor ? { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor } : null]}>
         <Text style={styles.resultTitle}>SÜRE DOLDU!</Text>
         <Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text>
         <Text style={styles.finalScore}>{score}</Text>
@@ -1029,8 +1164,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
                       triggerHapticSuccess();
                       gameSfx.victory();
                       setDoubled(true);
-                      const bonusScore = score;
-                      onCompleteRef.current(bonusScore);
+                      onCompleteRef.current(score, totalWordsFoundRef.current, true, totalCombosRef.current, allFoundWordsRef.current);
                     },
                   },
                 ]
@@ -1053,6 +1187,7 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
           <Text style={[styles.actionArrow, { color: "#FFF" }]}>→</Text>
         </Pressable>
       </View>
+      </>
     )}
       </ScrollView>
 
@@ -1107,19 +1242,27 @@ export function ArcadeChallenge({ onExit, onComplete }: { onExit: () => void; on
             onPress: () => {
               setShowExitModal(false);
               savedRef.current = true;
-              onCompleteRef.current(scoreRef.current);
+              if (scoreRef.current > 0) {
+                onCompleteRef.current(scoreRef.current, totalWordsFoundRef.current, false, totalCombosRef.current, allFoundWordsRef.current);
+              }
               onExit();
             },
           },
         } : null}
         onDismiss={() => setShowExitModal(false)}
       />
+
+      {countdown !== null && (
+        <View style={styles.countdownOverlay} pointerEvents="none">
+          <Text style={styles.countdownText}>{countdown === 0 ? "BAŞLA!" : countdown}</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#06140F" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, progressMeta: { color: "#A8C5B5", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, backgroundColor: "#30264D", borderWidth: 2, borderColor: "#594884", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" }, check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 }, foundLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12, textShadowColor: "#000", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#06140F" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#211A3D", alignItems: "center", justifyContent: "center" }, exitText: { color: "#FFF9FC", fontSize: 23, lineHeight: 23 }, kicker: { color: "#FFC24A", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, title: { color: "#FFF9FC", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#8FA4CF", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#2B2251", borderWidth: 1, position: "relative" }, timerUrgent: { backgroundColor: "#60233D", borderColor: "#FF647C" }, timerText: { color: "#FF647C", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#4ADE80", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#FFC24A", fontSize: 20, fontWeight: "900", letterSpacing: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, progressMeta: { color: "#A8C5B5", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#16122C", borderWidth: 1, borderColor: "#594884", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#FF647C", shadowColor: "#FF647C", shadowOpacity: 0.25, shadowRadius: 10, elevation: 8 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 99, backgroundColor: "#30264D", borderWidth: 2, borderColor: "#594884", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#4D3B81", borderColor: "#FFC24A" }, cellTail: { borderWidth: 2, borderColor: "#4ADE80", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#8D2C46", borderColor: "#FF647C" }, cellAccepted: { backgroundColor: "#2B776E", borderColor: "#4ADE80" }, cellFound: { backgroundColor: "#287B70", borderColor: "#4ADE80" },  check: { position: "absolute", left: 4, bottom: 2, color: "#E9FFF8", fontSize: 9, fontWeight: "900" }, letter: { color: "#FFF9FC", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, comboPill: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: "rgba(255, 194, 74, 0.2)", borderWidth: 1, borderColor: "#FFC24A" }, comboPillText: { color: "#FFC24A", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }, order: { position: "absolute", top: 3, right: 4, color: "#FFF2C7", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#211A3D", borderWidth: 1, borderColor: "#51406F", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#000", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 }, trayInvalid: { backgroundColor: "#5B2339", borderColor: "#FF647C" }, trayAccepted: { backgroundColor: "#1F514D", borderColor: "#4ADE80" }, trayLabel: { color: "#C6BADD", fontSize: 9, fontWeight: "900", letterSpacing: 1 }, word: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#1A1530", borderWidth: 1, borderColor: "#3C315B", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 }, foundLabel: { color: "#A8C5B5", fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#493878", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 }, tagText: { color: "#FFF2C7", fontSize: 10, fontWeight: "900" }, empty: { color: "#8F82A2", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#4A2443", borderWidth: 1, borderColor: "#E4638B", alignItems: "center" }, resultTitle: { color: "#FFF9FC", fontSize: 15, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 }, resultCopy: { color: "#F1D2DE", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#FFC24A", fontSize: 32, fontWeight: "900", marginVertical: 12, textShadowColor: "#000", textShadowOffset: { width: 0, height: 3 }, textShadowRadius: 4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#FF647C", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#35152A", fontSize: 10, fontWeight: "900", letterSpacing: 0.8 }, actionArrow: { color: "#35152A", fontSize: 20, fontWeight: "900" },
   activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(8, 28, 22, 0.95)", borderWidth: 1.5, borderColor: "#FFC24A", padding: 14, shadowColor: "#FFC24A", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
   activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   activeRouteTitle: { color: "#FFFFFF", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },

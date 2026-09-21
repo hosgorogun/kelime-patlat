@@ -176,9 +176,9 @@ export const SEASON_MISSIONS: SeasonMission[] = [
 
 
 export const MAX_LIVES = 5;
-export const LIVES_REGEN_INTERVAL_MS = 15 * 60 * 1000; // 15 dakika
-export const COST_PER_LIFE = 25;
-export const COST_REFILL_ALL = 125;
+export const LIVES_REGEN_INTERVAL_MS = 30 * 60 * 1000; // 30 dakika
+export const COST_PER_LIFE = 20;
+export const COST_REFILL_ALL = 75;
 
 export const DEFAULT_PROGRESS: PlayerProgress = {
   xp: 0,
@@ -309,8 +309,8 @@ export function badgesFor(progress: PlayerProgress): Badge[] {
   return [
     { id: "first-route", title: "İLK ROTA", description: "İlk turunu bitir.", icon: "✦", accent: "#50E3C2", unlocked: totalMatchesCount >= 1 || progress.wins >= 1 || progress.xp > 0 },
     { id: "victor", title: "ZAFER HATTI", description: "İlk düellonu kazan.", icon: "♕", accent: "#FFC24A", unlocked: progress.wins >= 1 },
-    { id: "daily", title: "GÜNEŞ İZİ", description: "Günlük rotayı tamamla.", icon: "☀", accent: "#FF9B62", unlocked: Boolean(progress.dailyCompletedId) || progress.missions.daily >= 1 },
-    { id: "wordsmith", title: "UZUN USTA", description: "Yedi harfli kelime bul.", icon: "◌", accent: "#9A76ED", unlocked: progress.missions.wordsmith >= 1 },
+    { id: "daily", title: "GÜNEŞ İZİ", description: "Günlük rotayı tamamla.", icon: "☀", accent: "#FF9B62", unlocked: Boolean(progress.dailyCompletedId) || (progress.missions?.daily ?? 0) >= 1 || (progress.streak ?? 0) >= 1 },
+    { id: "wordsmith", title: "UZUN USTA", description: "Yedi harfli kelime bul.", icon: "◌", accent: "#9A76ED", unlocked: (progress.missions?.wordsmith ?? 0) >= 1 || (progress.history ? progress.history.some((w) => w.length >= 7) : false) },
     { id: "streak", title: "AKIŞTA", description: "Üç günlük seri yap.", icon: "↗", accent: "#79C8FF", unlocked: progress.streak >= 3 },
     { id: "streak-expert", title: "NEON HAKİMİ", description: "Yedi günlük seri yap.", icon: "🔥", accent: "#FF9B62", unlocked: progress.streak >= 7 },
     { id: "streak-master", title: "ALEV EFENDİSİ", description: "On dört günlük seri yap.", icon: "🌟", accent: "#F43F5E", unlocked: progress.streak >= 14 },
@@ -350,9 +350,11 @@ export function getDailyChallenge(date = new Date()): DailyChallenge {
   };
 }
 
+export type LeagueTierName = "DEMİR" | "BRONZ" | "GÜMÜŞ" | "ALTIN" | "PLATİN" | "ELMAS" | "YÜCELİK" | "ÖLÜMSÜZLÜK" | "RADIAN";
+
 export type LeagueTierInfo = {
   name: string;
-  tier: "DEMİR" | "BRONZ" | "GÜMÜŞ" | "ALTIN" | "PLATİN" | "ELMAS" | "YÜCELİK" | "ÖLÜMSÜZLÜK" | "RADIAN";
+  tier: LeagueTierName;
   icon: string;
   image: string;
   color: string;
@@ -364,6 +366,40 @@ export type LeagueTierInfo = {
   totalPoints: number;
 };
 
+export interface LeagueTierConfig {
+  tier: LeagueTierName;
+  name: string;
+  icon: string;
+  image: string;
+  color: string;
+  minPoints: number;
+  maxPoints: number;
+}
+
+export const LEAGUE_TIERS: readonly LeagueTierConfig[] = [
+  { tier: "DEMİR", name: "DEMİR LİGİ", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/iron.jpg", color: "#94A3B8", minPoints: 0, maxPoints: 349 },
+  { tier: "BRONZ", name: "BRONZ LİGİ", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/bronze.jpg", color: "#F97316", minPoints: 350, maxPoints: 899 },
+  { tier: "GÜMÜŞ", name: "GÜMÜŞ LİGİ", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/silver.jpg", color: "#38BDF8", minPoints: 900, maxPoints: 1599 },
+  { tier: "ALTIN", name: "ALTIN LİGİ", icon: "🦅", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/gold.jpg", color: "#FBBF24", minPoints: 1600, maxPoints: 2499 },
+  { tier: "PLATİN", name: "PLATİN LİGİ", icon: "🪽", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/platinum.jpg", color: "#67E8F9", minPoints: 2500, maxPoints: 3599 },
+  { tier: "ELMAS", name: "ELMAS LİGİ", icon: "💎", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/diamond.jpg", color: "#60A5FA", minPoints: 3600, maxPoints: 4999 },
+  { tier: "YÜCELİK", name: "YÜCELİK LİGİ", icon: "🔮", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/ascendant.jpg", color: "#C084FC", minPoints: 5000, maxPoints: 6999 },
+  { tier: "ÖLÜMSÜZLÜK", name: "ÖLÜMSÜZLÜK LİGİ", icon: "🔥", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/immortal.jpg", color: "#FB7185", minPoints: 7000, maxPoints: 9999 },
+  { tier: "RADIAN", name: "RADIAN LİGİ", icon: "👑", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/radian.jpg", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
+] as const;
+
+export function getTierColor(tier?: string): string {
+  if (!tier) return "#94A3B8";
+  const found = LEAGUE_TIERS.find((t) => t.tier === tier);
+  return found?.color ?? "#94A3B8";
+}
+
+export function getMinLpForTier(tier?: string): number {
+  if (!tier) return 0;
+  const found = LEAGUE_TIERS.find((t) => t.tier === tier);
+  return found?.minPoints ?? 0;
+}
+
 export function getLeagueTier(progressOrPoints: PlayerProgress | number): LeagueTierInfo {
   let points = 0;
   if (typeof progressOrPoints === "number") {
@@ -372,21 +408,11 @@ export function getLeagueTier(progressOrPoints: PlayerProgress | number): League
     points = Math.max(0, progressOrPoints.lp ?? 0);
   }
 
-  const tiers = [
-    { tier: "DEMİR", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/iron.jpg", color: "#94A3B8", minPoints: 0, maxPoints: 349 },
-    { tier: "BRONZ", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/bronze.jpg", color: "#F97316", minPoints: 350, maxPoints: 899 },
-    { tier: "GÜMÜŞ", icon: "🛡️", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/silver.jpg", color: "#38BDF8", minPoints: 900, maxPoints: 1599 },
-    { tier: "ALTIN", icon: "🦅", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/gold.jpg", color: "#FBBF24", minPoints: 1600, maxPoints: 2499 },
-    { tier: "PLATİN", icon: "🪽", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/platinum.jpg", color: "#67E8F9", minPoints: 2500, maxPoints: 3599 },
-    { tier: "ELMAS", icon: "💎", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/diamond.jpg", color: "#60A5FA", minPoints: 3600, maxPoints: 4999 },
-    { tier: "YÜCELİK", icon: "🔮", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/ascendant.jpg", color: "#C084FC", minPoints: 5000, maxPoints: 6999 },
-    { tier: "ÖLÜMSÜZLÜK", icon: "🔥", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/immortal.jpg", color: "#FB7185", minPoints: 7000, maxPoints: 9999 },
-    { tier: "RADIAN", icon: "👑", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/radian.jpg", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
-  ] as const;
-  const current = [...tiers].reverse().find((tier) => points >= tier.minPoints) ?? tiers[0];
-  const next = tiers[tiers.indexOf(current) + 1];
+  const current = [...LEAGUE_TIERS].reverse().find((tier) => points >= tier.minPoints) ?? LEAGUE_TIERS[0]!;
+  const currentIndex = LEAGUE_TIERS.indexOf(current);
+  const next = LEAGUE_TIERS[currentIndex + 1];
   return {
-    name: `${current.tier} LİGİ`,
+    name: current.name,
     tier: current.tier,
     icon: current.icon,
     image: current.image,
@@ -644,15 +670,65 @@ export function applyMatchProgress(
   };
 }
 
-export function applyArcadeProgress(progress: PlayerProgress, score: number) {
+export function applyArcadeProgress(
+  progress: PlayerProgress,
+  score: number,
+  wordsCount?: number,
+  isDoubled: boolean = false,
+  comboCount?: number,
+  foundWords?: string[]
+) {
   const newBest = Math.max(progress.bestArcadeScore || 0, score);
-  const xpGain = Math.max(5, Math.floor(score / 10));
-  const coinsGain = Math.floor(score / 40);
+  const baseXP = Math.max(5, Math.floor(score / 10));
+  const baseCoins = Math.floor(score / 40);
+  const xpGain = baseXP;
+  const coinsGain = baseCoins;
+
+  const actualWordsCount = typeof wordsCount === "number" && wordsCount > 0
+    ? wordsCount
+    : (foundWords?.length || Math.max(1, Math.floor(score / 15)));
 
   const activeCatalog = [...getDailyMissions(getDayId()), ...getWeeklyMissions(getWeekId())];
-  let nextMissions = updateMissionAction(progress.missions, activeCatalog, "arcade_score", score);
+  let nextMissions = progress.missions || {};
+
+  // 2X Reklam Ödülü: İkinci bir mükerrer maç geçmişi kaydı oluşturmak yerine
+  // son arcade kaydını günceller ve fazladan XP/Çip kazancını ekler.
+  if (isDoubled) {
+    if (coinsGain > 0) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalog, "earn_chips", coinsGain);
+    }
+    const history = [...(progress.matchHistory || [])];
+    const latestArcadeIdx = history.findIndex((h) => h.mode === "arcade");
+    if (latestArcadeIdx !== -1 && history[latestArcadeIdx]) {
+      const prev = history[latestArcadeIdx]!;
+      history[latestArcadeIdx] = {
+        ...prev,
+        xpEarned: (prev.xpEarned || baseXP) + xpGain,
+        coinsEarned: (prev.coinsEarned || baseCoins) + coinsGain,
+      };
+    }
+    return {
+      ...progress,
+      xp: progress.xp + xpGain,
+      coins: (progress.coins ?? 0) + coinsGain,
+      bestArcadeScore: newBest,
+      missions: nextMissions,
+      matchHistory: history,
+    };
+  }
+
+  nextMissions = updateMissionAction(nextMissions, activeCatalog, "arcade_score", score);
+  nextMissions = updateMissionAction(nextMissions, activeCatalog, "word_count", actualWordsCount);
   if (coinsGain > 0) {
     nextMissions = updateMissionAction(nextMissions, activeCatalog, "earn_chips", coinsGain);
+  }
+  if (comboCount && comboCount > 0) {
+    nextMissions = updateMissionAction(nextMissions, activeCatalog, "combo_count", comboCount);
+  }
+  if (foundWords && foundWords.length > 0) {
+    for (const w of foundWords) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalog, "word_length", 1, w.length);
+    }
   }
 
   const arcadeHistoryItem: MatchHistoryEntry = {
@@ -662,7 +738,7 @@ export function applyArcadeProgress(progress: PlayerProgress, score: number) {
     myScore: score,
     xpEarned: xpGain,
     coinsEarned: coinsGain,
-    wordsCount: Math.floor(score / 15),
+    wordsCount: actualWordsCount,
     date: Date.now(),
   };
 
@@ -679,14 +755,23 @@ export function applyArcadeProgress(progress: PlayerProgress, score: number) {
 export function applyVintageProgress(
   progress: PlayerProgress,
   level: number,
-  score: number = 30
+  score: number = 30,
+  wordsCount: number = 5,
+  foundWords?: string[]
 ): PlayerProgress {
   const xpGain = score;
   const coinsGain = Math.max(2, Math.floor(score / 10));
   const activeCatalog = [...getDailyMissions(getDayId()), ...getWeeklyMissions(getWeekId())];
   let nextMissions = updateMissionAction(progress.missions || {}, activeCatalog, "vintage_solve", 1);
+  const actualWordsCount = wordsCount || foundWords?.length || 5;
+  nextMissions = updateMissionAction(nextMissions, activeCatalog, "word_count", actualWordsCount);
   if (coinsGain > 0) {
     nextMissions = updateMissionAction(nextMissions, activeCatalog, "earn_chips", coinsGain);
+  }
+  if (foundWords && foundWords.length > 0) {
+    for (const w of foundWords) {
+      nextMissions = updateMissionAction(nextMissions, activeCatalog, "word_length", 1, w.length);
+    }
   }
 
   const currentVintage = progress.vintageProgress;
@@ -701,7 +786,7 @@ export function applyVintageProgress(
     myScore: score,
     xpEarned: xpGain,
     coinsEarned: coinsGain,
-    wordsCount: 1,
+    wordsCount: actualWordsCount,
     date: Date.now(),
   };
 
@@ -996,11 +1081,22 @@ export function completeDailyProgress(
   progress: PlayerProgress,
   daily: DailyChallenge,
   score?: number,
-  wordsCount?: number
+  wordsCount?: number,
+  foundWords?: string[]
 ) {
   if (progress.dailyCompletedId === daily.id && (progress.missions?.daily ?? 0) >= 1) return progress;
   const activeCatalog = [...getDailyMissions(daily.id), ...getWeeklyMissions(getWeekId())];
-  const updatedMissions = updateMissionAction({ ...progress.missions, daily: 1 }, activeCatalog, "daily_route", 1);
+  let updatedMissions = updateMissionAction({ ...progress.missions, daily: 1 }, activeCatalog, "daily_route", 1);
+  const effectiveWordsCount = wordsCount ?? (foundWords?.length || daily.words?.length || 5);
+  if (effectiveWordsCount > 0) {
+    updatedMissions = updateMissionAction(updatedMissions, activeCatalog, "word_count", effectiveWordsCount);
+  }
+  updatedMissions = updateMissionAction(updatedMissions, activeCatalog, "earn_chips", 5);
+  if (foundWords && foundWords.length > 0) {
+    for (const w of foundWords) {
+      updatedMissions = updateMissionAction(updatedMissions, activeCatalog, "word_length", 1, w.length);
+    }
+  }
 
   // Check if a daily match history item was already added in this exact session
   const alreadyHasDaily = progress.matchHistory?.[0]?.mode === "daily" && Date.now() - (progress.matchHistory[0].date || 0) < 5000;
@@ -1012,7 +1108,7 @@ export function completeDailyProgress(
     myScore: score || daily.targetScore || 100,
     xpEarned: daily.rewardXp,
     coinsEarned: 5,
-    wordsCount: wordsCount ?? (daily.words?.length || 5),
+    wordsCount: effectiveWordsCount,
     date: Date.now(),
   };
 
@@ -1065,7 +1161,7 @@ export const CYBER_TITLES: CyberTitle[] = [
   { id: "victor", name: "NEON HAKİMİ", badge: "[NEON HAKİMİ]", icon: "⚡", accent: "#00F5D4", unlockHint: "5 düello kazan.", unlocked: (p) => p.wins >= 5 },
   { id: "hunter", name: "DÜELLO AVCISI", badge: "[AVCI]", icon: "🎯", accent: "#F43F5E", unlockHint: "10 düello kazan.", unlocked: (p) => p.wins >= 10 },
   { id: "gladiator", name: "ARENA KURDU", badge: "[GLADYATÖR]", icon: "⚔️", accent: "#FB923C", unlockHint: "20 maç tamamla.", unlocked: (p) => p.matches >= 20 },
-  { id: "lexicon", name: "KELİME BÜKÜCÜ", badge: "[KELİME BÜKÜCÜ]", icon: "📚", accent: "#34D399", unlockHint: "En az 30 kelime çöz veya 7 harfli kelime bul.", unlocked: (p) => (p.history ? p.history.length >= 30 : false) || (p.missions?.wordsmith || 0) >= 1 },
+  { id: "lexicon", name: "KELİME BÜKÜCÜ", badge: "[KELİME BÜKÜCÜ]", icon: "📚", accent: "#34D399", unlockHint: "En az 30 kelime çöz veya 7 harfli kelime bul.", unlocked: (p) => (p.history ? p.history.length >= 30 || p.history.some((w) => w.length >= 7) : false) || (p.missions?.wordsmith || 0) >= 1 },
   { id: "storm", name: "FIRTINA OPERATÖRÜ", badge: "[FIRTINA]", icon: "🌪️", accent: "#38BDF8", unlockHint: "En az 4 K/DK tempo hızına ulaş.", unlocked: (p) => (p.bestTempo || 0) >= 4 },
   { id: "firestreak", name: "ALEV HÜKÜMDARI", badge: "[ALEV MUHAFIZI]", icon: "🔥", accent: "#FF7849", unlockHint: "7 günlük galibiyet serisine ulaş.", unlocked: (p) => p.streak >= 7 },
   { id: "tycoon", name: "KAPİTAL LİDERİ", badge: "[KOZMİK ZENGİN]", icon: "🪙", accent: "#F59E0B", unlockHint: "Kasadaki çip miktarını 200'e ulaştır.", unlocked: (p) => (p.coins || 0) >= 200 },
@@ -1227,6 +1323,15 @@ export function reconcileDailyStreak(progress: PlayerProgress, todayId: string):
 
   const lastDate = new Date(progress.dailyCompletedId + "T00:00:00Z");
   const today = new Date(todayId + "T00:00:00Z");
+  if (isNaN(lastDate.getTime()) || isNaN(today.getTime())) {
+    return {
+      updatedProgress: { ...progress, lastStreakCheckDate: todayId },
+      shieldUsed: false,
+      shieldsConsumed: 0,
+      streakReset: false,
+      previousStreak: progress.streak,
+    };
+  }
   const diffTime = today.getTime() - lastDate.getTime();
   const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
@@ -1286,8 +1391,11 @@ export function updateMissionAction(
     if (m.actionType === actionType) {
       if (m.param !== undefined) {
         if (actionType === "duel_play" || actionType === "duel_win") {
-          // Düello tahta boyutu (4x4, 6x6, 8x8, 10x10) tam eşleşmeli
-          if (param !== undefined && param === m.param) {
+          // Düello tahta boyutu (4x4, 6x6, 8x8, 10x10)
+          // "8x8 veya 10x10" gibi görevler için (m.param === 8) 10x10 maçlar da eşleşir
+          if (m.param === 8 && param !== undefined && param >= 8) {
+            nextMissions[m.id] = (nextMissions[m.id] ?? 0) + increment;
+          } else if (param !== undefined && param === m.param) {
             nextMissions[m.id] = (nextMissions[m.id] ?? 0) + increment;
           }
         } else if (param !== undefined && param >= m.param) {
@@ -1311,7 +1419,13 @@ export function reconcileMissions(progress: PlayerProgress, todayId: string, wee
     nextMissions.daily = 0;
     nextMissions.duels = 0;
     nextMissions.wordsmith = 0;
-    // Clear catalog daily keys
+    // Clear previous daily catalog keys (starting with d_)
+    Object.keys(nextMissions).forEach((k) => {
+      if (k.startsWith("d_")) {
+        delete nextMissions[k];
+      }
+    });
+    // Initialize today's active missions to 0
     const dailyMissions = getDailyMissions(todayId);
     dailyMissions.forEach((m) => {
       nextMissions[m.id] = 0;
@@ -1327,6 +1441,12 @@ export function reconcileMissions(progress: PlayerProgress, todayId: string, wee
 
   if (updated.weeklyMissionsWeek !== weekId) {
     const nextMissions = { ...(updated.missions || {}) };
+    // Clear previous weekly catalog keys (starting with w_)
+    Object.keys(nextMissions).forEach((k) => {
+      if (k.startsWith("w_")) {
+        delete nextMissions[k];
+      }
+    });
     const weeklyMissions = getWeeklyMissions(weekId);
     weeklyMissions.forEach((m) => {
       nextMissions[m.id] = 0;
@@ -1364,7 +1484,7 @@ export function getUnclaimedMissionsCount(progress: PlayerProgress, todayId?: st
   }
 
   // Legacy daily missions fallback for tests and old progress format:
-  if (!catalogDailyClaimedOrDone) {
+  if (!catalogDailyClaimedOrDone && !progress.missionsDate) {
     for (const key of ["daily", "duels", "wordsmith"] as const) {
       const target = key === "duels" ? 2 : 1;
       const current = progress.missions?.[key] ?? 0;
@@ -1378,21 +1498,25 @@ export function getUnclaimedMissionsCount(progress: PlayerProgress, todayId?: st
 
   // Dynamic weekly missions from pool
   const activeWeekly = getWeeklyMissions(currentWeekId);
+  let catalogWeeklyClaimedOrDone = false;
   for (const mission of activeWeekly) {
     const current = progress.missions?.[mission.id] ?? 0;
     const isDone = current >= mission.target;
     const isClaimed = Boolean(progress.weeklyClaimed?.[mission.id]);
     if (isDone && !isClaimed) {
       count++;
+      catalogWeeklyClaimedOrDone = true;
     }
   }
 
-  // Legacy weekly fallbacks for tests
-  if (progress.wins >= 3 && !progress.weeklyClaimed?.victoryStreak) {
-    count++;
-  }
-  if ((progress.bestArcadeScore || 0) >= 400 && !progress.weeklyClaimed?.speedDemon) {
-    count++;
+  // Legacy weekly fallbacks for tests and old progress format ONLY (when not using catalog weekly missions):
+  if (!catalogWeeklyClaimedOrDone && !progress.weeklyMissionsWeek) {
+    if (progress.wins >= 3 && !progress.weeklyClaimed?.victoryStreak) {
+      count++;
+    }
+    if ((progress.bestArcadeScore || 0) >= 400 && !progress.weeklyClaimed?.speedDemon) {
+      count++;
+    }
   }
 
   return count;
@@ -1498,7 +1622,7 @@ export function reconcilePlayerProgress(progress: PlayerProgress, date = new Dat
   const streakRes = reconcileDailyStreak(progress, todayId);
   let currentProgress = streakRes.updatedProgress;
 
-  const missionsNeedReset = currentProgress.missionsDate !== todayId;
+  const missionsNeedReset = currentProgress.missionsDate !== todayId || currentProgress.weeklyMissionsWeek !== weekId;
   currentProgress = reconcileMissions(currentProgress, todayId, weekId);
 
   // Sezonluk Lig Puanı Soft Reset Kontrolü

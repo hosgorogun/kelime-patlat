@@ -103,7 +103,7 @@ describe("Magaza Cip Ekipman Satin Alma Is Mantigi (shop-buy)", () => {
     const result = simulateShopBuy(progress, "lives_refill");
     expect(result.ok).toBe(true);
     expect(result.next!.lives).toBe(MAX_LIVES);
-    expect(result.next!.coins).toBe(150);
+    expect(result.next!.coins).toBe(125); // 200 - 75 = 125
   });
 
   it("canlar zaten doluysa hata doner ve cip harcanmaz", () => {

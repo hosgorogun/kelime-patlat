@@ -13,9 +13,11 @@ export type MatchHistoryModalProps = {
 
 type FilterCategory = "all" | "duel" | "friend" | "solo";
 
-function formatRelativeTime(timestamp: number): string {
+function formatRelativeTime(timestamp: number | string | Date): string {
   if (!timestamp) return "Bilinmiyor";
-  const diffSec = Math.max(1, Math.floor((Date.now() - timestamp) / 1000));
+  const ms = typeof timestamp === "number" ? timestamp : new Date(timestamp).getTime();
+  if (!ms || isNaN(ms) || ms <= 0) return "Bilinmiyor";
+  const diffSec = Math.max(1, Math.floor((Date.now() - ms) / 1000));
   if (diffSec < 60) return "Az önce";
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `${diffMin} dk önce`;
@@ -25,7 +27,7 @@ function formatRelativeTime(timestamp: number): string {
   if (diffDays === 1) return "Dün";
   if (diffDays < 7) return `${diffDays} gün önce`;
   
-  const d = new Date(timestamp);
+  const d = new Date(ms);
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
   return `${day}.${month}.${d.getFullYear()}`;
@@ -45,10 +47,12 @@ export function MatchHistoryModal({
 
   // Filter items
   const filteredMatches = history.filter((item) => {
+    if (!item) return false;
+    const mode = (item.mode || "").toLowerCase();
     if (filter === "all") return true;
-    if (filter === "duel") return item.mode === "ranked" || item.mode === "bot";
-    if (filter === "friend") return item.mode === "friend";
-    if (filter === "solo") return item.mode === "solo" || item.mode === "arcade" || item.mode === "vintage" || item.mode === "daily";
+    if (filter === "duel") return mode === "ranked" || mode === "bot" || mode === "pvp";
+    if (filter === "friend") return mode === "friend";
+    if (filter === "solo") return mode === "solo" || mode === "arcade" || mode === "vintage" || mode === "daily" || mode === "level";
     return true;
   });
 
@@ -60,8 +64,9 @@ export function MatchHistoryModal({
 
   const getModeTitle = (entry: MatchHistoryEntry) => {
     const sizeStr = entry.size ? ` · ${entry.size}×${entry.size}` : "";
-    switch (entry.mode) {
+    switch (entry.mode as string) {
       case "ranked":
+      case "pvp":
         return `⚔️ Dereceli Düello${sizeStr}`;
       case "friend":
         return `🤝 Arkadaş Maçı${sizeStr}`;
@@ -82,8 +87,8 @@ export function MatchHistoryModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.containerCard}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.containerCard} onPress={(e) => e.stopPropagation()}>
           {/* Top Decorative Border */}
           <LinearGradient
             colors={["#50E3C2", "#C9A227", "#34D399"]}
@@ -197,10 +202,11 @@ export function MatchHistoryModal({
                 )}
               </View>
             ) : (
-              filteredMatches.map((match) => {
-                const isSoloMode = match.mode === "solo" || match.mode === "arcade" || match.mode === "vintage" || match.mode === "daily";
-                const isWon = match.won;
-                const isDraw = match.isDraw;
+              filteredMatches.map((match, idx) => {
+                const mode = (match.mode || "").toLowerCase();
+                const isSoloMode = mode === "solo" || mode === "arcade" || mode === "vintage" || mode === "daily" || mode === "level";
+                const isWon = !!match.won;
+                const isDraw = !!match.isDraw;
 
                 const resultBadgeColor = isSoloMode
                   ? (isWon ? "#06B6D4" : "#EF4444")
@@ -220,7 +226,7 @@ export function MatchHistoryModal({
 
                 return (
                   <View
-                    key={match.id}
+                    key={match.id || `match-${idx}`}
                     style={[
                       styles.matchCard,
                       {
@@ -366,8 +372,8 @@ export function MatchHistoryModal({
               <Text style={styles.bottomCloseBtnText}>KAPAT</Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -383,6 +389,7 @@ const styles = StyleSheet.create({
   containerCard: {
     width: "100%",
     maxWidth: 440,
+    height: "82%",
     maxHeight: "88%",
     backgroundColor: "#071B14",
     borderRadius: 24,

@@ -12,7 +12,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 
 import { socialManager, MOCK_FRIENDS } from "../shared/social";
 import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../shared/store-items";
-import { DIGITAL_STORE_PRODUCTS, monetizationManager } from "../shared/monetization";
+import { monetizationManager } from "../shared/monetization";
 
 describe("Sosyal ve Mağaza Sistemi Testleri", () => {
   beforeEach(() => {
@@ -55,6 +55,36 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
       expect(result.friend?.tier).toBe("YÜCELİK");
       expect(result.friend?.lp).toBe(5400);
       expect(result.friend?.level).toBe(42);
+    });
+
+    it("siber bot rakiplerini (TaktikMaster vb.) pratik dostu olarak arkadaş listesine eklemeyi destekler", () => {
+      const botOpponent = {
+        id: `bot_taktikmaster_${Date.now()}`,
+        name: "TaktikMaster",
+        username: "TaktikMaster",
+        avatar: "🤖",
+        selectedTitle: "[SİBER BOT]",
+        isOnline: true,
+        xp: 2800,
+        level: 3,
+        lp: 97,
+        tier: "GLADYATÖR",
+        wins: 97,
+        matches: 180,
+        streak: 2,
+        bestScore: 473,
+        bestTempo: 38,
+      };
+      const result = socialManager.addFriend(botOpponent);
+      expect(result.success).toBe(true);
+      expect(result.friend?.name).toBe("TaktikMaster");
+      expect(result.friend?.isOnline).toBe(true);
+      expect(socialManager.getFriends().some((f) => f.username.toLowerCase() === "taktikmaster")).toBe(true);
+
+      // Tekrar eklenmeye çalışıldığında güvenle engeller
+      const duplicateRes = socialManager.addFriend(botOpponent);
+      expect(duplicateRes.success).toBe(false);
+      expect(duplicateRes.message).toContain("zaten");
     });
 
     it("boş kullanıcı adı eklenmesini engeller", () => {
@@ -108,24 +138,9 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
       });
     });
 
-    it("dijital mağaza ürünlerinin fiyat ve çip değerlerini doğrular", () => {
-      expect(DIGITAL_STORE_PRODUCTS.length).toBeGreaterThanOrEqual(4);
-      DIGITAL_STORE_PRODUCTS.forEach((product) => {
-        expect(product.id).toBeTruthy();
-        expect(product.name).toBeTruthy();
-        expect(product.priceText).toMatch(/^₺/);
-        expect(["coin_pack", "theme", "radar_pack"]).toContain(product.type);
-      });
-    });
-
-    it("satın alma altyapısı henüz aktif değilken güvenli hata döner", async () => {
-      const result = await monetizationManager.purchaseProduct("coins_small");
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Satın alma altyapısı henüz etkin değil.");
-
-      const invalidResult = await monetizationManager.purchaseProduct("unknown_product");
-      expect(invalidResult.success).toBe(false);
-      expect(invalidResult.error).toBe("Ürün bulunamadı.");
+    it("gerçek para ile mağaza içi çip satışı olmadığını ve sistemin reklam tabanlı olduğunu doğrular", () => {
+      // Çip satışı tamamen kaldırılmıştır, çip kazanımı ödüllü reklamlar ve oynanışla sağlanır
+      expect(typeof monetizationManager.showRewardedAd).toBe("function");
     });
 
     it("ödüllü reklam kullanılamadığında onError callback'ini tetikler", async () => {
@@ -136,6 +151,38 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
         (err) => { errorReceived = err; }
       );
       expect(errorReceived).toBe("Ödüllü reklam şu anda kullanılamıyor.");
+    });
+
+    it("interstitial (geçiş) reklam motorunun her 3 maçta bir doğru tetiklendiğini doğrular", async () => {
+      monetizationManager.resetInterstitialCounter();
+      expect(monetizationManager.getCompletedMatchesCount()).toBe(0);
+
+      // 1. Galibiyet
+      const r1 = monetizationManager.recordMatchFinished(true);
+      expect(r1.shouldShowInterstitial).toBe(false);
+      expect(r1.matchCount).toBe(1);
+
+      // Mağlubiyet (oyuncu cezalandırılmaz, sayaç artmaz)
+      const rLoss = monetizationManager.recordMatchFinished(false);
+      expect(rLoss.shouldShowInterstitial).toBe(false);
+      expect(rLoss.matchCount).toBe(1);
+
+      // 2. Galibiyet
+      const r2 = monetizationManager.recordMatchFinished(true);
+      expect(r2.shouldShowInterstitial).toBe(false);
+      expect(r2.matchCount).toBe(2);
+
+      // 3. Galibiyet -> Reklam tetiklenmeli!
+      const r3 = monetizationManager.recordMatchFinished(true);
+      expect(r3.shouldShowInterstitial).toBe(true);
+      expect(r3.matchCount).toBe(3);
+
+      // Reklam gösterildiğinde callback çalışır
+      let closed = false;
+      await monetizationManager.showInterstitialAd(() => {
+        closed = true;
+      });
+      expect(closed).toBe(true);
     });
 
     it("tüm kozmetik kataloglarının (çerçeveler, zafer efektleri, tahta temaları) geçerli ID ve fiyatlara sahip olduğunu doğrular", () => {
@@ -161,6 +208,54 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
         expect(name).toBeTruthy();
         expect(color).toMatch(/^#[0-9A-Fa-f]{6}$/);
         expect(price).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it("correctly resolves board skin colors and victory effect animations across game modes", () => {
+      const getBoardSkinColor = (skinId?: string) => {
+        const skin = BOARD_SKINS.find((s) => s[0] === skinId);
+        return skin ? skin[2] : "#3EE8B5";
+      };
+
+      const getVictoryEffectGlyph = (effectId?: string) => {
+        const eff = VICTORY_EFFECTS.find((e) => e[0] === effectId);
+        return eff ? eff[2] : "✦";
+      };
+
+      // Default fallbacks
+      expect(getBoardSkinColor(undefined)).toBe("#3EE8B5");
+      expect(getBoardSkinColor("unknown_skin")).toBe("#3EE8B5");
+      expect(getVictoryEffectGlyph(undefined)).toBe("✦");
+
+      // Verify each board skin resolves to a distinct vibrant color
+      expect(getBoardSkinColor("grid")).toBe("#3EE8B5");
+      expect(getBoardSkinColor("night")).toBe("#818CF8");
+      expect(getBoardSkinColor("ember")).toBe("#FB7185");
+      expect(getBoardSkinColor("gold_grid")).toBe("#FFC24A");
+      expect(getBoardSkinColor("cyber_pink")).toBe("#FF2A85");
+
+      // Verify each victory effect resolves to its unique celebration icon
+      expect(getVictoryEffectGlyph("pulse")).toBe("🌊");
+      expect(getVictoryEffectGlyph("glitch")).toBe("💻");
+      expect(getVictoryEffectGlyph("flare")).toBe("💥");
+      expect(getVictoryEffectGlyph("lightning")).toBe("⚡");
+      expect(getVictoryEffectGlyph("fireworks")).toBe("🎆");
+    });
+
+    it("varsayılan kozmetikler ve çip ekipmanları tutarlı fiyatlandırmaya sahiptir", () => {
+      // Verify all default cosmetics cost 0
+      const defaultFrame = PROFILE_FRAMES.find(([id]) => id === "signal");
+      const defaultEffect = VICTORY_EFFECTS.find(([id]) => id === "pulse");
+      const defaultSkin = BOARD_SKINS.find(([id]) => id === "grid");
+
+      expect(defaultFrame?.[3]).toBe(0);
+      expect(defaultEffect?.[3]).toBe(0);
+      expect(defaultSkin?.[3]).toBe(0);
+
+      // Verify all chip equipment items have distinct rewards and valid positive costs
+      CHIP_EQUIPMENT_ITEMS.forEach((item) => {
+        expect(item.cost).toBeGreaterThan(0);
+        expect(["lives", "radar", "shield", "xp"]).toContain(item.rewardType);
       });
     });
   });

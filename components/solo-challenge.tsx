@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import { ActivityIndicator, AppState, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
@@ -18,6 +18,7 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
+import { VictoryEffectOverlay } from "./victory-effect-overlay";
 
 function ConnectLine({
   x1,
@@ -124,7 +125,41 @@ type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
-export function SoloChallenge({ level, theme = "general", variationSeed, daily = false, excludeWords = [], radarChargesBonus = 0, lives, watchAd, onExit, onComplete, onNext, onAdvanceLevel, onBonusReward }: { level: number; theme?: WordTheme; variationSeed?: number; daily?: boolean; excludeWords?: string[]; radarChargesBonus?: number; lives?: number; watchAd?: (onReward: () => void) => void; onExit: () => void; onComplete: (level: number, foundWords: string[], won: boolean) => void; onNext: () => void; onAdvanceLevel?: () => void; onBonusReward?: (xp: number, radarBonus: number) => void }) {
+export function SoloChallenge({
+  level,
+  theme = "general",
+  variationSeed,
+  daily = false,
+  excludeWords = [],
+  radarChargesBonus = 0,
+  lives,
+  onOpenLivesModal,
+  boardSkinColor,
+  selectedVictoryEffect,
+  watchAd,
+  onExit,
+  onComplete,
+  onNext,
+  onAdvanceLevel,
+  onBonusReward,
+}: {
+  level: number;
+  theme?: WordTheme;
+  variationSeed?: number;
+  daily?: boolean;
+  excludeWords?: string[];
+  radarChargesBonus?: number;
+  lives?: number;
+  onOpenLivesModal?: () => void;
+  boardSkinColor?: string;
+  selectedVictoryEffect?: string;
+  watchAd?: (onReward: () => void) => void;
+  onExit: () => void;
+  onComplete: (level: number, foundWords: string[], won: boolean) => void;
+  onNext: () => void;
+  onAdvanceLevel?: () => void;
+  onBonusReward?: (xp: number, radarBonus: number) => void;
+}) {
   const { width } = useWindowDimensions();
   const safeWatchAd = useMemo(() => watchAd ?? ((onReward: () => void) => onReward()), [watchAd]);
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
@@ -358,8 +393,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     }
   }, [status, challenge.words, challenge.routes, found]);
 
+  const [showExitModal, setShowExitModal] = useState(false);
+
   useEffect(() => {
-    if (status !== "playing" || countdown !== null || isPaused) return;
+    if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
     const timer = setInterval(() => setSeconds((value) => {
       if (value <= 1) {
         clearInterval(timer);
@@ -375,7 +412,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       return value - 1;
     }), 1000);
     return () => clearInterval(timer);
-  }, [status, countdown, isPaused]);
+  }, [status, countdown, isPaused, showExitModal]);
 
   useEffect(() => () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -547,11 +584,12 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     }
   };
 
-  const [showExitModal, setShowExitModal] = useState(false);
-
   const handleExitPress = () => {
     if (status === "lost" && daily) {
-      onCompleteRef.current(levelRef.current, foundRef.current, false);
+      if (!hasFinishedRef.current) {
+        hasFinishedRef.current = true;
+        onCompleteRef.current(levelRef.current, foundRef.current, false);
+      }
       onExit();
       return;
     }
@@ -563,9 +601,36 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
     }
   };
 
+  // Donanım geri tuşu kontrolü (Android BackHandler)
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isPaused) {
+        setIsPaused(false);
+        return true;
+      }
+      if (showExitModal) {
+        setShowExitModal(false);
+        return true;
+      }
+      if (status === "playing" && countdown === null) {
+        setShowExitModal(true);
+        return true;
+      }
+      handleExitPress();
+      return true;
+    };
+
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => sub.remove();
+  }, [isPaused, showExitModal, status, countdown, daily, onExit]);
+
   const handleRetry = () => {
     if (typeof lives === "number" && lives <= 0) {
-      onExit();
+      if (onOpenLivesModal) {
+        onOpenLivesModal();
+      } else {
+        onExit();
+      }
       return;
     }
     triggerHapticSelection();
@@ -731,7 +796,27 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       </Pressable>
     </View>
     <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={[styles.progressMeta, { color: activeTheme.headerText }]}>{challenge.subtitle}</Text></View>
-    <Animated.View ref={boardRef} onLayout={measureBoard} style={[styles.board, { width: boardWidth, height: boardWidth, position: "relative", backgroundColor: activeTheme.background, borderColor: activeTheme.cellBorder, transform: [{ translateX: shakeAnim }] }, isUrgent && styles.boardUrgent]}>
+    <Animated.View
+      ref={boardRef}
+      onLayout={measureBoard}
+      style={[
+        styles.board,
+        {
+          width: boardWidth,
+          height: boardWidth,
+          position: "relative",
+          backgroundColor: activeTheme.background,
+          borderColor: boardSkinColor ? `${boardSkinColor}99` : activeTheme.cellBorder,
+          borderWidth: boardSkinColor ? 2.5 : 2,
+          shadowColor: boardSkinColor || activeTheme.accentColor,
+          shadowOpacity: boardSkinColor ? 0.35 : 0.2,
+          shadowRadius: 10,
+          elevation: 5,
+          transform: [{ translateX: shakeAnim }],
+        },
+        isUrgent && styles.boardUrgent,
+      ]}
+    >
       {/* HUD Matrix Grid Backing */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={{ position: "absolute", top: 0, bottom: 0, left: "25%", width: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
@@ -754,7 +839,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
             y1={start.y}
             x2={end.x}
             y2={end.y}
-            color={activeTheme.accentColor}
+            color={boardSkinColor || activeTheme.accentColor}
             showArrow
           />
         );
@@ -1089,9 +1174,11 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
       </View>
     </View>
     {status === "won" && (
-      <View style={styles.result}>
-        <Text style={styles.resultTitle}>{daily ? "GÜNLÜK ROTA TAMAMLANDI" : "SEVİYE TAMAMLANDI"}</Text>
-        <Text style={styles.resultCopy}>{daily ? "Bugünün XP ödülü sezon ilerlemene eklendi." : "Yeni rota yoğunluğu ve daha kısa süre seni bekliyor."}</Text>
+      <>
+        <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "won"} />
+        <View style={[styles.result, boardSkinColor && { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor }]}>
+          <Text style={styles.resultTitle}>{daily ? "GÜNLÜK ROTA TAMAMLANDI" : "SEVİYE TAMAMLANDI"}</Text>
+          <Text style={styles.resultCopy}>{daily ? "Bugünün XP ödülü sezon ilerlemene eklendi." : "Yeni rota yoğunluğu ve daha kısa süre seni bekliyor."}</Text>
         
         {daily && (
           <View style={[styles.chestCard, { borderColor: activeTheme.accentColor }]}>
@@ -1183,6 +1270,7 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
           </Pressable>
         </View>
       </View>
+      </>
     )}
     {status === "lost" && (
       <View style={styles.result}>
@@ -1228,7 +1316,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
         {daily ? (
           <Pressable
             onPress={() => {
-              onCompleteRef.current(levelRef.current, foundRef.current, false);
+              if (!hasFinishedRef.current) {
+                hasFinishedRef.current = true;
+                onCompleteRef.current(levelRef.current, foundRef.current, false);
+              }
               onExit();
             }}
             style={[styles.action, { backgroundColor: activeTheme.accentColor }]}
@@ -1298,7 +1389,10 @@ export function SoloChallenge({ level, theme = "general", variationSeed, daily =
             text: daily ? "AYRIL" : "AYRIL (-1 CAN)",
             onPress: () => {
               setShowExitModal(false);
-              onCompleteRef.current(levelRef.current, foundRef.current, false);
+              if (!hasFinishedRef.current) {
+                hasFinishedRef.current = true;
+                onCompleteRef.current(levelRef.current, foundRef.current, false);
+              }
               onExit();
             },
           },

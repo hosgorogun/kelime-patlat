@@ -256,7 +256,7 @@ export function SoloLevels({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 140, flexGrow: 1 },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 185, flexGrow: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
   back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#164036", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },

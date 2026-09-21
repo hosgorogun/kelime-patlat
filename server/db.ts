@@ -320,13 +320,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string): Promise<User | undefined> {
-  await connectDb();
   try {
+    await connectDb();
     const doc = await UserModel.findOne({ openId });
     if (!doc) return undefined;
     return doc.toObject();
   } catch (error) {
-    console.error("[Database] Failed to get user by openId:", error);
+    console.warn("[Database] Failed to get user by openId (offline fallback):", error);
     return undefined;
   }
 }

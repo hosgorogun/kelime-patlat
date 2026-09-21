@@ -47,13 +47,22 @@ describe("Tek oyunculu seviye yolculuğu", () => {
     expect(final.minWordLength).toBeGreaterThanOrEqual(first.minWordLength);
   });
 
-  it("seviyeler büyüdükçe daha büyük tahtaya ve daha kısa süreye geçer", () => {
+  it("seviyeler büyüdükçe kademe bazında tahta boyutu ve dengeli süre eğrisine geçer", () => {
     expect(getSoloLevel(1).size).toBe(4);
     expect(getSoloLevel(16).size).toBe(6);
     expect(getSoloLevel(46).size).toBe(8);
+    expect(getSoloLevel(76).size).toBe(10);
     expect(getSoloLevel(1).wordCount).toBe(3);
     expect(getSoloLevel(12).wordCount).toBe(3);
-    expect(getSoloLevel(1).timeLimit).toBeGreaterThan(getSoloLevel(16).timeLimit);
+    // Her kademe içinde seviye arttıkça süre sıkılaşır (heyecan ve ustalık artar)
+    expect(getSoloLevel(1).timeLimit).toBeGreaterThan(getSoloLevel(15).timeLimit);
+    expect(getSoloLevel(16).timeLimit).toBeGreaterThan(getSoloLevel(45).timeLimit);
+    expect(getSoloLevel(46).timeLimit).toBeGreaterThan(getSoloLevel(75).timeLimit);
+    expect(getSoloLevel(76).timeLimit).toBeGreaterThan(getSoloLevel(100).timeLimit);
+    // Erken seviyede kelime başına verilen süre, son seviyeye göre daha cömerttir (öğrenme eğrisi)
+    expect(getSoloLevel(1).timeLimit / getSoloLevel(1).wordCount).toBeGreaterThan(
+      getSoloLevel(100).timeLimit / getSoloLevel(100).wordCount
+    );
   });
 
   it("üretilen seviyedeki tüm kelimelerin yatay-dikey yolu bulunur", () => {

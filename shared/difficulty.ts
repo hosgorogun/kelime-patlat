@@ -47,10 +47,29 @@ export function getDifficultyProfile(level: number): DifficultyProfile {
 
   const progress = (safeLevel - 1) / 99;
   
+  let timeLimit = 60;
+  if (size === 4) {
+    // Seviye 1-15: 55 sn -> 45 sn (3 kelime, 16 hücre)
+    const tierRatio = (safeLevel - 1) / 14;
+    timeLimit = Math.round(55 - tierRatio * 10);
+  } else if (size === 6) {
+    // Seviye 16-45: 85 sn -> 75 sn (5-8 kelime, 36 hücre)
+    const tierRatio = (safeLevel - 16) / 29;
+    timeLimit = Math.round(85 - tierRatio * 10);
+  } else if (size === 8) {
+    // Seviye 46-75: 135 sn -> 115 sn (8-12 kelime, 64 hücre)
+    const tierRatio = (safeLevel - 46) / 29;
+    timeLimit = Math.round(135 - tierRatio * 20);
+  } else {
+    // Seviye 76-100: 175 sn -> 150 sn (10-14 kelime, 100 hücre)
+    const tierRatio = (safeLevel - 76) / 24;
+    timeLimit = Math.round(175 - tierRatio * 25);
+  }
+
   return {
     size,
     wordCount,
-    timeLimit: Math.max(40, Math.round(110 - (safeLevel - 1) * 0.7 - (size === 6 ? 5 : size === 8 ? 10 : size === 10 ? 15 : 0))),
+    timeLimit,
     minTurns: safeLevel <= 5 ? 1 : safeLevel <= 25 ? 2 : 3,
     minWordLength,
     maxWordLength,

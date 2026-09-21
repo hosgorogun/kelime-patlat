@@ -90,10 +90,25 @@ describe("Match History (Oyun Geçmişi) Testleri", () => {
     expect(arcadeProgress.matchHistory![0].mode).toBe("arcade");
     expect(arcadeProgress.matchHistory![0].myScore).toBe(180);
 
-    const vintageProgress = applyVintageProgress(DEFAULT_PROGRESS, 1, 60);
+    const vintageProgress = applyVintageProgress(DEFAULT_PROGRESS, 1, 60, 6);
     expect(vintageProgress.matchHistory?.length).toBe(1);
     expect(vintageProgress.matchHistory![0].mode).toBe("vintage");
     expect(vintageProgress.matchHistory![0].myScore).toBe(60);
+    expect(vintageProgress.matchHistory![0].wordsCount).toBe(6);
+  });
+
+  it("applyArcadeProgress 2X reklam izlendiğinde mükerrer maç kaydı oluşturmaz, mevcut kaydı günceller", () => {
+    const firstRun = applyArcadeProgress(DEFAULT_PROGRESS, 120, 8, false);
+    expect(firstRun.matchHistory?.length).toBe(1);
+    expect(firstRun.matchHistory![0].xpEarned).toBe(12);
+    expect(firstRun.matchHistory![0].coinsEarned).toBe(3);
+
+    const doubledRun = applyArcadeProgress(firstRun, 120, 8, true);
+    // Maç sayısı hala 1 olmalı (çift kayıt yok)
+    expect(doubledRun.matchHistory?.length).toBe(1);
+    // Ödüller 2 katına çıkmış olmalı
+    expect(doubledRun.matchHistory![0].xpEarned).toBe(24);
+    expect(doubledRun.matchHistory![0].coinsEarned).toBe(6);
   });
 
   it("completeDailyProgress günün rotasını maç geçmişine eklemelidir", () => {

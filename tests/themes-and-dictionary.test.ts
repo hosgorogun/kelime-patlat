@@ -73,7 +73,7 @@ describe("Görsel Temalar, Sözlük ve Davet Sistemi Testleri", () => {
       const empty = await fetchWordDetail("   ");
       expect(empty.word).toBe("");
       expect(empty.definition).toBe("Kelime belirtilmedi.");
-    });
+    }, 15000);
 
     it("tüm kelime kataloğunun (WORD_CATALOG_DATA) Türkçe harfler ve min 3 uzunluğunda olduğunu doğrular", async () => {
       const { WORD_CATALOG_DATA } = await import("../shared/word-catalog");

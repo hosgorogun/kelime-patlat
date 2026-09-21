@@ -15,9 +15,11 @@ import * as ImagePicker from "expo-image-picker";
 import {
   AVATARS,
   CYBER_TITLES,
+  THEME_PACKS,
   badgesFor,
   getActiveCyberTitle,
   getPlayerLevel,
+  getLeagueTier,
   isAvatarUnlocked,
   type AvatarId,
   type GenderType,
@@ -38,6 +40,7 @@ export function ProfileScreen({
   onSelectAvatar,
   onSelectTheme,
   onSelectTitle,
+  onSelectFrame,
   onUpdateGender,
   onUpdateAvatarPhoto,
   sfxOn,
@@ -55,6 +58,7 @@ export function ProfileScreen({
   onSelectAvatar?: (avatar: AvatarId) => void;
   onSelectTheme?: (theme: ThemePackId) => void;
   onSelectTitle?: (titleBadge: string) => void;
+  onSelectFrame?: (frameId: string) => void;
   onUpdateGender?: (gender: GenderType) => void;
   onUpdateAvatarPhoto?: (photoUrl?: string) => void;
   sfxOn: boolean;
@@ -81,17 +85,31 @@ export function ProfileScreen({
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
-  const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
+  const currentFrameId = progress.selectedFrame || "signal";
+  const activeFrame = PROFILE_FRAMES.find((f) => f[0] === currentFrameId);
   const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || "#3EE8B5");
+
   const currentLevel = getPlayerLevel(progress.xp);
   const currentLevelXp = progress.xp % 200;
   const nextLevelXp = 200;
   const progressRatio = Math.min(1, Math.max(0.04, currentLevelXp / nextLevelXp));
+
+  const currentLeague = getLeagueTier(progress);
   const activeTitle = getActiveCyberTitle(progress);
   const badges = badgesFor(progress);
   const unlockedBadgesCount = badges.filter((b) => b.unlocked).length;
   const unlockedTitlesCount = CYBER_TITLES.filter((t) => t.unlocked(progress)).length;
   const unlockedAvatarsCount = AVATARS.filter((a) => isAvatarUnlocked(a.id, progress)).length;
+  const unlockedFramesCount = PROFILE_FRAMES.filter(
+    (f) => f[3] === 0 || progress.ownedFrames?.[f[0]] || progress.selectedFrame === f[0]
+  ).length;
+
+  const totalMatches = progress.matches ?? 0;
+  const winRate = totalMatches > 0 ? Math.round(((progress.wins ?? 0) / totalMatches) * 100) : 0;
+  const wordPoolCount = Math.max(
+    progress.history ? progress.history.length : 0,
+    totalMatches > 0 ? totalMatches * 3 : 0
+  );
 
   const longestWord =
     progress.history && progress.history.length
@@ -100,9 +118,21 @@ export function ProfileScreen({
 
   const handleSaveName = () => {
     const trimmed = nameInput.trim().toLocaleUpperCase("tr-TR").slice(0, 16);
-    if (trimmed.length >= 3) {
-      onUpdatePlayerName(trimmed);
-      triggerHapticSuccess();
+    if (trimmed.length < 3) {
+      triggerHapticError();
+      if (onShowToast) {
+        onShowToast("GEÇERSİZ İSİM", "Kullanıcı adı en az 3 karakter olmalıdır.", "⚠️", "#EF4444");
+      } else {
+        Alert.alert("Geçersiz İsim", "Kullanıcı adı en az 3 karakter olmalıdır.");
+      }
+      setNameInput(playerName);
+      setIsEditingName(false);
+      return;
+    }
+    onUpdatePlayerName(trimmed);
+    triggerHapticSuccess();
+    if (onShowToast) {
+      onShowToast("İSİM GÜNCELLENDİ", `Kullanıcı adınız "${trimmed}" olarak kaydedildi.`, "✓", "#3EE8B5");
     }
     setIsEditingName(false);
   };
@@ -126,6 +156,14 @@ export function ProfileScreen({
     if (!result.canceled && result.assets[0]) {
       triggerHapticSuccess();
       onUpdateAvatarPhoto?.(result.assets[0].uri);
+    }
+  };
+
+  const handleResetToGlyph = () => {
+    triggerHapticSelection();
+    onUpdateAvatarPhoto?.("");
+    if (onShowToast) {
+      onShowToast("GLİF AVATARINA GEÇİLDİ", "Klasik siber karakter simgenize dönüldü.", "🤖", "#3EE8B5");
     }
   };
 
@@ -182,18 +220,25 @@ export function ProfileScreen({
               )}
             </Pressable>
 
-            {/* Change Photo Pill */}
-            <Pressable onPress={handlePickPhoto} style={styles.cameraIconBtn}>
-              <Text style={styles.cameraIconText}>📷 DEĞİŞTİR</Text>
-            </Pressable>
+            {/* Photo Action Buttons */}
+            <View style={styles.avatarActionsRow}>
+              <Pressable onPress={handlePickPhoto} style={styles.cameraIconBtn}>
+                <Text style={styles.cameraIconText}>📷 FOTOĞRAF</Text>
+              </Pressable>
+              {Boolean(progress.avatarPhoto) && (
+                <Pressable onPress={handleResetToGlyph} style={styles.resetGlyphBtn}>
+                  <Text style={styles.resetGlyphText}>✕ GLİF</Text>
+                </Pressable>
+              )}
+            </View>
 
-            {/* Level Badge in a clean corner */}
+            {/* Level Badge */}
             <View style={styles.levelBadge}>
               <Text style={styles.levelBadgeText}>LV.{currentLevel}</Text>
             </View>
           </View>
 
-          {/* Name & Title */}
+          {/* Name & Badges */}
           <View style={styles.heroInfo}>
             <View style={styles.nameRow}>
               {isEditingName ? (
@@ -230,11 +275,20 @@ export function ProfileScreen({
               )}
             </View>
 
-            {/* Cyber Hologram Title */}
-            <View style={styles.titleBadgeRow}>
+            {/* Title & League Badges Row */}
+            <View style={styles.metaBadgesRow}>
+              {/* Active Cyber Hologram Title */}
               <View style={styles.titleBadge}>
                 <Text style={styles.titleBadgeIcon}>🎖️</Text>
-                <Text style={styles.titleBadgeText}>{activeTitle}</Text>
+                <Text numberOfLines={1} style={styles.titleBadgeText}>{activeTitle}</Text>
+              </View>
+
+              {/* League Tier Badge */}
+              <View style={[styles.leagueBadge, { borderColor: currentLeague.color, backgroundColor: `${currentLeague.color}15` }]}>
+                <Text style={styles.leagueBadgeIcon}>{currentLeague.icon}</Text>
+                <Text style={[styles.leagueBadgeText, { color: currentLeague.color }]}>
+                  {currentLeague.name} · {progress.lp ?? 0} LP
+                </Text>
               </View>
             </View>
           </View>
@@ -274,7 +328,7 @@ export function ProfileScreen({
           style={[styles.tabBtn, activeTab === "overview" && styles.tabBtnActive]}
         >
           <Text style={[styles.tabBtnText, activeTab === "overview" && styles.tabBtnTextActive]}>
-            📊 GENEL BAKIŞ & ÜNVANLAR
+            📊 GENEL BAKIŞ & ÖZELLEŞTİRME
           </Text>
         </Pressable>
         <Pressable
@@ -304,8 +358,28 @@ export function ProfileScreen({
                 <Text style={styles.statIcon}>🏆</Text>
               </View>
               <View style={styles.statDataWrap}>
-                <Text style={styles.statNumber}>{progress.wins}</Text>
+                <Text style={styles.statNumber}>{progress.wins ?? 0}</Text>
                 <Text style={styles.statCaption}>GALİBİYET</Text>
+              </View>
+            </View>
+
+            <View style={[styles.statTile, styles.statTileMatches]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(56, 189, 248, 0.12)", borderColor: "#38BDF8" }]}>
+                <Text style={styles.statIcon}>⚔️</Text>
+              </View>
+              <View style={styles.statDataWrap}>
+                <Text style={styles.statNumber}>{totalMatches}</Text>
+                <Text style={styles.statCaption}>TOPLAM MAÇ</Text>
+              </View>
+            </View>
+
+            <View style={[styles.statTile, styles.statTileWinRate]}>
+              <View style={[styles.statIconBox, { backgroundColor: "rgba(192, 132, 252, 0.12)", borderColor: "#C084FC" }]}>
+                <Text style={styles.statIcon}>📈</Text>
+              </View>
+              <View style={styles.statDataWrap}>
+                <Text style={styles.statNumber}>%{winRate}</Text>
+                <Text style={styles.statCaption}>KAZANMA ORANI</Text>
               </View>
             </View>
 
@@ -314,30 +388,8 @@ export function ProfileScreen({
                 <Text style={styles.statIcon}>⚡</Text>
               </View>
               <View style={styles.statDataWrap}>
-                <Text style={styles.statNumber}>{progress.bestScore}</Text>
+                <Text style={styles.statNumber}>{progress.bestScore ?? 0}</Text>
                 <Text style={styles.statCaption}>EN İYİ SKOR</Text>
-              </View>
-            </View>
-
-            <View style={[styles.statTile, styles.statTileWords]}>
-              <View style={[styles.statIconBox, { backgroundColor: "rgba(167, 139, 250, 0.12)", borderColor: "#E8C36A" }]}>
-                <Text style={styles.statIcon}>📚</Text>
-              </View>
-              <View style={styles.statDataWrap}>
-                <Text style={styles.statNumber}>
-                  {progress.history ? progress.history.length : 0}
-                </Text>
-                <Text style={styles.statCaption}>KELİME</Text>
-              </View>
-            </View>
-
-            <View style={[styles.statTile, styles.statTileStreak]}>
-              <View style={[styles.statIconBox, { backgroundColor: "rgba(244, 114, 182, 0.12)", borderColor: "#F472B6" }]}>
-                <Text style={styles.statIcon}>🔥</Text>
-              </View>
-              <View style={styles.statDataWrap}>
-                <Text style={styles.statNumber}>{progress.streak} <Text style={styles.statUnit}>GÜN</Text></Text>
-                <Text style={styles.statCaption}>SERİ</Text>
               </View>
             </View>
           </View>
@@ -345,13 +397,29 @@ export function ProfileScreen({
           {/* Mini Intel HUD Strip */}
           <View style={styles.intelStrip}>
             <View style={styles.intelCell}>
-              <Text style={styles.intelLabel}>⚡ EN İYİ TEMPO</Text>
-              <Text style={styles.intelValue}>{progress.bestTempo || "—"} <Text style={styles.intelSub}>K/DK</Text></Text>
+              <Text style={styles.intelLabel}>🔥 AKTİF SERİ</Text>
+              <Text style={[styles.intelValue, { color: "#FB7185" }]}>
+                {progress.streak ?? 0} <Text style={styles.intelSub}>GÜN</Text>
+              </Text>
             </View>
             <View style={styles.intelDivider} />
             <View style={styles.intelCell}>
-              <Text style={styles.intelLabel}>🎯 EN UZUN ROTA</Text>
-              <Text numberOfLines={1} style={[styles.intelValue, { color: "#FFC24A" }]}>{longestWord}</Text>
+              <Text style={styles.intelLabel}>⚡ TEMPO</Text>
+              <Text style={styles.intelValue}>
+                {progress.bestTempo || "—"} <Text style={styles.intelSub}>K/DK</Text>
+              </Text>
+            </View>
+            <View style={styles.intelDivider} />
+            <View style={styles.intelCell}>
+              <Text style={styles.intelLabel}>📚 KELİMELER</Text>
+              <Text style={[styles.intelValue, { color: "#34D399" }]}>{wordPoolCount}</Text>
+            </View>
+            <View style={styles.intelDivider} />
+            <View style={styles.intelCell}>
+              <Text style={styles.intelLabel}>🎯 EN UZUN</Text>
+              <Text numberOfLines={1} style={[styles.intelValue, { color: "#FFC24A" }]}>
+                {longestWord}
+              </Text>
             </View>
             <View style={styles.intelDivider} />
             <View style={styles.intelCell}>
@@ -360,7 +428,74 @@ export function ProfileScreen({
             </View>
           </View>
 
-          {/* 3. SİBER AVATARLAR */}
+          {/* 3. PROFİL ÇERÇEVELERİ (PROFILE FRAMES SHOWCASE) */}
+          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
+            <Text style={styles.sectionTitle}>🖼️ PROFİL ÇERÇEVELERİ</Text>
+            <View style={styles.badgeCounterWrap}>
+              <Text style={styles.sectionMeta}>{unlockedFramesCount} / {PROFILE_FRAMES.length} AÇIK</Text>
+            </View>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+            {PROFILE_FRAMES.map(([fId, fName, fColor, fCost]) => {
+              const isUnlocked = fCost === 0 || Boolean(progress.ownedFrames?.[fId]) || progress.selectedFrame === fId;
+              const isSelected = (progress.selectedFrame || "signal") === fId;
+
+              return (
+                <Pressable
+                  key={fId}
+                  onPress={() => {
+                    if (!isUnlocked) {
+                      triggerHapticError();
+                      if (onShowToast) {
+                        onShowToast("🔒 ÇERÇEVE KİLİTLİ", `"${fName}" çerçevesini Siber Mağaza'dan açabilirsiniz.`, "🔒", "#EF4444");
+                      } else {
+                        Alert.alert("🔒 Kilitli Çerçeve", `"${fName}" çerçevesini Siber Mağaza'dan edinebilirsiniz.`);
+                      }
+                    } else {
+                      triggerHapticSuccess();
+                      onSelectFrame?.(fId);
+                      if (onShowToast) {
+                        onShowToast("🖼️ ÇERÇEVE KUŞANILDI", `"${fName}" çerçevesi aktif edildi.`, "✓", fColor);
+                      }
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    styles.frameTile,
+                    isSelected && { borderColor: fColor, backgroundColor: "rgba(62, 232, 181, 0.12)" },
+                    !isUnlocked && styles.frameTileLocked,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={[styles.framePreviewCircle, { borderColor: fColor }]}>
+                    <View style={[styles.framePreviewInner, { backgroundColor: isSelected ? fColor : "transparent" }]}>
+                      <Text style={{ fontSize: 13 }}>{isUnlocked ? "✦" : "🔒"}</Text>
+                    </View>
+                  </View>
+
+                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: fColor }, !isUnlocked && { color: "#8E889C" }]}>
+                    {fName}
+                  </Text>
+
+                  <View style={[
+                    styles.titleMiniStatusPill,
+                    isSelected && { backgroundColor: `${fColor}25`, borderColor: fColor },
+                    !isUnlocked && styles.titleMiniStatusLocked,
+                  ]}>
+                    <Text style={[
+                      styles.titleMiniStatusText,
+                      isSelected && { color: fColor },
+                      !isUnlocked && { color: "#7B748C" },
+                    ]}>
+                      {isSelected ? "SEÇİLİ" : isUnlocked ? "SEÇ" : `${fCost} ÇİP`}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* 4. SİBER AVATARLAR */}
           <View style={[styles.sectionHeader, { marginTop: 18 }]}>
             <Text style={styles.sectionTitle}>🤖 SİBER AVATARLAR</Text>
             <View style={styles.badgeCounterWrap}>
@@ -436,7 +571,7 @@ export function ProfileScreen({
             })}
           </ScrollView>
 
-          {/* 4. OYUNCU UNVANLARI */}
+          {/* 5. OYUNCU UNVANLARI */}
           <View style={[styles.sectionHeader, { marginTop: 18 }]}>
             <Text style={styles.sectionTitle}>🎖️ OYUNCU UNVANLARI</Text>
             <View style={styles.badgeCounterWrap}>
@@ -490,12 +625,12 @@ export function ProfileScreen({
                   <View style={[
                     styles.titleMiniStatusPill,
                     isSelected && styles.titleMiniStatusSelected,
-                    (!unlocked) && styles.titleMiniStatusLocked,
+                    !unlocked && styles.titleMiniStatusLocked,
                   ]}>
                     <Text style={[
                       styles.titleMiniStatusText,
                       isSelected && { color: "#3EE8B5" },
-                      (!unlocked) && { color: "#7B748C" },
+                      !unlocked && { color: "#7B748C" },
                     ]}>
                       {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
                     </Text>
@@ -505,7 +640,7 @@ export function ProfileScreen({
             })}
           </ScrollView>
 
-          {/* 4. BAŞARI ROZETLERİ (Trophy Showcase) */}
+          {/* 6. BAŞARI ROZETLERİ (Trophy Showcase) */}
           <View style={[styles.sectionHeader, { marginTop: 22 }]}>
             <Text style={styles.sectionTitle}>🏆 BAŞARI ROZETLERİ</Text>
             <View style={styles.badgeCounterWrap}>
@@ -552,7 +687,7 @@ export function ProfileScreen({
         </>
       ) : (
         <>
-          {/* 5. AYARLAR & SİSTEM KONTROLLERİ */}
+          {/* 8. AYARLAR & SİSTEM KONTROLLERİ */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>⚙️ SES VE GERİ BİLDİRİM</Text>
             <Text style={styles.sectionMeta}>TERCİHLER</Text>
@@ -602,8 +737,90 @@ export function ProfileScreen({
             </View>
           </View>
 
+          {/* Cinsiyet ve Hitap Tercihi */}
+          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
+            <Text style={styles.sectionTitle}>👤 HİTAP VE KİMLİK</Text>
+            <Text style={styles.sectionMeta}>PROFİL TERCİHİ</Text>
+          </View>
+
+          <View style={styles.settingsCard}>
+            <Text style={styles.genderTitle}>OYUN İÇİ HİTAP ŞEKLİ</Text>
+            <Text style={styles.genderSub}>Profilinizde ve zafer duyurularında kullanılacak hitap tarzı</Text>
+
+            <View style={styles.genderRow}>
+              {[
+                { id: "unspecified", label: "Belirtilmemiş", icon: "🌐" },
+                { id: "male", label: "Erkek", icon: "♂️" },
+                { id: "female", label: "Kadın", icon: "♀️" },
+              ].map((item) => {
+                const isSelected = (progress.gender || "unspecified") === item.id;
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => {
+                      triggerHapticSelection();
+                      onUpdateGender?.(item.id as GenderType);
+                      if (onShowToast) {
+                        onShowToast("HİTAP GÜNCELLENDİ", `Hitap tercihi "${item.label}" olarak belirlendi.`, item.icon, "#3EE8B5");
+                      }
+                    }}
+                    style={[
+                      styles.genderPill,
+                      isSelected && styles.genderPillSelected,
+                    ]}
+                  >
+                    <Text style={{ fontSize: 13, marginRight: 4 }}>{item.icon}</Text>
+                    <Text style={[styles.genderPillText, isSelected && styles.genderPillTextSelected]}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Hızlı Tema Tercihi */}
+          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
+            <Text style={styles.sectionTitle}>🎨 OYUN TEMASI</Text>
+            <Text style={styles.sectionMeta}>GÖRSEL TEMA</Text>
+          </View>
+
+          <View style={styles.settingsCard}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {THEME_PACKS.map((theme) => {
+                const isSelected = (progress.selectedTheme || "classic") === theme.id;
+                return (
+                  <Pressable
+                    key={theme.id}
+                    onPress={() => {
+                      triggerHapticSelection();
+                      onSelectTheme?.(theme.id as ThemePackId);
+                      if (onShowToast) {
+                        onShowToast("TEMA GÜNCELLENDİ", `"${theme.label}" teması kuşanıldı.`, "🎨", "#3EE8B5");
+                      }
+                    }}
+                    style={[
+                      styles.themePill,
+                      isSelected && styles.themePillSelected,
+                    ]}
+                  >
+                    <Text style={[styles.themePillText, isSelected && styles.themePillTextSelected]}>
+                      {theme.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Sistem Bilgisi */}
+          <View style={styles.appInfoCard}>
+            <Text style={styles.appInfoTitle}>KELİME PATLAT CYBER EDITION</Text>
+            <Text style={styles.appInfoSub}>Versiyon 1.0.0 · Build 2026.09 · Çevrim İçi Motor Etkin</Text>
+          </View>
+
           {/* Danger Zone & Account Management */}
-          <View style={[styles.sectionHeader, { marginTop: 22 }]}>
+          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
             <Text style={styles.sectionTitle}>🛡️ HESAP VE GÜVENLİK</Text>
             <Text style={[styles.sectionMeta, { color: "#F87171" }]}>GÜVENLİ BÖLGE</Text>
           </View>
@@ -866,7 +1083,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    borderWidth: 2,
+    borderWidth: 2.5,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -905,27 +1122,43 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
   },
-  cameraIconBtn: {
+  avatarActionsRow: {
+    flexDirection: "row",
+    gap: 4,
     position: "absolute",
-    bottom: -6,
+    bottom: -8,
+  },
+  cameraIconBtn: {
     backgroundColor: "#0A241C",
     borderWidth: 1,
     borderColor: "#3EE8B5",
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
   },
   cameraIconText: {
     color: "#3EE8B5",
-    fontSize: 7.5,
+    fontSize: 7,
     fontWeight: "900",
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
+  },
+  resetGlyphBtn: {
+    backgroundColor: "#0A241C",
+    borderWidth: 1,
+    borderColor: "#FF647C",
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  resetGlyphText: {
+    color: "#FF647C",
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 0.3,
   },
   heroInfo: {
     flex: 1,
@@ -990,18 +1223,19 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontSize: 16,
   },
-  titleBadgeRow: {
+  metaBadgesRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
-    gap: 8,
-    marginTop: 5,
+    gap: 6,
+    marginTop: 6,
   },
   titleBadge: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "rgba(212, 180, 90, 0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#C9A227",
@@ -1010,9 +1244,24 @@ const styles = StyleSheet.create({
   titleBadgeIcon: { fontSize: 10 },
   titleBadgeText: {
     color: "#C8D9C0",
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
+  },
+  leagueBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 4,
+  },
+  leagueBadgeIcon: { fontSize: 10 },
+  leagueBadgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
 
   /* XP Progress */
@@ -1108,7 +1357,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(212, 180, 90, 0.3)",
   },
 
-  /* 2. STATS GRID (Compact 2x2 with horizontal content) */
+  /* 2. STATS GRID (Compact 2x2) */
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1133,9 +1382,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   statTileWins: { borderColor: "#FFC24A", backgroundColor: "rgba(42, 29, 7, 0.85)" },
+  statTileMatches: { borderColor: "#38BDF8", backgroundColor: "rgba(7, 28, 42, 0.85)" },
+  statTileWinRate: { borderColor: "#C084FC", backgroundColor: "rgba(32, 14, 42, 0.85)" },
   statTileScore: { borderColor: "#3EE8B5", backgroundColor: "rgba(7, 36, 28, 0.85)" },
-  statTileWords: { borderColor: "#C084FC", backgroundColor: "rgba(32, 14, 42, 0.85)" },
-  statTileStreak: { borderColor: "#FB7185", backgroundColor: "rgba(42, 14, 22, 0.85)" },
   statIconBox: {
     width: 32,
     height: 32,
@@ -1150,12 +1399,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  statIcon: {
-    fontSize: 15,
-  },
-  statDataWrap: {
-    flex: 1,
-  },
+  statIcon: { fontSize: 15 },
+  statDataWrap: { flex: 1 },
   statNumber: {
     color: "#FFF",
     fontSize: 16,
@@ -1164,11 +1409,6 @@ const styles = StyleSheet.create({
     textShadowColor: "#000",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 2,
-  },
-  statUnit: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#F472B6",
   },
   statCaption: {
     color: "#8FBAAB",
@@ -1195,34 +1435,23 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  intelCell: {
-    flex: 1,
-    alignItems: "center",
-  },
+  intelCell: { flex: 1, alignItems: "center" },
   intelLabel: {
     color: "#8FBAAB",
     fontSize: 7.5,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
+    textAlign: "center",
   },
   intelValue: {
     color: "#FFF",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     marginTop: 3,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 2,
+    textAlign: "center",
   },
-  intelSub: {
-    fontSize: 8,
-    color: "#8FBAAB",
-  },
-  intelDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: "rgba(212, 180, 90, 0.2)",
-  },
+  intelSub: { fontSize: 8, color: "#8FBAAB" },
+  intelDivider: { width: 1, height: 24, backgroundColor: "rgba(212, 180, 90, 0.2)" },
 
   /* Horizontal Row (Carousels) */
   horizontalRow: {
@@ -1230,7 +1459,47 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
 
-  /* 3. OYUNCU UNVANLARI (Square Tiles) */
+  /* Profile Frames Showcase */
+  frameTile: {
+    width: 90,
+    height: 98,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(212, 180, 90, 0.25)",
+    backgroundColor: "#0E2C22",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  frameTileLocked: {
+    borderColor: "rgba(212, 180, 90, 0.15)",
+    backgroundColor: "rgba(10, 36, 28, 0.5)",
+    opacity: 0.6,
+  },
+  framePreviewCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    backgroundColor: "#0A241C",
+  },
+  framePreviewInner: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* Titles & Badges Tiles */
   titleTile: {
     width: 88,
     height: 92,
@@ -1284,7 +1553,6 @@ const styles = StyleSheet.create({
     color: "#C5D9C8",
   },
 
-  /* 4. TROPHY BADGES */
   badgeTile: {
     width: 88,
     height: 90,
@@ -1312,15 +1580,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  badgeIconText: {
-    fontSize: 16,
-  },
+  badgeIconText: { fontSize: 16 },
   badgeTileTitle: {
     color: "#FFF",
     fontSize: 8,
@@ -1329,7 +1590,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* 5. SETTINGS & DANGER ZONE */
+  /* Settings & Danger Zone */
   settingsCard: {
     backgroundColor: "#0E2C22",
     borderRadius: 20,
@@ -1341,6 +1602,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 5,
+    marginBottom: 12,
   },
   settingRow: {
     flexDirection: "row",
@@ -1364,27 +1626,103 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  settingRowIcon: {
-    fontSize: 16,
-  },
+  settingRowIcon: { fontSize: 16 },
   settingLabel: {
     color: "#FFF",
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 0.6,
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   settingSubLabel: {
     color: "#8FBAAB",
     fontSize: 9,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  genderTitle: {
+    color: "#FFF",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+  genderSub: {
+    color: "#8FBAAB",
+    fontSize: 9,
+    fontWeight: "600",
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  genderRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  genderPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0A241C",
+    borderWidth: 1,
+    borderColor: "rgba(212, 180, 90, 0.25)",
+    borderRadius: 12,
+    paddingVertical: 9,
+  },
+  genderPillSelected: {
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
+    borderColor: "#3EE8B5",
+  },
+  genderPillText: {
+    color: "#8FBAAB",
+    fontSize: 9.5,
+    fontWeight: "800",
+  },
+  genderPillTextSelected: {
+    color: "#3EE8B5",
+    fontWeight: "900",
+  },
+
+  themePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#0A241C",
+    borderWidth: 1,
+    borderColor: "rgba(212, 180, 90, 0.25)",
+  },
+  themePillSelected: {
+    backgroundColor: "rgba(62, 232, 181, 0.15)",
+    borderColor: "#3EE8B5",
+  },
+  themePillText: {
+    color: "#8FBAAB",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  themePillTextSelected: {
+    color: "#3EE8B5",
+    fontWeight: "900",
+  },
+
+  appInfoCard: {
+    backgroundColor: "rgba(10, 36, 28, 0.6)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(212, 180, 90, 0.2)",
+    padding: 12,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  appInfoTitle: {
+    color: "#E8C36A",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  appInfoSub: {
+    color: "#8FBAAB",
+    fontSize: 8.5,
     fontWeight: "700",
     marginTop: 2,
   },
@@ -1396,11 +1734,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(212, 180, 90, 0.25)",
     gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 10,
   },
   actionButtonSecondary: {
     flexDirection: "row",
@@ -1438,7 +1772,7 @@ const styles = StyleSheet.create({
   },
   actionBtnIcon: { fontSize: 13 },
   privacyBtn: {
-    marginTop: 14,
+    marginTop: 4,
     paddingVertical: 8,
     alignItems: "center",
   },
@@ -1466,9 +1800,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 10,
   },
-  modalIconTop: {
-    fontSize: 20,
-  },
+  modalIconTop: { fontSize: 20 },
   deleteModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(10, 6, 22, 0.85)",
@@ -1484,10 +1816,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#EF4444",
     padding: 22,
-    shadowColor: "#EF4444",
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
   },
   deleteModalTitle: {
     color: "#EF4444",

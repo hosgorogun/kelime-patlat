@@ -59,6 +59,7 @@ export function CommandCenter({
   onSolo,
   onNavigate,
   onShowGuide,
+  unclaimedMissionsCount = 0,
   unclaimedMilestonesCount = 0,
   onClaimDailyReward,
   onShowToast,
@@ -99,16 +100,6 @@ export function CommandCenter({
   const currentCount = progress.loginDaysCount || 0;
   const activeDayIndex = isClaimedToday ? (((currentCount || 1) - 1) % 7) : (currentCount % 7);
   const displayDayNumber = activeDayIndex + 1;
-  const todayReward = DAILY_LOGIN_REWARDS[activeDayIndex]!;
-  const nextReward = DAILY_LOGIN_REWARDS[(activeDayIndex + 1) % 7]!;
-
-  const getRewardUnitName = (type: string) => {
-    switch (type) {
-      case "coins": return "ÇİP";
-      case "shield": return "SERİ KALKANI";
-      default: return "SEZON XP";
-    }
-  };
 
   useEffect(() => {
     if (!isClaimedToday && !hasAutoOpenedDailyRewardRef.current) {
@@ -181,7 +172,7 @@ export function CommandCenter({
                 : infoModal === "radar"
                 ? "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
                 : infoModal === "lives"
-                ? "Tek oyunculu solo seviyelerde veya zamana karşı denemelerde başarısız olduğunda 1 Can kaybedersin. Canların bittiğinde 15 dakikada bir otomatik dolar veya Çip ile anında yenileyebilirsin."
+                ? "Tek oyunculu solo seviyelerde veya zamana karşı denemelerde başarısız olduğunda 1 Can kaybedersin. Canların bittiğinde 30 dakikada bir otomatik dolar veya Çip ile anında yenileyebilirsin."
                 : infoModal === "mystery"
                 ? `Günün İpucu: "${mystery.definition}"\n\nBu tanıma uyan kelimeyi herhangi bir oyun tahtasında (Düello, Seviye veya Günün Rotası) bulup bağladığında anında +${mystery.rewardXp} XP kazanırsın!`
                 : "Rotanı Ateşle güverte kartı, oyunun ana rekabet merkezidir! Dereceli düelloya katılabilir, arkadaşınla eşleşebilir, Günün Rotası sabit tahtasını çözebilir veya Lig & Kademe merdiveninde LP biriktirebilirsin."}
@@ -197,7 +188,7 @@ export function CommandCenter({
                   : infoModal === "radar"
                   ? "• Her seviyede 3 temel hak otomatik verilir.\n• Mağaza ve görevlerden ek kalıcı bonus haklar elde edebilirsin.\n• Seviye içi gizli sandıkları çözerek ekstra hak toplayabilirsin."
                   : infoModal === "lives"
-                  ? "• Her 30 dakikada 1 Can otomatik olarak ücretsiz doldurulur (Maks 5).\n• Beklemek istemiyorsan Mağaza'dan Çip ile anında doldurabilirsin.\n• Günlük giriş ve seviye ödüllerinden bedava Can kazanabilirsin."
+                  ? "• Her 30 dakikada 1 Can otomatik olarak ücretsiz doldurulur (Maks 5).\n• Beklemek istemiyorsan Mağaza'dan Çip ile veya reklam izleyerek anında doldurabilirsin.\n• Günlük giriş ve seviye ödüllerinden bedava Can kazanabilirsin."
                   : infoModal === "mystery"
                   ? "• Her gün gece yarısı yeni bir gizemli kelime belirlenir.\n• Kelimeyi herhangi bir oyun modunda bulduğun anda ödül XP hesabına eklenir.\n• İpucunu dikkatle incele ve tahtada harfleri birleştir!"
                   : "• Galibiyet kazanarak lig puanı (LP) topla ve Demir'den Radian'a yüksel.\n• Günün rotasında sabit tahtayı tamamlayarak ekstra Sezon XP elde et.\n• En yüksek kelime temposu (K/DK) yakalayarak liderlik sıralamasına gir."}
@@ -205,7 +196,7 @@ export function CommandCenter({
             </View>
 
             <GameButton
-              label={infoModal === "shield" || infoModal === "lives" ? "MAĞAZADA İNCELE" : infoModal === "rotani" ? "LİG & KADEMELER" : "ANLADIM"}
+              label={infoModal === "lives" ? "CAN MERKEZİ (DOLDUR)" : infoModal === "shield" ? "MAĞAZADA İNCELE" : infoModal === "rotani" ? "LİG & KADEMELER" : "ANLADIM"}
               variant={infoModal === "rotani" || infoModal === "mystery" ? "emerald" : "gold"}
               size="md"
               onPress={() => {
@@ -348,6 +339,22 @@ export function CommandCenter({
         </Pressable>
       )}
 
+      {unclaimedMissionsCount > 0 && (
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            onNavigate("missions");
+          }}
+          style={({ pressed }) => [styles.missionsMiniPill, pressed && styles.pressed]}
+        >
+          <Text style={styles.missionsMiniIcon}>📜</Text>
+          <Text style={styles.missionsMiniText}>
+            {unclaimedMissionsCount} GÖREVİN ÖDÜLÜ BEKLİYOR!
+          </Text>
+          <Text style={styles.missionsMiniAction}>TOPLA ➔</Text>
+        </Pressable>
+      )}
+
       {progress.streak > 0 && !dailyDone && (
         <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.streakWarningPill, pressed && styles.pressed]}>
           <Text style={styles.streakWarningIcon}>🔥</Text>
@@ -417,6 +424,19 @@ export function CommandCenter({
             style={{ flex: 1 }}
           />
         </View>
+
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            if (onPlayBot) onPlayBot(4);
+            else onNavigate("online");
+          }}
+          style={({ pressed }) => [styles.botPracticeBtn, pressed && styles.pressed]}
+        >
+          <Text style={styles.botPracticeIcon}>🤖</Text>
+          <Text style={styles.botPracticeText}>SİBER BOT İLE HIZLI ALIŞTIRMA YAP</Text>
+          <Text style={styles.botPracticeArrow}>➔</Text>
+        </Pressable>
 
         <View style={[styles.signalFooter, { borderTopColor: "rgba(56, 189, 248, 0.2)" }]}>
           <View style={styles.footerCol}>
@@ -687,6 +707,26 @@ const styles = StyleSheet.create({
   dailyMiniIcon: { fontSize: 15 },
   dailyMiniText: { flex: 1, color: "#FFDF85", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
   dailyMiniAction: { color: "#FFC24A", fontSize: 11, fontWeight: "900" },
+  missionsMiniPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(62, 232, 181, 0.12)",
+    borderWidth: 1.5,
+    borderColor: "#3EE8B5",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 6,
+    marginBottom: 4,
+    gap: 8,
+    shadowColor: "#3EE8B5",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  missionsMiniIcon: { fontSize: 15 },
+  missionsMiniText: { flex: 1, color: "#A7F3D0", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
+  missionsMiniAction: { color: "#3EE8B5", fontSize: 11, fontWeight: "900" },
   livesHeaderPill: {
     height: 30,
     flexDirection: "row",
@@ -800,6 +840,22 @@ const styles = StyleSheet.create({
   track: { height: 7, marginTop: 6, borderRadius: 4, overflow: "hidden", backgroundColor: "#1A3328" },
   trackFill: { height: "100%", borderRadius: 4 },
   heroActions: { flexDirection: "row", gap: 8, marginTop: 14 },
+  botPracticeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(56, 189, 248, 0.45)",
+    borderRadius: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    gap: 8,
+  },
+  botPracticeIcon: { fontSize: 14 },
+  botPracticeText: { color: "#7DD3FC", fontSize: 10.5, fontWeight: "900", letterSpacing: 0.5 },
+  botPracticeArrow: { color: "#38BDF8", fontSize: 11, fontWeight: "900" },
   signalFooter: { marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" },
   footerCol: { flex: 1, alignItems: "center" },
   signalLabel: { color: palette.muted, fontSize: 8, fontWeight: "900", letterSpacing: 0.7 },

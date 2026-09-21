@@ -359,7 +359,7 @@ export const DAILY_EASY_POOL: CatalogMission[] = [
   {
     "id": "d_easy_30",
     "title": "Günü Başlat",
-    "desc": "Günün kelimesini oyna ve 1 düello tamamla",
+    "desc": "Günün Gizemli Kelimesini başarıyla tamamla",
     "actionType": "daily_route",
     "target": 1,
     "rewardXp": 30,
@@ -654,8 +654,8 @@ export const DAILY_MEDIUM_POOL: CatalogMission[] = [
   },
   {
     "id": "d_med_26",
-    "title": "Günün İkilisi",
-    "desc": "Günün Gizemli Kelimesi ve 2 düello tamamla",
+    "title": "Günün Rotası",
+    "desc": "Günün Gizemli Kelimesini başarıyla çöz",
     "actionType": "daily_route",
     "target": 1,
     "rewardXp": 58,

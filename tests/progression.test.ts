@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoloBoard } from "../shared/solo";
-import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, getWeekId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, checkDailyLoginReward, getDailyMissions, getWeeklyMissions, ALL_MISSIONS, findMissionById, getCalculatedLives, deductLife, buyLives, MAX_LIVES, COST_PER_LIFE, COST_REFILL_ALL } from "../shared/progression";
+import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, AVATARS, badgesFor, completeDailyProgress, DEFAULT_PROGRESS, getDailyChallenge, getDayId, getWeekId, THEME_PACKS, isAvatarUnlocked, getActiveCyberTitle, getDailyMysteryWord, reconcileDailyStreak, reconcileMissions, reconcileSeasonReset, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, checkDailyLoginReward, getDailyMissions, getWeeklyMissions, ALL_MISSIONS, findMissionById, getCalculatedLives, deductLife, buyLives, MAX_LIVES, COST_PER_LIFE, COST_REFILL_ALL, updateMissionAction } from "../shared/progression";
 import { catalogWordsForTheme } from "../shared/word-catalog";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { getWordDefinition } from "../shared/dictionary";
@@ -681,18 +681,18 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const lostCalc = getCalculatedLives(lost);
     expect(lostCalc.lives).toBe(4);
 
-    // 25 Çip ile 1 Can satın alma
+    // 20 Çip ile 1 Can satın alma
     const baseWithCoins = { ...lost, coins: 100 };
     const buyOne = buyLives(baseWithCoins, "one");
     expect(buyOne.success).toBe(true);
-    expect(buyOne.updatedProgress.coins).toBe(75);
+    expect(buyOne.updatedProgress.coins).toBe(80);
     expect(getCalculatedLives(buyOne.updatedProgress).lives).toBe(5);
 
-    // 125 Çip ile tüm canları doldurma (0 candan 5 cana)
+    // 75 Çip ile tüm canları doldurma (0 candan 5 cana)
     const zeroLives = { ...DEFAULT_PROGRESS, lives: 0, coins: 200, lastLifeRegenTimestamp: Date.now() };
     const buyAll = buyLives(zeroLives, "all");
     expect(buyAll.success).toBe(true);
-    expect(buyAll.updatedProgress.coins).toBe(75); // 200 - 125 = 75
+    expect(buyAll.updatedProgress.coins).toBe(125); // 200 - 75 = 125
     expect(getCalculatedLives(buyAll.updatedProgress).lives).toBe(5);
 
     // Yetersiz bakiyede hata dönme
@@ -868,6 +868,79 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const lowLp = { ...DEFAULT_PROGRESS, lp: 5, pvpWinStreak: 0 };
     const floorLoss = applyMatchProgress(lowLp, { score: 20, tempo: 1, won: false }, "pvp");
     expect(floorLoss.lp).toBe(0);
+  });
+
+  it("görevler sistemi: Günlük rota, Arcade ve Vintage modlarında kelime, kombo ve çip takibini eksiksiz yapar", () => {
+    const today = getDayId();
+    const week = getWeekId();
+    const dailyMission = getDailyMissions(today)[0];
+    const baseProgress = {
+      ...DEFAULT_PROGRESS,
+      missionsDate: today,
+      weeklyMissionsWeek: week,
+      missions: {},
+    };
+
+    // 1. Günlük rota: word_count, earn_chips ve word_length takibi
+    const dailyChallenge = getDailyChallenge(new Date());
+    const dailyDone = completeDailyProgress(baseProgress, dailyChallenge, 120, 5, ["KİTAP", "MERHABA"]);
+    expect(dailyDone.missions.daily).toBe(1);
+    expect(dailyDone.coins).toBe(5);
+
+    // 2. Arcade modu: combo_count ve word_length takibi
+    const arcadeDone = applyArcadeProgress(baseProgress, 500, 4, false, 3, ["FUTBOL", "ŞAMPİYONLUK"]);
+    expect(arcadeDone.bestArcadeScore).toBe(500);
+
+    // 3. Vintage modu: word_length ve word_count takibi
+    const vintageDone = applyVintageProgress(baseProgress, 1, 50, 4, ["TELEFON", "MASA"]);
+    expect(vintageDone.vintageProgress?.completedLevels).toContain(1);
+
+    // 4. Tahta Terörü (d_hard_26: 8x8 veya 10x10): 10x10 düellolarının m.param=8 ile eşleşmesi
+    const mockCatalog = [
+      {
+        id: "d_hard_26",
+        title: "Tahta Terörü",
+        desc: "3 adet 8x8 veya 10x10 Düello tamamla",
+        actionType: "duel_play" as const,
+        target: 3,
+        param: 8,
+        rewardXp: 140,
+        rewardCoins: 80,
+        period: "daily" as const,
+        difficulty: "hard" as const,
+      },
+    ];
+    const match8x8 = updateMissionAction({}, mockCatalog, "duel_play", 1, 8);
+    expect(match8x8["d_hard_26"]).toBe(1);
+    const match10x10 = updateMissionAction(match8x8, mockCatalog, "duel_play", 1, 10);
+    expect(match10x10["d_hard_26"]).toBe(2);
+
+    // 5. reconcileMissions: Önceki günlerden kalan d_ ve w_ anahtarlarını temizleme
+    const staleProgress = {
+      ...DEFAULT_PROGRESS,
+      missions: {
+        d_easy_01: 5,
+        d_old_99: 3,
+        w_old_01: 10,
+      },
+      missionsDate: "2026-09-01",
+      weeklyMissionsWeek: "2026-W30",
+    };
+    const reconciled = reconcileMissions(staleProgress, "2026-09-02", "2026-W31");
+    expect(reconciled.missions["d_old_99"]).toBeUndefined();
+    expect(reconciled.missions["w_old_01"]).toBeUndefined();
+
+    // 6. getUnclaimedMissionsCount: Gerçek oyuncu profillerinde miras hayalet rozetleri engelleme
+    const modernPlayer = {
+      ...DEFAULT_PROGRESS,
+      wins: 10, // >= 3
+      bestArcadeScore: 600, // >= 400
+      missionsDate: today,
+      weeklyMissionsWeek: week,
+      missions: {},
+    };
+    // Hiçbir katalog görevi tamamlanmamışken rozet sayısı 0 olmalıdır (hayalet rozet engellendi)
+    expect(getUnclaimedMissionsCount(modernPlayer)).toBe(0);
   });
 });
 

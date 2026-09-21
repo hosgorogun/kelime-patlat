@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { getRank, getLeagueTier, type PlayerProgress } from "@/shared/progression";
+import {
+  getRank,
+  getLeagueTier,
+  getSeasonRemainingTime,
+  getTierColor,
+  getMinLpForTier,
+  type PlayerProgress,
+} from "@/shared/progression";
 import { type LeaderboardEntry, BOARD_SIZES, type BoardSize } from "@/shared/game";
 import { socialManager, type FriendUser, type FriendRequest } from "@/shared/social";
 import { triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { getApiBaseUrl } from "@/constants/oauth";
+import { LeagueHub } from "@/components/league-hub";
 
-type SeasonTab = "leaderboard" | "friends";
+export type SeasonTab = "leagues" | "leaderboard" | "friends";
 type RankingType = "lp" | "level";
 
 // Lig Kademesi (LP) Sıralaması için Özel Yarışmacılar
@@ -44,6 +52,8 @@ export function SeasonHub({
   onUpdateFriends,
   onInspectUser,
   onOpenLeagueHub,
+  onPlayRanked,
+  initialTab,
   pendingRequests,
   onAcceptRequest,
   onRejectRequest,
@@ -58,12 +68,14 @@ export function SeasonHub({
   onUpdateFriends?: (updatedFriends: FriendUser[]) => void;
   onInspectUser?: (user: Partial<LeaderboardEntry> & { id: string; name: string }) => void;
   onOpenLeagueHub?: () => void;
+  onPlayRanked?: () => void;
+  initialTab?: SeasonTab;
   pendingRequests?: FriendRequest[];
   onAcceptRequest?: (requestId: string) => void;
   onRejectRequest?: (requestId: string) => void;
   onSendFriendRequest?: (username: string) => Promise<{ success: boolean; message: string }>;
 }) {
-  const [activeTab, setActiveTab] = useState<SeasonTab>("leaderboard");
+  const [activeTab, setActiveTab] = useState<SeasonTab>(() => initialTab || "leagues");
   const [friendsSubTab, setFriendsSubTab] = useState<"friends" | "requests">("friends");
   const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
   const [rankingType, setRankingType] = useState<RankingType>("lp");
@@ -73,6 +85,20 @@ export function SeasonHub({
   const [socialMessage, setSocialMessage] = useState<string | null>(null);
   // Board size picker modal state
   const [challengeTarget, setChallengeTarget] = useState<FriendUser | null>(null);
+  const [remaining, setRemaining] = useState(() => getSeasonRemainingTime());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRemaining(getSeasonRemainingTime());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     const unsub = socialManager.subscribe(() => {
@@ -195,8 +221,8 @@ export function SeasonHub({
         return b.score - a.score;
       }
       // "lp" sort
-      const lpA = a.lp ?? a.score;
-      const lpB = b.lp ?? b.score;
+      const lpA = a.lp ?? (a.tier ? getMinLpForTier(a.tier) : 0);
+      const lpB = b.lp ?? (b.tier ? getMinLpForTier(b.tier) : 0);
       return lpB - lpA;
     });
   }, [basePool, leaderboardFilter, rankingType, friendsList, playerId, playerName, progress]);
@@ -405,29 +431,43 @@ export function SeasonHub({
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={onBack} style={styles.back}>
+          <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
             <Text style={styles.backText}>‹</Text>
           </Pressable>
           <View style={{ flex: 1, marginRight: 6 }}>
-            <Text style={styles.overline}>SEZON 01 · TOPLULUK &amp; REKABET</Text>
+            <Text style={styles.overline}>SEZON 01 · LİG &amp; REKABET</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.title}>
-              LİDERLİK VE ARKADAŞLIK
+              LİG &amp; SEZON MERKEZİ
             </Text>
           </View>
-          <View style={styles.rankOrb}>
-            <Text style={styles.rankOrbText}>{rank.slice(0, 1)}</Text>
+          <View style={styles.timerPill}>
+            <Text style={styles.timerIcon}>⏳</Text>
+            <View>
+              <Text style={styles.timerLabel}>SIFIRLANMA</Text>
+              <Text style={styles.timerValue}>{remaining.formatted}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Single Modern Segmented Tab Controller */}
+        {/* 3-Segmented Tab Controller */}
         <View style={styles.segmentedTabContainer}>
+          <Pressable
+            onPress={() => { triggerHapticSelection(); setActiveTab("leagues"); }}
+            style={[styles.segmentedTabBtn, activeTab === "leagues" && styles.segmentedTabBtnActive]}
+          >
+            <Text style={styles.segmentedTabIcon}>👑</Text>
+            <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "leagues" && styles.segmentedTabTextActive]}>
+              KADEMELER
+            </Text>
+          </Pressable>
+
           <Pressable
             onPress={() => { triggerHapticSelection(); setActiveTab("leaderboard"); }}
             style={[styles.segmentedTabBtn, activeTab === "leaderboard" && styles.segmentedTabBtnActive]}
           >
-            <Text style={[styles.segmentedTabIcon]}>🏆</Text>
+            <Text style={styles.segmentedTabIcon}>🏆</Text>
             <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "leaderboard" && styles.segmentedTabTextActive]}>
-              LİDERLİK TABLOSU
+              LİDERLİK
             </Text>
           </Pressable>
 
@@ -435,7 +475,7 @@ export function SeasonHub({
             onPress={() => { triggerHapticSelection(); setActiveTab("friends"); }}
             style={[styles.segmentedTabBtn, activeTab === "friends" && styles.segmentedTabBtnActive]}
           >
-            <Text style={[styles.segmentedTabIcon]}>👥</Text>
+            <Text style={styles.segmentedTabIcon}>👥</Text>
             <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "friends" && styles.segmentedTabTextActive]}>
               ARKADAŞLAR ({friendsList.length})
             </Text>
@@ -445,41 +485,15 @@ export function SeasonHub({
           </Pressable>
         </View>
 
-        {onOpenLeagueHub && (
-          <Pressable
-            onPress={() => {
-              triggerHapticSelection();
-              onOpenLeagueHub();
-            }}
-            style={({ pressed }) => [
-              {
-                marginTop: 10,
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-                borderRadius: 16,
-                backgroundColor: "rgba(62, 232, 181, 0.12)",
-                borderWidth: 1.5,
-                borderColor: "#3EE8B5",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              },
-              pressed && { opacity: 0.8 },
-            ]}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Text style={{ fontSize: 18 }}>👑</Text>
-              <View>
-                <Text style={{ color: "#3EE8B5", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 }}>
-                  LİGLER & KADEMELER REHBERİ
-                </Text>
-                <Text style={{ color: "#94A3B8", fontSize: 9.5, fontWeight: "700" }}>
-                  Demir'den Radian'a tüm ligleri ve LP hedeflerini incele
-                </Text>
-              </View>
-            </View>
-            <Text style={{ color: "#3EE8B5", fontSize: 16, fontWeight: "900" }}>→</Text>
-          </Pressable>
+        {/* TAB 1: Leagues & Tiers */}
+        {activeTab === "leagues" && (
+          <LeagueHub
+            playerId={playerId}
+            progress={progress}
+            leaderboard={leaderboard}
+            onPlayRanked={onPlayRanked}
+            embedded={true}
+          />
         )}
 
         {/* TAB 1: Leaderboard */}
@@ -589,14 +603,14 @@ export function SeasonHub({
                     </View>
                     <Text numberOfLines={1} style={styles.podiumName}>{top2.name}</Text>
                     {top2.tier ? (
-                      <View style={[styles.tierBadge, { borderColor: getLeagueTier(top2.lp ?? 0).color }]}>
-                        <Text style={[styles.tierBadgeText, { color: getLeagueTier(top2.lp ?? 0).color }]}>{top2.tier}</Text>
+                      <View style={[styles.tierBadge, { borderColor: getTierColor(top2.tier) }]}>
+                        <Text style={[styles.tierBadgeText, { color: getTierColor(top2.tier) }]}>{top2.tier}</Text>
                       </View>
                     ) : null}
                     <Text style={styles.podiumScore}>
                       {rankingType === "level"
                         ? `Lv.${top2.level ?? Math.floor(top2.score / 200) + 1} (${top2.score} XP)`
-                        : `${top2.lp ?? top2.score} LP`}
+                        : `${top2.lp ?? (top2.tier ? getMinLpForTier(top2.tier) : 0)} LP`}
                     </Text>
                     <View style={styles.podiumBar2}>
                       <Text style={styles.podiumBarLabel}>🥈 İKİNCİ</Text>
@@ -626,14 +640,14 @@ export function SeasonHub({
                     </View>
                     <Text numberOfLines={1} style={styles.podiumName}>{top1.name}</Text>
                     {top1.tier ? (
-                      <View style={[styles.tierBadge, { borderColor: getLeagueTier(top1.lp ?? 0).color }]}>
-                        <Text style={[styles.tierBadgeText, { color: getLeagueTier(top1.lp ?? 0).color }]}>{top1.tier}</Text>
+                      <View style={[styles.tierBadge, { borderColor: getTierColor(top1.tier) }]}>
+                        <Text style={[styles.tierBadgeText, { color: getTierColor(top1.tier) }]}>{top1.tier}</Text>
                       </View>
                     ) : null}
                     <Text style={[styles.podiumScore, { color: "#FFD000" }]}>
                       {rankingType === "level"
                         ? `Lv.${top1.level ?? Math.floor(top1.score / 200) + 1} (${top1.score} XP)`
-                        : `${top1.lp ?? top1.score} LP`}
+                        : `${top1.lp ?? (top1.tier ? getMinLpForTier(top1.tier) : 0)} LP`}
                     </Text>
                     <View style={styles.podiumBar1}>
                       <Text style={styles.podiumBarLabel}>🥇 ŞAMPİYON</Text>
@@ -662,14 +676,14 @@ export function SeasonHub({
                     </View>
                     <Text numberOfLines={1} style={styles.podiumName}>{top3.name}</Text>
                     {top3.tier ? (
-                      <View style={[styles.tierBadge, { borderColor: getLeagueTier(top3.lp ?? 0).color }]}>
-                        <Text style={[styles.tierBadgeText, { color: getLeagueTier(top3.lp ?? 0).color }]}>{top3.tier}</Text>
+                      <View style={[styles.tierBadge, { borderColor: getTierColor(top3.tier) }]}>
+                        <Text style={[styles.tierBadgeText, { color: getTierColor(top3.tier) }]}>{top3.tier}</Text>
                       </View>
                     ) : null}
                     <Text style={styles.podiumScore}>
                       {rankingType === "level"
                         ? `Lv.${top3.level ?? Math.floor(top3.score / 200) + 1} (${top3.score} XP)`
-                        : `${top3.lp ?? top3.score} LP`}
+                        : `${top3.lp ?? (top3.tier ? getMinLpForTier(top3.tier) : 0)} LP`}
                     </Text>
                     <View style={styles.podiumBar3}>
                       <Text style={styles.podiumBarLabel}>🥉 ÜÇÜNCÜ</Text>
@@ -692,7 +706,8 @@ export function SeasonHub({
                   const index = displayedLeaderboard.length >= 3 ? sliceIdx + 3 : sliceIdx;
                   const winRate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
                   const isUser = entry.id === playerId;
-                  const tierInfo = getLeagueTier(entry.lp ?? 0);
+                  const tierColor = getTierColor(entry.tier);
+                  const displayLp = entry.lp ?? (entry.tier ? getMinLpForTier(entry.tier) : 0);
                   return (
                     <Pressable
                       key={entry.id}
@@ -727,8 +742,8 @@ export function SeasonHub({
                             </View>
                           )}
                           {entry.tier && (
-                            <View style={[styles.rowTierBadge, { borderColor: tierInfo.color }]}>
-                              <Text style={[styles.rowTierText, { color: tierInfo.color }]}>{entry.tier}</Text>
+                            <View style={[styles.rowTierBadge, { borderColor: tierColor }]}>
+                              <Text style={[styles.rowTierText, { color: tierColor }]}>{entry.tier}</Text>
                             </View>
                           )}
                         </View>
@@ -754,7 +769,7 @@ export function SeasonHub({
                           </View>
                         ) : (
                           <View style={{ alignItems: "flex-end" }}>
-                            <Text style={styles.score}>{entry.lp ?? entry.score} LP</Text>
+                            <Text style={styles.score}>{displayLp} LP</Text>
                             <Text style={styles.rowLpText}>{entry.score} XP</Text>
                           </View>
                         )}
@@ -979,7 +994,7 @@ export function SeasonHub({
 
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingBottom: 140 },
+  content: { flexGrow: 1, paddingBottom: 185 },
   header: { flexDirection: "row", alignItems: "center", gap: 11 },
   back: {
     width: 38,
@@ -1006,6 +1021,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   rankOrbText: { color: "#FFC24A", fontWeight: "900" },
+  timerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#164536",
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.4)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  timerIcon: { fontSize: 12 },
+  timerLabel: { color: "#FBBF24", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.8 },
+  timerValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
 
   /* Modern Segmented Tab Controller */
   segmentedTabContainer: {

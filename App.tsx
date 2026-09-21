@@ -25,8 +25,10 @@ import { CommandCenter } from "./components/command-center";
 import { MatchInsight } from "./components/match-insight";
 import { MatchRewardsCard } from "./components/match-rewards";
 import { PremiumDock, type DockDestination } from "./components/premium-dock";
+import { CyberBannerAd } from "./components/cyber-banner-ad";
+import { monetizationManager } from "./shared/monetization";
 import { ProfileScreen } from "./components/profile-screen";
-import { SeasonHub } from "./components/season-hub";
+import { SeasonHub, type SeasonTab } from "./components/season-hub";
 import { LeagueHub } from "./components/league-hub";
 import { SoloChallenge } from "./components/solo-challenge";
 import { SoloLevels } from "./components/solo-levels";
@@ -56,6 +58,8 @@ import { UserProfileModal, type InspectableUser } from "./components/user-profil
 import { LivesModal } from "./components/lives-modal";
 import { ErrorBoundary } from "./components/error-boundary";
 import { ModernAlertModal, type ModernAlertData } from "./components/modern-alert-modal";
+import { VictoryEffectOverlay } from "./components/victory-effect-overlay";
+import { GameSplashScreen } from "./components/game-splash-screen";
 
 type Screen = "home" | "online" | "friends" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -216,12 +220,14 @@ function HomeScreen() {
     return { pageX: ne.pageX ?? 0, pageY: ne.pageY ?? 0 };
   };
   const [screen, setScreen] = useState<Screen>("home");
+  const [seasonInitialTab, setSeasonInitialTab] = useState<SeasonTab>("leagues");
   const screenRef = useRef(screen);
   screenRef.current = screen;
   const [globalAlert, setGlobalAlert] = useState<ModernAlertData | null>(null);
   const [playerName, setPlayerName] = useState("OYUNCU");
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [splashFinished, setSplashFinished] = useState(false);
   const [playerId, setPlayerId] = useState<string>(() => `player-${Math.random().toString(36).slice(2, 10)}`);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{
     word: string;
@@ -251,6 +257,12 @@ function HomeScreen() {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if ((screen === "room" || screen === "game") && !room) {
+      setScreen("home");
+    }
+  }, [screen, room]);
 
   useEffect(() => {
     AsyncStorage.getItem("kelime-patlat:sfx-enabled").then((val) => {
@@ -359,7 +371,7 @@ function HomeScreen() {
   const victoryCueRef = useRef<string | null>(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [showLeaveDuelModal, setShowLeaveDuelModal] = useState(false);
-  const [pendingMatchConfirm, setPendingMatchConfirm] = useState<{ size: BoardSize; modeTitle: string; durationText: string; routesText: string } | null>(null);
+  const [pendingMatchConfirm, setPendingMatchConfirm] = useState<{ size: BoardSize; modeTitle: string; durationText: string; routesText: string; isBot?: boolean } | null>(null);
   const [selectedModeInfo, setSelectedModeInfo] = useState<"pvp" | "daily" | "vintage" | "arcade" | "solo" | null>(null);
   const [showLivesModal, setShowLivesModal] = useState(false);
   const [buyingLivesLoading, setBuyingLivesLoading] = useState(false);
@@ -374,7 +386,8 @@ function HomeScreen() {
   const matchmakingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [activeEmote, setActiveEmote] = useState<{ id: string; playerId: string; playerName: string; emote: string } | null>(null);
   const emoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingDuelInviteRef = useRef<{ targetId: string; targetUsername?: string; size: BoardSize } | null>(null);
+  const lastEmoteSentRef = useRef<number>(0);
+  const pendingDuelInviteRef = useRef<{ targetId: string; targetUsername?: string; size: BoardSize; botProfile?: any } | null>(null);
 
   // Oyun bittiğinde tüm bulunan ve bulunamayan kelimelerin birleşik listesi (Unconditional Hook)
   const allFinishedWords = useMemo(() => {
@@ -688,6 +701,10 @@ function HomeScreen() {
         return true;
       }
       if (screen === "room" || screen === "game") {
+        if (room?.status === "finished") {
+          leaveRoom();
+          return true;
+        }
         setGlobalAlert({
           icon: "⚔️",
           kicker: "DÜELLODAN AYRIL",
@@ -868,10 +885,10 @@ function HomeScreen() {
     }
   }, [safeName]);
 
-  const awardProgressOnServer = useCallback(async (payload: { kind: "solo" | "arcade" | "vintage"; level?: number; score?: number; foundWords?: string[]; daily?: boolean }, fallback: (current: PlayerProgress) => PlayerProgress) => {
+  const awardProgressOnServer = useCallback(async (payload: { kind: "solo" | "arcade" | "vintage"; level?: number; score?: number; foundWords?: string[]; daily?: boolean; wordsCount?: number; dailyId?: string; isDoubled?: boolean; comboCount?: number }, fallback?: (current: PlayerProgress) => PlayerProgress) => {
     const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
     if (!token || token === "guest") { 
-      setProgress(fallback);
+      // Yerel ilerleme çağıran bileşen tarafından zaten uygulandı; misafir oturumunda mükerrer ödül verilmesi önlendi
       return;
     }
     try {
@@ -885,19 +902,30 @@ function HomeScreen() {
       if (data.progress) setProgress(data.progress);
       else throw new Error("Sunucu progress döndürmedi.");
     } catch {
-      setProgress(fallback);
+      // Çevrimdışı veya sunucu hatasında yerel ilerleme zaten korunduğundan mükerrer fallback çalıştırılmaz
     }
   }, []);
 
   const claimMissionOnServer = useCallback(async (kind: "daily" | "weekly", missionId: string, fallback: (current: PlayerProgress) => PlayerProgress) => {
     const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
-    if (!token || token === "guest") { setProgress(fallback); return; } 
+    const applyLocalFallback = () => {
+      setProgress((curr) => {
+        const updated = fallback(curr);
+        void syncProgressToCloud(updated);
+        return updated;
+      });
+    };
+    if (!token || token === "guest") { applyLocalFallback(); return; } 
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/game/claim`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ kind, missionId }) });
+      if (response.status === 400 || response.status === 409) {
+        // Görev henüz tamamlanmadı veya zaten alındı; sahte yerel ödül verilmesi engellendi
+        return;
+      }
       if (!response.ok) throw new Error("Görev ödülü alınamadı.");
       const data = await response.json();
-      setProgress(data.progress);
-    } catch { setProgress(fallback); }
+      if (data.progress) setProgress(data.progress);
+    } catch { applyLocalFallback(); }
   }, []);
 
   const claimMilestoneOnServer = useCallback(async (level: number, fallback: (current: PlayerProgress) => PlayerProgress) => {
@@ -909,6 +937,10 @@ function HomeScreen() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ level })
       });
+      if (response.status === 400 || response.status === 409) {
+        // Sandık zaten alınmış veya henüz açılmamış; sahte yerel ödül verilmesi engellendi
+        return;
+      }
       if (!response.ok) throw new Error("Sandık ödülü alınamadı.");
       const data = await response.json();
       if (data.progress) setProgress(data.progress);
@@ -1037,12 +1069,14 @@ function HomeScreen() {
 
     if (reconciliation.seasonReset.seasonResetPerformed) {
       const sr = reconciliation.seasonReset;
-      setSeasonResetModal({
-        newSeasonId: sr.newSeasonId,
-        previousRank: sr.previousRank || "DEMİR",
-        previousLp: sr.previousLp ?? 0,
-        newLp: sr.newLp ?? 0,
-      });
+      if ((progress.matches ?? 0) > 0 || (progress.lp ?? 0) > 0) {
+        setSeasonResetModal({
+          newSeasonId: sr.newSeasonId,
+          previousRank: sr.previousRank || "DEMİR",
+          previousLp: sr.previousLp ?? 0,
+          newLp: sr.newLp ?? 0,
+        });
+      }
     } else if (reconciliation.shieldSaved) {
       setGlobalAlert({
         icon: "🛡️",
@@ -1076,6 +1110,14 @@ function HomeScreen() {
     if (!progressReady) return;
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
+        try {
+          const socket = getGameSocket();
+          if (!socket.connected) {
+            socket.connect();
+          }
+        } catch {
+          // Socket liveness recovery
+        }
         setProgress((current) => {
           const res = reconcilePlayerProgress(current);
           if (res.shieldSaved || res.streakReset || res.missionsReset || res.seasonReset.seasonResetPerformed) {
@@ -1199,7 +1241,7 @@ function HomeScreen() {
 
     const opponent = room.players.find((p) => p.id !== playerId);
     const opponentScore = opponent ? (room.scores[opponent.id] ?? 0) : 0;
-    const isFriendGame = Boolean((room as any).isFriendGame || (room as any).isCustom);
+    const isFriendGame = Boolean((room as any).isFriendGame || room.isCustom || !room.isRanked);
 
     setProgress((current) => {
       const updated = applyMatchProgress(
@@ -1309,7 +1351,7 @@ function HomeScreen() {
       setRoomFromServer(next);
 
       if (pendingDuelInviteRef.current && next.status === "waiting") {
-        const { targetId, targetUsername, size } = pendingDuelInviteRef.current;
+        const { targetId, targetUsername, size, botProfile } = pendingDuelInviteRef.current;
         pendingDuelInviteRef.current = null;
         socket.emit("friend:duel:invite", {
           toPlayerId: targetId,
@@ -1318,6 +1360,7 @@ function HomeScreen() {
           fromPlayerName: safeName,
           roomCode: next.code,
           size,
+          botProfile,
         });
       }
     };
@@ -1332,7 +1375,13 @@ function HomeScreen() {
         icon: "⚠️",
         accentColor: "#FF647C",
       });
-      if (msg.includes("Oda süresi") || msg.includes("sonlandırıldı") || msg.includes("bulunamadı")) {
+      if (
+        msg.includes("Oda süresi") ||
+        msg.includes("sonlandırıldı") ||
+        msg.includes("bulunamadı") ||
+        msg.includes("dolu") ||
+        msg.includes("maç başladı")
+      ) {
         activeRoomCodeRef.current = null;
         setRoom(null);
         if (screenRef.current === "room" || screenRef.current === "game") {
@@ -1534,7 +1583,7 @@ function HomeScreen() {
     });
   };
 
-  const createRoom = async (size = selectedSize, inviteTarget?: { toPlayerId: string; toUsername?: string }) => {
+  const createRoom = async (size = selectedSize, inviteTarget?: { toPlayerId: string; toUsername?: string; botProfile?: any }) => {
     setInspectedPath(null);
     setSelectedWordInfo(null);
     haptics.light();
@@ -1607,15 +1656,16 @@ function HomeScreen() {
   };
 
   const promptBotDuel = (size: BoardSize) => {
-    const modeTitle = size === 4 ? "4×4 Nabız Hızlı Savaş" : size === 6 ? "6×6 Akış Düellosu" : size === 8 ? "8×8 Derinlik Düellosu" : "10×10 Zirve Master Savaş";
-    const durationText = size === 4 ? "55 Saniye" : size === 6 ? "75 Saniye" : size === 8 ? "90 Saniye" : "110 Saniye";
-    const routesText = size === 4 ? "4 Rota" : size === 6 ? "6 Rota" : size === 8 ? "8 Rota" : "10 Rota";
+    const modeTitle = size === 4 ? "4×4 Siber Bot Alıştırması" : size === 6 ? "6×6 Siber Bot Düellosu" : size === 8 ? "8×8 İleri Düzey Bot Maçı" : "10×10 Usta Bot Karşılaşması";
+    const durationText = size === 4 ? "55 Saniye" : size === 6 ? "75 Saniye" : size === 8 ? "95 Saniye" : "125 Saniye";
+    const routesText = size === 4 ? "4 Rota" : size === 6 ? "6 Rota" : size === 8 ? "8 Rota" : "12 Rota";
 
     setPendingMatchConfirm({
       size,
       modeTitle,
       durationText,
       routesText,
+      isBot: true,
     });
   };
 
@@ -1672,31 +1722,78 @@ function HomeScreen() {
 
   const sendEmote = (emote: string) => {
     if (!room) return;
+    const now = Date.now();
+    if (now - lastEmoteSentRef.current < 800) return;
+    lastEmoteSentRef.current = now;
     const socket = getGameSocket();
     socket.emit("room:emote", { code: room.code, playerId, emote });
     gameSfx.tap();
     haptics.light();
   };
 
-  const handleChallengeTarget = async (target: InspectableUser, size: BoardSize = 4) => {
+  const handleChallengeTarget = async (target: InspectableUser, size?: BoardSize) => {
+    const duelSize: BoardSize = size || (room?.size as BoardSize) || selectedSize || 4;
     setInspectedUser(null);
-    if (target.isBot) {
-      startBotDuel(size);
-    } else {
-      pendingDuelInviteRef.current = {
-        targetId: target.id,
-        targetUsername: target.username || target.name,
-        size,
-      };
-      setGlobalToast({
-        id: `duel-sent-${Date.now()}`,
-        title: "DÜELLO DAVETİ GÖNDERİLDİ ⚔️",
-        subtitle: `${target.name || target.username} oyuncusuna davet iletildi. Katılması bekleniyor...`,
-        icon: "⚔️",
-        accentColor: "#3EE8B5",
-      });
-      createRoom(size, { toPlayerId: target.id, toUsername: target.username || target.name });
+    if (room) {
+      getGameSocket().emit("room:leave", { code: room.code, playerId });
+      setRoom(null);
     }
+    setShowResultModal(false);
+    setShowLeaveDuelModal(false);
+    activeRoomCodeRef.current = null;
+    prevStartedAtRef.current = null;
+    recordedRoundRef.current = null;
+    setGameCountdown(null);
+    setInspectedPath(null);
+    clearSelection();
+
+    const isBot = Boolean(
+      target.isBot ||
+      target.id?.startsWith("bot:") ||
+      target.id?.startsWith("friend:bot:") ||
+      target.id?.startsWith("mock:")
+    );
+
+    const targetId = target.id?.startsWith("bot:")
+      ? target.id
+      : (isBot ? `bot:${target.id || target.username || target.name}` : target.id);
+    const targetUsername = target.username || target.name;
+
+    const botProfile = isBot ? {
+      avatar: target.avatar,
+      avatarPhoto: target.avatarPhoto,
+      selectedTitle: target.selectedTitle,
+      selectedFrame: target.selectedFrame,
+      level: target.level,
+      tier: target.tier,
+      lp: target.lp,
+      wins: target.wins,
+      matches: target.matches,
+      streak: target.streak,
+      bestScore: target.bestScore,
+      bestTempo: target.bestTempo,
+    } : undefined;
+
+    pendingDuelInviteRef.current = {
+      targetId,
+      targetUsername,
+      size: duelSize,
+      botProfile,
+    };
+
+    setGlobalToast({
+      id: `duel-sent-${Date.now()}`,
+      title: "DÜELLO DAVETİ GÖNDERİLDİ ⚔️",
+      subtitle: `${targetUsername} oyuncusuna davet iletildi. Katılması bekleniyor...`,
+      icon: "⚔️",
+      accentColor: "#3EE8B5",
+    });
+
+    createRoom(duelSize, {
+      toPlayerId: targetId,
+      toUsername: targetUsername,
+      botProfile,
+    });
   };
 
   const shareRoomInvite = async () => {
@@ -1809,6 +1906,63 @@ function HomeScreen() {
     });
   };
 
+  const handleAddFriendTarget = async (target: InspectableUser) => {
+    if (target.isBot) {
+      const botFriend: FriendUser = {
+        id: target.id || `bot_${Date.now()}`,
+        name: target.name,
+        username: target.username || target.name,
+        avatar: target.avatar || "🤖",
+        avatarPhoto: target.avatarPhoto,
+        selectedTitle: target.selectedTitle || "[SİBER BOT]",
+        isOnline: true,
+        xp: target.xp ?? 2500,
+        level: target.level ?? 10,
+        lp: target.lp ?? 100,
+        tier: target.tier ?? "PLATİN",
+        wins: target.wins ?? 25,
+        matches: target.matches ?? 35,
+        streak: target.streak ?? 3,
+        bestScore: target.bestScore ?? 140,
+        bestTempo: target.bestTempo ?? 3.8,
+      };
+      const res = socialManager.addFriend(botFriend);
+      if (res.success) {
+        const updated = [...socialManager.getFriends()];
+        setProgress((curr) => ({ ...curr, friends: updated }));
+        void syncProgressToCloud({ ...progress, friends: updated });
+        triggerHapticSuccess();
+        gameSfx.victory();
+        setGlobalToast({
+          id: `bot-friend-${Date.now()}`,
+          title: "BOT DOSTU EKLENDİ! 🤖",
+          subtitle: `${target.name} arkadaş listene eklendi! Sosyal Arena'dan istediğin zaman pratik maçı yapabilirsin.`,
+          icon: "🤖",
+          accentColor: "#3EE8B5",
+        });
+      } else {
+        setGlobalToast({
+          id: `bot-friend-already-${Date.now()}`,
+          title: "BİLGİ",
+          subtitle: res.message,
+          icon: "ℹ️",
+          accentColor: "#FFC24A",
+        });
+      }
+      return;
+    }
+
+    const targetName = target.username || target.name;
+    const res = await handleSendFriendRequest(targetName);
+    setGlobalToast({
+      id: `friend-${Date.now()}`,
+      title: res.success ? "İSTEK GÖNDERİLDİ" : "BİLGİ",
+      subtitle: res.message,
+      icon: res.success ? "👥" : "ℹ️",
+      accentColor: res.success ? "#3EE8B5" : "#FFC24A",
+    });
+  };
+
   const handleAcceptFriendRequest = async (requestId: string) => {
     const socket = await ensureConnectedSocket();
     if (socket && socket.connected) {
@@ -1848,6 +2002,19 @@ function HomeScreen() {
     const invite = incomingDuelInvite;
     setIncomingDuelInvite(null);
     const socket = getGameSocket();
+    if (room) {
+      socket.emit("room:leave", { code: room.code, playerId });
+      setRoom(null);
+    }
+    setShowResultModal(false);
+    setShowLeaveDuelModal(false);
+    activeRoomCodeRef.current = null;
+    prevStartedAtRef.current = null;
+    recordedRoundRef.current = null;
+    setGameCountdown(null);
+    setInspectedPath(null);
+    clearSelection();
+
     socket.emit("friend:duel:respond", {
       toPlayerId: invite.fromPlayerId,
       fromPlayerName: safeName,
@@ -1871,7 +2038,16 @@ function HomeScreen() {
   };
 
   const leaveRoom = () => {
-    if (room) getGameSocket().emit("room:leave", { code: room.code, playerId });
+    if (room) {
+      if (room.status === "finished") {
+        const won = room.winnerId === playerId;
+        const { shouldShowInterstitial } = monetizationManager.recordMatchFinished(won);
+        if (shouldShowInterstitial) {
+          void monetizationManager.showInterstitialAd();
+        }
+      }
+      getGameSocket().emit("room:leave", { code: room.code, playerId });
+    }
     getGameSocket().emit("matchmaking:leave", { playerId, size: selectedSize });
     setShowResultModal(false);
     setShowLeaveDuelModal(false);
@@ -2108,7 +2284,10 @@ function HomeScreen() {
       }
     } catch {
       const res = buyLives(progress, "one");
-      if (res.success) setProgress(res.updatedProgress);
+      if (res.success) {
+        setProgress(res.updatedProgress);
+        void syncProgressToCloud(res.updatedProgress);
+      }
     } finally {
       setBuyingLivesLoading(false);
     }
@@ -2170,7 +2349,10 @@ function HomeScreen() {
       }
     } catch {
       const res = buyLives(progress, "all");
-      if (res.success) setProgress(res.updatedProgress);
+      if (res.success) {
+        setProgress(res.updatedProgress);
+        void syncProgressToCloud(res.updatedProgress);
+      }
     } finally {
       setBuyingLivesLoading(false);
     }
@@ -2216,11 +2398,26 @@ function HomeScreen() {
       }
     } catch {
       const res = buyLives(progress, "ad");
-      if (res.success) setProgress(res.updatedProgress);
+      if (res.success) {
+        setProgress(res.updatedProgress);
+        void syncProgressToCloud(res.updatedProgress);
+      }
     } finally {
       setBuyingLivesLoading(false);
     }
   };
+
+  const livesModalElement = (
+    <LivesModal
+      visible={showLivesModal}
+      progress={progress}
+      onClose={() => setShowLivesModal(false)}
+      onBuyOne={handleBuyOneLife}
+      onRefillAll={handleRefillAllLives}
+      onWatchAd={handleWatchAdForLife}
+      loading={buyingLivesLoading}
+    />
+  );
 
   const openSoloLevel = (level: number) => {
     const calc = getCalculatedLives(progress);
@@ -2262,7 +2459,7 @@ function HomeScreen() {
           setGlobalToast({
             id: `life-lost-${Date.now()}`,
             title: "CAN KAYBEDİLDİ 💔",
-            subtitle: "Son canını tükettin! Canların 15 dakikada bir otomatik dolar veya çiple yenileyebilirsin.",
+            subtitle: "Son canını tükettin! Canların 30 dakikada bir otomatik dolar veya çiple yenileyebilirsin.",
             icon: "💔",
             accentColor: "#EF4444",
           });
@@ -2302,6 +2499,10 @@ function HomeScreen() {
         soloUnlockedLevel: Math.min(MAX_SOLO_LEVEL + 1, Math.max(current.soloUnlockedLevel ?? 1, next)),
       }),
     );
+    const { shouldShowInterstitial } = monetizationManager.recordMatchFinished(true);
+    if (shouldShowInterstitial) {
+      void monetizationManager.showInterstitialAd();
+    }
   };
 
   const closeGuide = async () => {
@@ -2316,7 +2517,8 @@ function HomeScreen() {
         progress,
         daily,
         dailyScore,
-        (foundWords || []).length
+        (foundWords || []).length,
+        foundWords
       );
       const withWords = {
         ...updated,
@@ -2325,7 +2527,7 @@ function HomeScreen() {
       setProgress(withWords);
       void syncProgressToCloud(withWords);
       void awardProgressOnServer(
-        { kind: "solo", level, foundWords, daily: true, score: dailyScore },
+        { kind: "solo", level, foundWords, daily: true, score: dailyScore, dailyId: daily.id },
         () => withWords,
       );
     } else {
@@ -2370,54 +2572,70 @@ function HomeScreen() {
     }
   };
 
+  const isClaimingDailyRewardRef = useRef(false);
   const handleClaimDailyReward = async () => {
+    if (isClaimingDailyRewardRef.current) return;
     const todayId = getDayId();
-    const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
-    if (token && token !== "guest") {
-      try {
-        const response = await fetch(`${getApiBaseUrl()}/api/game/daily-login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
-        if (response.ok && data.progress) {
-          setProgress(data.progress);
-          await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(data.progress)).catch(() => undefined);
-          haptics.success();
-          gameSfx.victory();
-          const reward = data.reward;
-          const rewardName = reward.rewardType === "coins" ? "SİBER ÇİP" : reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
-          setGlobalToast({
-            id: `daily-reward-${Date.now()}`,
-            title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
-            subtitle: `${reward.label} tamamlandı! +${reward.amount} ${rewardName} hesabına eklendi.`,
-            icon: reward.icon,
-            accentColor: "#3EE8B5",
-            badge: `+${reward.amount}`,
-          });
-          return;
-        }
-      } catch {
-        // Fallback to local
-      }
-    }
+    if (progress.lastLoginDay === todayId) return;
+    isClaimingDailyRewardRef.current = true;
 
-    const res = checkDailyLoginReward(progress, todayId);
-    if (!res) return;
-    setProgress(res.updatedProgress);
-    AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(res.updatedProgress)).catch(() => undefined);
-    void syncProgressToCloud(res.updatedProgress);
-    haptics.success();
-    gameSfx.victory();
-    const rewardName = res.reward.rewardType === "coins" ? "SİBER ÇİP" : res.reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
-    setGlobalToast({
-      id: `daily-reward-${Date.now()}`,
-      title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
-      subtitle: `${res.reward.label} tamamlandı! +${res.reward.amount} ${rewardName} hesabına eklendi.`,
-      icon: res.reward.icon,
-      accentColor: "#3EE8B5",
-      badge: `+${res.reward.amount}`,
-    });
+    try {
+      const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+      if (token && token !== "guest") {
+        try {
+          const response = await fetch(`${getApiBaseUrl()}/api/game/daily-login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          });
+          const data = await response.json();
+          if (response.ok && data.progress) {
+            setProgress(data.progress);
+            await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(data.progress)).catch(() => undefined);
+            haptics.success();
+            gameSfx.victory();
+            const reward = data.reward;
+            const rewardName = reward.rewardType === "coins" ? "SİBER ÇİP" : reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
+            setGlobalToast({
+              id: `daily-reward-${Date.now()}`,
+              title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
+              subtitle: `${reward.label} tamamlandı! +${reward.amount} ${rewardName} hesabına eklendi.`,
+              icon: reward.icon,
+              accentColor: "#3EE8B5",
+              badge: `+${reward.amount}`,
+            });
+            return;
+          } else if (response.status === 400) {
+            // Sunucuda bugünkü giriş ödülü zaten alınmış; yerel mükerrer ödül verilmesi önlendi
+            if (data.progress) {
+              setProgress(data.progress);
+              await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(data.progress)).catch(() => undefined);
+            }
+            return;
+          }
+        } catch {
+          // Fallback to local
+        }
+      }
+
+      const res = checkDailyLoginReward(progress, todayId);
+      if (!res) return;
+      setProgress(res.updatedProgress);
+      AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(res.updatedProgress)).catch(() => undefined);
+      void syncProgressToCloud(res.updatedProgress);
+      haptics.success();
+      gameSfx.victory();
+      const rewardName = res.reward.rewardType === "coins" ? "SİBER ÇİP" : res.reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
+      setGlobalToast({
+        id: `daily-reward-${Date.now()}`,
+        title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
+        subtitle: `${res.reward.label} tamamlandı! +${res.reward.amount} ${rewardName} hesabına eklendi.`,
+        icon: res.reward.icon,
+        accentColor: "#3EE8B5",
+        badge: `+${res.reward.amount}`,
+      });
+    } finally {
+      isClaimingDailyRewardRef.current = false;
+    }
   };
 
   const handleCloseGuide = () => {
@@ -2425,12 +2643,12 @@ function HomeScreen() {
     AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
   };
 
-  if (authLoading) {
+  if (!splashFinished) {
     return (
-      <ScreenContainer style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <StatusBar style="light" />
-        <ActivityIndicator size="large" color="#3EE8B5" />
-      </ScreenContainer>
+      <GameSplashScreen
+        isReady={!authLoading}
+        onFinish={() => setSplashFinished(true)}
+      />
     );
   }
 
@@ -2523,7 +2741,7 @@ function HomeScreen() {
 
   if (screen === "home") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <CommandCenter
           playerName={safeName}
@@ -2631,7 +2849,7 @@ function HomeScreen() {
                 <Text style={{ color: "#F1F5F9", fontSize: 11, fontWeight: "900", letterSpacing: 0.5, marginBottom: 6 }}>💡 STRATEJİ VE İPUCU</Text>
                 <Text style={{ color: "#94A3B8", fontSize: 12, lineHeight: 18 }}>
                   {selectedModeInfo === "pvp"
-                    ? "• 5 harfli kelimeler 1.5×, 7+ harfli kelimeler 2.0× puan verir.\n• Siber Radar jokeri ile harf rotalarını anında gör."
+                    ? "• 5+ harfli kelimeler ×2, 7+ harfli kelimeler ×3 bonus puan verir.\n• Siber Radar jokeri ile harf rotalarını anında gör."
                     : selectedModeInfo === "daily"
                     ? "• Her gün 1 defa oynama hakkın vardır.\n• Tamamlayamadığın günlerde Seri Kalkanı otomatik devreye girer."
                     : selectedModeInfo === "solo"
@@ -2706,8 +2924,8 @@ function HomeScreen() {
               </View>
 
               {/* Üst etiket */}
-              <Text style={{ color: "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>
-                DERECELİ DÜELLO
+              <Text style={{ color: pendingMatchConfirm?.isBot ? "#38BDF8" : "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 }}>
+                {pendingMatchConfirm?.isBot ? "YAPAY ZEKA DÜELLOSU" : "DERECELİ DÜELLO"}
               </Text>
 
               {/* Mod adı */}
@@ -2727,7 +2945,7 @@ function HomeScreen() {
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }}>
                   <Text style={{ color: "#94A3B8", fontSize: 12, fontWeight: "700" }}>🏅 LP</Text>
-                  <Text style={{ color: "#FFC24A", fontSize: 12, fontWeight: "900" }}>Galibiyet / Mağlubiyet</Text>
+                  <Text style={{ color: "#FFC24A", fontSize: 12, fontWeight: "900" }}>{pendingMatchConfirm?.isBot ? "Alıştırma (0 LP)" : "Galibiyet / Mağlubiyet"}</Text>
                 </View>
               </View>
 
@@ -2736,22 +2954,28 @@ function HomeScreen() {
                 <Pressable
                   onPress={() => {
                     if (pendingMatchConfirm) {
-                      const size = pendingMatchConfirm.size;
+                      const { size, isBot } = pendingMatchConfirm;
                       setPendingMatchConfirm(null);
-                      startMatchmaking(size);
+                      if (isBot) {
+                        void startBotDuel(size);
+                      } else {
+                        void startMatchmaking(size);
+                      }
                     }
                   }}
                   style={({ pressed }) => ({
                     width: "100%",
                     height: 50,
                     borderRadius: 14,
-                    backgroundColor: "#3EE8B5",
+                    backgroundColor: pendingMatchConfirm?.isBot ? "#38BDF8" : "#3EE8B5",
                     justifyContent: "center",
                     alignItems: "center",
                     opacity: pressed ? 0.8 : 1,
                   })}
                 >
-                  <Text style={{ color: "#04110C", fontSize: 15, fontWeight: "900", letterSpacing: 1 }}>⚔️ SAVAŞI BAŞLAT</Text>
+                  <Text style={{ color: "#04110C", fontSize: 15, fontWeight: "900", letterSpacing: 1 }}>
+                    {pendingMatchConfirm?.isBot ? "🤖 DÜELLOYU BAŞLAT" : "⚔️ SAVAŞI BAŞLAT"}
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setPendingMatchConfirm(null)}
@@ -2907,7 +3131,7 @@ function HomeScreen() {
   if (screen === "daily-lobby") {
     const dailyDone = progress.dailyCompletedId === daily.id;
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -3027,17 +3251,19 @@ function HomeScreen() {
     );
   }
 
-  if (screen === "season") {
+  if (screen === "season" || screen === "league") {
     return (
-      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
+      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <SeasonHub
+          initialTab={screen === "league" ? "leagues" : seasonInitialTab}
           playerId={playerId}
           playerName={playerName}
           progress={progress}
           leaderboard={leaderboard}
           onBack={() => setScreen("home")}
           onOpenLeagueHub={() => setScreen("league")}
+          onPlayRanked={() => setScreen("online")}
           pendingRequests={pendingRequests}
           onAcceptRequest={handleAcceptFriendRequest}
           onRejectRequest={handleRejectFriendRequest}
@@ -3047,15 +3273,40 @@ function HomeScreen() {
               (f) => f.name.toLowerCase() === friendName.toLowerCase() || f.username.toLowerCase() === friendName.toLowerCase()
             );
             const targetSize = size || 4;
+            const isBotFriend = Boolean(
+              targetFriend && (
+                targetFriend.isBot ||
+                targetFriend.id.startsWith("bot:") ||
+                targetFriend.id.startsWith("friend:bot:") ||
+                /^f\d+$/.test(targetFriend.id) ||
+                targetFriend.id.startsWith("mock:")
+              )
+            );
+            const friendBotProfile = isBotFriend && targetFriend ? {
+              avatar: targetFriend.avatar,
+              avatarPhoto: targetFriend.avatarPhoto,
+              selectedTitle: targetFriend.selectedTitle,
+              selectedFrame: targetFriend.selectedFrame,
+              level: targetFriend.level,
+              tier: targetFriend.tier,
+              lp: targetFriend.lp,
+              wins: targetFriend.wins,
+              matches: targetFriend.matches,
+              streak: targetFriend.streak,
+              bestScore: targetFriend.bestScore,
+              bestTempo: targetFriend.bestTempo,
+            } : undefined;
             const inviteTarget = targetFriend ? {
               toPlayerId: targetFriend.id,
               toUsername: targetFriend.username || targetFriend.name,
+              botProfile: friendBotProfile,
             } : undefined;
             if (targetFriend) {
               pendingDuelInviteRef.current = {
                 targetId: targetFriend.id,
                 targetUsername: targetFriend.username || targetFriend.name,
                 size: targetSize,
+                botProfile: friendBotProfile,
               };
             }
             createRoom(targetSize, inviteTarget);
@@ -3082,28 +3333,9 @@ function HomeScreen() {
           isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
           isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
-          onAddFriend={async (target) => {
-            const targetName = target.username || target.name;
-            const res = await handleSendFriendRequest(targetName);
-            setGlobalToast({
-              id: `friend-${Date.now()}`,
-              title: res.success ? "İSTEK GÖNDERİLDİ" : "BİLGİ",
-              subtitle: res.message,
-              icon: res.success ? "👥" : "ℹ️",
-              accentColor: res.success ? "#3EE8B5" : "#FFC24A",
-            });
-          }}
+          onAddFriend={handleAddFriendTarget}
           onChallenge={handleChallengeTarget}
         />
-      </MainShell>
-    );
-  }
-
-  if (screen === "league") {
-    return (
-      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
-        <StatusBar style="light" />
-        <LeagueHub playerId={playerId} progress={progress} leaderboard={leaderboard} onBack={() => setScreen("home")} />
       </MainShell>
     );
   }
@@ -3143,8 +3375,10 @@ function HomeScreen() {
           }}
         />
         <View style={{ position: "absolute", bottom: 8, left: 14, right: 14 }}>
+          <CyberBannerAd />
           <PremiumDock active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} />
         </View>
+        {livesModalElement}
       </ScreenContainer>
     );
   }
@@ -3162,6 +3396,9 @@ function HomeScreen() {
           excludeWords={recentSoloWords}
           radarChargesBonus={progress.radarChargesBonus || 0}
           lives={getCalculatedLives(progress).lives}
+          onOpenLivesModal={() => setShowLivesModal(true)}
+          boardSkinColor={activeBoardSkinColor}
+          selectedVictoryEffect={progress.selectedVictoryEffect}
           onExit={() => {
             const destination = dailySession ? "home" : "levels";
             setDailySession(null);
@@ -3184,17 +3421,20 @@ function HomeScreen() {
             }));
           }}
         />
+        {livesModalElement}
       </ScreenContainer>
     );
   }
 
   if (screen === "store") {
     return (
-      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
+      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <CyberStore
           coins={progress.coins ?? 0}
           progress={progress}
+          hasClaimableDailyReward={hasClaimableDailyReward}
+          onClaimDailyReward={handleClaimDailyReward}
           onBuyCoins={(amount) => {
             setProgress((current) => {
               const next = { ...current, coins: (current.coins ?? 0) + amount };
@@ -3217,7 +3457,7 @@ function HomeScreen() {
             const currentCoins = progress.coins ?? 0;
             if (currentCoins < item.cost) {
               setGlobalToast({ id: `store-err-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${item.cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
-              return;
+              return false;
             }
             if (item.rewardType === "lives") {
               const calc = getCalculatedLives(progress);
@@ -3229,7 +3469,7 @@ function HomeScreen() {
                   icon: "💚",
                   accentColor: "#22C55E",
                 });
-                return;
+                return false;
               }
             }
 
@@ -3245,7 +3485,10 @@ function HomeScreen() {
                 if (res.ok && data.progress) {
                   setProgress(data.progress);
                   setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#3EE8B5" });
-                  return;
+                  return true;
+                } else if (res.status === 400) {
+                  setGlobalToast({ id: `item-err-${Date.now()}`, title: "SATIN ALINAMADI", subtitle: data.error || "İşlem gerçekleştirilemedi.", icon: "⚠️", accentColor: "#FF647C" });
+                  return false;
                 }
               } catch {
                 // Fallback to local
@@ -3270,6 +3513,7 @@ function HomeScreen() {
               return next;
             });
             setGlobalToast({ id: `item-bought-${Date.now()}`, title: "SATIN ALINDI!", subtitle: `${item.name} envanterinize eklendi.`, icon: item.icon, accentColor: "#3EE8B5" });
+            return true;
           }}
           onSelectFrame={(selectedFrame) => {
             setProgress((current) => {
@@ -3277,7 +3521,7 @@ function HomeScreen() {
               void syncProgressToCloud(next);
               return next;
             });
-            setGlobalToast({ id: `frame-${Date.now()}`, title: "ÇERÇEVE KUŞANILDI", subtitle: "Profiler sinyalin güncellendi.", icon: "✨", accentColor: "#3EE8B5" });
+            setGlobalToast({ id: `frame-${Date.now()}`, title: "ÇERÇEVE KUŞANILDI", subtitle: "Profil sinyalin güncellendi.", icon: "✨", accentColor: "#3EE8B5" });
           }}
           onSelectVictoryEffect={(selectedVictoryEffect) => {
             setProgress((current) => {
@@ -3313,8 +3557,11 @@ function HomeScreen() {
                 const data = await res.json();
                 if (res.ok && data.progress) {
                   setProgress(data.progress);
-                  setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#3EE8B5" });
+                  setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşanıldı!", icon: "🎉", accentColor: "#3EE8B5" });
                   return true;
+                } else if (res.status === 400) {
+                  setGlobalToast({ id: `buy-err-${Date.now()}`, title: "SATIN ALINAMADI", subtitle: data.error || "İşlem gerçekleştirilemedi.", icon: "⚠️", accentColor: "#FF647C" });
+                  return false;
                 }
               } catch {
                 // Fallback to local
@@ -3332,7 +3579,7 @@ function HomeScreen() {
               void syncProgressToCloud(next);
               return next;
             });
-            setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşatıldı!", icon: "🎉", accentColor: "#3EE8B5" });
+            setGlobalToast({ id: `buy-${Date.now()}`, title: "KOZMETİK KAZANILDI", subtitle: "Yeni ürün envanterine eklendi ve kuşanıldı!", icon: "🎉", accentColor: "#3EE8B5" });
             return true;
           }}
           onBack={() => setScreen("home")}
@@ -3345,7 +3592,7 @@ function HomeScreen() {
     if (!arcadeStarted) {
       const bestScore = progress.bestArcadeScore || 0;
       return (
-        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
+        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
           <StatusBar style="light" />
           <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.subHeader}>
@@ -3444,14 +3691,19 @@ function HomeScreen() {
         <StatusBar style="light" />
         <GlobalGameToast toast={globalToast} onDismiss={() => setGlobalToast(null)} />
         <ArcadeChallenge
+          boardSkinColor={activeBoardSkinColor}
+          selectedVictoryEffect={progress.selectedVictoryEffect}
           onExit={() => setArcadeStarted(false)}
-          onComplete={(score) => {
+          onComplete={(score, wordsCount, isDoubled, comboCount, foundWords) => {
             setProgress((current) => {
-              const updated = applyArcadeProgress(current, score);
+              const updated = applyArcadeProgress(current, score, wordsCount, isDoubled, comboCount, foundWords);
               void syncProgressToCloud(updated);
               return updated;
             });
-            void awardProgressOnServer({ kind: "arcade", score }, (current) => applyArcadeProgress(current, score));
+            void awardProgressOnServer(
+              { kind: "arcade", score, wordsCount, isDoubled, comboCount, foundWords },
+              (current) => applyArcadeProgress(current, score, wordsCount, isDoubled, comboCount, foundWords)
+            );
           }}
         />
       </ScreenContainer>
@@ -3460,7 +3712,7 @@ function HomeScreen() {
 
   if (screen === "online") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -3543,7 +3795,7 @@ function HomeScreen() {
                     {size === 4 ? "Nabız (Hızlı)" : size === 6 ? "Akış (Orta)" : size === 8 ? "Derinlik (Zor)" : "Zirve (Usta)"}
                   </Text>
                   <Text style={styles.sizeDetail}>
-                    {size === 4 ? "4 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : size === 8 ? "8 rota · 90 sn" : "10 rota · 110 sn"}
+                    {size === 4 ? "3 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : size === 8 ? "8 rota · 95 sn" : "12 rota · 125 sn"}
                   </Text>
                 </Pressable>
               );
@@ -3554,6 +3806,18 @@ function HomeScreen() {
             <Text style={styles.primaryButtonText}>⚔️ CANLI EŞLEŞMEYE GİR</Text>
             <Text style={styles.primaryButtonArrow}>→</Text>
           </Pressable>
+
+          <Pressable
+            onPress={() => promptBotDuel(selectedSize)}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              { marginTop: 10, backgroundColor: "rgba(56, 189, 248, 0.15)", borderWidth: 1.5, borderColor: "#38BDF8" },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.primaryButtonText, { color: "#38BDF8" }]}>🤖 SİBER BOT İLE ALIŞTIRMA YAP</Text>
+            <Text style={[styles.primaryButtonArrow, { color: "#38BDF8" }]}>→</Text>
+          </Pressable>
           
           {Boolean(notice) && <Text style={styles.notice}>{notice}</Text>}
         </ScrollView>
@@ -3563,7 +3827,7 @@ function HomeScreen() {
 
   if (screen === "friends") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -3601,7 +3865,7 @@ function HomeScreen() {
                     {size === 4 ? "Nabız (Hızlı)" : size === 6 ? "Akış (Orta)" : size === 8 ? "Derinlik (Zor)" : "Zirve (Usta)"}
                   </Text>
                   <Text style={styles.sizeDetail}>
-                    {size === 4 ? "4 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : size === 8 ? "8 rota · 90 sn" : "10 rota · 110 sn"}
+                    {size === 4 ? "3 rota · 55 sn" : size === 6 ? "6 rota · 75 sn" : size === 8 ? "8 rota · 95 sn" : "12 rota · 125 sn"}
                   </Text>
                 </Pressable>
               );
@@ -3635,7 +3899,7 @@ function HomeScreen() {
             <Text style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>
               ARKADAŞLARINLA DÜELLO YAP ({friendsList.length})
             </Text>
-            <Pressable onPress={() => setScreen("season")}>
+            <Pressable onPress={() => { setSeasonInitialTab("friends"); setScreen("season"); }}>
               <Text style={{ color: "#3EE8B5", fontSize: 11, fontWeight: "800", letterSpacing: 0.5 }}>
                 + YENİ ARKADAŞ BUL
               </Text>
@@ -3649,7 +3913,7 @@ function HomeScreen() {
               <Text style={styles.emptyFriendsText}>
                 Liderlik tablosundaki oyuncuları inceleyerek veya maç sonu ekranlarından rakipleri arkadaş olarak ekleyebilirsin.
               </Text>
-              <Pressable onPress={() => setScreen("season")} style={styles.emptyFriendsButton}>
+              <Pressable onPress={() => { setSeasonInitialTab("leaderboard"); setScreen("season"); }} style={styles.emptyFriendsButton}>
                 <Text style={styles.emptyFriendsButtonText}>🏆 LİDERLİK TABLOSUNU AÇ</Text>
               </Pressable>
             </View>
@@ -3729,25 +3993,33 @@ function HomeScreen() {
         <StatusBar style="light" />
         <VintagePuzzle
           onBack={() => setScreen("home")}
+          selectedVictoryEffect={progress.selectedVictoryEffect}
           vintageProgress={progress.vintageProgress}
           lives={livesCalc.lives}
-          onOpenLivesModal={() => setShowLivesModal(true)}
-          onSaveProgress={(newProgress) => {
+          coins={progress.coins ?? 0}
+          onSpendCoins={(amount: number) => {
+            const currentCoins = progress.coins ?? 0;
+            if (currentCoins < amount) return false;
             setProgress((current) => {
-              const updated = { ...current, vintageProgress: newProgress };
+              const updated = { ...current, coins: Math.max(0, (current.coins ?? 0) - amount) };
               void syncProgressToCloud(updated);
               return updated;
             });
+            return true;
           }}
-          onRewardXp={(amount: number, level: number) => {
+          onOpenLivesModal={() => setShowLivesModal(true)}
+          onSaveProgress={(newProgress) => {
+            setProgress((current) => ({ ...current, vintageProgress: newProgress }));
+          }}
+          onRewardXp={(amount: number, level: number, wordsCount: number = 5, foundWords?: string[]) => {
             setProgress((current) => {
-              const updated = applyVintageProgress(current, level, amount);
+              const updated = applyVintageProgress(current, level, amount, wordsCount, foundWords);
               void syncProgressToCloud(updated);
               return updated;
             });
             void awardProgressOnServer(
-              { kind: "vintage", score: amount, level },
-              (current) => applyVintageProgress(current, level, amount)
+              { kind: "vintage", score: amount, level, wordsCount, foundWords },
+              (current) => applyVintageProgress(current, level, amount, wordsCount, foundWords)
             );
             setGlobalToast({
               id: `vintage-${Date.now()}`,
@@ -3759,18 +4031,20 @@ function HomeScreen() {
           }}
         />
         {globalToast && <GlobalGameToast toast={globalToast} onDismiss={() => setGlobalToast(null)} />}
+        {livesModalElement}
       </ScreenContainer>
     );
   }
 
   if (screen === "missions") {
     return (
-      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
+      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <MissionsScreen
           progress={progress}
           onBack={() => setScreen("home")}
           onPlayDaily={() => setScreen("daily-lobby")}
+          onNavigate={(destination) => setScreen(destination)}
           onClaimDaily={(missionId, xp, coins) => {
             void claimMissionOnServer("daily", missionId, (current) => ({
               ...current,
@@ -3795,7 +4069,7 @@ function HomeScreen() {
 
   if (screen === "profile") {
     return (
-      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite}>
+      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
         <StatusBar style="light" />
         <ProfileScreen
           playerName={safeName}
@@ -3803,6 +4077,10 @@ function HomeScreen() {
             setPlayerName(newName);
             AsyncStorage.setItem("kelime-patlat:player-name", newName).catch(() => undefined);
             void syncProgressToCloud(progress, newName);
+            const socket = getGameSocket();
+            if (socket.connected) {
+              socket.emit("player:identify", { playerId, username: newName });
+            }
           }}
           progress={progress}
           onShowToast={(title, subtitle, icon, color) => {
@@ -3840,6 +4118,20 @@ function HomeScreen() {
               const next = { ...current, selectedTheme };
               void syncProgressToCloud(next);
               return next;
+            });
+          }}
+          onSelectFrame={(selectedFrame) => {
+            setProgress((current) => {
+              const next = { ...current, selectedFrame };
+              void syncProgressToCloud(next);
+              return next;
+            });
+            setGlobalToast({
+              id: `frame-${Date.now()}`,
+              title: "ÇERÇEVE KUŞANILDI",
+              subtitle: "Profil çerçeveniz başarıyla güncellendi.",
+              icon: "🖼️",
+              accentColor: "#3EE8B5",
             });
           }}
           onUpdateGender={(gender) => {
@@ -3883,6 +4175,7 @@ function HomeScreen() {
             await AsyncStorage.removeItem(SOLO_UNLOCK_KEY).catch(() => undefined);
             await AsyncStorage.removeItem("kelime-patlat:player-id").catch(() => undefined);
             await AsyncStorage.removeItem("kelime-patlat:player-name").catch(() => undefined);
+            await AsyncStorage.removeItem("@kelime_patlat:vintage_puzzle_progress").catch(() => undefined);
             reconnectGameSocket();
           }}
           onDeleteAccount={async () => {
@@ -3901,12 +4194,13 @@ function HomeScreen() {
               }
             }
             await socialManager.reset().catch(() => undefined);
-            await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
-            await AsyncStorage.removeItem(PROGRESS_KEY);
-            await AsyncStorage.removeItem(SOLO_UNLOCK_KEY);
-            await AsyncStorage.removeItem("kelime-patlat:player-id");
-            await AsyncStorage.removeItem("kelime-patlat:player-name");
-            await AsyncStorage.removeItem("kelime-patlat:guide-seen");
+            await AsyncStorage.removeItem(SESSION_TOKEN_KEY).catch(() => undefined);
+            await AsyncStorage.removeItem(PROGRESS_KEY).catch(() => undefined);
+            await AsyncStorage.removeItem(SOLO_UNLOCK_KEY).catch(() => undefined);
+            await AsyncStorage.removeItem("kelime-patlat:player-id").catch(() => undefined);
+            await AsyncStorage.removeItem("kelime-patlat:player-name").catch(() => undefined);
+            await AsyncStorage.removeItem("kelime-patlat:guide-seen").catch(() => undefined);
+            await AsyncStorage.removeItem("@kelime_patlat:vintage_puzzle_progress").catch(() => undefined);
             setAuthToken(null);
             setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
             setPlayerName("OYUNCU");
@@ -3963,17 +4257,7 @@ function HomeScreen() {
           isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
           isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
           onClose={() => setInspectedUser(null)}
-          onAddFriend={async (target) => {
-            const targetName = target.username || target.name;
-            const res = await handleSendFriendRequest(targetName);
-            setGlobalToast({
-              id: `friend-${Date.now()}`,
-              title: res.success ? "İSTEK GÖNDERİLDİ" : "BİLGİ",
-              subtitle: res.message,
-              icon: res.success ? "👥" : "ℹ️",
-              accentColor: res.success ? "#3EE8B5" : "#FFC24A",
-            });
-          }}
+          onAddFriend={handleAddFriendTarget}
           onChallenge={handleChallengeTarget}
         />
       </ScreenContainer>
@@ -3981,9 +4265,12 @@ function HomeScreen() {
   }
 
   if (!room) {
-    // Oda verisi kayboldu - güvenli geri dönüş
-    setScreen("home");
-    return null;
+    return (
+      <ScreenContainer style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <StatusBar style="light" />
+        <ActivityIndicator size="large" color="#3EE8B5" />
+      </ScreenContainer>
+    );
   }
   const selectionSet = new Set(selectedCells);
   const foundCellOwners = new Map<number, string>();
@@ -4444,6 +4731,12 @@ function HomeScreen() {
       {room.status === "finished" && showResultModal && (
         <Modal visible transparent animationType="fade" onRequestClose={() => setShowResultModal(false)}>
           <Pressable style={[styles.modalOverlay, { flex: 1, width: "100%", height: "100%", paddingHorizontal: 14, paddingVertical: 20 }]} onPress={() => setShowResultModal(false)}>
+            {iWon && (
+              <VictoryEffectOverlay
+                effectId={progress.selectedVictoryEffect}
+                visible={Boolean(room?.status === "finished" && iWon)}
+              />
+            )}
             <Pressable
               style={{
                 width: "100%",
@@ -4933,29 +5226,11 @@ function HomeScreen() {
         isSelf={inspectedUser ? (inspectedUser.id === playerId || (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") === safeName.toLocaleLowerCase("tr-TR")) : false}
         isFriend={inspectedUser ? socialManager.getFriends().some((f) => f.username.toLocaleLowerCase("tr-TR") === (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")) : false}
         onClose={() => setInspectedUser(null)}
-        onAddFriend={async (target) => {
-          const targetName = target.username || target.name;
-          const res = await handleSendFriendRequest(targetName);
-          setGlobalToast({
-            id: `friend-${Date.now()}`,
-            title: res.success ? "İSTEK GÖNDERİLDİ" : "BİLGİ",
-            subtitle: res.message,
-            icon: res.success ? "👥" : "ℹ️",
-            accentColor: res.success ? "#3EE8B5" : "#FFC24A",
-          });
-        }}
+        onAddFriend={handleAddFriendTarget}
         onChallenge={handleChallengeTarget}
       />
 
-      <LivesModal
-        visible={showLivesModal}
-        progress={progress}
-        onClose={() => setShowLivesModal(false)}
-        onBuyOne={handleBuyOneLife}
-        onRefillAll={handleRefillAllLives}
-        onWatchAd={handleWatchAdForLife}
-        loading={buyingLivesLoading}
-      />
+      {livesModalElement}
     </ScreenContainer>
   );
 }
@@ -5404,6 +5679,7 @@ function MainShell({
   onRejectDuel,
   matchmakingState,
   onCancelMatchmaking,
+  livesModal,
 }: {
   active: DockDestination;
   children: React.ReactNode;
@@ -5421,6 +5697,7 @@ function MainShell({
   onRejectDuel?: () => void;
   matchmakingState?: { size: BoardSize; elapsedSeconds: number } | null;
   onCancelMatchmaking?: () => void;
+  livesModal?: React.ReactNode;
 }) {
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 14, paddingTop: 6 }}>
@@ -5430,6 +5707,7 @@ function MainShell({
       <View style={styles.shell}>
         {children}
         <View style={styles.fixedDock}>
+          <CyberBannerAd />
           <PremiumDock active={active} onNavigate={onNavigate} missionsBadgeCount={missionsBadgeCount} storeBadgeCount={storeBadgeCount} />
         </View>
       </View>
@@ -5487,9 +5765,9 @@ function MainShell({
                 <ActivityIndicator size="large" color="#3EE8B5" />
                 <Text style={styles.matchmakingRadarIcon}>📡</Text>
               </View>
-              <Text style={styles.matchmakingKicker}>CANLI EŞLEŞTİRME</Text>
-              <Text style={styles.matchmakingTitle}>
-                {matchmakingState.size}×{matchmakingState.size} DÜELLO
+              <Text style={styles.matchmakingTitle}>EŞLEŞME ARANIYOR</Text>
+              <Text style={styles.matchmakingSubtitle}>
+                {matchmakingState.size}×{matchmakingState.size} Boyutunda Canlı Rakip
               </Text>
               <Text style={styles.matchmakingTimer}>
                 {`00:${String(matchmakingState.elapsedSeconds).padStart(2, "0")}`}
@@ -5509,6 +5787,7 @@ function MainShell({
           </View>
         </Modal>
       )}
+      {livesModal}
     </ScreenContainer>
   );
 }
@@ -5635,7 +5914,7 @@ const battleStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   shell: { flex: 1, userSelect: "none", touchAction: "none" } as any,
   fixedDock: { position: "absolute", left: 0, right: 0, bottom: 8 },
-  homeScroll: { paddingBottom: 132, flexGrow: 1 },
+  homeScroll: { paddingBottom: 185, flexGrow: 1 },
   subHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   subHeaderKicker: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
   subHeaderTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 },
@@ -5847,6 +6126,7 @@ const styles = StyleSheet.create({
   matchmakingRadarIcon: { fontSize: 28, position: "absolute" },
   matchmakingKicker: { color: "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 },
   matchmakingTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: 0.5, marginBottom: 8, textAlign: "center" },
+  matchmakingSubtitle: { color: "#94A3B8", fontSize: 13, fontWeight: "600", marginBottom: 12, textAlign: "center" },
   matchmakingTimer: { color: "#3EE8B5", fontSize: 32, fontWeight: "900", letterSpacing: 2, marginBottom: 10 },
   matchmakingStatusText: { color: "#94A3B8", fontSize: 12, fontWeight: "600", textAlign: "center", marginBottom: 20, minHeight: 34 },
   matchmakingCancelBtn: { width: "100%", height: 46, borderRadius: 14, backgroundColor: "rgba(239,68,68,0.15)", borderWidth: 1, borderColor: "rgba(239,68,68,0.4)", justifyContent: "center", alignItems: "center" },

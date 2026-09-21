@@ -12,7 +12,7 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
     id: "lives_refill",
     name: "5x Tam Can Doldurma",
     description: "Can sayacını anında yeniler ve 5/5 tam hakka ulaştırır.",
-    cost: 50,
+    cost: 75,
     icon: "💚",
     rewardType: "lives",
   },

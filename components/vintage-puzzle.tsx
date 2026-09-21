@@ -21,10 +21,13 @@ import {
   playErrorSound,
 } from "@/shared/audio-haptics";
 import { generatePuzzle, PuzzleResult, PlacedWord } from "@/shared/puzzle-generator";
+import { MAX_LIVES } from "@/shared/progression";
 import { ModernAlertModal } from "./modern-alert-modal";
+import { VictoryEffectOverlay } from "./victory-effect-overlay";
 
 const TR_ALPHABET = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
 const VINTAGE_STORAGE_KEY = "@kelime_patlat:vintage_puzzle_progress";
+export const VINTAGE_HINT_COST = 25;
 
 export interface PoolTile {
   id: string;
@@ -33,7 +36,7 @@ export interface PoolTile {
 
 export type VintagePuzzleProps = {
   onBack: () => void;
-  onRewardXp?: (amount: number, level: number) => void;
+  onRewardXp?: (amount: number, level: number, wordsCount?: number, foundWords?: string[]) => void;
   vintageProgress?: {
     maxUnlockedLevel: number;
     completedLevels: number[];
@@ -46,6 +49,9 @@ export type VintagePuzzleProps = {
   }) => void;
   lives?: number;
   onOpenLivesModal?: () => void;
+  coins?: number;
+  onSpendCoins?: (amount: number) => boolean;
+  selectedVictoryEffect?: string;
 };
 
 // Alt Performans Bileşeni: Grid Hücresi (60 FPS)
@@ -142,7 +148,17 @@ const LetterTileItem = React.memo(
 );
 LetterTileItem.displayName = "LetterTileItem";
 
-export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgress, lives = 5, onOpenLivesModal }: VintagePuzzleProps) {
+export function VintagePuzzle({
+  onBack,
+  onRewardXp,
+  vintageProgress,
+  onSaveProgress,
+  lives = MAX_LIVES,
+  onOpenLivesModal,
+  coins,
+  onSpendCoins,
+  selectedVictoryEffect,
+}: VintagePuzzleProps) {
   const { width: windowWidth } = useWindowDimensions();
   const cellSize = Math.max(26, Math.floor((windowWidth - 28) / 10));
 
@@ -171,6 +187,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [pendingExitDestination, setPendingExitDestination] = useState<"map" | "app">("map");
 
   const handlePlayBackPress = useCallback(() => {
@@ -185,6 +202,10 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
 
   useEffect(() => {
     const onBackPress = () => {
+      if (showResetModal) {
+        setShowResetModal(false);
+        return true;
+      }
       if (showExitModal) {
         setShowExitModal(false);
         return true;
@@ -204,7 +225,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
 
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [showExitModal, viewMode, isLevelComplete, onBack]);
+  }, [showResetModal, showExitModal, viewMode, isLevelComplete, onBack]);
 
   const gridContainerRef = useRef<View>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -344,8 +365,13 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
   const handleResetLevel = useCallback(() => {
     triggerHapticSelection();
     playSelectionNote(0);
-    loadNewPuzzleForLevel(levelIndex);
-  }, [levelIndex, loadNewPuzzleForLevel]);
+    const hasPlacedTiles = playerBoard.some((row) => row.some((cell) => cell !== null));
+    if (hasPlacedTiles || solvedWordIds.size > 0) {
+      setShowResetModal(true);
+    } else {
+      loadNewPuzzleForLevel(levelIndex);
+    }
+  }, [levelIndex, loadNewPuzzleForLevel, playerBoard, solvedWordIds]);
 
   // Hata Uyarısı
   const triggerError = useCallback(
@@ -424,7 +450,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
           const isFirstTime = !completedLevels.has(levelIndex);
           const baseXP = levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100;
           const xpEarned = isFirstTime ? baseXP : Math.max(3, Math.floor(baseXP / 10));
-          onRewardXp?.(xpEarned, levelIndex);
+          onRewardXp?.(xpEarned, levelIndex, puzzle.words.length, puzzle.words.map((w) => w.answer));
 
           const nextCompleted = new Set([...completedLevels, levelIndex]);
           const nextMax = Math.min(20, Math.max(maxUnlockedLevel, levelIndex + 1));
@@ -611,6 +637,97 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
     [selectedCell, puzzleCellsMap]
   );
 
+  // Joker İpucu: Seçili veya ilk çözülmemiş kelimeden 1 harfi tahtaya yerleştirir
+  const handleUseHint = useCallback(() => {
+    if (!puzzle || isLevelComplete) return;
+    const availableCoins = coins ?? 0;
+    if (availableCoins < VINTAGE_HINT_COST) {
+      triggerError(`Yetersiz Çip! 1 harf açmak için ${VINTAGE_HINT_COST} Çip gerekir.`);
+      return;
+    }
+
+    // 1. Hedef kelimeyi belirle (seçili ve çözülmemişse o, aksi halde ilk çözülmemiş kelime)
+    const targetWord =
+      puzzle.words.find((w) => w.id === selectedWordId && !solvedWordIds.has(w.id)) ||
+      puzzle.words.find((w) => !solvedWordIds.has(w.id));
+
+    if (!targetWord) {
+      triggerError("Açılacak kelime kalmadı!");
+      return;
+    }
+
+    // 2. Bu kelimede doğru harf yerleşmemiş ilk hücreyi bul
+    let targetCell: [number, number] | null = null;
+    let targetChar: string | null = null;
+
+    for (let i = 0; i < targetWord.length; i++) {
+      const r = targetWord.direction === "horizontal" ? targetWord.row : targetWord.row + i;
+      const c = targetWord.direction === "horizontal" ? targetWord.col + i : targetWord.col;
+      const expected = targetWord.answer[i]!;
+      if (playerBoard[r]?.[c] !== expected) {
+        targetCell = [r, c];
+        targetChar = expected;
+        break;
+      }
+    }
+
+    if (!targetCell || !targetChar) {
+      triggerError("Bu kelimenin tüm harfleri zaten doğru!");
+      return;
+    }
+
+    // 3. Çipi harca
+    const success = onSpendCoins ? onSpendCoins(VINTAGE_HINT_COST) : true;
+    if (!success) {
+      triggerError(`Yetersiz Çip! 1 harf açmak için ${VINTAGE_HINT_COST} Çip gerekir.`);
+      return;
+    }
+
+    triggerHapticSuccess();
+    playSuccessSound();
+
+    const [tr, tc] = targetCell;
+    const oldChar = playerBoard[tr]![tc];
+    const newBoard = playerBoard.map((rowArr) => [...rowArr]);
+    newBoard[tr]![tc] = targetChar;
+
+    // Eğer hedef harf havuzda mevcut değilse, oyuncunun tahtada yanlış yerleştirdiği kilitlenmemiş bir hücreden temizle
+    const tileInPool = letterPool.some((t) => t.letter === targetChar);
+    if (!tileInPool) {
+      for (let r = 0; r < 10; r++) {
+        let cleared = false;
+        for (let c = 0; c < 10; c++) {
+          if ((r !== tr || c !== tc) && newBoard[r]![c] === targetChar && !isCellLockedByCompletedWord(r, c)) {
+            newBoard[r]![c] = null;
+            cleared = true;
+            break;
+          }
+        }
+        if (cleared) break;
+      }
+    }
+    setPlayerBoard(newBoard);
+
+    // 4. Havuzdan doğru harf taşını çıkar ve varsa eski yanlış harfi havuza geri ver
+    setLetterPool((prev) => {
+      let nextPool = [...prev];
+      if (oldChar !== null && oldChar !== targetChar) {
+        nextPool.push({
+          id: `p-ret-hint-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          letter: oldChar,
+        });
+      }
+      const tileIndex = nextPool.findIndex((t) => t.letter === targetChar);
+      if (tileIndex !== -1) {
+        nextPool.splice(tileIndex, 1);
+      }
+      return nextPool;
+    });
+
+    setSelectedCell([tr, tc]);
+    checkCompletedWordsOnBoard(newBoard);
+  }, [puzzle, isLevelComplete, coins, selectedWordId, solvedWordIds, playerBoard, letterPool, isCellLockedByCompletedWord, onSpendCoins, triggerError, checkCompletedWordsOnBoard]);
+
   const activeWordItem = useMemo(
     () => puzzle?.words.find((w) => w.id === selectedWordId),
     [puzzle, selectedWordId]
@@ -648,10 +765,10 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
               style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
             >
               <Text style={styles.livesIcon}>💚</Text>
-              <Text style={styles.livesText}>{lives}/5</Text>
+              <Text style={styles.livesText}>{lives}/{MAX_LIVES}</Text>
             </Pressable>
             <View style={styles.scorePill}>
-              <Text style={styles.scoreText}>🪙 {score}</Text>
+              <Text style={styles.scoreText}>🪙 {coins !== undefined ? coins : score}</Text>
             </View>
           </View>
         </View>
@@ -762,13 +879,19 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
             style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
           >
             <Text style={styles.livesIcon}>💚</Text>
-            <Text style={styles.livesText}>{lives}/5</Text>
+            <Text style={styles.livesText}>{lives}/{MAX_LIVES}</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleUseHint}
+            style={({ pressed }) => [styles.hintBtn, pressed && { opacity: 0.8 }]}
+          >
+            <Text style={styles.hintBtnText}>💡 {VINTAGE_HINT_COST}</Text>
           </Pressable>
           <Pressable onPress={handleResetLevel} style={styles.resetBtn}>
-            <Text style={styles.resetBtnText}>🔄 SIFIRLA</Text>
+            <Text style={styles.resetBtnText}>🔄</Text>
           </Pressable>
           <View style={styles.scorePill}>
-            <Text style={styles.scoreText}>🪙 {score}</Text>
+            <Text style={styles.scoreText}>🪙 {coins !== undefined ? coins : score}</Text>
           </View>
         </View>
       </View>
@@ -906,7 +1029,9 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
 
       {/* Seviye Başarı Modalı */}
       {isLevelComplete && (
-        <View style={styles.winOverlay}>
+        <>
+          <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={isLevelComplete} />
+          <View style={styles.winOverlay}>
           <View style={styles.winCard}>
             <Text style={{ fontSize: 44 }}>🎉🗞️</Text>
             <Text style={styles.winTitle}>BÖLÜM {levelIndex} TAMAMLANDI!</Text>
@@ -954,6 +1079,7 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
             </Pressable>
           </View>
         </View>
+        </>
       )}
 
       <ModernAlertModal
@@ -981,6 +1107,29 @@ export function VintagePuzzle({ onBack, onRewardXp, vintageProgress, onSaveProgr
           },
         } : null}
         onDismiss={() => setShowExitModal(false)}
+      />
+
+      <ModernAlertModal
+        alert={showResetModal ? {
+          icon: "🔄",
+          kicker: "BÖLÜMÜ SIFIRLA",
+          title: "Bulmacayı Baştan Başlat",
+          message: "Bu bölümü baştan başlatmak istediğinize emin misiniz? Tahtadaki tüm yerleştirilmiş harfler silinecek ve yeni bir bulmaca yüklenecektir.",
+          accentColor: "#F59E0B",
+          primaryButton: {
+            text: "DEVAM ET",
+            color: "#3EE8B5",
+            onPress: () => setShowResetModal(false),
+          },
+          secondaryButton: {
+            text: "SIFIRLA",
+            onPress: () => {
+              setShowResetModal(false);
+              loadNewPuzzleForLevel(levelIndex);
+            },
+          },
+        } : null}
+        onDismiss={() => setShowResetModal(false)}
       />
     </View>
   );
@@ -1061,6 +1210,19 @@ const styles = StyleSheet.create({
     color: "#E2E8F0",
     fontSize: 10.5,
     fontWeight: "800",
+  },
+  hintBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 208, 0, 0.15)",
+    borderWidth: 1,
+    borderColor: "#FFD000",
+  },
+  hintBtnText: {
+    color: "#FFD000",
+    fontSize: 10.5,
+    fontWeight: "900",
   },
   paperBoardScroll: {
     flex: 1,

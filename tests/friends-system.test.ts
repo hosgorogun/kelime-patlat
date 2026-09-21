@@ -228,5 +228,54 @@ describe("Arkadaşlık ve Sosyal Sistem Testleri", () => {
       expect(invitePayload.toPlayerId).toBe("usr_friend_99");
       expect(invitePayload.fromPlayerId).toBe("usr_host_01");
     });
+
+    it("Aynı bota (TaktikMaster) meydan okunduğunda hedef bot kimliği ve profili korunur", () => {
+      const inspectableTarget = {
+        id: "bot:room_123",
+        name: "TaktikMaster",
+        username: "TaktikMaster",
+        isBot: true,
+        avatar: "⚡",
+        selectedTitle: "[ÜSTAD]",
+        selectedFrame: "neon",
+        level: 18,
+        tier: "ALTIN",
+        lp: 1450,
+        wins: 45,
+        matches: 80,
+      };
+
+      const isBot = Boolean(
+        inspectableTarget.isBot ||
+        inspectableTarget.id?.startsWith("bot:")
+      );
+
+      const targetId = inspectableTarget.id?.startsWith("bot:")
+        ? inspectableTarget.id
+        : (isBot ? `bot:${inspectableTarget.id || inspectableTarget.username}` : inspectableTarget.id);
+
+      const botProfile = isBot ? {
+        avatar: inspectableTarget.avatar,
+        selectedTitle: inspectableTarget.selectedTitle,
+        selectedFrame: inspectableTarget.selectedFrame,
+        level: inspectableTarget.level,
+        tier: inspectableTarget.tier,
+        lp: inspectableTarget.lp,
+        wins: inspectableTarget.wins,
+        matches: inspectableTarget.matches,
+      } : undefined;
+
+      const invitePayload = {
+        toPlayerId: targetId,
+        toUsername: inspectableTarget.username,
+        botProfile,
+      };
+
+      expect(invitePayload.toPlayerId).toBe("bot:room_123");
+      expect(invitePayload.toUsername).toBe("TaktikMaster");
+      expect(invitePayload.botProfile).toBeDefined();
+      expect(invitePayload.botProfile?.selectedTitle).toBe("[ÜSTAD]");
+      expect(invitePayload.botProfile?.level).toBe(18);
+    });
   });
 });

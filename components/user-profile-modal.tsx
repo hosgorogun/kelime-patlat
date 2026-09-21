@@ -8,7 +8,7 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import { AVATARS } from "@/shared/progression";
+import { AVATARS, getTierColor } from "@/shared/progression";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 
@@ -33,18 +33,6 @@ export type InspectableUser = {
   historyCount?: number;
 };
 
-const TIER_COLORS: Record<string, string> = {
-  DEMİR: "#94A3B8",
-  BRONZ: "#CD7F32",
-  GÜMÜŞ: "#CBD5E1",
-  ALTIN: "#F59E0B",
-  PLATİN: "#38BDF8",
-  ELMAS: "#818CF8",
-  YÜCELİK: "#C084FC",
-  ÖLÜMSÜZLÜK: "#F43F5E",
-  RADIAN: "#FBBF24",
-};
-
 export function UserProfileModal({
   visible,
   user,
@@ -63,10 +51,12 @@ export function UserProfileModal({
   onChallenge?: (user: InspectableUser) => void;
 }) {
   const [imgError, setImgError] = React.useState(false);
+  const [isSendingFriend, setIsSendingFriend] = React.useState(false);
 
   React.useEffect(() => {
     setImgError(false);
-  }, [user?.avatarPhoto]);
+    setIsSendingFriend(false);
+  }, [user?.id, user?.avatarPhoto]);
 
   if (!user) return null;
 
@@ -74,7 +64,7 @@ export function UserProfileModal({
   const displayTitle = user.selectedTitle || "[ÇAYLAK]";
   const displayLevel = user.level ?? (user.xp ? Math.floor(user.xp / 200) + 1 : 1);
   const displayTier = user.tier || "DEMİR";
-  const tierColor = TIER_COLORS[displayTier] || "#94A3B8";
+  const tierColor = getTierColor(displayTier);
 
   const activeAvatarObj = AVATARS.find((a) => a.id === user.avatar);
   const avatarIcon = activeAvatarObj ? activeAvatarObj.icon : user.avatar || (user.isBot ? "🤖" : "⚡");
@@ -215,13 +205,23 @@ export function UserProfileModal({
                 </View>
               ) : (
                 <Pressable
+                  disabled={isSendingFriend}
                   onPress={() => {
+                    if (isSendingFriend) return;
+                    setIsSendingFriend(true);
                     triggerHapticSuccess();
                     onAddFriend?.(user);
+                    setTimeout(() => setIsSendingFriend(false), 2000);
                   }}
-                  style={({ pressed }) => [styles.addFriendBtn, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.addFriendBtn,
+                    (pressed || isSendingFriend) && styles.pressed,
+                    isSendingFriend && { opacity: 0.6 },
+                  ]}
                 >
-                  <Text style={styles.addFriendBtnText}>➕ ARKADAŞ EKLE</Text>
+                  <Text style={styles.addFriendBtnText}>
+                    {isSendingFriend ? "⏳ İLETİLİYOR..." : "➕ ARKADAŞ EKLE"}
+                  </Text>
                 </Pressable>
               )}
 

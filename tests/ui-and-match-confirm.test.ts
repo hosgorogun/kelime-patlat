@@ -33,9 +33,9 @@ describe("Dereceli Onay & Can Mantığı Testleri", () => {
     expect(calc.lives).toBe(0);
   });
 
-  it("15 dakika geçtikten sonra getCalculatedLives otomatik 1 can yenilemelidir", () => {
-    const fifteenMinsAgo = Date.now() - 15 * 60 * 1000 - 1000;
-    const progress: PlayerProgress = { ...DEFAULT_PROGRESS, lives: 3, lastLifeRegenTimestamp: fifteenMinsAgo };
+  it("30 dakika geçtikten sonra getCalculatedLives otomatik 1 can yenilemelidir", () => {
+    const thirtyMinsAgo = Date.now() - 30 * 60 * 1000 - 1000;
+    const progress: PlayerProgress = { ...DEFAULT_PROGRESS, lives: 3, lastLifeRegenTimestamp: thirtyMinsAgo };
     const calc = getCalculatedLives(progress);
 
     expect(calc.lives).toBe(4);

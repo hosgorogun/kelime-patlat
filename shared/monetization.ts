@@ -1,35 +1,58 @@
-// Monetization Engine (Google AdMob Rewarded & In-App Purchases Abstraction)
-
-export type ProductItem = {
-  id: string;
-  name: string;
-  description: string;
-  priceText: string;
-  coins: number;
-  unlimitedRadar?: boolean;
-  type: "coin_pack" | "theme" | "radar_pack";
-};
-
-export const DIGITAL_STORE_PRODUCTS: ProductItem[] = [
-  { id: "coins_small", name: "100 Siber Çip", description: "Market alışverişleri için başlangıç paketi", priceText: "₺19.99", coins: 100, type: "coin_pack" },
-  { id: "coins_medium", name: "300 Siber Çip", description: "Popüler siber çip paketi (+50 Bonus)", priceText: "₺49.99", coins: 350, type: "coin_pack" },
-  { id: "coins_large", name: "1000 Siber Çip", description: "Büyük siber çip kasası (+250 Bonus)", priceText: "₺129.99", coins: 1250, type: "coin_pack" },
-  { id: "radar_infinite", name: "Sınırsız Siber Radar", description: "Tüm oyunlarda süresiz +10 Radar Şifre Çözücü", priceText: "₺79.99", coins: 0, unlimitedRadar: true, type: "radar_pack" },
-];
+// Monetization Engine (Google AdMob Rewarded & Interstitial Ads)
 
 export type AdRewardType = "radar_charge" | "double_xp" | "time_boost";
 
+/**
+ * Ansızın çıkan (interstitial) video reklamların tetiklenme sıklığı.
+ * Kullanıcı deneyimini bozmamak adına her 3 galibiyet/tamamlanan maçta bir gösterilir.
+ */
+export const INTERSTITIAL_MATCH_INTERVAL = 3;
+
 class MonetizationManager {
+  private completedMatchesCount = 0;
+
+  /**
+   * Ödüllü video reklam motoru (Rewarded Video Ad).
+   */
   async showRewardedAd(type: AdRewardType, onReward: () => void, onError?: (err: string) => void) {
     void type;
     if (onError) onError("Ödüllü reklam şu anda kullanılamıyor.");
   }
 
-  async purchaseProduct(productId: string): Promise<{ success: boolean; product?: ProductItem; error?: string }> {
-    const product = DIGITAL_STORE_PRODUCTS.find((p) => p.id === productId);
-    if (!product) return { success: false, error: "Ürün bulunamadı." };
+  /**
+   * Maç veya solo bölüm tamamlandığında çağrılır.
+   * Oyuncuyu kaybetme anında cezalandırmamak için sadece kazanılan (won=true) maçlarda
+   * veya tamamlanan maçlarda sayaç artırılır.
+   * Sayaç INTERSTITIAL_MATCH_INTERVAL (3) katına ulaştığında interstitial tetiklenmesini önerir.
+   */
+  recordMatchFinished(won: boolean = true): { shouldShowInterstitial: boolean; matchCount: number } {
+    if (won) {
+      this.completedMatchesCount++;
+    }
+    const shouldShow = this.completedMatchesCount > 0 && this.completedMatchesCount % INTERSTITIAL_MATCH_INTERVAL === 0;
+    return {
+      shouldShowInterstitial: shouldShow,
+      matchCount: this.completedMatchesCount,
+    };
+  }
 
-    return { success: false, product, error: "Satın alma altyapısı henüz etkin değil." };
+  getCompletedMatchesCount(): number {
+    return this.completedMatchesCount;
+  }
+
+  resetInterstitialCounter() {
+    this.completedMatchesCount = 0;
+  }
+
+  /**
+   * Ansızın çıkan (interstitial) geçiş reklamını oynatır.
+   */
+  async showInterstitialAd(onClosed?: () => void, onError?: (err: string) => void) {
+    try {
+      if (onClosed) onClosed();
+    } catch (err: any) {
+      if (onError) onError(err?.message || "Geçiş reklamı gösterilemedi.");
+    }
   }
 }
 

@@ -519,3 +519,67 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
     subtitle: `${words.length} kelime · ${config.timeLimit} sn · en az ${config.minTurns} dönüş`
   };
 }
+
+export const ARCADE_INITIAL_TIME = 40;
+export const MAX_ARCADE_TIME = 65;
+
+export function getNextArcadeSeed(currentScore: number, currentSeed: number): number {
+  if (currentScore < 320) {
+    return (currentSeed % 15) + 1;
+  }
+  if (currentScore < 900) {
+    return 16 + ((currentSeed + 1) % 30);
+  }
+  if (currentScore < 1800) {
+    return 46 + ((currentSeed + 1) % 30);
+  }
+  return 76 + ((currentSeed + 1) % 25);
+}
+
+export function getArcadeBoardClearBonus(currentSize: BoardSize, nextSize: BoardSize): number {
+  const isGraduating = nextSize > currentSize;
+  if (currentSize === 4) {
+    return isGraduating ? 18 : 10;
+  }
+  if (currentSize === 6) {
+    return isGraduating ? 22 : 14;
+  }
+  if (currentSize === 8) {
+    return isGraduating ? 26 : 18;
+  }
+  return 22;
+}
+
+export function calculateArcadeCombo(comboStreak: number): {
+  bonusSeconds: number;
+  bonusScore: number;
+  label: string;
+} {
+  if (comboStreak >= 4) {
+    return {
+      bonusSeconds: 3,
+      bonusScore: 40,
+      label: `💥 SÜPER KOMBO x${comboStreak}! +3s`,
+    };
+  }
+  if (comboStreak === 3) {
+    return {
+      bonusSeconds: 2,
+      bonusScore: 25,
+      label: "⚡ KOMBO x3! +2s",
+    };
+  }
+  if (comboStreak === 2) {
+    return {
+      bonusSeconds: 1,
+      bonusScore: 10,
+      label: "🔥 KOMBO x2! +1s",
+    };
+  }
+  return {
+    bonusSeconds: 0,
+    bonusScore: 0,
+    label: "",
+  };
+}
+

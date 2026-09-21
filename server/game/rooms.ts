@@ -94,6 +94,7 @@ const roomCreateSchema = z.object({
   inviteTarget: z.object({
     toPlayerId: z.string(),
     toUsername: z.string().optional(),
+    botProfile: playerProfileSchema.optional(),
   }).optional(),
 });
 const roomJoinSchema = z.object({ code: codeSchema, playerId: playerIdSchema, playerName: playerNameSchema, profile: playerProfileSchema });
@@ -446,10 +447,9 @@ function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = fa
   setTimeout(() => {
     const current = rooms.get(room.code);
     if (!current || current !== room || room.roundToken !== token || room.status !== "playing") return;
-    const path = findWordPath(room.board, room.size, word);
+    const path = room.routes[word] || findWordPath(room.board, room.size, word);
     if (path) {
       room.botSelection = path;
-      emitRoom(io, room);
       setTimeout(() => {
         const finalCurrent = rooms.get(room.code);
         if (!finalCurrent || finalCurrent !== room || room.roundToken !== token || room.status !== "playing") return;
@@ -496,6 +496,8 @@ function startRound(io: Server, room: Room) {
   room.startedAt = Date.now() + 3000;
   room.winnerId = null;
   room.message = `${words.length} gizli kelime var. Yalnız yatay ve dikey bağla!`;
+  room.host.ready = false;
+  if (room.guest) room.guest.ready = false;
   room.host.rematch = false;
   if (room.guest) room.guest.rematch = false;
   room.lastWordFoundTime = {};
@@ -542,13 +544,17 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
   // Eğer maç oynanırken bir oyuncu odadan çıkarsa, kalan oyuncu hükmen kazanır
   if (room.status === "playing") {
     const remaining = room.host.id === playerId ? room.guest : room.host;
-    if (remaining && !remaining.isBot) {
+    if (remaining) {
       room.winnerId = remaining.id;
       room.message = `${player.name} maçı terk etti. ${remaining.name} hükmen kazandı!`;
       room.status = "finished";
-      recordRoundForLeaderboard(io, room);
-      emitRoom(io, room);
-      return;
+      if (room.isRanked || !remaining.isBot) {
+        recordRoundForLeaderboard(io, room);
+      }
+      if (!remaining.isBot) {
+        emitRoom(io, room);
+        return;
+      }
     }
     // Bot kalmışsa veya kimse kalmadıysa odayı temizle
     destroyRoom(room.code, room);
@@ -925,23 +931,34 @@ export function registerGameRooms(io: Server) {
           });
         }
         if (uniqueSockets.length === 0) {
-          const isMockFriend = toPlayerId.startsWith("f") || toPlayerId.startsWith("mock") || toPlayerId.startsWith("bot");
+          const isMockFriend = /^f\d+$/.test(toPlayerId) || toPlayerId.startsWith("mock") || toPlayerId.startsWith("bot");
           if (isMockFriend) {
             socket.emit("friend:duel:sent", { success: true, message: `${toUsername || "Arkadaşınız"} daveti aldı, katılıyor...` });
             setTimeout(() => {
               const currentRoom = rooms.get(code);
               if (currentRoom && currentRoom.status === "waiting" && !currentRoom.guest) {
                 const friendName = toUsername || "Arkadaş";
+                const bp = payload.inviteTarget?.botProfile;
                 currentRoom.guest = {
-                  id: `friend:${toPlayerId}`,
+                  id: toPlayerId.startsWith("bot:") ? toPlayerId : (toPlayerId.startsWith("friend:") ? toPlayerId : `friend:${toPlayerId}`),
                   name: friendName,
                   isBot: true,
                   socketId: null,
                   connected: true,
                   ready: true,
                   rematch: false,
-                  selectedTitle: "[DÜELLOCU]",
-                  avatar: "⚡",
+                  selectedTitle: bp?.selectedTitle || "[DÜELLOCU]",
+                  avatar: bp?.avatar || "⚡",
+                  avatarPhoto: bp?.avatarPhoto,
+                  selectedFrame: bp?.selectedFrame || "signal",
+                  level: bp?.level || 15,
+                  tier: bp?.tier || "BRONZ",
+                  lp: bp?.lp || 100,
+                  wins: bp?.wins || 10,
+                  matches: bp?.matches || 20,
+                  streak: bp?.streak || 0,
+                  bestScore: bp?.bestScore || 200,
+                  bestTempo: bp?.bestTempo || 20,
                 };
                 currentRoom.status = "lobby";
                 currentRoom.message = `${friendName} düello davetini kabul etti!`;
@@ -949,6 +966,8 @@ export function registerGameRooms(io: Server) {
                 emitRoom(io, currentRoom);
               }
             }, 1600);
+          } else {
+            socket.emit("friend:duel:failed", { message: `${toUsername || "Arkadaşınız"} şu an çevrim dışı görünüyor.` });
           }
         }
       }
@@ -1024,7 +1043,7 @@ export function registerGameRooms(io: Server) {
       if (room.status !== "lobby") return;
       player.ready = true;
       const otherPlayer = player === room.host ? room.guest : room.host;
-      if (otherPlayer && (otherPlayer.isBot || otherPlayer.id.startsWith("f") || otherPlayer.id.startsWith("friend:") || otherPlayer.id.startsWith("bot:") || otherPlayer.id.startsWith("mock:"))) {
+      if (otherPlayer && (otherPlayer.isBot || /^f\d+$/.test(otherPlayer.id) || otherPlayer.id.startsWith("friend:") || otherPlayer.id.startsWith("bot:") || otherPlayer.id.startsWith("mock:"))) {
         otherPlayer.ready = true;
       }
       if (room.host.ready && room.guest.ready) return startRound(io, room);
@@ -1050,7 +1069,7 @@ export function registerGameRooms(io: Server) {
       if (room.startedAt) {
         if (Date.now() < room.startedAt) return socket.emit("word:rejected", { word: "", reason: "starting" });
         const durationMs = getRoundDurationMs(room.size);
-        if (Date.now() >= room.startedAt + durationMs) {
+        if (Date.now() >= room.startedAt + durationMs + 1000) {
           return socket.emit("word:rejected", { word: "", reason: "time_up" });
         }
       }
@@ -1117,6 +1136,9 @@ export function registerGameRooms(io: Server) {
     socket.on("room:emote", (payload: { code: string; playerId: string; emote: string }) => {
       if (!isValidPayload(roomEmoteSchema, payload)) return fail(socket, "Geçersiz tepki isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
+      const now = Date.now();
+      if (socket.data.lastEmoteAt && now - socket.data.lastEmoteAt < 800) return;
+      socket.data.lastEmoteAt = now;
       const room = rooms.get(payload.code.trim().toUpperCase());
       if (!room) return;
       const player = playerForSocket(room, socket, payload.playerId);
@@ -1397,8 +1419,9 @@ export function registerGameRooms(io: Server) {
       fromPlayerName: string;
       roomCode: string;
       size: BoardSize;
+      botProfile?: z.infer<typeof playerProfileSchema>;
     }) => {
-      const { toPlayerId, toUsername, fromPlayerId, fromPlayerName, roomCode, size } = payload;
+      const { toPlayerId, toUsername, fromPlayerId, fromPlayerName, roomCode, size, botProfile } = payload;
       const targetSockets = [
         ...getSocketsForUser(toPlayerId),
         ...(toUsername ? getSocketsForUser(toUsername) : [])
@@ -1408,7 +1431,7 @@ export function registerGameRooms(io: Server) {
       if (uniqueSockets.length === 0) {
         // Mock friend veya offline friend ile test ediliyorsa:
         // Kullanıcının düello akışını test edebilmesi için daveti kabul eden simüle arkadaş eklenir
-        const isMockFriend = toPlayerId.startsWith("f") || toPlayerId.startsWith("mock") || toPlayerId.startsWith("bot");
+        const isMockFriend = /^f\d+$/.test(toPlayerId) || toPlayerId.startsWith("mock") || toPlayerId.startsWith("bot");
         if (isMockFriend) {
           const room = rooms.get(roomCode);
           if (room && room.status === "waiting" && !room.guest) {
@@ -1417,16 +1440,27 @@ export function registerGameRooms(io: Server) {
               const currentRoom = rooms.get(roomCode);
               if (currentRoom && currentRoom.status === "waiting" && !currentRoom.guest) {
                 const friendName = toUsername || "Arkadaş";
+                const bp = botProfile;
                 currentRoom.guest = {
-                  id: `friend:${toPlayerId}`,
+                  id: toPlayerId.startsWith("bot:") ? toPlayerId : (toPlayerId.startsWith("friend:") ? toPlayerId : `friend:${toPlayerId}`),
                   name: friendName,
                   isBot: true,
                   socketId: null,
                   connected: true,
                   ready: true,
                   rematch: false,
-                  selectedTitle: "[DÜELLOCU]",
-                  avatar: "⚡",
+                  selectedTitle: bp?.selectedTitle || "[DÜELLOCU]",
+                  avatar: bp?.avatar || "⚡",
+                  avatarPhoto: bp?.avatarPhoto,
+                  selectedFrame: bp?.selectedFrame || "signal",
+                  level: bp?.level || 15,
+                  tier: bp?.tier || "BRONZ",
+                  lp: bp?.lp || 100,
+                  wins: bp?.wins || 10,
+                  matches: bp?.matches || 20,
+                  streak: bp?.streak || 0,
+                  bestScore: bp?.bestScore || 200,
+                  bestTempo: bp?.bestTempo || 20,
                 };
                 currentRoom.status = "lobby";
                 currentRoom.message = `${friendName} düello davetini kabul etti!`;

@@ -49,7 +49,7 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   const allowedOrigins = new Set(
-    [process.env.CORS_ORIGINS, process.env.EXPO_WEB_PREVIEW_URL, "http://localhost:8081"]
+    [process.env.CORS_ORIGINS, process.env.EXPO_WEB_PREVIEW_URL, "http://localhost:8081", "http://localhost:8082", "http://localhost:19006"]
       .flatMap((value) => value?.split(",") ?? [])
       .map((value) => value.trim().replace(/\/$/, ""))
       .filter(Boolean),
@@ -360,7 +360,17 @@ async function startServer() {
       const user = await sdk.authenticateRequest(req);
       if (!user) return res.status(401).json({ error: "Yetkisiz işlem." });
       const dbUser = await UserModel.findOne({ openId: user.openId });
-      if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+      if (!dbUser) {
+        return res.json({
+          success: true,
+          user: {
+            openId: user.openId,
+            name: user.name || "OYUNCU",
+            username: user.name || "OYUNCU",
+            progress: DEFAULT_PROGRESS,
+          },
+        });
+      }
       if (dbUser.progress && (!Array.isArray(dbUser.progress.matchHistory) || dbUser.progress.matchHistory.length === 0)) {
         dbUser.progress.matchHistory = backfillMatchHistoryIfEmpty({ ...DEFAULT_PROGRESS, ...dbUser.progress });
         dbUser.updatedAt = new Date();
@@ -868,9 +878,13 @@ async function startServer() {
       awardId: z.string().trim().min(8).max(128),
       kind: z.enum(["solo", "arcade", "vintage"]),
       level: z.number().int().min(1).max(100).optional(),
-      score: z.number().int().min(0).max(5000).optional(),
-      foundWords: z.array(z.string().max(32)).max(32).optional(),
+      score: z.number().int().min(0).max(50000).optional(),
+      foundWords: z.array(z.string().max(32)).max(64).optional(),
       daily: z.boolean().optional(),
+      dailyId: z.string().max(32).optional(),
+      wordsCount: z.number().int().min(0).max(1000).optional(),
+      comboCount: z.number().int().min(0).max(500).optional(),
+      isDoubled: z.boolean().optional(),
     }).safeParse(req.body);
     if (!payload.success) return res.status(400).json({ error: "Geçersiz ödül isteği." });
     try {
@@ -902,19 +916,22 @@ async function startServer() {
 
       const score = payload.data.score ?? ((payload.data.level ?? 1) * 14);
       const foundWords = payload.data.foundWords ?? [];
+      const wordsCount = payload.data.wordsCount ?? foundWords.length;
+      const dailyDate = payload.data.dailyId ? new Date(`${payload.data.dailyId}T12:00:00Z`) : new Date();
       const next = payload.data.kind === "arcade"
-        ? applyArcadeProgress(current, payload.data.score ?? 0)
+        ? applyArcadeProgress(current, payload.data.score ?? 0, wordsCount, payload.data.isDoubled, payload.data.comboCount, foundWords)
         : payload.data.kind === "vintage"
-        ? applyVintageProgress(current, payload.data.level ?? 1, payload.data.score ?? 30)
+        ? applyVintageProgress(current, payload.data.level ?? 1, payload.data.score ?? 30, wordsCount || 5, foundWords)
         : payload.data.daily
         ? completeDailyProgress(
             {
               ...current,
               history: Array.from(new Set([...(current.history || []), ...foundWords])).slice(-150),
             },
-            getDailyChallenge(),
+            getDailyChallenge(isNaN(dailyDate.getTime()) ? new Date() : dailyDate),
             score,
-            foundWords.length
+            wordsCount,
+            foundWords
           )
         : {
             ...applyMatchProgress(current, {

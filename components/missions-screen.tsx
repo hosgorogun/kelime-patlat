@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import {
@@ -44,12 +44,14 @@ export function MissionsScreen({
   onPlayDaily,
   onClaimDaily,
   onClaimWeekly,
+  onNavigate,
 }: {
   progress: PlayerProgress;
   onBack: () => void;
   onPlayDaily: () => void;
   onClaimDaily?: (missionId: string, xp: number, coins: number) => void;
   onClaimWeekly?: (missionId: string, xp: number, shield?: number, coins?: number) => void;
+  onNavigate?: (destination: any) => void;
 }) {
   const [toast, setToast] = useState<{
     title: string;
@@ -153,13 +155,6 @@ export function MissionsScreen({
       desc: `"${mission.title}" görevi başarıyla tamamlandı!`,
       rewards: rewardsList,
     });
-
-    Alert.alert(
-      "🎉 Görev Ödülü Alındı!",
-      `Tebrikler! "${mission.title}" görevini tamamladın.\n\nKazanılan Ödüller:\n` +
-      rewardsList.map((r) => `• ${r}`).join("\n") +
-      `\n\nÖdüller profilinize başarıyla eklendi!`
-    );
   };
 
   const renderMissionCard = (mission: CatalogMission) => {
@@ -243,10 +238,50 @@ export function MissionsScreen({
                   />
                 ) : mission.actionType === "daily_route" ? (
                   <GameButton
-                    label="OYNAT"
+                    label="GÜNLÜK ROTA"
                     variant="emerald"
                     size="sm"
                     onPress={onPlayDaily}
+                    style={styles.claimBtn}
+                  />
+                ) : (mission.actionType === "duel_play" || mission.actionType === "duel_win") && onNavigate ? (
+                  <GameButton
+                    label="DÜELLO"
+                    variant="emerald"
+                    size="sm"
+                    onPress={() => onNavigate("online")}
+                    style={styles.claimBtn}
+                  />
+                ) : mission.actionType === "arcade_score" && onNavigate ? (
+                  <GameButton
+                    label="ARCADE"
+                    variant="emerald"
+                    size="sm"
+                    onPress={() => onNavigate("arcade")}
+                    style={styles.claimBtn}
+                  />
+                ) : mission.actionType === "vintage_solve" && onNavigate ? (
+                  <GameButton
+                    label="BULMACA"
+                    variant="emerald"
+                    size="sm"
+                    onPress={() => onNavigate("vintage")}
+                    style={styles.claimBtn}
+                  />
+                ) : mission.actionType === "solo_progress" && onNavigate ? (
+                  <GameButton
+                    label="SEVİYELER"
+                    variant="emerald"
+                    size="sm"
+                    onPress={() => onNavigate("levels")}
+                    style={styles.claimBtn}
+                  />
+                ) : onNavigate ? (
+                  <GameButton
+                    label="OYNA"
+                    variant="emerald"
+                    size="sm"
+                    onPress={() => onNavigate("home")}
                     style={styles.claimBtn}
                   />
                 ) : (
@@ -403,7 +438,7 @@ export function MissionsScreen({
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingBottom: 136 },
+  content: { flexGrow: 1, paddingBottom: 185 },
   header: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
   back: {
     width: 40,

@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { socialManager } from "../shared/social";
-import { getDayId, getWeekId, getSeasonId, getLeagueTier } from "../shared/progression";
+import { getDayId, getWeekId, getSeasonId, getLeagueTier, buyLives, getCalculatedLives, DEFAULT_PROGRESS, COST_PER_LIFE, COST_REFILL_ALL } from "../shared/progression";
 
 describe("Senior QA Edge Case Test Suiti - Sosyal Sistem & Tarih Tutarlılığı", () => {
   beforeEach(async () => {
@@ -198,9 +198,9 @@ describe("Senior QA Edge Case Test Suiti - Sosyal Sistem & Tarih Tutarlılığı
 
     const calc = getCalculatedLives(progressWithFutureStamp);
 
-    // Gelecekteki zaman damgası mevcut zamana çekilmeli ve kalan süre normal 15 dk (900s) aralığında olmalıdır
+    // Gelecekteki zaman damgası mevcut zamana çekilmeli ve kalan süre normal 30 dk (1800s) aralığında olmalıdır
     expect(calc.lives).toBe(2);
-    expect(calc.nextLifeTimerSeconds).toBeLessThanOrEqual(15 * 60);
+    expect(calc.nextLifeTimerSeconds).toBeLessThanOrEqual(30 * 60);
     expect(calc.nextLifeTimerSeconds).toBeGreaterThan(0);
     expect(calc.lastLifeRegenTimestamp).toBeLessThanOrEqual(Date.now());
   });
@@ -215,5 +215,259 @@ describe("Senior QA Edge Case Test Suiti - Sosyal Sistem & Tarih Tutarlılığı
     expect(resolveDisplayName({ name: undefined, username: undefined })).toBe("OYUNCU");
     expect(resolveDisplayName({ name: "   ", username: "" })).toBe("OYUNCU");
   });
+
+  it("room:emote hız sınırı 800ms cooldown kuralına tam uymalıdır", () => {
+    let lastEmoteAt = 0;
+    const canSendEmote = (now: number) => {
+      if (lastEmoteAt && now - lastEmoteAt < 800) return false;
+      lastEmoteAt = now;
+      return true;
+    };
+
+    const t0 = 10000;
+    expect(canSendEmote(t0)).toBe(true);
+    // 200ms sonra spam denemesi -> engellenmeli
+    expect(canSendEmote(t0 + 200)).toBe(false);
+    // 500ms sonra spam denemesi -> engellenmeli
+    expect(canSendEmote(t0 + 500)).toBe(false);
+    // 799ms sonra spam denemesi -> engellenmeli
+    expect(canSendEmote(t0 + 799)).toBe(false);
+    // 800ms sonra yeni istek -> kabul edilmeli
+    expect(canSendEmote(t0 + 800)).toBe(true);
+  });
+
+  it("Arcade modunda score 0 iken erken çıkışta onComplete çağrısı izole edilmelidir", () => {
+    let completeCalled = false;
+    const handleExit = (score: number) => {
+      if (score > 0) {
+        completeCalled = true;
+      }
+    };
+
+    // 0 skorla çıkış
+    handleExit(0);
+    expect(completeCalled).toBe(false);
+
+    // 100 skorla çıkış
+    handleExit(100);
+    expect(completeCalled).toBe(true);
+  });
+
+  it("applyArcadeProgress ve applyVintageProgress yerel uygulandığında tek sefer doğru ödül verir", async () => {
+    const { applyArcadeProgress, applyVintageProgress, DEFAULT_PROGRESS } = await import("../shared/progression");
+
+    const p1 = applyArcadeProgress(DEFAULT_PROGRESS, 200, 5, false, 2, ["ELMA", "ARMUT"]);
+    expect(p1.xp).toBe(DEFAULT_PROGRESS.xp + 20); // 200 / 10 = 20
+    expect(p1.coins).toBe((DEFAULT_PROGRESS.coins || 0) + 5); // 200 / 40 = 5
+    expect(p1.bestArcadeScore).toBe(200);
+
+    const p2 = applyVintageProgress(DEFAULT_PROGRESS, 1, 30, 5);
+    expect(p2.xp).toBe(DEFAULT_PROGRESS.xp + 30);
+    expect(p2.coins).toBe((DEFAULT_PROGRESS.coins || 0) + 3); // max(2, floor(30/10)) = 3
+  });
+
+  it("reconcileDailyStreak bozuk/geçersiz tarih dizgelerinde seriyi sıfırlamamalı ve çökmeyi önlemelidir", async () => {
+    const { reconcileDailyStreak, DEFAULT_PROGRESS } = await import("../shared/progression");
+
+    const corruptProgress = {
+      ...DEFAULT_PROGRESS,
+      streak: 7,
+      dailyCompletedId: "invalid-date-string-xyz",
+    };
+
+    const result = reconcileDailyStreak(corruptProgress, "2026-09-21");
+    expect(result.streakReset).toBe(false);
+    expect(result.updatedProgress.streak).toBe(7);
+  });
+
+  it("formatRelativeTime ISO dizgesi, sayı, Date veya geçersiz değerlerde NaN üretmemelidir", () => {
+    function formatRelativeTime(timestamp: number | string | Date): string {
+      if (!timestamp) return "Bilinmiyor";
+      const ms = typeof timestamp === "number" ? timestamp : new Date(timestamp).getTime();
+      if (!ms || isNaN(ms) || ms <= 0) return "Bilinmiyor";
+      const diffSec = Math.max(1, Math.floor((Date.now() - ms) / 1000));
+      if (diffSec < 60) return "Az önce";
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin} dk önce`;
+      const diffHours = Math.floor(diffMin / 60);
+      if (diffHours < 24) return `${diffHours} sa önce`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays === 1) return "Dün";
+      if (diffDays < 7) return `${diffDays} gün önce`;
+      const d = new Date(ms);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      return `${day}.${month}.${d.getFullYear()}`;
+    }
+
+    expect(formatRelativeTime(0)).toBe("Bilinmiyor");
+    expect(formatRelativeTime("invalid-date")).toBe("Bilinmiyor");
+    expect(formatRelativeTime(Date.now() - 30_000)).toBe("Az önce");
+    expect(formatRelativeTime(new Date(Date.now() - 120_000).toISOString())).toBe("2 dk önce");
+    expect(formatRelativeTime(new Date(Date.now() - 7200_000))).toBe("2 sa önce");
+  });
+
+  it("Yeni başlayan oyuncuda (0 maç, 0 LP) sezon sıfırlama modalı gösterilmemelidir", async () => {
+    const { DEFAULT_PROGRESS } = await import("../shared/progression");
+    const freshPlayer = {
+      ...DEFAULT_PROGRESS,
+      lastSeasonResetId: undefined,
+      matches: 0,
+      lp: 0,
+    };
+
+    const shouldShowModal = (p: { matches?: number; lp?: number }, performed: boolean) => {
+      return performed && ((p.matches ?? 0) > 0 || (p.lp ?? 0) > 0);
+    };
+
+    expect(shouldShowModal(freshPlayer, true)).toBe(false);
+
+    const activePlayer = {
+      ...DEFAULT_PROGRESS,
+      matches: 5,
+      lp: 350,
+    };
+    expect(shouldShowModal(activePlayer, true)).toBe(true);
+  });
+
+  it("Mevcut aktif oyuncuda (maç ve LP sahibi) reconcileSeasonReset normal soft reset gerçekleştirmelidir", async () => {
+    const { reconcileSeasonReset, DEFAULT_PROGRESS } = await import("../shared/progression");
+    const activePlayer = {
+      ...DEFAULT_PROGRESS,
+      lastSeasonResetId: "2025-S01", // Eski sezon
+      matches: 15,
+      lp: 4000, // Elmas ligi
+    };
+
+    const res = reconcileSeasonReset(activePlayer);
+    expect(res.resetResult.seasonResetPerformed).toBe(true);
+    expect(res.resetResult.previousLp).toBe(4000);
+    expect(res.updatedProgress.lp).toBe(2500); // 3600+ LP -> 2500'e çekilir
+  });
+
+  it("applyVintageProgress kelime sayısı verilmediğinde actualWordsCount ile matchHistory üretmelidir", async () => {
+    const { applyVintageProgress, DEFAULT_PROGRESS } = await import("../shared/progression");
+    const res = applyVintageProgress(DEFAULT_PROGRESS, 2, 80, 0, ["TREN", "VAGON", "RAY", "MAKAS"]);
+    expect(res.matchHistory).toBeDefined();
+    expect(res.matchHistory![0].wordsCount).toBe(4);
+    expect(res.matchHistory![0].mode).toBe("vintage");
+  });
+
+  it("onRoomError oda dolu veya maç başladı hatalarında oda durumunu temizlemelidir", () => {
+    const shouldCleanupRoom = (msg: string) => {
+      return (
+        msg.includes("Oda süresi") ||
+        msg.includes("sonlandırıldı") ||
+        msg.includes("bulunamadı") ||
+        msg.includes("dolu") ||
+        msg.includes("maç başladı")
+      );
+    };
+
+    expect(shouldCleanupRoom("Bu oda zaten dolu.")).toBe(true);
+    expect(shouldCleanupRoom("Bu odada maç başladı; yeni oda kurun.")).toBe(true);
+    expect(shouldCleanupRoom("Bu oda bulunamadı veya süresi doldu.")).toBe(true);
+    expect(shouldCleanupRoom("Geçersiz harf rotası.")).toBe(false);
+  });
+
+  it("checkDailyLoginReward ve handleClaimDailyReward eşzamanlı çift talepte mükerrer ödül vermemelidir", async () => {
+    const { checkDailyLoginReward, DEFAULT_PROGRESS } = await import("../shared/progression");
+    const today = "2026-09-21";
+
+    // 1. İlk talep
+    const firstClaim = checkDailyLoginReward(DEFAULT_PROGRESS, today);
+    expect(firstClaim).not.toBeNull();
+    expect(firstClaim!.updatedProgress.lastLoginDay).toBe(today);
+
+    // 2. İkinci talep (aynı gün) -> null dönmeli, bakiye veya seri artmamalı
+    const secondClaim = checkDailyLoginReward(firstClaim!.updatedProgress, today);
+    expect(secondClaim).toBeNull();
+  });
+
+  describe("Senior QA Edge Case Test Suiti - Bot / Arkadaş Kimlik Ayrımı (startsWith 'f' vs ^f\\d+$)", () => {
+    const isMockFriendRegex = (id: string) => /^f\d+$/.test(id) || id.startsWith("mock") || id.startsWith("bot") || id.startsWith("friend:");
+
+    it("Mock arkadaş kimliklerini (f1, f2, f3, f4, f5) doğru şekilde tespit eder", () => {
+      expect(isMockFriendRegex("f1")).toBe(true);
+      expect(isMockFriendRegex("f2")).toBe(true);
+      expect(isMockFriendRegex("f3")).toBe(true);
+      expect(isMockFriendRegex("f4")).toBe(true);
+      expect(isMockFriendRegex("f5")).toBe(true);
+      expect(isMockFriendRegex("f100")).toBe(true);
+      expect(isMockFriendRegex("bot:gladiator")).toBe(true);
+      expect(isMockFriendRegex("mock:friend")).toBe(true);
+      expect(isMockFriendRegex("friend:f1")).toBe(true);
+    });
+
+    it("'f' harfiyle başlayan gerçek kullanıcı kimliklerini ASLA sahte bot olarak işaretlemez", () => {
+      // Gerçek oyuncu kimlikleri ve kullanıcı adları:
+      expect(isMockFriendRegex("fe152968-50ca-4b9f-864b-78c47ed3780c")).toBe(false);
+      expect(isMockFriendRegex("fatma_yildiz")).toBe(false);
+      expect(isMockFriendRegex("furkan123")).toBe(false);
+      expect(isMockFriendRegex("ferhat_matrix")).toBe(false);
+      expect(isMockFriendRegex("filiz")).toBe(false);
+      expect(isMockFriendRegex("facebook_user_12345")).toBe(false);
+      expect(isMockFriendRegex("firebase_auth_999")).toBe(false);
+    });
+  });
+
+  describe("Senior QA Edge Case Test Suiti - Can Satın Alma ve Yenileme Güvenliği", () => {
+    it("Canı dolu olan bir oyuncu ek can veya ful yenileme satın alamaz", () => {
+      const fullProgress = { ...DEFAULT_PROGRESS, lives: 5, coins: 500 };
+      const buyOne = buyLives(fullProgress, "one");
+      expect(buyOne.success).toBe(false);
+      expect(buyOne.message).toContain("Canlarınız zaten dolu");
+
+      const buyAll = buyLives(fullProgress, "all");
+      expect(buyAll.success).toBe(false);
+      expect(buyAll.message).toContain("Canlarınız zaten dolu");
+
+      const adWatch = buyLives(fullProgress, "ad");
+      expect(adWatch.success).toBe(false);
+      expect(adWatch.message).toContain("Canlarınız zaten dolu");
+    });
+
+    it("Yetersiz çipi olan oyuncunun can satın alma işlemi engellenir", () => {
+      const brokeProgress = { ...DEFAULT_PROGRESS, lives: 1, coins: 5 };
+      const buyOne = buyLives(brokeProgress, "one");
+      expect(buyOne.success).toBe(false);
+      expect(buyOne.message).toContain("Yetersiz çip");
+
+      const buyAll = buyLives(brokeProgress, "all");
+      expect(buyAll.success).toBe(false);
+      expect(buyAll.message).toContain("Yetersiz çip");
+    });
+
+    it("1 can satın alındığında çip düşer, can +1 artar ve timer korunur", () => {
+      const playerProgress = {
+        ...DEFAULT_PROGRESS,
+        lives: 2,
+        coins: 100,
+        lastLifeRegenTimestamp: Date.now() - 60_000,
+      };
+      const res = buyLives(playerProgress, "one");
+      expect(res.success).toBe(true);
+      expect(res.updatedProgress.lives).toBe(3);
+      expect(res.updatedProgress.coins).toBe(100 - COST_PER_LIFE);
+      // Kalan can 5'ten küçük olduğunda yenilenme zamanlayıcısı korunmalıdır
+      expect(res.updatedProgress.lastLifeRegenTimestamp).toBe(playerProgress.lastLifeRegenTimestamp);
+    });
+
+    it("Tüm canlar doldurulduğunda can 5 olur, çip düşer ve sonraki can sayacı sıfırlanır", () => {
+      const playerProgress = {
+        ...DEFAULT_PROGRESS,
+        lives: 1,
+        coins: 200,
+        lastLifeRegenTimestamp: Date.now() - 100_000,
+      };
+      const res = buyLives(playerProgress, "all");
+      expect(res.success).toBe(true);
+      expect(res.updatedProgress.lives).toBe(5);
+      expect(res.updatedProgress.coins).toBe(200 - COST_REFILL_ALL);
+      expect(getCalculatedLives(res.updatedProgress).nextLifeTimerSeconds).toBe(0);
+    });
+  });
 });
+
+
 

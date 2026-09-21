@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
   guestButton: {
     marginTop: 18,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 14,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   guestText: {
     color: "#3EE8B5",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.8,
   },

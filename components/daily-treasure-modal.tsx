@@ -18,6 +18,7 @@ export function DailyTreasureModal({
   progress,
   onClaim,
 }: DailyTreasureModalProps) {
+  const [isClaiming, setIsClaiming] = React.useState(false);
   const todayId = getDayId();
   const isClaimedToday = progress.lastLoginDay === todayId;
   const currentCount = progress.loginDaysCount || 0;
@@ -84,7 +85,7 @@ export function DailyTreasureModal({
               {/* İlk 4 Gün (Üst Satır) */}
               <View style={styles.daysRow}>
                 {DAILY_LOGIN_REWARDS.slice(0, 4).map((item, index) => {
-                  const isPast = isClaimedToday ? index < activeDayIndex : index < activeDayIndex;
+                  const isPast = index < activeDayIndex;
                   const isToday = index === activeDayIndex;
                   const isTodayClaimable = isToday && !isClaimedToday;
                   const isTodayClaimed = isToday && isClaimedToday;
@@ -132,7 +133,7 @@ export function DailyTreasureModal({
               <View style={styles.daysRow}>
                 {DAILY_LOGIN_REWARDS.slice(4, 6).map((item, sliceIdx) => {
                   const index = 4 + sliceIdx;
-                  const isPast = isClaimedToday ? index < activeDayIndex : index < activeDayIndex;
+                  const isPast = index < activeDayIndex;
                   const isToday = index === activeDayIndex;
                   const isTodayClaimable = isToday && !isClaimedToday;
                   const isTodayClaimed = isToday && isClaimedToday;
@@ -174,7 +175,7 @@ export function DailyTreasureModal({
                 {(() => {
                   const item = DAILY_LOGIN_REWARDS[6]!;
                   const index = 6;
-                  const isPast = isClaimedToday ? index < activeDayIndex : index < activeDayIndex;
+                  const isPast = index < activeDayIndex;
                   const isToday = index === activeDayIndex;
                   const isTodayClaimable = isToday && !isClaimedToday;
                   const isTodayClaimed = isToday && isClaimedToday;
@@ -221,13 +222,17 @@ export function DailyTreasureModal({
             {/* Aksiyon Alanı */}
             {!isClaimedToday ? (
               <GameButton
-                label={`ÖDÜLÜ TOPLA  (+${todayReward.amount} ${getRewardUnitName(todayReward.rewardType)})`}
-                icon="🎁"
+                label={isClaiming ? "ÖDÜL ALINIYOR..." : `ÖDÜLÜ TOPLA  (+${todayReward.amount} ${getRewardUnitName(todayReward.rewardType)})`}
+                icon={isClaiming ? "⏳" : "🎁"}
                 size="lg"
                 variant="gold"
+                disabled={isClaiming || isClaimedToday}
                 onPress={() => {
+                  if (isClaiming || isClaimedToday) return;
+                  setIsClaiming(true);
                   triggerHapticSelection();
                   onClaim();
+                  setTimeout(() => setIsClaiming(false), 2000);
                 }}
                 style={styles.claimButton}
               />
