@@ -18,6 +18,7 @@ import { AVATARS, applyArcadeProgress, applyMatchProgress, applyVintageProgress,
 import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
 import type { LeaderboardEntry } from "../../shared/game";
 import { getWordDefinition } from "../../shared/dictionary";
+import { normalizeTr, isEqualTr, normalizeTrUpper } from "../../shared/tr-utils";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -145,7 +146,16 @@ async function startServer() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  const MAX_DICTIONARY_CACHE = 2000;
   const serverDictionaryCache = new Map<string, any>();
+
+  function setDictionaryCache(key: string, data: any) {
+    if (serverDictionaryCache.size >= MAX_DICTIONARY_CACHE) {
+      const oldestKey = serverDictionaryCache.keys().next().value;
+      if (oldestKey) serverDictionaryCache.delete(oldestKey);
+    }
+    serverDictionaryCache.set(key, data);
+  }
 
   app.get("/api/dictionary/:word", async (req, res) => {
     try {
@@ -154,7 +164,7 @@ async function startServer() {
         return res.status(400).json({ error: "Kelime belirtilmedi" });
       }
       const clean = rawWord.trim();
-      const trUpper = clean.toLocaleUpperCase("tr-TR");
+      const trUpper = normalizeTrUpper(clean);
 
       if (serverDictionaryCache.has(trUpper)) {
         return res.json(serverDictionaryCache.get(trUpper));
@@ -162,7 +172,7 @@ async function startServer() {
 
       // TDK GTS API sorgusu
       try {
-        const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(clean.toLocaleLowerCase("tr-TR"))}`;
+        const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(normalizeTr(clean))}`;
         const tdkRes = await fetch(tdkUrl, { headers: { "User-Agent": "KelimePatlat/1.0" } });
         if (tdkRes.ok) {
           const data = await tdkRes.json();
@@ -184,7 +194,7 @@ async function startServer() {
               example: firstExample,
               source: "TDK",
             };
-            serverDictionaryCache.set(trUpper, result);
+            setDictionaryCache(trUpper, result);
             return res.json(result);
           }
         }
@@ -199,7 +209,7 @@ async function startServer() {
         definitions: [localDef],
         source: "Yerel",
       };
-      serverDictionaryCache.set(trUpper, fallbackResult);
+      setDictionaryCache(trUpper, fallbackResult);
       return res.json(fallbackResult);
     } catch (err: any) {
       return res.status(500).json({ error: err.message || "Sözlük hatası" });
@@ -631,7 +641,7 @@ async function startServer() {
       let user = await UserModel.findOne({
         $or: [
           { openId: idOrName },
-          { username: idOrName.toLowerCase() },
+          { username: normalizeTr(idOrName) },
           { name: new RegExp(`^${escapeRegex(idOrName)}$`, "i") },
         ]
       }).lean();
@@ -725,14 +735,14 @@ async function startServer() {
       if (!payload.success) return res.status(400).json({ error: "Geçersiz istek parametreleri." });
       const { toUsername, fromPlayerId, fromPlayerName, profile } = payload.data;
 
-      if (toUsername.toLowerCase() === fromPlayerName.toLowerCase() || toUsername.toLowerCase() === (profile?.username || "").toLowerCase()) {
+      if (isEqualTr(toUsername, fromPlayerName) || isEqualTr(toUsername, profile?.username)) {
         return res.status(400).json({ error: "Kendinize arkadaşlık isteği gönderemezsiniz." });
       }
 
       await connectDb();
       const targetUser = await UserModel.findOne({
         $or: [
-          { username: toUsername.toLowerCase() },
+          { username: normalizeTr(toUsername) },
           { openId: toUsername },
           { name: new RegExp(`^${escapeRegex(toUsername)}$`, "i") }
         ]
@@ -744,7 +754,7 @@ async function startServer() {
 
       if (targetUser?.progress?.friends && Array.isArray(targetUser.progress.friends)) {
         const isAlreadyFriend = targetUser.progress.friends.some(
-          (f: any) => (typeof f === "string" ? f === fromPlayerId : f.id === fromPlayerId || f.username?.toLowerCase() === (profile?.username || fromPlayerName).toLowerCase())
+          (f: any) => (typeof f === "string" ? f === fromPlayerId : f.id === fromPlayerId || isEqualTr(f.username, profile?.username || fromPlayerName))
         );
         if (isAlreadyFriend) {
           return res.status(400).json({ error: "Bu kullanıcı zaten arkadaş listenizde." });
@@ -753,7 +763,7 @@ async function startServer() {
 
       const existingRequests = await getPendingFriendRequests(targetUserId);
       const alreadyPending = existingRequests.some(
-        r => (r.fromUserId === fromPlayerId || r.fromUsername.toLowerCase() === (profile?.username || fromPlayerName).toLowerCase()) && r.status === "pending"
+        r => (r.fromUserId === fromPlayerId || isEqualTr(r.fromUsername, profile?.username || fromPlayerName)) && r.status === "pending"
       );
       if (alreadyPending) {
         return res.status(400).json({ error: "Bu kullanıcıya daha önce istek gönderilmiş." });

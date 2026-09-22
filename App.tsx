@@ -60,6 +60,7 @@ import { ErrorBoundary } from "./components/error-boundary";
 import { ModernAlertModal, type ModernAlertData } from "./components/modern-alert-modal";
 import { VictoryEffectOverlay } from "./components/victory-effect-overlay";
 import { GameSplashScreen } from "./components/game-splash-screen";
+import { ConnectLine } from "./components/game-ui";
 
 type Screen = "home" | "online" | "friends" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -69,112 +70,6 @@ const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
 function initials(name: string) {
   return name.trim().slice(0, 2).toLocaleUpperCase("tr-TR") || "KP";
 }
-
-function ConnectLine({
-  x1,
-  y1,
-  x2,
-  y2,
-  color,
-  opacity = 0.95,
-  showArrow = true,
-}: {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  color: string;
-  opacity?: number;
-  showArrow?: boolean;
-}) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx);
-  const arrowPos = Math.max(0, length - 18);
-
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        left: x1,
-        top: y1,
-        width: length,
-        height: 0,
-        transform: [{ rotate: `${angle}rad` }],
-        transformOrigin: "0% 50%",
-        zIndex: 20,
-        overflow: "visible",
-      }}
-    >
-      {/* Çizgi gövdesi */}
-      <View
-        style={{
-          position: "absolute",
-          left: 0,
-          top: -3,
-          width: Math.max(0, length - 6),
-          height: 6,
-          backgroundColor: color,
-          borderRadius: 3,
-          opacity,
-          shadowColor: color,
-          shadowOpacity: 0.8,
-          shadowRadius: 6,
-          elevation: 4,
-        }}
-      />
-      {/* Vektörel Yön Oku (Ok Sonu ->) */}
-      {showArrow && length > 14 && (
-        <View
-          style={{
-            position: "absolute",
-            left: arrowPos,
-            top: -8,
-            width: 14,
-            height: 16,
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 25,
-            opacity,
-          }}
-        >
-          {/* Dış renkli ok */}
-          <View
-            style={{
-              position: "absolute",
-              width: 0,
-              height: 0,
-              borderTopWidth: 8,
-              borderBottomWidth: 8,
-              borderLeftWidth: 14,
-              borderTopColor: "transparent",
-              borderBottomColor: "transparent",
-              borderLeftColor: color,
-            }}
-          />
-          {/* İç beyaz keskin ok */}
-          <View
-            style={{
-              position: "absolute",
-              left: 1,
-              width: 0,
-              height: 0,
-              borderTopWidth: 5,
-              borderBottomWidth: 5,
-              borderLeftWidth: 9,
-              borderTopColor: "transparent",
-              borderBottomColor: "transparent",
-              borderLeftColor: "#FFFFFF",
-            }}
-          />
-        </View>
-      )}
-    </View>
-  );
-}
-
 
 const WORD_PALETTE = APP_WORD_PALETTE;
 
@@ -188,6 +83,7 @@ function HomeScreen() {
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingWordTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastGestureStartTimeRef = useRef(0);
   const boardRef = useRef<View>(null);
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
@@ -2207,6 +2103,10 @@ function HomeScreen() {
   const handleGestureStart = (event: any) => {
     event.preventDefault?.();
     event.stopPropagation?.();
+    const now = Date.now();
+    // 60ms içinde gelen mükerrer pointer/touch çift tetiklenmesini engelle
+    if (now - lastGestureStartTimeRef.current < 60) return;
+    lastGestureStartTimeRef.current = now;
     setIsSelecting(true);
     measureBoard();
     const { x, y } = getEventBoardCoords(event);
@@ -2225,6 +2125,7 @@ function HomeScreen() {
     setIsSelecting(false);
     if (!selectionActiveRef.current) return;
     selectionActiveRef.current = false;
+    lastGestureStartTimeRef.current = 0;
     submitSelection(true);
   };
 

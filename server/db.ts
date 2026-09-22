@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import crypto from "crypto";
 import { ENV } from "./_core/env";
+import { normalizeTr } from "../shared/tr-utils";
 
 export type User = {
   id: number;
@@ -156,9 +157,9 @@ export async function createFriendRequest(data: Omit<FriendRequest, "id" | "crea
 }
 
 export async function getPendingFriendRequests(userIdOrUsername: string): Promise<FriendRequest[]> {
-  const normalized = userIdOrUsername.trim().toLowerCase();
+  const normalized = normalizeTr(userIdOrUsername);
   const memResults = Array.from(inMemoryFriendRequests.values()).filter(
-    (r) => (r.toUserId === userIdOrUsername || r.toUsername.toLowerCase() === normalized) && r.status === "pending"
+    (r) => (r.toUserId === userIdOrUsername || normalizeTr(r.toUsername) === normalized) && r.status === "pending"
   );
 
   try {

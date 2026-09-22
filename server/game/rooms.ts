@@ -21,6 +21,7 @@ import { DEFAULT_PROGRESS, getLeagueTier, applyMatchProgress, type PlayerProgres
 import { getRandomBotPersona } from "../../shared/botPersonas";
 import { UserModel, createFriendRequest, getPendingFriendRequests, updateFriendRequestStatus, findFriendRequestById, type FriendRequest } from "../db";
 import { loadLeaderboard, recordLeaderboardRounds } from "./mongo-store";
+import { normalizeTr, isEqualTr } from "../../shared/tr-utils";
 
 type PlayerRecord = GamePlayer & { socketId: string | null };
 
@@ -613,7 +614,7 @@ const userSocketMap = new Map<string, Set<string>>();
 
 function registerUserSocket(identifier: string, socketId: string) {
   if (!identifier) return;
-  const key = identifier.trim().toLowerCase();
+  const key = normalizeTr(identifier);
   let set = userSocketMap.get(key);
   if (!set) {
     set = new Set();
@@ -624,7 +625,7 @@ function registerUserSocket(identifier: string, socketId: string) {
 
 function unregisterUserSocket(identifier: string, socketId: string) {
   if (!identifier) return;
-  const key = identifier.trim().toLowerCase();
+  const key = normalizeTr(identifier);
   const set = userSocketMap.get(key);
   if (set) {
     set.delete(socketId);
@@ -634,7 +635,7 @@ function unregisterUserSocket(identifier: string, socketId: string) {
 
 function getSocketsForUser(identifier: string): string[] {
   if (!identifier) return [];
-  const set = userSocketMap.get(identifier.trim().toLowerCase());
+  const set = userSocketMap.get(normalizeTr(identifier));
   return set ? Array.from(set) : [];
 }
 
@@ -660,19 +661,6 @@ export function registerGameRooms(io: Server) {
       next();
     }
   });
-
-  setInterval(() => {
-    const now = Date.now();
-    for (const [code, room] of rooms) {
-      if (now - room.touchedAt > ROOM_TTL_MS) {
-        destroyRoom(code, room);
-        continue;
-      }
-      if (room.status === "finished" && !room.host.connected && (!room.guest || !room.guest.connected || room.guest.isBot)) {
-        destroyRoom(code, room);
-      }
-    }
-  }, 60_000);
 
   io.on("connection", (socket) => {
     const ownsPlayerId = (playerId: string) => {
@@ -1202,14 +1190,14 @@ export function registerGameRooms(io: Server) {
         registerUserSocket(fromUsername, socket.id);
 
         // Kendi kendine istek gönderemez
-        if (toUsername.toLowerCase() === fromName.toLowerCase() || toUsername.toLowerCase() === fromUsername.toLowerCase()) {
+        if (isEqualTr(toUsername, fromName) || isEqualTr(toUsername, fromUsername)) {
           return socket.emit("friend:error", { message: "Kendinize arkadaşlık isteği gönderemezsiniz." });
         }
 
         // Hedef kullanıcıyı veritabanında ara
         let targetUser = await UserModel.findOne({
           $or: [
-            { username: toUsername.toLowerCase() },
+            { username: normalizeTr(toUsername) },
             { openId: toUsername },
             { name: new RegExp(`^${escapeRegex(toUsername)}$`, "i") }
           ]
@@ -1222,7 +1210,7 @@ export function registerGameRooms(io: Server) {
         // Hedef kullanıcının arkadaş listesinde zaten var mı?
         if (targetUser?.progress?.friends && Array.isArray(targetUser.progress.friends)) {
           const isAlreadyFriend = targetUser.progress.friends.some(
-            (f: any) => (typeof f === "string" ? f === fromId : f.id === fromId || f.username?.toLowerCase() === fromUsername.toLowerCase())
+            (f: any) => (typeof f === "string" ? f === fromId : f.id === fromId || isEqualTr(f.username, fromUsername))
           );
           if (isAlreadyFriend) {
             return socket.emit("friend:error", { message: "Bu kullanıcı zaten arkadaş listenizde." });
@@ -1232,7 +1220,7 @@ export function registerGameRooms(io: Server) {
         // Bekleyen istek var mı?
         const existingRequests = await getPendingFriendRequests(targetUserId);
         const alreadyPending = existingRequests.some(
-          r => (r.fromUserId === fromId || r.fromUsername.toLowerCase() === fromUsername.toLowerCase()) && r.status === "pending"
+          r => (r.fromUserId === fromId || isEqualTr(r.fromUsername, fromUsername)) && r.status === "pending"
         );
         if (alreadyPending) {
           return socket.emit("friend:error", { message: "Bu kullanıcıya daha önce istek gönderilmiş." });

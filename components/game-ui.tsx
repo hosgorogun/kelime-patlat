@@ -632,3 +632,108 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(184, 134, 58, 0.45)",
   },
 });
+
+export function ConnectLine({
+  x1,
+  y1,
+  x2,
+  y2,
+  color,
+  opacity = 0.95,
+  showArrow = true,
+}: {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  opacity?: number;
+  showArrow?: boolean;
+}) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx);
+  const arrowPos = Math.max(0, length - 18);
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        left: x1,
+        top: y1,
+        width: length,
+        height: 0,
+        transform: [{ rotate: `${angle}rad` }],
+        transformOrigin: "0% 50%",
+        zIndex: 20,
+        overflow: "visible",
+      }}
+    >
+      {/* Çizgi gövdesi */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          top: -3,
+          width: Math.max(0, length - 6),
+          height: 6,
+          backgroundColor: color,
+          borderRadius: 3,
+          opacity,
+          shadowColor: color,
+          shadowOpacity: 0.8,
+          shadowRadius: 6,
+          elevation: 4,
+        }}
+      />
+      {/* Vektörel Yön Oku (Ok Sonu ->) */}
+      {showArrow && length > 14 && (
+        <View
+          style={{
+            position: "absolute",
+            left: arrowPos,
+            top: -8,
+            width: 14,
+            height: 16,
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 25,
+            opacity,
+          }}
+        >
+          {/* Dış renkli ok */}
+          <View
+            style={{
+              position: "absolute",
+              width: 0,
+              height: 0,
+              borderTopWidth: 8,
+              borderBottomWidth: 8,
+              borderLeftWidth: 14,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: color,
+            }}
+          />
+          {/* İç beyaz keskin ok */}
+          <View
+            style={{
+              position: "absolute",
+              left: 1,
+              width: 0,
+              height: 0,
+              borderTopWidth: 5,
+              borderBottomWidth: 5,
+              borderLeftWidth: 9,
+              borderTopColor: "transparent",
+              borderBottomColor: "transparent",
+              borderLeftColor: "#FFFFFF",
+            }}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
