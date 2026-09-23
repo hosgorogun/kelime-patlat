@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, AppState, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
@@ -42,7 +42,8 @@ function FloatingTimeBonus({ text }: { text: string | null }) {
         }),
       ]).start();
     }
-  }, [text]);
+    // animVal sabit bir Animated.Value ref'idir, bağımlılık listesine eklenmesi gerekmez
+  }, [text, animVal]);
 
   if (!text) return null;
 
@@ -164,10 +165,14 @@ export function SoloChallenge({
   const [status, setStatus] = useState<"playing" | "won" | "lost">("playing");
   const [isSelecting, setIsSelecting] = useState(false);
   const [radarCooldown, setRadarCooldown] = useState(0);
-  const [radarCharges, setRadarCharges] = useState(radarChargesBonus || 0);
+  const [radarCharges, setRadarCharges] = useState(3 + (radarChargesBonus || 0));
+  // Bonus şarj değişimini takip etmek için referans (reset effect'in sonsuz döngüye girmesini önler)
+  const radarBonusRef = useRef(radarChargesBonus);
+  radarBonusRef.current = radarChargesBonus;
 
   useEffect(() => {
-    setRadarCharges(radarChargesBonus || 0);
+    // Bonus şarj sayısı arttığında mevcut şarjlara ekle (azaldığında dokunma)
+    setRadarCharges((current) => Math.max(current, 3 + (radarChargesBonus || 0)));
   }, [radarChargesBonus]);
 
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
@@ -318,12 +323,14 @@ export function SoloChallenge({
 
   useEffect(() => {
     setSelected([]); setFound([]); setFoundPaths([]); setInspectedPath(null); setInspectedColor(null); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
-    setRadarCooldown(0); setRadarCharges(3 + (radarChargesBonus || 0)); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
+    setRadarCooldown(0); setRadarCharges(3 + (radarBonusRef.current || 0)); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
     setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
     hasFinishedRef.current = false;
     hasAutoInspectedRef.current = false;
     isDecryptingRef.current = false;
-  }, [challenge, radarChargesBonus]);
+    // NOT: radarChargesBonus bilinçli olarak bağımlılık listesinde değil — kutu ödülü alındığında
+    // bu effect yeniden çalışıp chestState'i "closed"a sıfırlarsa oyuncu aynı kutuyu sonsuz kez açabilir (XP exploit'i).
+  }, [challenge]);
 
   useEffect(() => {
     if (variationSeed !== undefined) setVariation(variationSeed);
@@ -385,22 +392,21 @@ export function SoloChallenge({
 
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
-    const timer = setInterval(() => setSeconds((value) => {
-      if (value <= 1) {
-        clearInterval(timer);
-        if (!hasFinishedRef.current) {
-          hasFinishedRef.current = true;
-          setStatus("lost");
-          triggerHapticError();
-          playErrorSound();
-          onCompleteRef.current(levelRef.current, foundRef.current, false);
-        }
-        return 0;
-      }
-      return value - 1;
-    }), 1000);
+    const timer = setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
     return () => clearInterval(timer);
   }, [status, countdown, isPaused, showExitModal]);
+
+  // Süre bittiğinde kaybı işle (yan etkiler setState updater'ının dışında tutulur)
+  useEffect(() => {
+    if (seconds > 0 || status !== "playing" || countdown !== null || isPaused || showExitModal) return;
+    if (!hasFinishedRef.current) {
+      hasFinishedRef.current = true;
+      setStatus("lost");
+      triggerHapticError();
+      playErrorSound();
+      onCompleteRef.current(levelRef.current, foundRef.current, false);
+    }
+  }, [seconds, status, countdown, isPaused, showExitModal]);
 
   useEffect(() => () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -429,6 +435,12 @@ export function SoloChallenge({
     };
   };
 
+  const particleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => () => {
+    particleTimers.current.forEach(clearTimeout);
+  }, []);
+
   const explodeConfetti = () => {
     const colors = ["#FFC24A", "#4ADE80", "#FF647C", "#E8C36A", "#FF9B62"];
     const newConfetti: typeof particles = [];
@@ -449,9 +461,10 @@ export function SoloChallenge({
       }).start();
     }
     setParticles((prev) => [...prev, ...newConfetti]);
-    setTimeout(() => {
+    const cleanupTimer = setTimeout(() => {
       setParticles((prev) => prev.filter((p) => !newConfetti.includes(p)));
     }, 2600);
+    particleTimers.current.push(cleanupTimer);
   };
 
   const explodeParticles = (cells: number[]) => {
@@ -483,9 +496,10 @@ export function SoloChallenge({
     });
 
     setParticles((prev) => [...prev, ...newParticles]);
-    setTimeout(() => {
+    const cleanupTimer = setTimeout(() => {
       setParticles((prev) => prev.filter(p => !newParticles.includes(p)));
     }, 380);
+    particleTimers.current.push(cleanupTimer);
   };
 
   const showInvalid = (message: string) => {
@@ -502,11 +516,6 @@ export function SoloChallenge({
     triggerHapticSelection();
     if (next.length >= previous.length) playSelectionNote(next.length - 1);
   };
-  const particleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => () => {
-    particleTimers.current.forEach(clearTimeout);
-  }, []);
 
   const revealRadar = () => {
     if (radarCooldown > 0 || radarCharges <= 0 || status !== "playing") return;
@@ -549,7 +558,8 @@ export function SoloChallenge({
     const bonus = isCombo ? 8 : 4;
     setSeconds((s) => Math.min(challenge.timeLimit, s + bonus));
     setTimeBonusText(isCombo ? `+${bonus}s 🔥 KOMBO!` : `+${bonus}s`);
-    setTimeout(() => setTimeBonusText(null), 1500);
+    const bonusTextTimer = setTimeout(() => setTimeBonusText(null), 1500);
+    particleTimers.current.push(bonusTextTimer);
 
     if (word.length >= 6) {
       triggerHapticLongWord();
@@ -563,16 +573,18 @@ export function SoloChallenge({
       explodeConfetti();
       gameSfx.victory();
       triggerHapticLongWord();
-      setTimeout(() => {
+      const winTimer = setTimeout(() => {
         setStatus("won");
-        onComplete(level, nextFound, true);
+        onCompleteRef.current(levelRef.current, nextFound, true);
       }, 700);
+      particleTimers.current.push(winTimer);
     } else {
-      setTimeout(() => setFeedback("idle"), 360);
+      const feedbackTimer = setTimeout(() => setFeedback("idle"), 360);
+      particleTimers.current.push(feedbackTimer);
     }
   };
 
-  const handleExitPress = () => {
+  const handleExitPress = useCallback(() => {
     if (status === "lost" && daily) {
       if (!hasFinishedRef.current) {
         hasFinishedRef.current = true;
@@ -587,7 +599,7 @@ export function SoloChallenge({
     } else {
       onExit();
     }
-  };
+  }, [status, daily, countdown, onExit, setShowExitModal]);
 
   // Donanım geri tuşu kontrolü (Android BackHandler)
   useEffect(() => {
@@ -610,7 +622,8 @@ export function SoloChallenge({
 
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [isPaused, showExitModal, status, countdown, daily, onExit]);
+    // handleExitPress yalnızca listelenen bağımlılıkları okur; ayrıca listeye eklenmesi gerekmez
+  }, [isPaused, showExitModal, status, countdown, daily, onExit, handleExitPress]);
 
   const handleRetry = () => {
     if (typeof lives === "number" && lives <= 0) {
@@ -1124,7 +1137,7 @@ export function SoloChallenge({
             {selectedWordInfo.example ? (
               <View style={{ marginTop: 6, padding: 6, backgroundColor: "rgba(255, 255, 255, 0.05)", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: inspectedColor || activeTheme.accentColor }}>
                 <Text style={{ color: "#94A3B8", fontSize: 11, fontStyle: "italic" }}>
-                  Örnek: "{selectedWordInfo.example}"
+                  Örnek: &quot;{selectedWordInfo.example}&quot;
                 </Text>
               </View>
             ) : null}

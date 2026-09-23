@@ -48,7 +48,8 @@ function FloatingTimeBonus({ text }: { text: string | null }) {
         }),
       ]).start();
     }
-  }, [text]);
+    // animVal sabit bir Animated.Value ref'idir, bağımlılık listesine eklenmesi gerekmez
+  }, [text, animVal]);
 
   if (!text) return null;
 
@@ -122,11 +123,13 @@ export function ArcadeChallenge({
   onComplete,
   boardSkinColor,
   selectedVictoryEffect,
+  watchAd,
 }: {
   onExit: () => void;
   onComplete: (score: number, wordsCount?: number, isDoubled?: boolean, comboCount?: number, foundWords?: string[]) => void;
   boardSkinColor?: string;
   selectedVictoryEffect?: string;
+  watchAd?: (onReward: () => void) => void;
 }) {
   const { width } = useWindowDimensions();
   const [levelSeed, setLevelSeed] = useState(() => Math.floor(Math.random() * 15) + 1);
@@ -291,22 +294,20 @@ export function ArcadeChallenge({
   // Time Countdown (pauses when paused, countdown is active, or exit confirmation modal is open)
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
-    const timer = setInterval(() => setSeconds((value) => {
-      if (value <= 1) {
-        clearInterval(timer);
-        setStatus("lost");
-        triggerHapticError();
-        playErrorSound();
-        savedRef.current = true;
-        setTimeout(() => {
-          onCompleteRef.current(scoreRef.current, totalWordsFoundRef.current, false, totalCombosRef.current, allFoundWordsRef.current);
-        }, 0);
-        return 0;
-      }
-      return value - 1;
-    }), 1000);
+    const timer = setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
     return () => clearInterval(timer);
   }, [status, countdown, isPaused, showExitModal]);
+
+  // Süre bittiğinde kaybı işle (yan etkiler setState updater'ının dışında tutulur; StrictMode'da çift ödül riskini önler)
+  useEffect(() => {
+    if (seconds > 0 || status !== "playing" || countdown !== null || isPaused || showExitModal) return;
+    if (savedRef.current) return;
+    savedRef.current = true;
+    setStatus("lost");
+    triggerHapticError();
+    playErrorSound();
+    onCompleteRef.current(scoreRef.current, totalWordsFoundRef.current, false, totalCombosRef.current, allFoundWordsRef.current);
+  }, [seconds, status, countdown, isPaused, showExitModal]);
 
   // Donanım geri tuşu kontrolü (Android BackHandler)
   useEffect(() => {
@@ -493,7 +494,8 @@ export function ArcadeChallenge({
     } else {
       setTimeBonusText(`+${totalBonus}s`);
     }
-    setTimeout(() => setTimeBonusText(null), 1200);
+    const bonusTextTimer = setTimeout(() => setTimeBonusText(null), 1200);
+    particleTimers.current.push(bonusTextTimer);
 
     playSuccessSound();
     if (word.length >= 6 || comboInfo.bonusSeconds > 0) {
@@ -520,7 +522,7 @@ export function ArcadeChallenge({
           : `TAHTA TEMİZLENDİ! +${boardClearBonus}s ⚡`
       );
 
-      setTimeout(() => {
+      const boardClearTimer = setTimeout(() => {
         setFound([]);
         setFoundPaths([]);
         setLevelSeed(nextSeed);
@@ -529,8 +531,10 @@ export function ArcadeChallenge({
         setCombo(0);
         lastWordTimeRef.current = 0;
       }, 700);
+      particleTimers.current.push(boardClearTimer);
     } else {
-      setTimeout(() => setFeedback("idle"), 360);
+      const feedbackTimer = setTimeout(() => setFeedback("idle"), 360);
+      particleTimers.current.push(feedbackTimer);
     }
   };
 
@@ -1044,7 +1048,7 @@ export function ArcadeChallenge({
             {selectedWordInfo.example ? (
               <View style={{ marginTop: 6, padding: 6, backgroundColor: "rgba(255, 255, 255, 0.05)", borderRadius: 8, borderLeftWidth: 3, borderLeftColor: inspectedColor || "#FFC24A" }}>
                 <Text style={{ color: "#94A3B8", fontSize: 11, fontStyle: "italic" }}>
-                  Örnek: "{selectedWordInfo.example}"
+                  Örnek: &quot;{selectedWordInfo.example}&quot;
                 </Text>
               </View>
             ) : null}
@@ -1141,22 +1145,27 @@ export function ArcadeChallenge({
         {!doubled && score > 0 && (
           <Pressable
             onPress={() => {
-              Alert.alert(
-                "📺 Ödülü 2X Yap",
-                "15 saniyelik sponsorlu reklam izleyerek bu turdaki XP ve Çip ödülünü 2 katına çıkarmak ister misin?",
-                [
-                  { text: "Vazgeç", style: "cancel" },
-                  {
-                    text: "İzle ve 2X Yap",
-                    onPress: () => {
-                      triggerHapticSuccess();
-                      gameSfx.victory();
-                      setDoubled(true);
-                      onCompleteRef.current(score, totalWordsFoundRef.current, true, totalCombosRef.current, allFoundWordsRef.current);
+              const applyDoubleReward = () => {
+                triggerHapticSuccess();
+                gameSfx.victory();
+                setDoubled(true);
+                onCompleteRef.current(score, totalWordsFoundRef.current, true, totalCombosRef.current, allFoundWordsRef.current);
+              };
+              if (watchAd) {
+                watchAd(applyDoubleReward);
+              } else {
+                Alert.alert(
+                  "📺 Ödülü 2X Yap",
+                  "15 saniyelik sponsorlu reklam izleyerek bu turdaki XP ve Çip ödülünü 2 katına çıkarmak ister misin?",
+                  [
+                    { text: "Vazgeç", style: "cancel" },
+                    {
+                      text: "İzle ve 2X Yap",
+                      onPress: applyDoubleReward,
                     },
-                  },
-                ]
-              );
+                  ]
+                );
+              }
             }}
             style={[styles.action, { backgroundColor: "rgba(255, 208, 0, 0.2)", borderColor: "#FFD000", borderWidth: 1.5, marginBottom: 8 }]}
           >

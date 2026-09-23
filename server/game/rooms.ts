@@ -64,6 +64,8 @@ const rooms = new Map<string, Room>();
 const matchmakingQueue = new Map<BoardSize, QueueEntry[]>();
 const matchmakingTimers = new Map<string, NodeJS.Timeout>();
 const leaderboard = new Map<string, LeaderboardEntry>();
+// Soket bazlı bekleyen düello davetleri (spoofing koruması için)
+const pendingDuelInvites = new Map<string, { fromPlayerId: string; roomCode: string; expiresAt: number }>();
 const ROOM_TTL_MS = 15 * 60 * 1000;
 const playerIdSchema = z.string().trim().min(1).max(128);
 const playerNameSchema = z.string().max(100);
@@ -71,7 +73,8 @@ const codeSchema = z.string().trim().min(1).max(16);
 const sizeSchema = z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]);
 const playerProfileSchema = z.object({
   avatar: z.string().optional(),
-  avatarPhoto: z.string().optional(),
+  // Base64 fotoğraf için üst boyut limiti ( bellek/bant genişliği istismarını önler)
+  avatarPhoto: z.string().max(250_000).optional(),
   selectedTitle: z.string().optional(),
   selectedFrame: z.string().optional(),
   level: z.number().optional(),
@@ -1163,10 +1166,11 @@ export function registerGameRooms(io: Server) {
     }
 
     socket.on("player:identify", (payload: { playerId: string; username?: string }) => {
-      if (payload?.playerId) {
+      // Kimlik taklidini önle: sadece bu soketin sahibi olduğu ID'ler kaydedilir
+      if (payload?.playerId && ownsPlayerId(payload.playerId)) {
         registerUserSocket(payload.playerId, socket.id);
       }
-      if (payload?.username) {
+      if (payload?.username && ownsPlayerId(payload.username)) {
         registerUserSocket(payload.username, socket.id);
       }
     });
@@ -1181,6 +1185,10 @@ export function registerGameRooms(io: Server) {
         const toUsername = payload?.toUsername?.trim();
         if (!toUsername) {
           return socket.emit("friend:error", { message: "Geçerli bir kullanıcı adı girin." });
+        }
+        // IDOR koruması: gönderen kimlik bu sokete ait olmalı
+        if (!ownsPlayerId(payload.fromPlayerId)) {
+          return socket.emit("friend:error", { message: "Oyuncu kimliği bu oturuma ait değil." });
         }
         const fromId = payload.fromPlayerId;
         const fromName = payload.fromPlayerName || "OYUNCU";
@@ -1266,8 +1274,12 @@ export function registerGameRooms(io: Server) {
     socket.on("friend:requests:get", async (payload: { playerId: string; username?: string }) => {
       try {
         if (!payload?.playerId) return;
+        // IDOR koruması: sadece kendi bekleyen istekleri listeleyebilir
+        if (!ownsPlayerId(payload.playerId)) {
+          return socket.emit("friend:error", { message: "Oyuncu kimliği bu oturuma ait değil." });
+        }
         registerUserSocket(payload.playerId, socket.id);
-        if (payload.username) registerUserSocket(payload.username, socket.id);
+        if (payload.username && ownsPlayerId(payload.username)) registerUserSocket(payload.username, socket.id);
 
         const requestsByUserId = await getPendingFriendRequests(payload.playerId);
         let requestsByUsername: any[] = [];
@@ -1294,9 +1306,20 @@ export function registerGameRooms(io: Server) {
     }) => {
       try {
         const { requestId, action, playerId } = payload;
+        // IDOR koruması: yanıtlayan kimlik bu sokete ait olmalı
+        if (!ownsPlayerId(playerId)) {
+          return socket.emit("friend:error", { message: "Oyuncu kimliği bu oturuma ait değil." });
+        }
         const req = await findFriendRequestById(requestId);
         if (!req) {
           return socket.emit("friend:error", { message: "İstek bulunamadı." });
+        }
+        // Sadece isteğin gerçek hedefi yanıtlayabilir ve yalnızca bekleyen istekler işlenir
+        if (req.toUserId !== playerId) {
+          return socket.emit("friend:error", { message: "Bu isteği yanıtlama yetkiniz yok." });
+        }
+        if (req.status !== "pending") {
+          return socket.emit("friend:error", { message: "Bu istek zaten işlenmiş." });
         }
 
         if (action === "reject") {
@@ -1380,6 +1403,10 @@ export function registerGameRooms(io: Server) {
     socket.on("friend:remove", async (payload: { friendId: string; playerId: string }) => {
       try {
         const { friendId, playerId } = payload;
+        // IDOR koruması: sadece kendi arkadaş listesinden silebilir
+        if (!ownsPlayerId(playerId)) {
+          return socket.emit("friend:error", { message: "Oyuncu kimliği bu oturuma ait değil." });
+        }
         try {
           await UserModel.findOneAndUpdate(
             { openId: playerId },
@@ -1410,6 +1437,10 @@ export function registerGameRooms(io: Server) {
       botProfile?: z.infer<typeof playerProfileSchema>;
     }) => {
       const { toPlayerId, toUsername, fromPlayerId, fromPlayerName, roomCode, size, botProfile } = payload;
+      // IDOR koruması: davet, soketin sahibi olduğu kimlikten gönderilmeli
+      if (!ownsPlayerId(fromPlayerId)) {
+        return socket.emit("friend:duel:failed", { message: "Oyuncu kimliği bu oturuma ait değil." });
+      }
       const targetSockets = [
         ...getSocketsForUser(toPlayerId),
         ...(toUsername ? getSocketsForUser(toUsername) : [])
@@ -1465,6 +1496,8 @@ export function registerGameRooms(io: Server) {
       }
 
       for (const sId of uniqueSockets) {
+        // Hedef soket için bekleyen daveti kaydet (yanıt doğrulamasında kullanılır)
+        pendingDuelInvites.set(sId, { fromPlayerId, roomCode, expiresAt: Date.now() + 60_000 });
         io.to(sId).emit("friend:duel:incoming", {
           fromPlayerId,
           fromPlayerName,
@@ -1483,6 +1516,12 @@ export function registerGameRooms(io: Server) {
       accepted: boolean;
     }) => {
       const { toPlayerId, fromPlayerName, roomCode, accepted } = payload;
+      // Spoofing koruması: bu sokete gerçekten bir düello daveti iletilmiş olmalı
+      const pendingInvite = pendingDuelInvites.get(socket.id);
+      if (!pendingInvite || pendingInvite.fromPlayerId !== toPlayerId || pendingInvite.roomCode !== roomCode) {
+        return socket.emit("friend:duel:failed", { message: "Bu daveti yanıtlama yetkiniz yok." });
+      }
+      pendingDuelInvites.delete(socket.id);
       const targetSockets = getSocketsForUser(toPlayerId);
       for (const sId of targetSockets) {
         if (accepted) {
@@ -1494,6 +1533,7 @@ export function registerGameRooms(io: Server) {
     });
 
     socket.on("disconnect", () => {
+      pendingDuelInvites.delete(socket.id);
       for (const [key, set] of userSocketMap.entries()) {
         if (set.has(socket.id)) {
           set.delete(socket.id);
@@ -1582,6 +1622,11 @@ export function registerGameRooms(io: Server) {
       }
       // 3. Kimsenin bağlanmadığı 10 dakikadan eski bekleme/lobi odaları
       if ((room.status === "waiting" || room.status === "lobby") && noHumanConnected && now - room.touchedAt > 10 * 60 * 1000) {
+        destroyRoom(code, room);
+        continue;
+      }
+      // 4. Bağlı oyuncu olsa bile 30 dakikadan eski bekleme odaları — sonsuz açık kalan lobileri engeller
+      if (room.status === "waiting" && now - room.touchedAt > 30 * 60 * 1000) {
         destroyRoom(code, room);
         continue;
       }

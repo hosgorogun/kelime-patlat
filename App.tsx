@@ -42,6 +42,7 @@ import { setHapticsEnabled as setSoloHapticsEnabled, triggerHapticSelection, tri
 import { advanceSelection, getRoundDurationMs, wordFromSelection, wordScoreMultiplier, type BoardSize, type LeaderboardEntry, type RoomSnapshot } from "./shared/game";
 import { applyMatchProgress, applyArcadeProgress, applyVintageProgress, completeDailyProgress, reconcilePlayerProgress, checkDailyLoginReward, getDayId, DEFAULT_PROGRESS, getDailyChallenge, getPlayerLevel, type DailyChallenge, type PlayerProgress, type MatchHistoryEntry, THEME_PACKS, AVATARS, mergePlayerProgress, getUnclaimedMissionsCount, getUnclaimedMilestonesCount, getLeagueTier, buyLives, deductLife, getCalculatedLives, MAX_LIVES } from "./shared/progression";
 import { inviteMessage, normalizeRoomCode } from "./shared/invite";
+import { isEqualTr } from "./shared/tr-utils";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "./shared/solo";
 import { getWordDefinition, fetchWordDetail, getCachedWordDetail } from "./shared/dictionary";
 import { initManusRuntime } from "./lib/_core/manus-runtime";
@@ -66,6 +67,9 @@ type Screen = "home" | "online" | "friends" | "profile" | "levels" | "solo" | "r
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
+// Çevrimdışı kazanılan ödüllerin sunucuya iletilemeyen istekleri için kalıcı kuyruk
+const PENDING_AWARDS_KEY = "kelime-patlat:pending-awards-v1";
+const MAX_PENDING_AWARDS = 50;
 
 function initials(name: string) {
   return name.trim().slice(0, 2).toLocaleUpperCase("tr-TR") || "KP";
@@ -226,6 +230,11 @@ function HomeScreen() {
   const [recentSoloWords, setRecentSoloWords] = useState<string[]>([]);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const [progress, setProgress] = useState<PlayerProgress>(DEFAULT_PROGRESS);
+  // Bayat closure'lardan okuma yapmamak için güncel bakiyeyi yansıtan ref
+  const progressRef = useRef<PlayerProgress>(DEFAULT_PROGRESS);
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
   const [progressReady, setProgressReady] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -495,7 +504,8 @@ function HomeScreen() {
   useEffect(() => {
     if (room?.status !== "playing" || !room.startedAt) return;
     setClockNow(Date.now());
-    const timer = setInterval(() => setClockNow(Date.now()), 500);
+    // 1 saniyelik tick yeterli (saniye hassasiyetinde gösterim) — 500ms gereksiz CPU tüketimi
+    const timer = setInterval(() => setClockNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [room?.startedAt, room?.status]);
 
@@ -514,20 +524,18 @@ function HomeScreen() {
       return () => clearTimeout(timer);
     }
     const timer = setTimeout(() => {
-      setGameCountdown((prev) => {
-        if (prev === null) return null;
-        if (prev === 1) {
-          gameSfx.accepted();
-          haptics.success();
-          return 0;
-        }
-        if (prev > 1) {
-          gameSfx.tap();
-          haptics.select();
-          return prev - 1;
-        }
-        return null;
-      });
+      // Yan etkiler (ses/titreşim) updater DIŞINDA çalıştırılır — updater saf kalır
+      if (gameCountdown === 1) {
+        gameSfx.accepted();
+        haptics.success();
+        setGameCountdown(0);
+        return;
+      }
+      if (gameCountdown > 1) {
+        gameSfx.tap();
+        haptics.select();
+        setGameCountdown(gameCountdown - 1);
+      }
     }, 1000);
     return () => clearTimeout(timer);
   }, [gameCountdown]);
@@ -697,6 +705,47 @@ function HomeScreen() {
     room,
   ]);
 
+  // Kuyruktaki bekleyen ödülleri sunucuya iletir; başarısız olanlar kuyrukta kalır
+  const flushPendingAwards = useCallback(async () => {
+    const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+    if (!token || token === "guest") return;
+    let queue: any[] = [];
+    try {
+      const stored = await AsyncStorage.getItem(PENDING_AWARDS_KEY);
+      queue = stored ? JSON.parse(stored) : [];
+    } catch { return; }
+    if (queue.length === 0) return;
+    const remaining: any[] = [];
+    for (const item of queue) {
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/api/game/award`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(item),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.progress) {
+            // Merge kullan: sunucu bakiyeleri alınır, çevrimdışı yapılmış yerel seçimler (kozmetik vb.) korunur
+            setProgress((current) => mergePlayerProgress(current, data.progress, { preferRemoteBalances: true }));
+          }
+        } else if (response.status === 400 || response.status === 409) {
+          // Kalıcı olarak reddedildi (geçersiz/kilitli/mükerrer) — kuyruktan düşür, sonsuz retry engellenir
+        } else {
+          remaining.push(item);
+        }
+      } catch {
+        // Hâlâ çevrimdışı — kalan kuyruk korunur
+        remaining.push(item);
+      }
+    }
+    try {
+      await AsyncStorage.setItem(PENDING_AWARDS_KEY, JSON.stringify(remaining));
+    } catch {
+      // Yoksay
+    }
+  }, []);
+
   // Load token and verify auth state
   useEffect(() => {
     let active = true;
@@ -735,6 +784,9 @@ function HomeScreen() {
               setPlayerId(cachedId || `user-${Math.random().toString(36).slice(2, 10)}`);
               setPlayerName(cachedName || "OYUNCU");
             }
+            // Oturum doğrulandı — önceki çevrimdışı oturumdan kalan ödülleri sunucuya ilet.
+            // Kuyruk boşaltma sunucu progress'i setProgress ile uyguladığından, offline kazançlar ezilmez.
+            void flushPendingAwards();
           } else {
             // Hot refresh / temporary server reconnect: keep cached session active
             const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
@@ -759,7 +811,8 @@ function HomeScreen() {
       setAuthLoading(false);
     }).catch(() => { if (active) setAuthLoading(false); });
     return () => { active = false; };
-  }, []);
+    // flushPendingAwards sabit bir useCallback'tir; mount'ta bir kez çalışması yeterlidir
+  }, [flushPendingAwards]);
 
   const syncProgressToCloud = useCallback(async (currentProgress: PlayerProgress, customName?: string) => {
     try {
@@ -787,18 +840,29 @@ function HomeScreen() {
       // Yerel ilerleme çağıran bileşen tarafından zaten uygulandı; misafir oturumunda mükerrer ödül verilmesi önlendi
       return;
     }
+    // Her ödül için kalıcı, benzersiz kimlik — sunucu tarafı idempotency (mükerrer işleme) kilidi
+    const awardId = `${payload.kind}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/game/award`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...payload, awardId: `${payload.kind}:${Date.now()}:${Math.random().toString(36).slice(2)}` }), 
+        body: JSON.stringify({ ...payload, awardId }), 
       });
       if (!response.ok) throw new Error("Ödül sunucuda hesaplanamadı.");
       const data = await response.json();
       if (data.progress) setProgress(data.progress);
       else throw new Error("Sunucu progress döndürmedi.");
     } catch {
-      // Çevrimdışı veya sunucu hatasında yerel ilerleme zaten korunduğundan mükerrer fallback çalıştırılmaz
+      // Çevrimdışı / sunucu hatası: ödül isteği kalıcı kuyruğa alınır, bağlantı gelince otomatik yeniden denenir.
+      // Yerel ilerleme zaten uygulandığından mükerrer fallback çalıştırılmaz.
+      try {
+        const stored = await AsyncStorage.getItem(PENDING_AWARDS_KEY);
+        const queue: any[] = stored ? JSON.parse(stored) : [];
+        queue.push({ ...payload, awardId, queuedAt: Date.now() });
+        await AsyncStorage.setItem(PENDING_AWARDS_KEY, JSON.stringify(queue.slice(-MAX_PENDING_AWARDS)));
+      } catch {
+        // Kuyruğa yazma başarısız olursa ödül yalnızca yerel ilerlemede kalır
+      }
     }
   }, []);
 
@@ -1401,6 +1465,8 @@ function HomeScreen() {
       }
       socket.emit("player:identify", { playerId, username: safeName });
       socket.emit("friend:requests:get", { playerId, username: safeName });
+      // Bağlantı geri geldi — çevrimdışıyken kuyruğa alınan ödülleri sunucuya ilet
+      void flushPendingAwards();
     };
     const onDisconnect = () => {
       setIsSocketConnected(false);
@@ -1444,7 +1510,7 @@ function HomeScreen() {
       socket.off("room:emote:received", onEmoteReceived);
       if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
     };
-  }, [clearFeedbackLater, setRoomFromServer, playerId, safeName]);
+  }, [clearFeedbackLater, setRoomFromServer, playerId, safeName, flushPendingAwards]);
 
   const ensureConnectedSocket = async (): Promise<any> => {
     const socket = getGameSocket();
@@ -1704,8 +1770,9 @@ function HomeScreen() {
   };
 
   const joinRoom = async (targetCode?: string) => {
-    const code = (targetCode || roomCodeInput).trim().toUpperCase();
-    if (code.length < 5) {
+    // Türkçe "i" → "İ" dönüşüm hatasını önlemek için normalizeRoomCode kullanılır (tr-TR güvenli)
+    const normalized = normalizeRoomCode(targetCode || roomCodeInput);
+    if (!normalized) {
       haptics.error();
       setNotice("5 karakterli oda kodunu yaz.");
       setGlobalToast({
@@ -1717,6 +1784,7 @@ function HomeScreen() {
       });
       return;
     }
+    const code = normalized;
     setInspectedPath(null);
     setSelectedWordInfo(null);
     const socket = await ensureConnectedSocket();
@@ -1796,7 +1864,8 @@ function HomeScreen() {
         if (!resolved) {
           resolved = true;
           cleanup();
-          resolve({ success: true, message: `${toUsername} kullanıcısına istek iletildi!` });
+          // Sunucudan yanıt alınamadı — sahte başarı döndürmek yerine dürüst bilgi ver
+          resolve({ success: false, message: "Sunucudan yanıt alınamadı. Lütfen tekrar deneyin." });
         }
       }, 3500);
     });
@@ -2414,22 +2483,24 @@ function HomeScreen() {
   const completeDailyChallenge = (level: number, foundWords: string[] = [], won = true) => {
     if (won) {
       const dailyScore = Math.max(level * 14, (foundWords || []).length * 15, daily.targetScore || 100);
-      const updated = completeDailyProgress(
-        progress,
-        daily,
-        dailyScore,
-        (foundWords || []).length,
-        foundWords
-      );
-      const withWords = {
-        ...updated,
-        history: Array.from(new Set([...(updated.history || []), ...(foundWords || [])])).slice(-150),
-      };
-      setProgress(withWords);
-      void syncProgressToCloud(withWords);
+      // Fonksiyonel güncelleme: hızlı ardışık çağrılarda bayat closure verisinin ilerlemeyi ezmesini önler
+      setProgress((current) => {
+        const updated = completeDailyProgress(
+          current,
+          daily,
+          dailyScore,
+          (foundWords || []).length,
+          foundWords
+        );
+        const withWords = {
+          ...updated,
+          history: Array.from(new Set([...(updated.history || []), ...(foundWords || [])])).slice(-150),
+        };
+        void syncProgressToCloud(withWords);
+        return withWords;
+      });
       void awardProgressOnServer(
-        { kind: "solo", level, foundWords, daily: true, score: dailyScore, dailyId: daily.id },
-        () => withWords,
+        { kind: "solo", level, foundWords, daily: true, score: dailyScore, dailyId: daily.id }
       );
     } else {
       const dailyLossItem: MatchHistoryEntry = {
@@ -2570,7 +2641,10 @@ function HomeScreen() {
                 await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
                 await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
                 await AsyncStorage.setItem("kelime-patlat:player-name", finalGuestName);
-                if (data.user.progress) setProgress(data.user.progress);
+                // Yerel ilerlemeyi koru; sunucudan gelen misafir verisiyle birleştir
+                if (data.user.progress) {
+                  setProgress((current) => mergePlayerProgress(current, data.user.progress, { preferRemoteBalances: true }));
+                }
               } else {
                 const fallbackGuestName = `Misafir #${Math.floor(1000 + Math.random() * 9000)}`;
                 setAuthToken("guest");
@@ -3170,8 +3244,9 @@ function HomeScreen() {
           onRejectRequest={handleRejectFriendRequest}
           onSendFriendRequest={handleSendFriendRequest}
           onChallengeFriend={async (friendName, size) => {
+            // Türkçe karakter duyarlı eşleşme (İ/ı, I/i sorunlarını önler)
             const targetFriend = socialManager.getFriends().find(
-              (f) => f.name.toLowerCase() === friendName.toLowerCase() || f.username.toLowerCase() === friendName.toLowerCase()
+              (f) => isEqualTr(f.name, friendName) || isEqualTr(f.username || "", friendName)
             );
             const targetSize = size || 4;
             const isBotFriend = Boolean(
@@ -3300,6 +3375,7 @@ function HomeScreen() {
           onOpenLivesModal={() => setShowLivesModal(true)}
           boardSkinColor={activeBoardSkinColor}
           selectedVictoryEffect={progress.selectedVictoryEffect}
+          watchAd={watchAd}
           onExit={() => {
             const destination = dailySession ? "home" : "levels";
             setDailySession(null);
@@ -3355,13 +3431,14 @@ function HomeScreen() {
             });
           }}
           onSpendCoins={async (item) => {
-            const currentCoins = progress.coins ?? 0;
+            // Bayat closure yerine ref üzerinden güncel bakiye okunur
+            const currentCoins = progressRef.current.coins ?? 0;
             if (currentCoins < item.cost) {
               setGlobalToast({ id: `store-err-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${item.cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
               return false;
             }
             if (item.rewardType === "lives") {
-              const calc = getCalculatedLives(progress);
+              const calc = getCalculatedLives(progressRef.current);
               if (calc.lives >= MAX_LIVES) {
                 setGlobalToast({
                   id: `lives-full-${Date.now()}`,
@@ -3441,7 +3518,8 @@ function HomeScreen() {
             setGlobalToast({ id: `skin-${Date.now()}`, title: "TAHTA GÖRÜNÜMÜ DEĞİŞTİ", subtitle: "Matris arka planın güncellendi.", icon: "🎨", accentColor: "#FFC24A" });
           }}
           onBuyCosmetic={async (kind, id, cost) => {
-            const currentCoins = progress.coins ?? 0;
+            // Bayat closure yerine ref üzerinden güncel bakiye okunur
+            const currentCoins = progressRef.current.coins ?? 0;
             if (cost > 0 && currentCoins < cost) {
               setGlobalToast({ id: `store-${Date.now()}`, title: "YETERSİZ ÇİP", subtitle: `${cost} çip gerekiyor.`, icon: "⚠️", accentColor: "#FF647C" });
               return false;
@@ -3594,6 +3672,7 @@ function HomeScreen() {
         <ArcadeChallenge
           boardSkinColor={activeBoardSkinColor}
           selectedVictoryEffect={progress.selectedVictoryEffect}
+          watchAd={watchAd}
           onExit={() => setArcadeStarted(false)}
           onComplete={(score, wordsCount, isDoubled, comboCount, foundWords) => {
             setProgress((current) => {
@@ -3783,7 +3862,7 @@ function HomeScreen() {
             <View style={styles.joinRow}>
               <TextInput 
                 value={roomCodeInput} 
-                onChangeText={(val) => setRoomCodeInput(val.toUpperCase())} 
+                onChangeText={(val) => setRoomCodeInput(val.toLocaleUpperCase("tr-TR").replace(/[^A-Z0-9]/g, ""))} 
                 maxLength={5} 
                 autoCapitalize="characters" 
                 placeholder="5 HANELİ KOD" 

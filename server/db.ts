@@ -228,6 +228,10 @@ function databaseUri() {
 }
 
 export async function seedDemoUser() {
+  // Üretim ortamında bilinen şifreli demo hesabı OLUŞTURULMAZ (güvenlik riski)
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
   try {
     await UserModel.updateMany({ username: null }, { $unset: { username: 1 } });
     const existing = await UserModel.findOne({ username: "siber_oyuncu" });

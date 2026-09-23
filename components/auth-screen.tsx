@@ -51,8 +51,8 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
         setError("Kullanıcı adı boşluk içeremez.");
         return;
       }
-      if (cleanPassword.length < 4) {
-        setError("Şifre en az 4 karakter olmalıdır.");
+      if (cleanPassword.length < 6) {
+        setError("Şifre en az 6 karakter olmalıdır.");
         return;
       }
     }

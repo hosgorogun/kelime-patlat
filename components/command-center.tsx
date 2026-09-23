@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Animated, Easing, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, getDailyMysteryWord, THEME_PACKS, AVATARS, DAILY_LOGIN_REWARDS, getDayId, getCalculatedLives, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getLeagueTier, getRank, getPlayerLevel, getActiveCyberTitle, getDailyMysteryWord, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { palette } from "@/shared/palette";
@@ -477,7 +477,7 @@ export function CommandCenter({
                 <Text style={styles.mysteryStripReward}>+{mystery.rewardXp} XP</Text>
               </View>
               <Text style={styles.mysteryStripDef}>
-                "{mystery.definition}"
+                &quot;{mystery.definition}&quot;
               </Text>
             </View>
           </View>

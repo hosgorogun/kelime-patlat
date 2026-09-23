@@ -201,15 +201,11 @@ export function CyberStore({
         setTimeout(() => setStoreMessage(null), 3500);
       },
       () => {
+        // Reklam oynatılamadıysa ödül VERİLMEZ (günlük hak da tüketilmez)
         setAdLoading(false);
-        const nextCount = dailyAdCount + 1;
-        setDailyAdCount(nextCount);
-        void AsyncStorage.setItem(`@kelime_patlat:daily_ad_watches_${todayId}`, String(nextCount));
-        triggerHapticSuccess();
-        gameSfx.victory();
-        onBuyCoins(15);
-        const left = Math.max(0, DAILY_AD_LIMIT - nextCount);
-        setStoreMessage(`Sponsorlu reklam izlendi: +15 Siber Çip eklendi! 🪙 (Bugün Kalan Hak: ${left}/${DAILY_AD_LIMIT})`);
+        triggerHapticError();
+        gameSfx.rejected();
+        setStoreMessage("Reklam şu anda yüklenemedi. Lütfen daha sonra tekrar dene.");
         setTimeout(() => setStoreMessage(null), 3500);
       }
     );

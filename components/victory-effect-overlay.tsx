@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { VICTORY_EFFECTS } from "@/shared/store-items";
 import { gameSfx } from "@/lib/game-sfx";
-import { triggerHapticSuccess, triggerHapticLongWord } from "@/shared/audio-haptics";
+import { triggerHapticLongWord } from "@/shared/audio-haptics";
 
 export type VictoryEffectId = "pulse" | "glitch" | "flare" | "lightning" | "fireworks";
 
@@ -209,7 +208,8 @@ export function VictoryEffectOverlay({
     }, 2800);
 
     return () => clearTimeout(timer);
-  }, [visible, safeEffect, particles]);
+    // Anim değerleri sabit Animated.Value ref'leridir; onFinish her render'da değişebilir ama efekt yalnızca görünür olduğunda çalışır
+  }, [visible, safeEffect, particles, badgeAnim, flashAnim, shockwave1, shockwave2, onFinish]);
 
   if (!visible) return null;
 

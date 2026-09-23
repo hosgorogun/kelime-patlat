@@ -5,6 +5,13 @@ if (isProduction && (!cookieSecret || cookieSecret.length < 32)) {
   throw new Error("JWT_SECRET must be configured with at least 32 characters in production.");
 }
 
+if (!isProduction && !cookieSecret) {
+  console.warn(
+    "[ENV] JWT_SECRET tanımlı değil — geliştirme amaçlı varsayılan anahtar kullanılıyor. " +
+    "Üretimde mutlaka güçlü bir JWT_SECRET ayarlayın."
+  );
+}
+
 export const ENV = {
   appId: process.env.VITE_APP_ID?.trim() || "kelime-patlat",
   cookieSecret: cookieSecret || "development-only-kelime-patlat-secret-key",

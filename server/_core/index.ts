@@ -245,7 +245,7 @@ async function startServer() {
 
   const signupSchema = z.object({
     username: z.string().trim().min(3, "Kullanıcı adı min 3 karakter olmalıdır.").max(32).regex(/^\S+$/, "Kullanıcı adı boşluk içeremez."),
-    password: z.string().min(4, "Şifre min 4 karakter olmalıdır.").max(128),
+    password: z.string().min(6, "Şifre min 6 karakter olmalıdır.").max(128),
     email: z.string().trim().email("Geçerli bir e-posta adresi gereklidir.").max(128),
     fullName: z.string().trim().min(2, "Ad soyad en az 2 karakter olmalıdır.").max(64),
     gender: z.enum(["male", "female", "unspecified"]).optional(),
@@ -523,7 +523,8 @@ async function startServer() {
           ownedFrames: safeOwnedFrames,
           ownedBoardSkins: safeOwnedBoardSkins,
           ownedVictoryEffects: safeOwnedEffects,
-          friends: Array.isArray(progress.friends) ? progress.friends : currentProg.friends,
+          // Arkadaş listesi yalnızca friend:request:respond akışı üzerinden değişir — istemciden doğrudan yazılamaz
+          friends: currentProg.friends,
           welcomeRewardClaimed: currentProg.welcomeRewardClaimed || Boolean(progress.welcomeRewardClaimed),
           claimedMilestones: {
             ...(currentProg.claimedMilestones || {}),
@@ -532,7 +533,12 @@ async function startServer() {
           coins: nextCoins + welcomeCoinsBonus + dailyLoginCoinsBonus,
           streakShields: nextShields + welcomeShieldsBonus + dailyLoginShieldBonus,
           radarChargesBonus: nextRadar + welcomeRadarBonus,
-          lives: typeof progress.lives === "number" ? Math.min(MAX_LIVES, Math.max(0, progress.lives)) : currentProg.lives,
+          lives: (() => {
+            // Can istemciden şişirilemez: yalnızca azalma veya sunucu tarafı yenileme kabul edilir
+            if (typeof progress.lives !== "number") return currentProg.lives;
+            const currentLives = getCalculatedLives(currentProg).lives;
+            return Math.min(MAX_LIVES, Math.max(0, Math.min(progress.lives, currentLives)));
+          })(),
           lastLifeRegenTimestamp: typeof progress.lastLifeRegenTimestamp === "number" ? progress.lastLifeRegenTimestamp : currentProg.lastLifeRegenTimestamp,
           dailyCompletedId: progress.dailyCompletedId || currentProg.dailyCompletedId,
           lastStreakCheckDate: progress.lastStreakCheckDate || currentProg.lastStreakCheckDate,
@@ -542,7 +548,19 @@ async function startServer() {
             : currentProg.loginDaysCount,
           dailyClaimed: { ...(currentProg.dailyClaimed || {}), ...(progress.dailyClaimed || {}) },
           weeklyClaimed: { ...(currentProg.weeklyClaimed || {}), ...(progress.weeklyClaimed || {}) },
-          missions: { ...(currentProg.missions || {}), ...(progress.missions || {}) },
+          // Görev ilerlemesi istemciden artırılamaz — sunucu /api/game/claim üzerinden doğrular.
+          // İstemci değeri yalnızca katalog hedefini aşmıyorsa kabul edilir (çevrimdışı ilerleme senkronu).
+          missions: (() => {
+            const merged = { ...(currentProg.missions || {}) };
+            const incoming = progress.missions || {};
+            for (const [mId, val] of Object.entries(incoming)) {
+              if (typeof val !== "number" || val < 0) continue;
+              const catalogMission = findMissionById(mId);
+              const cap = catalogMission ? catalogMission.target : (merged[mId] ?? 0);
+              merged[mId] = Math.min(Math.max(merged[mId] ?? 0, Math.min(val, cap)), cap);
+            }
+            return merged;
+          })(),
           missionsDate: progress.missionsDate || currentProg.missionsDate,
           weeklyMissionsWeek: progress.weeklyMissionsWeek || currentProg.weeklyMissionsWeek,
           seasonHistory: progress.seasonHistory || currentProg.seasonHistory,
@@ -576,7 +594,8 @@ async function startServer() {
           matches: currentProg.matches,
           // Günlük rota başarısızlığı veya kalkan yokluğunda serinin sıfırlanmasına izin verilir
           streak: typeof progress.streak === "number" ? Math.min(currentProg.streak, Math.max(0, progress.streak)) : currentProg.streak,
-          pvpWinStreak: typeof progress.pvpWinStreak === "number" ? Math.max(0, progress.pvpWinStreak) : (currentProg.pvpWinStreak ?? 0),
+          // PvP kazanma serisi istemciden şişirilemez — yalnızca sunucu mağaları artırır
+          pvpWinStreak: currentProg.pvpWinStreak ?? 0,
           // Çevrimdışı kazanılan solo seviye ilerlemesi güvenli üst sınırla (101) korunur
           soloUnlockedLevel: Math.min(101, Math.max(currentProg.soloUnlockedLevel ?? 1, typeof progress.soloUnlockedLevel === "number" ? progress.soloUnlockedLevel : 1)),
         };
@@ -713,8 +732,13 @@ async function startServer() {
   // --- SOSYAL VE ARKADAŞLIK REST ENDPOINTLERİ ---
   app.get("/api/friends/requests/:userIdOrUsername", async (req, res) => {
     try {
+      // Kimlik doğrulama: token sahibi sadece KENDİ isteklerini listeleyebilir (IDOR koruması)
+      const user = await sdk.authenticateRequest(req);
       const target = req.params.userIdOrUsername?.trim();
       if (!target) return res.status(400).json({ error: "Geçersiz parametre." });
+      if (target !== user.openId && target !== user.username) {
+        return res.status(403).json({ error: "Sadece kendi arkadaşlık isteklerinizi görebilirsiniz." });
+      }
       await connectDb();
       const requests = await getPendingFriendRequests(target);
       res.json({ requests });
@@ -725,6 +749,8 @@ async function startServer() {
 
   app.post("/api/friends/request", async (req, res) => {
     try {
+      // Kimlik doğrulama: gönderen kimlik token'dan doğrulanır (spoofing koruması)
+      const user = await sdk.authenticateRequest(req);
       const payload = z.object({
         toUsername: z.string().trim().min(1).max(64),
         fromPlayerId: z.string().trim().min(1).max(128),
@@ -734,6 +760,11 @@ async function startServer() {
 
       if (!payload.success) return res.status(400).json({ error: "Geçersiz istek parametreleri." });
       const { toUsername, fromPlayerId, fromPlayerName, profile } = payload.data;
+
+      // Token sahibi ile gönderen kimlik eşleşmeli
+      if (fromPlayerId !== user.openId) {
+        return res.status(403).json({ error: "Oyuncu kimliği bu oturuma ait değil." });
+      }
 
       if (isEqualTr(toUsername, fromPlayerName) || isEqualTr(toUsername, profile?.username)) {
         return res.status(400).json({ error: "Kendinize arkadaşlık isteği gönderemezsiniz." });
@@ -793,6 +824,8 @@ async function startServer() {
 
   app.post("/api/friends/respond", async (req, res) => {
     try {
+      // Kimlik doğrulama: yanıtlayan kimlik token'dan doğrulanır (IDOR koruması)
+      const user = await sdk.authenticateRequest(req);
       const payload = z.object({
         requestId: z.string().trim().min(1),
         action: z.enum(["accept", "reject"]),
@@ -804,9 +837,22 @@ async function startServer() {
       if (!payload.success) return res.status(400).json({ error: "Geçersiz parametreler." });
       const { requestId, action, playerId, playerName, profile } = payload.data;
 
+      // Token sahibi ile yanıtlayan kimlik eşleşmeli
+      if (playerId !== user.openId) {
+        return res.status(403).json({ error: "Oyuncu kimliği bu oturuma ait değil." });
+      }
+
       await connectDb();
       const reqDoc = await findFriendRequestById(requestId);
       if (!reqDoc) return res.status(404).json({ error: "İstek bulunamadı." });
+
+      // Sadece isteğin gerçek hedefi yanıtlayabilir ve yalnızca bekleyen istekler işlenir
+      if (reqDoc.toUserId !== playerId) {
+        return res.status(403).json({ error: "Bu isteği yanıtlama yetkiniz yok." });
+      }
+      if (reqDoc.status !== "pending") {
+        return res.status(400).json({ error: "Bu istek zaten işlenmiş." });
+      }
 
       if (action === "reject") {
         await updateFriendRequestStatus(requestId, "rejected");
@@ -922,6 +968,24 @@ async function startServer() {
         if (requestedLevel > maxVintageUnlocked) {
           return res.status(400).json({ error: "Kilitli nostalji bulmacası için ödül alınamaz." });
         }
+      }
+      // Günlük ödül doğrulaması: aynı gün yalnızca bir kez işlenir (dailyCompletedId idempotency).
+      // Çevrimdışı kazanılan dünkü ödül, kuyruk yeniden denemesinde kaybolmasın diye geçmiş tarihli dailyId'lere izin verilir;
+      // ancak sunucu bu dailyId'yi zaten işlemişse (yanıt kaybolsa bile) mükerrer ödül verilmez.
+      if (payload.data.daily) {
+        const todayId = getDayId();
+        if (payload.data.dailyId && current.dailyCompletedId === payload.data.dailyId) {
+          return res.status(409).json({ error: "Bu günlük ödülü zaten işlendi." });
+        }
+        if (payload.data.dailyId && payload.data.dailyId === todayId && current.dailyCompletedId === todayId) {
+          return res.status(409).json({ error: "Bugünün günlük ödülü zaten işlendi." });
+        }
+      }
+      // Tür bazlı makul skor üst sınırları (istemciden şişirilmiş skor engellenir)
+      const SCORE_CAPS: Record<string, number> = { solo: 5000, arcade: 50000, vintage: 20000 };
+      const scoreCap = SCORE_CAPS[payload.data.kind] ?? 5000;
+      if ((payload.data.score ?? 0) > scoreCap) {
+        return res.status(400).json({ error: "Geçersiz ödül isteği." });
       }
 
       const score = payload.data.score ?? ((payload.data.level ?? 1) * 14);
