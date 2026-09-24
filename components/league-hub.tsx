@@ -100,7 +100,7 @@ export function LeagueHub({
       {!embedded && (
         <View style={styles.header}>
           {onBack && (
-            <Pressable onPress={onBack} style={styles.backButton} hitSlop={8}>
+            <Pressable onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]} hitSlop={8}>
               <Text style={styles.backText}>‹</Text>
             </Pressable>
           )}

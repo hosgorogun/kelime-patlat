@@ -212,7 +212,7 @@ function deaccent(str: string): string {
     .replace(/ö/gi, "o")
     .replace(/ş/gi, "s")
     .replace(/ü/gi, "u")
-    .toLowerCase();
+    .toLocaleLowerCase("tr-TR");
 }
 
 export type WordDetail = {

@@ -240,13 +240,13 @@ export function CommandCenter({
               )}
             </View>
             <View style={styles.identityMeta}>
-              <Text numberOfLines={1} style={styles.name}>{playerName}</Text>
-              <View style={styles.rankRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text numberOfLines={1} style={[styles.name, { flexShrink: 1 }]}>{playerName}</Text>
                 <View style={styles.titlePill}>
                   <Text numberOfLines={1} style={styles.cyberBadge}>{getActiveCyberTitle(progress)}</Text>
                 </View>
-                <Text numberOfLines={1} style={styles.rank}>Sv. {getPlayerLevel(progress.xp)} · {rank}</Text>
               </View>
+              <Text numberOfLines={1} style={styles.rank}>Sv. {getPlayerLevel(progress.xp)} · {rank}</Text>
             </View>
           </Pressable>
 
@@ -645,13 +645,13 @@ const styles = StyleSheet.create({
   name: { color: palette.cream, fontSize: 13, fontWeight: "900", letterSpacing: 0.2 },
   rankRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 },
   titlePill: {
-    maxWidth: "46%",
     backgroundColor: "rgba(244, 208, 111, 0.16)",
     borderWidth: 1,
     borderColor: "rgba(244, 208, 111, 0.45)",
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 8,
+    flexShrink: 1,
   },
   cyberBadge: { color: palette.gold, fontSize: 8, fontWeight: "900", letterSpacing: 0.4 },
   rank: { flexShrink: 1, color: palette.mutedGold, fontSize: 10, fontWeight: "900", letterSpacing: 0.3 },

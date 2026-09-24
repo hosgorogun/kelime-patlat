@@ -176,6 +176,7 @@ export function SoloChallenge({
   }, [radarChargesBonus]);
 
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
+  const [comboStreak, setComboStreak] = useState<number>(0);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{
     word: string;
@@ -555,9 +556,12 @@ export function SoloChallenge({
     const isCombo = lastTime > 0 && (now - lastTime < 8000);
     lastWordTimeRef.current = now;
 
-    const bonus = isCombo ? 8 : 4;
+    const nextStreak = isCombo ? comboStreak + 1 : 1;
+    setComboStreak(nextStreak);
+
+    const bonus = isCombo ? Math.min(12, 4 + nextStreak * 2) : 4;
     setSeconds((s) => Math.min(challenge.timeLimit, s + bonus));
-    setTimeBonusText(isCombo ? `+${bonus}s 🔥 KOMBO!` : `+${bonus}s`);
+    setTimeBonusText(nextStreak >= 2 ? `🔥 ATEŞLİ KOMBO x${nextStreak}! +${bonus}s` : `+${bonus}s`);
     const bonusTextTimer = setTimeout(() => setTimeBonusText(null), 1500);
     particleTimers.current.push(bonusTextTimer);
 
@@ -634,6 +638,10 @@ export function SoloChallenge({
       }
       return;
     }
+    // Eğer bölüm daha önce kazanılmadan yenileniyorsa 1 can kaybettir
+    if (status === "lost") {
+      onCompleteRef.current(levelRef.current, foundRef.current, false);
+    }
     triggerHapticSelection();
     const nextVariation = variation + 1;
     const nextBoard = createSoloBoard(level, nextVariation, theme, excludeWords);
@@ -653,6 +661,7 @@ export function SoloChallenge({
     submitted.current = false;
     hasFinishedRef.current = false;
     setTimeBonusText(null);
+    setComboStreak(0);
     setSelectedWordInfo(null);
     setCountdown(3);
     setRadarCooldown(0);
@@ -796,7 +805,16 @@ export function SoloChallenge({
         <Text style={{ fontSize: 13 }}>⏸️</Text>
       </Pressable>
     </View>
-    <View style={styles.progress}><Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text><Text style={[styles.progressMeta, { color: activeTheme.headerText }]}>{challenge.subtitle}</Text></View>
+    <View style={styles.progress}>
+      <Text style={styles.progressLabel}>{found.length} / {challenge.words.length} KELİME</Text>
+      {comboStreak >= 2 ? (
+        <View style={{ backgroundColor: "rgba(245, 158, 11, 0.25)", borderWidth: 1, borderColor: "#F59E0B", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Text style={{ fontSize: 11 }}>🔥</Text>
+          <Text style={{ color: "#FBBF24", fontSize: 10, fontWeight: "900" }}>ATEŞLİ KOMBO x{comboStreak}</Text>
+        </View>
+      ) : null}
+      <Text style={[styles.progressMeta, { color: activeTheme.headerText }]}>{challenge.subtitle}</Text>
+    </View>
     <Animated.View
       ref={boardRef}
       onLayout={measureBoard}
@@ -1452,7 +1470,7 @@ const styles = StyleSheet.create({
   chestSuccessReward: { color: "#FFF9FC", fontSize: 9, fontWeight: "900", letterSpacing: 0.4, textAlign: "center", marginTop: 6 },
   pauseBtn: { width: 35, height: 35, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center", marginLeft: 6 },
   pauseOverlay: { flex: 1, backgroundColor: "rgba(4, 17, 12, 0.92)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
-  pauseCard: { width: "100%", maxWidth: 360, backgroundColor: "#0E2C22", borderWidth: 1.5, borderColor: "#C9A227", borderRadius: 24, padding: 24, alignItems: "center" },
+  pauseCard: { width: "100%", maxWidth: 360, maxHeight: "85%", backgroundColor: "#0E2C22", borderWidth: 1.5, borderColor: "#C9A227", borderRadius: 24, padding: 24, alignItems: "center", overflow: "hidden" },
   pauseTitle: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 1, marginBottom: 8 },
   pauseSub: { color: "#8FBAAB", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
   resumeBtn: { width: "100%", height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 10 },

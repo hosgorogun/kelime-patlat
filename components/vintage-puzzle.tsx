@@ -182,6 +182,7 @@ export function VintagePuzzle({
   const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
 
   const [score, setScore] = useState(() => vintageProgress?.score ?? 0);
+  const [boardSwapCount, setBoardSwapCount] = useState(1);
   const [isLevelComplete, setIsLevelComplete] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -357,20 +358,9 @@ export function VintagePuzzle({
   }, []);
 
   useEffect(() => {
+    setBoardSwapCount(1);
     loadNewPuzzleForLevel(levelIndex);
   }, [levelIndex, loadNewPuzzleForLevel]);
-
-  // Seviyeyi Sıfırla / Baştan Başla
-  const handleResetLevel = useCallback(() => {
-    triggerHapticSelection();
-    playSelectionNote(0);
-    const hasPlacedTiles = playerBoard.some((row) => row.some((cell) => cell !== null));
-    if (hasPlacedTiles || solvedWordIds.size > 0) {
-      setShowResetModal(true);
-    } else {
-      loadNewPuzzleForLevel(levelIndex);
-    }
-  }, [levelIndex, loadNewPuzzleForLevel, playerBoard, solvedWordIds]);
 
   // Hata Uyarısı
   const triggerError = useCallback(
@@ -387,6 +377,23 @@ export function VintagePuzzle({
     },
     [shakeAnim]
   );
+
+  // Seviyeyi Sıfırla / Baştan Başla (Seviye başına 1 tahta değiştirme hakkı)
+  const handleResetLevel = useCallback(() => {
+    triggerHapticSelection();
+    playSelectionNote(0);
+    const hasPlacedTiles = playerBoard.some((row) => row.some((cell) => cell !== null));
+    if (hasPlacedTiles || solvedWordIds.size > 0) {
+      setShowResetModal(true);
+    } else {
+      if (boardSwapCount <= 0) {
+        triggerError("Bu bölümde tahta değiştirme hakkınızı kullandınız! (Maks: 1)");
+        return;
+      }
+      setBoardSwapCount((prev) => Math.max(0, prev - 1));
+      loadNewPuzzleForLevel(levelIndex);
+    }
+  }, [levelIndex, loadNewPuzzleForLevel, playerBoard, solvedWordIds, boardSwapCount, triggerError]);
 
   const isCellLocked = useCallback(
     (r: number, c: number, solvedIds: Set<string>) => {
@@ -887,7 +894,7 @@ export function VintagePuzzle({
             <Text style={styles.hintBtnText}>💡 {VINTAGE_HINT_COST}</Text>
           </Pressable>
           <Pressable onPress={handleResetLevel} style={styles.resetBtn}>
-            <Text style={styles.resetBtnText}>🔄</Text>
+            <Text style={styles.resetBtnText}>🔄 [{boardSwapCount}]</Text>
           </Pressable>
           <View style={styles.scorePill}>
             <Text style={styles.scoreText}>🪙 {coins !== undefined ? coins : score}</Text>
@@ -1124,6 +1131,11 @@ export function VintagePuzzle({
             text: "SIFIRLA",
             onPress: () => {
               setShowResetModal(false);
+              if (boardSwapCount <= 0) {
+                triggerError("Bu bölümde tahta değiştirme hakkınızı kullandınız! (Maks: 1)");
+                return;
+              }
+              setBoardSwapCount((prev) => Math.max(0, prev - 1));
               loadNewPuzzleForLevel(levelIndex);
             },
           },
@@ -1487,20 +1499,25 @@ const styles = StyleSheet.create({
     borderColor: "#F59E0B",
   },
   gridCellCenterWord: {
-    backgroundColor: "#FDE68A",
-    borderColor: "#D97706",
+    backgroundColor: "#FCD34D",
+    borderColor: "#B45309",
+    shadowColor: "#F59E0B",
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 4,
   },
   gridCellPlaced: {
-    backgroundColor: "#A7F3D0",
-    borderColor: "#059669",
+    backgroundColor: "#6EE7B7",
+    borderColor: "#047857",
   },
   gridCellDraft: {
     backgroundColor: "#FFFFFF",
     borderColor: "#8C7A6B",
   },
   gridCellCompleted: {
-    backgroundColor: "#D1FAE5",
+    backgroundColor: "#A7F3D0",
     borderColor: "#059669",
+    borderWidth: 2,
   },
   gridCellTargetWord: {
     backgroundColor: "#FFFBEB",

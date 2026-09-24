@@ -130,6 +130,8 @@ export type VintageProgress = {
 export type GenderType = "male" | "female" | "unspecified";
 
 
+export type ChestType = "bronze_chest" | "silver_chest" | "gold_chest" | "cyber_chest" | "legendary_chest" | "mythic_chest";
+
 export type MilestoneReward = {
   level: number;
   title: string;
@@ -137,15 +139,22 @@ export type MilestoneReward = {
   shields: number;
   xp: number;
   desc: string;
+  chestType: ChestType;
+  icon: string;
+  accent: string;
+  badge: string;
+  badgeId: string;
+  badgeTitle: string;
+  badgeIcon: string;
 };
 
 export const MILESTONE_REWARDS: MilestoneReward[] = [
-  { level: 15, title: "4×4 MEZUNİYETİ", coins: 20, shields: 1, xp: 150, desc: "Mini siber ağı tamamladın!" },
-  { level: 30, title: "SİBER ROTA SANDIĞI", coins: 35, shields: 1, xp: 200, desc: "Orta hat operasyon başarısı!" },
-  { level: 45, title: "6×6 USTALIK SANDIĞI", coins: 50, shields: 2, xp: 300, desc: "6×6 geniş ağı fethettin!" },
-  { level: 60, title: "DERİN SİBER KASASI", coins: 75, shields: 2, xp: 400, desc: "Büyük 8×8 operasyon ödülü!" },
-  { level: 75, title: "8×8 EFSANE SANDIĞI", coins: 100, shields: 2, xp: 500, desc: "Devasa ızgarayı aştın!" },
-  { level: 100, title: "KOZMİK ŞAMPİYON TACI", coins: 150, shields: 3, xp: 1000, desc: "100 seviyenin mutlak galibi!" },
+  { level: 15, title: "BRONZ SİBER SANDIK", coins: 20, shields: 1, xp: 150, desc: "Seviye 15 mini siber ağ ödülü!", chestType: "bronze_chest", icon: "📦", accent: "#CD7F32", badge: "BRONZ SANDIK", badgeId: "badge-lvl-15", badgeTitle: "4×4 BRONZ MİMAR", badgeIcon: "🥉" },
+  { level: 30, title: "GÜMÜŞ SİBER SANDIK", coins: 35, shields: 1, xp: 200, desc: "Seviye 30 orta hat hiyerarşi ödülü!", chestType: "silver_chest", icon: "🧰", accent: "#E0E0E0", badge: "GÜMÜŞ SANDIK", badgeId: "badge-lvl-30", badgeTitle: "GÜMÜŞ AĞ UZMANI", badgeIcon: "🥈" },
+  { level: 45, title: "ALTIN USTALIK SANDIĞI", coins: 50, shields: 2, xp: 300, desc: "Seviye 45 geniş ağ ustalık ödülü!", chestType: "gold_chest", icon: "🎁", accent: "#FFD700", badge: "ALTIN SANDIK", badgeId: "badge-lvl-45", badgeTitle: "6×6 ALTIN USTA", badgeIcon: "🥇" },
+  { level: 60, title: "SİBER KRİSTAL SANDIK", coins: 75, shields: 2, xp: 400, desc: "Seviye 60 derin ağ operasyon ödülü!", chestType: "cyber_chest", icon: "🗃️", accent: "#00E5FF", badge: "SİBER SANDIK", badgeId: "badge-lvl-60", badgeTitle: "DERİN AĞ KRİSTALİ", badgeIcon: "💎" },
+  { level: 75, title: "EFSANEVİ SİBER SANDIK", coins: 100, shields: 2, xp: 500, desc: "Seviye 75 devasa ızgara ödülü!", chestType: "legendary_chest", icon: "🔮", accent: "#A855F7", badge: "EFSANEVİ SANDIK", badgeId: "badge-lvl-75", badgeTitle: "EFSANEVİ HÂKİM", badgeIcon: "🔮" },
+  { level: 100, title: "KOZMİK ŞAMPİYON SANDIĞI", coins: 150, shields: 3, xp: 1000, desc: "Seviye 100 mutlak şampiyonluk ödülü!", chestType: "mythic_chest", icon: "👑", accent: "#FF1493", badge: "KOZMİK SANDIK", badgeId: "badge-lvl-100", badgeTitle: "KOZMİK İMPARATOR", badgeIcon: "👑" },
 ];
 
 export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string; unlockHint: string };
@@ -325,6 +334,13 @@ export function badgesFor(progress: PlayerProgress): Badge[] {
     { id: "tempo-beast", title: "FIRTINA TEMPO", description: "Dakikada en az 4 kelime temposuna ulaş.", icon: "🌪️", accent: "#06B6D4", unlocked: (progress.bestTempo || 0) >= 4 },
     { id: "word-hoarder", title: "SÖZLÜK EFENDİSİ", description: "Toplam 50 kelime çöz.", icon: "📖", accent: "#10B981", unlocked: wordsCount >= 50 },
     { id: "rich-operator", title: "KOZMİK ZENGİN", description: "Kasanı 200 çipe ulaştır.", icon: "🪙", accent: "#F59E0B", unlocked: (progress.coins || 0) >= 200 },
+    // Level Milestone Achievement Badges (Earned from Level Chests)
+    { id: "badge-lvl-15", title: "4×4 BRONZ MİMAR", description: "Seviye 15 Siber Harita Sandığı ödülü.", icon: "🥉", accent: "#CD7F32", unlocked: (progress.xp ?? 0) >= 15 * 200 || Boolean(progress.missions?.["badge-lvl-15"]) },
+    { id: "badge-lvl-30", title: "GÜMÜŞ AĞ UZMANI", description: "Seviye 30 Siber Harita Sandığı ödülü.", icon: "🥈", accent: "#E0E0E0", unlocked: (progress.xp ?? 0) >= 30 * 200 || Boolean(progress.missions?.["badge-lvl-30"]) },
+    { id: "badge-lvl-45", title: "6×6 ALTIN USTA", description: "Seviye 45 Siber Harita Sandığı ödülü.", icon: "🥇", accent: "#FFD700", unlocked: (progress.xp ?? 0) >= 45 * 200 || Boolean(progress.missions?.["badge-lvl-45"]) },
+    { id: "badge-lvl-60", title: "DERİN AĞ KRİSTALİ", description: "Seviye 60 Siber Harita Sandığı ödülü.", icon: "💎", accent: "#00E5FF", unlocked: (progress.xp ?? 0) >= 60 * 200 || Boolean(progress.missions?.["badge-lvl-60"]) },
+    { id: "badge-lvl-75", title: "EFSANEVİ HÂKİM", description: "Seviye 75 Siber Harita Sandığı ödülü.", icon: "🔮", accent: "#A855F7", unlocked: (progress.xp ?? 0) >= 75 * 200 || Boolean(progress.missions?.["badge-lvl-75"]) },
+    { id: "badge-lvl-100", title: "KOZMİK İMPARATOR", description: "Seviye 100 Siber Harita Sandığı ödülü.", icon: "👑", accent: "#FF1493", unlocked: (progress.xp ?? 0) >= 100 * 200 || Boolean(progress.missions?.["badge-lvl-100"]) },
   ];
 }
 
@@ -645,6 +661,8 @@ export function applyMatchProgress(
 
   const updatedMatchHistory = [matchHistoryItem, ...(progress.matchHistory || [])].slice(0, 50);
 
+  const effectiveLpChange = isFriend ? 0 : (nextLp - currentLp);
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
@@ -661,7 +679,7 @@ export function applyMatchProgress(
     matchHistory: updatedMatchHistory,
     lastMatchReward: {
       xp: xpGain,
-      lp: lpGain,
+      lp: effectiveLpChange,
       coins: coinsEarned,
       streakBonus,
       pvpWinStreak: type === "pvp" && !isFriend ? pvpWinStreak : undefined,

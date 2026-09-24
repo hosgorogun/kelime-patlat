@@ -95,4 +95,24 @@ describe("Kelime Patlat tahta kuralları", () => {
     expect(wordScoreMultiplier(7)).toBe(3);
     expect(wordScoreMultiplier(12)).toBe(3);
   });
+
+  it("getDifficultyProfile seviye zorluk profillerini (1-100) doğru sınırlarla döndürmelidir", async () => {
+    const { getDifficultyProfile } = await import("../shared/difficulty");
+    const p1 = getDifficultyProfile(1);
+    expect(p1.size).toBe(4);
+    expect(p1.wordCount).toBe(3);
+
+    const p20 = getDifficultyProfile(20);
+    expect(p20.size).toBe(6);
+
+    const p50 = getDifficultyProfile(50);
+    expect(p50.size).toBe(8);
+
+    const p100 = getDifficultyProfile(100);
+    expect(p100.size).toBe(10);
+
+    // Taşma/Uç değer güvenliği (Clamp 1-100)
+    expect(getDifficultyProfile(-10).size).toBe(4);
+    expect(getDifficultyProfile(999).size).toBe(10);
+  });
 });

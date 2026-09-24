@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { monetizationManager } from "@/shared/monetization";
 import { gameSfx, triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { getCalculatedLives, MAX_LIVES, getPlayerLevel, getDayId, type PlayerProgress } from "@/shared/progression";
-import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "@/shared/store-items";
+import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS, STORE_ASSETS } from "@/shared/store-items";
 
 const DAILY_AD_LIMIT = 3;
 
@@ -415,7 +415,11 @@ export function CyberStore({
             <View key={item.id} style={[styles.productCard, { borderColor: `${accentColor}40` }]}>
               {/* Realistic Cyber Emblem */}
               <View style={[styles.productIconWrap, { borderColor: accentColor, backgroundColor: `${accentColor}18` }]}>
-                <Text style={styles.productIcon}>{item.icon}</Text>
+                {item.imageKey && STORE_ASSETS[item.imageKey] ? (
+                  <Image source={STORE_ASSETS[item.imageKey]} style={{ width: 48, height: 48, borderRadius: 12 }} resizeMode="cover" />
+                ) : (
+                  <Text style={styles.productIcon}>{item.icon}</Text>
+                )}
                 <View style={[styles.productEmblemDot, { backgroundColor: accentColor }]} />
               </View>
               <View style={styles.productInfo}>
@@ -538,7 +542,7 @@ export function CyberStore({
             <Text style={styles.sectionSubHeader}>BİTİRİŞ PATLAMASI</Text>
           </View>
           <View style={styles.cosmeticGrid}>
-            {VICTORY_EFFECTS.map(([id, label, glyph, cost]) => {
+            {VICTORY_EFFECTS.map(([id, label, glyph, cost, imageKey]) => {
               const owned = Boolean(progress?.ownedVictoryEffects?.[id]) || cost === 0;
               const isSelected = progress?.selectedVictoryEffect === id;
 
@@ -551,7 +555,6 @@ export function CyberStore({
               };
               const meta = VICTORY_META[id] || { color: "#FFC24A", emoji: glyph || "🔥" };
               const themeColor = meta.color;
-              const centerEmoji = meta.emoji;
 
               return (
                 <Pressable
@@ -564,12 +567,17 @@ export function CyberStore({
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  {/* Efekt önizleme kutusu */}
+                  {/* Efekt önizleme kutusu (3D Üretilen Görsel) */}
                   <View style={[styles.cosmeticEffectBox, {
                     borderColor: `${themeColor}70`,
                     backgroundColor: `${themeColor}12`,
+                    overflow: "hidden"
                   }]}>
-                    <Text style={{ fontSize: 28 }}>{centerEmoji}</Text>
+                    {imageKey && STORE_ASSETS[imageKey] ? (
+                      <Image source={STORE_ASSETS[imageKey]} style={{ width: "100%", height: "100%", borderRadius: 12 }} resizeMode="cover" />
+                    ) : (
+                      <Text style={{ fontSize: 28 }}>{meta.emoji}</Text>
+                    )}
                     <View style={{
                       position: "absolute", bottom: 0, left: 0, right: 0, height: 3,
                       backgroundColor: themeColor, opacity: 0.5,
@@ -598,7 +606,7 @@ export function CyberStore({
             <Text style={styles.sectionSubHeader}>MATRİS TASARIMI</Text>
           </View>
           <View style={styles.cosmeticGrid}>
-            {BOARD_SKINS.map(([id, label, color, cost]) => {
+            {BOARD_SKINS.map(([id, label, color, cost, imageKey]) => {
               const owned = Boolean(progress?.ownedBoardSkins?.[id]) || cost === 0;
               const isSelected = progress?.selectedBoardSkin === id;
               const isGrid = id === "grid";
@@ -615,22 +623,26 @@ export function CyberStore({
                     pressed && { opacity: 0.8 },
                   ]}
                 >
-                  {/* Realistic Mini Board Matrix View */}
-                  <View style={[styles.realisticBoardWrap, { borderColor: color, backgroundColor: isGrid ? "#0A1F26" : isNight ? "#141539" : "#2B111F" }]}>
-                    <View style={styles.miniBoardGrid}>
-                      <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}20` }]}>
-                        <Text style={[styles.miniCellText, { color }]}>K</Text>
+                  {/* Realistic Mini Board Matrix View (3D Üretilen Görsel) */}
+                  <View style={[styles.realisticBoardWrap, { borderColor: color, backgroundColor: isGrid ? "#0A1F26" : isNight ? "#141539" : "#2B111F", overflow: "hidden" }]}>
+                    {imageKey && STORE_ASSETS[imageKey] ? (
+                      <Image source={STORE_ASSETS[imageKey]} style={{ width: "100%", height: "100%", borderRadius: 12 }} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.miniBoardGrid}>
+                        <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}20` }]}>
+                          <Text style={[styles.miniCellText, { color }]}>K</Text>
+                        </View>
+                        <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}35` }]}>
+                          <Text style={[styles.miniCellText, { color }]}>P</Text>
+                        </View>
+                        <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}20` }]}>
+                          <Text style={[styles.miniCellText, { color }]}>⚡</Text>
+                        </View>
+                        <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}50` }]}>
+                          <Text style={[styles.miniCellText, { color: "#FFF" }]}>✦</Text>
+                        </View>
                       </View>
-                      <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}35` }]}>
-                        <Text style={[styles.miniCellText, { color }]}>P</Text>
-                      </View>
-                      <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}20` }]}>
-                        <Text style={[styles.miniCellText, { color }]}>⚡</Text>
-                      </View>
-                      <View style={[styles.miniCell, { borderColor: `${color}60`, backgroundColor: `${color}50` }]}>
-                        <Text style={[styles.miniCellText, { color: "#FFF" }]}>✦</Text>
-                      </View>
-                    </View>
+                    )}
                   </View>
 
                   <Text numberOfLines={1} style={[styles.cosmeticCardName, { color }]}>{label}</Text>
@@ -653,7 +665,7 @@ export function CyberStore({
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, paddingHorizontal: 0, paddingTop: 4, paddingBottom: 185 },
+  container: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 185 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   backButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#0A241C", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF", fontSize: 26, lineHeight: 28 },

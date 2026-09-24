@@ -255,6 +255,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     width: "100%",
     maxWidth: 380,
+    maxHeight: "88%",
     backgroundColor: "#0E2C22",
     borderRadius: 24,
     borderWidth: 1.5,
@@ -266,6 +267,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.55,
     shadowRadius: 20,
     elevation: 10,
+    overflow: "hidden",
   },
   accentLine: {
     position: "absolute",

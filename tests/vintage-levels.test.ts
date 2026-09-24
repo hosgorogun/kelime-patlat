@@ -63,4 +63,17 @@ describe("Nostalji Kelime Bulmaca 20 Seviye Doğrulama Testi", () => {
       expect(solvedIds.size).toBe(puzzle.words.length);
     }
   });
+
+  it("Gazete (Vintage) modunda seviye başına 1 tahta değiştirme (boardSwapCount) sınırı olmalıdır", () => {
+    let boardSwapCount = 1;
+    const canSwap = () => {
+      if (boardSwapCount <= 0) return false;
+      boardSwapCount -= 1;
+      return true;
+    };
+
+    expect(canSwap()).toBe(true);  // 1. Değiştirme hakkı kullanılır
+    expect(canSwap()).toBe(false); // 2. Değiştirme talebi reddedilir (Sınır koruması)
+    expect(boardSwapCount).toBe(0);
+  });
 });

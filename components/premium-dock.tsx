@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { ICONS } from "@/components/game-ui";
 import { palette } from "@/shared/palette";
+import { STORE_ASSETS } from "@/shared/store-items";
 
 export type DockDestination = "store" | "missions" | "home" | "season" | "profile";
 
@@ -21,14 +22,18 @@ export function PremiumDock({
     <View style={styles.dockWrap}>
       <LinearGradient colors={["#0F382B", "#0A281E", "#051610"]} style={styles.dock}>
         <DockTab
-          emoji="🛒"
+          imageKey="lives"
+          iconSource={ICONS.coin}
+          fallbackEmoji="🛍️"
           label="MAĞAZA"
           active={active === "store"}
           badgeCount={storeBadgeCount}
           onPress={() => onNavigate("store")}
         />
         <DockTab
-          emoji="📜"
+          imageKey="radar"
+          iconSource={ICONS.radar}
+          fallbackEmoji="🎯"
           label="GÖREVLER"
           active={active === "missions"}
           badgeCount={missionsBadgeCount}
@@ -48,13 +53,16 @@ export function PremiumDock({
         </Pressable>
 
         <DockTab
-          emoji="🏆"
+          imageKey="shield"
+          iconSource={ICONS.trophy}
+          fallbackEmoji="🏆"
           label="LİG"
           active={active === "season"}
           onPress={() => onNavigate("season")}
         />
         <DockTab
-          emoji="👤"
+          imageKey="xp"
+          fallbackEmoji="👤"
           label="PROFİL"
           active={active === "profile"}
           onPress={() => onNavigate("profile")}
@@ -65,18 +73,24 @@ export function PremiumDock({
 }
 
 function DockTab({
-  emoji,
+  imageKey,
+  iconSource,
+  fallbackEmoji,
   label,
   active,
   onPress,
   badgeCount,
 }: {
-  emoji: string;
+  imageKey?: string;
+  iconSource?: any;
+  fallbackEmoji: string;
   label: string;
   active: boolean;
   onPress: () => void;
   badgeCount?: number;
 }) {
+  const assetSource = imageKey && STORE_ASSETS[imageKey] ? STORE_ASSETS[imageKey] : null;
+
   return (
     <Pressable
       onPress={onPress}
@@ -84,7 +98,13 @@ function DockTab({
     >
       <View style={styles.iconBox}>
         <View style={[styles.iconBubble, active && styles.iconBubbleActive]}>
-          <Text style={[styles.icon, active && styles.iconActive]}>{emoji}</Text>
+          {assetSource ? (
+            <Image source={assetSource} style={styles.dockImage} resizeMode="cover" />
+          ) : iconSource ? (
+            <Image source={iconSource} style={styles.dockIconImage} resizeMode="contain" />
+          ) : (
+            <Text style={[styles.icon, active && styles.iconActive]}>{fallbackEmoji}</Text>
+          )}
         </View>
         {badgeCount !== undefined && badgeCount > 0 && (
           <View style={styles.tabBadge}>
@@ -118,7 +138,7 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   dock: {
-    height: 74,
+    height: 76,
     borderRadius: 25,
     overflow: "visible",
     paddingHorizontal: 6,
@@ -142,34 +162,43 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   iconBox: {
-    height: 28,
+    height: 34,
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
   },
   iconBubble: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 36, 28, 0.9)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    backgroundColor: "rgba(10, 36, 28, 0.95)",
+    borderWidth: 1.5,
+    borderColor: "rgba(62, 232, 181, 0.3)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.4,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: "hidden",
+  },
+  dockImage: {
+    width: "100%",
+    height: "100%",
+  },
+  dockIconImage: {
+    width: 22,
+    height: 22,
   },
   iconBubbleActive: {
     backgroundColor: "rgba(62, 232, 181, 0.28)",
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: "#3EE8B5",
     shadowColor: "#3EE8B5",
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 6,
   },
   tabBadge: {
     position: "absolute",

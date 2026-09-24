@@ -91,7 +91,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
   it("başarı rozetlerinin kilit açılma şartlarını doğru değerlendirir", () => {
     const fresh = badgesFor(DEFAULT_PROGRESS);
     expect(fresh.every((b) => !b.unlocked)).toBe(true);
-    expect(fresh.length).toBe(18);
+    expect(fresh.length).toBe(24);
 
     const advanced = badgesFor({
       ...DEFAULT_PROGRESS,
@@ -99,7 +99,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
       wins: 25,
       streak: 14,
       bestArcadeScore: 1000,
-      xp: 2000,
+      xp: 20000,
       bestTempo: 4.2,
       coins: 250,
       history: new Array(50).fill("TEST"),
@@ -125,7 +125,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(rookieBadges.every((badge) => !badge.unlocked)).toBe(true);
     const seasoned = {
       ...DEFAULT_PROGRESS,
-      xp: 2000,
+      xp: 20000,
       bestArcadeScore: 1000,
       matches: 25,
       wins: 25,

@@ -702,9 +702,25 @@ export function ArcadeChallenge({
 
   return (
     <View style={{ flex: 1, backgroundColor: "#06140F" }}>
+      {/* Pulsing Red Vignette for Urgent Time (seconds <= 8) */}
+      {isUrgent && status === "playing" && (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderWidth: 8,
+              borderColor: "rgba(239, 68, 68, 0.65)",
+              zIndex: 99,
+            },
+          ]}
+        />
+      )}
       <ScrollView contentContainerStyle={styles.content} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-      <Pressable onPress={handleExitPress} style={styles.exit}><Text style={styles.exitText}>‹</Text></Pressable>
+      <Pressable onPress={handleExitPress} style={({ pressed }) => [styles.exit, pressed && { opacity: 0.7 }]}>
+        <Text style={styles.exitText}>‹</Text>
+      </Pressable>
       <View style={{ flex: 1, marginHorizontal: 8, minWidth: 0 }}>
         <Text numberOfLines={1} style={styles.kicker}>ARCADE MODU</Text>
         <Text numberOfLines={1} style={styles.title}>ZAMANA KARŞI HÜCUM</Text>
@@ -896,7 +912,9 @@ export function ArcadeChallenge({
                 elevation: 6,
               },
               isSelected && styles.cellSelected,
+              isSelected && { transform: [{ scale: 1.15 }] },
               isTail && styles.cellTail,
+              isTail && { transform: [{ scale: 1.20 }] },
               feedback === "invalid" && isSelected && styles.cellInvalid,
               feedback === "accepted" && isSelected && styles.cellAccepted
             ]}>
@@ -1293,7 +1311,7 @@ const styles = StyleSheet.create({
   arcadeRewardText: { color: "#3EE8B5", fontSize: 11, fontWeight: "900" },
   pauseBtn: { width: 35, height: 35, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255, 208, 0, 0.4)", backgroundColor: "rgba(255, 208, 0, 0.12)", alignItems: "center", justifyContent: "center", marginLeft: 6 },
   pauseOverlay: { flex: 1, backgroundColor: "rgba(4, 17, 12, 0.92)", alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
-  pauseCard: { width: "100%", maxWidth: 360, backgroundColor: "#0E2C22", borderWidth: 1.5, borderColor: "#FFD000", borderRadius: 24, padding: 24, alignItems: "center" },
+  pauseCard: { width: "100%", maxWidth: 360, maxHeight: "85%", backgroundColor: "#0E2C22", borderWidth: 1.5, borderColor: "#FFD000", borderRadius: 24, padding: 24, alignItems: "center", overflow: "hidden" },
   pauseTitle: { color: "#FFF9FC", fontSize: 18, fontWeight: "900", letterSpacing: 1, marginBottom: 8 },
   pauseSub: { color: "#8FBAAB", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
   resumeBtn: { width: "100%", height: 46, borderRadius: 14, backgroundColor: "#FFD000", alignItems: "center", justifyContent: "center", marginBottom: 10 },

@@ -79,6 +79,7 @@ export function SeasonHub({
   const [friendsSubTab, setFriendsSubTab] = useState<"friends" | "requests">("friends");
   const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
   const [rankingType, setRankingType] = useState<RankingType>("lp");
+  const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
   const [friendInput, setFriendInput] = useState("");
   const [friendsList, setFriendsList] = useState<FriendUser[]>(() => socialManager.getFriends());
   const [pendingRequestsList, setPendingRequestsList] = useState<FriendRequest[]>(() => pendingRequests || socialManager.getPendingRequests());
@@ -585,7 +586,7 @@ export function SeasonHub({
                 {/* 2nd Place */}
                 {top2 && (
                   <Pressable
-                    style={[styles.podiumColumn, styles.podiumCol2]}
+                    style={({ pressed }) => [styles.podiumColumn, styles.podiumCol2, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
                     onPress={() => {
                       triggerHapticSelection();
                       onInspectUser?.(top2);
@@ -621,7 +622,7 @@ export function SeasonHub({
                 {/* 1st Place (Center, Tallest) */}
                 {top1 && (
                   <Pressable
-                    style={[styles.podiumColumn, styles.podiumCol1]}
+                    style={({ pressed }) => [styles.podiumColumn, styles.podiumCol1, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
                     onPress={() => {
                       triggerHapticSelection();
                       onInspectUser?.(top1);
@@ -658,7 +659,7 @@ export function SeasonHub({
                 {/* 3rd Place */}
                 {top3 && (
                   <Pressable
-                    style={[styles.podiumColumn, styles.podiumCol3]}
+                    style={({ pressed }) => [styles.podiumColumn, styles.podiumCol3, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
                     onPress={() => {
                       triggerHapticSelection();
                       onInspectUser?.(top3);
@@ -701,94 +702,136 @@ export function SeasonHub({
             </View>
 
             <View style={styles.board}>
-              {(displayedLeaderboard.length >= 3 ? restOfLeaderboard : displayedLeaderboard).length ? (
-                (displayedLeaderboard.length >= 3 ? restOfLeaderboard : displayedLeaderboard).map((entry, sliceIdx) => {
-                  const index = displayedLeaderboard.length >= 3 ? sliceIdx + 3 : sliceIdx;
-                  const winRate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
-                  const isUser = entry.id === playerId;
-                  const tierColor = getTierColor(entry.tier);
-                  const displayLp = entry.lp ?? (entry.tier ? getMinLpForTier(entry.tier) : 0);
+              {(() => {
+                const effectivePool = displayedLeaderboard.length >= 3 ? restOfLeaderboard : displayedLeaderboard;
+                const isPodiumActive = displayedLeaderboard.length >= 3;
+                const initialVisibleCount = isPodiumActive ? 4 : 7;
+                const visiblePool = showAllLeaderboard ? effectivePool : effectivePool.slice(0, initialVisibleCount);
+                const hiddenCount = effectivePool.length - visiblePool.length;
+
+                if (!effectivePool.length) {
                   return (
-                    <Pressable
-                      key={entry.id}
-                      style={({ pressed }) => [styles.row, isUser && styles.rowUser, pressed && { opacity: 0.75 }]}
-                      onPress={() => {
-                        triggerHapticSelection();
-                        onInspectUser?.(entry);
-                      }}
-                    >
-                      <View style={styles.position}>
-                        <Text style={styles.positionText}>
-                          {index + 1}
-                        </Text>
-                      </View>
-                      <View style={styles.playerMark}>
-                        {entry.avatarPhoto ? (
-                          <Image source={{ uri: entry.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 10 }} resizeMode="cover" />
-                        ) : (
-                          <Text style={styles.playerMarkText}>
-                            {entry.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
-                          </Text>
-                        )}
-                      </View>
-                      <View style={styles.playerCopy}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                          <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#3EE8B5" }]}>
-                            {entry.name}
-                          </Text>
-                          {isUser && (
-                            <View style={styles.userSelfTag}>
-                              <Text style={styles.userSelfTagText}>SEN</Text>
-                            </View>
-                          )}
-                          {entry.tier && (
-                            <View style={[styles.rowTierBadge, { borderColor: tierColor }]}>
-                              <Text style={[styles.rowTierText, { color: tierColor }]}>{entry.tier}</Text>
-                            </View>
-                          )}
-                        </View>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
-                          <Text style={styles.playerMeta}>
-                            {entry.wins}/{entry.matches} Galibiyet
-                          </Text>
-                          {entry.matches > 0 && (
-                            <View style={[styles.winRateBadge, winRate >= 50 ? styles.winRateHigh : styles.winRateNormal]}>
-                              <Text style={styles.winRateText}>%{winRate}</Text>
-                            </View>
-                          )}
-                          <Text style={styles.playerMeta}>· En İyi: {entry.bestRound}</Text>
-                        </View>
-                      </View>
-                      <View style={{ alignItems: "flex-end" }}>
-                        {rankingType === "level" ? (
-                          <View style={{ alignItems: "flex-end" }}>
-                            <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
-                              <Text style={{ color: "#38BDF8", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? Math.floor(entry.score / 200) + 1}</Text>
-                            </View>
-                            <Text style={{ color: "#94A3B8", fontSize: 10, fontWeight: "700" }}>{entry.score} XP</Text>
-                          </View>
-                        ) : (
-                          <View style={{ alignItems: "flex-end" }}>
-                            <Text style={styles.score}>{displayLp} LP</Text>
-                            <Text style={styles.rowLpText}>{entry.score} XP</Text>
-                          </View>
-                        )}
-                      </View>
-                    </Pressable>
+                    <View style={styles.emptyBoard}>
+                      <Text style={styles.emptyTitle}>
+                        {leaderboardFilter === "friends" ? "ARKADAŞLARINDAN HENÜZ MAÇ YAPAN YOK" : "SIRALAMA AÇIK"}
+                      </Text>
+                      <Text style={styles.emptyCopy}>
+                        {leaderboardFilter === "friends"
+                          ? "Arkadaşlarını düelloya davet et ve sıralamada ilk sıraya yerleş!"
+                          : "İlk tamamlanan canlı düello burada sezona yazılır."}
+                      </Text>
+                    </View>
                   );
-                })
-              ) : (
-                <View style={styles.emptyBoard}>
-                  <Text style={styles.emptyTitle}>
-                    {leaderboardFilter === "friends" ? "ARKADAŞLARINDAN HENÜZ MAÇ YAPAN YOK" : "SIRALAMA AÇIK"}
-                  </Text>
-                  <Text style={styles.emptyCopy}>
-                    {leaderboardFilter === "friends"
-                      ? "Arkadaşlarını düelloya davet et ve sıralamada ilk sıraya yerleş!"
-                      : "İlk tamamlanan canlı düello burada sezona yazılır."}
-                  </Text>
-                </View>
-              )}
+                }
+
+                return (
+                  <>
+                    {visiblePool.map((entry, sliceIdx) => {
+                      const index = isPodiumActive ? sliceIdx + 3 : sliceIdx;
+                      const winRate = entry.matches > 0 ? Math.round((entry.wins / entry.matches) * 100) : 0;
+                      const isUser = entry.id === playerId;
+                      const tierColor = getTierColor(entry.tier);
+                      const displayLp = entry.lp ?? (entry.tier ? getMinLpForTier(entry.tier) : 0);
+                      return (
+                        <Pressable
+                          key={entry.id}
+                          style={({ pressed }) => [styles.row, isUser && styles.rowUser, pressed && { opacity: 0.75 }]}
+                          onPress={() => {
+                            triggerHapticSelection();
+                            onInspectUser?.(entry);
+                          }}
+                        >
+                          <View style={styles.position}>
+                            <Text style={styles.positionText}>
+                              {index + 1}
+                            </Text>
+                          </View>
+                          <View style={styles.playerMark}>
+                            {entry.avatarPhoto ? (
+                              <Image source={{ uri: entry.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 10 }} resizeMode="cover" />
+                            ) : (
+                              <Text style={styles.playerMarkText}>
+                                {entry.name.slice(0, 1).toLocaleUpperCase("tr-TR")}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={styles.playerCopy}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                              <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#3EE8B5" }]}>
+                                {entry.name}
+                              </Text>
+                              {isUser && (
+                                <View style={styles.userSelfTag}>
+                                  <Text style={styles.userSelfTagText}>SEN</Text>
+                                </View>
+                              )}
+                              {entry.tier && (
+                                <View style={[styles.rowTierBadge, { borderColor: tierColor }]}>
+                                  <Text style={[styles.rowTierText, { color: tierColor }]}>{entry.tier}</Text>
+                                </View>
+                              )}
+                            </View>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                              <Text style={styles.playerMeta}>
+                                {entry.wins}/{entry.matches} Galibiyet
+                              </Text>
+                              {entry.matches > 0 && (
+                                <View style={[styles.winRateBadge, winRate >= 50 ? styles.winRateHigh : styles.winRateNormal]}>
+                                  <Text style={styles.winRateText}>%{winRate}</Text>
+                                </View>
+                              )}
+                              <Text style={styles.playerMeta}>· En İyi: {entry.bestRound}</Text>
+                            </View>
+                          </View>
+                          <View style={{ alignItems: "flex-end" }}>
+                            {rankingType === "level" ? (
+                              <View style={{ alignItems: "flex-end" }}>
+                                <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
+                                  <Text style={{ color: "#38BDF8", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? Math.floor(entry.score / 200) + 1}</Text>
+                                </View>
+                                <Text style={{ color: "#94A3B8", fontSize: 10, fontWeight: "700" }}>{entry.score} XP</Text>
+                              </View>
+                            ) : (
+                              <View style={{ alignItems: "flex-end" }}>
+                                <Text style={styles.score}>{displayLp} LP</Text>
+                                <Text style={styles.rowLpText}>{entry.score} XP</Text>
+                              </View>
+                            )}
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+
+                    {hiddenCount > 0 && (
+                      <Pressable
+                        onPress={() => {
+                          triggerHapticSelection();
+                          setShowAllLeaderboard(true);
+                        }}
+                        style={({ pressed }) => [styles.expandLeaderboardBtn, pressed && { opacity: 0.8 }]}
+                      >
+                        <Text style={styles.expandLeaderboardBtnText}>
+                          ▼ DAHA FAZLA GÖSTER (+{hiddenCount} YARIŞMACI)
+                        </Text>
+                      </Pressable>
+                    )}
+
+                    {showAllLeaderboard && effectivePool.length > initialVisibleCount && (
+                      <Pressable
+                        onPress={() => {
+                          triggerHapticSelection();
+                          setShowAllLeaderboard(false);
+                        }}
+                        style={({ pressed }) => [styles.expandLeaderboardBtn, pressed && { opacity: 0.8 }]}
+                      >
+                        <Text style={styles.expandLeaderboardBtnText}>
+                          ▲ DAHA AZ GÖSTER
+                        </Text>
+                      </Pressable>
+                    )}
+                  </>
+                );
+              })()}
             </View>
           </View>
         )}
@@ -1102,51 +1145,53 @@ const styles = StyleSheet.create({
   toolbarSegment: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "rgba(8, 28, 22, 0.8)",
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.2)",
+    backgroundColor: "rgba(10, 32, 24, 0.92)",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(62, 232, 181, 0.3)",
     padding: 3,
     gap: 3,
   },
   toolbarPill: {
     flex: 1,
-    height: 34,
-    borderRadius: 10,
+    height: 36,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
+    backgroundColor: "transparent",
   },
   toolbarPillText: {
-    color: "#A8C5B5",
-    fontSize: 9.5,
+    color: "#8FBAAB",
+    fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
     textAlign: "center",
   },
   toolbarPillTextActive: {
-    color: "#FFFFFF",
+    color: "#071A14",
+    fontWeight: "900",
   },
   toolbarPillActiveLp: {
-    backgroundColor: "#C9A227",
-    shadowColor: "#C9A227",
+    backgroundColor: "#FBBF24",
+    shadowColor: "#FBBF24",
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 3,
   },
   toolbarPillActiveLevel: {
-    backgroundColor: "#0E7490",
+    backgroundColor: "#38BDF8",
     shadowColor: "#38BDF8",
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 3,
   },
   toolbarPillActiveScope: {
-    backgroundColor: "#164536",
+    backgroundColor: "#3EE8B5",
     shadowColor: "#3EE8B5",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 3,
   },
 
   /* Hero Cards */
@@ -1328,35 +1373,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  /* Filter Switcher (Global vs Friends) */
-  leaderFilterRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-  },
-  filterChip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(12, 42, 34, 0.8)",
-    borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterChipActive: {
-    backgroundColor: "rgba(201, 162, 39, 0.35)",
-    borderColor: "#C9A227",
-  },
-  filterChipText: {
-    color: "#8FBAAB",
-    fontSize: 9.5,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  filterChipTextActive: {
-    color: "#3EE8B5",
-  },
+
 
   /* Podium (Top 3) */
   podiumContainer: {
@@ -1497,11 +1514,11 @@ const styles = StyleSheet.create({
   podiumBar1: {
     width: "100%",
     height: 64,
-    backgroundColor: "rgba(255, 208, 0, 0.15)",
+    backgroundColor: "rgba(14, 44, 34, 0.95)",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255, 208, 0, 0.4)",
+    borderWidth: 1.5,
+    borderColor: "#FFD000",
     borderBottomWidth: 0,
     alignItems: "center",
     paddingTop: 8,
@@ -1510,11 +1527,11 @@ const styles = StyleSheet.create({
   podiumBar2: {
     width: "100%",
     height: 48,
-    backgroundColor: "rgba(148, 163, 184, 0.12)",
+    backgroundColor: "rgba(14, 44, 34, 0.95)",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.3)",
+    borderWidth: 1.5,
+    borderColor: "#94A3B8",
     borderBottomWidth: 0,
     alignItems: "center",
     paddingTop: 8,
@@ -1523,11 +1540,11 @@ const styles = StyleSheet.create({
   podiumBar3: {
     width: "100%",
     height: 38,
-    backgroundColor: "rgba(251, 146, 60, 0.12)",
+    backgroundColor: "rgba(14, 44, 34, 0.95)",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(251, 146, 60, 0.3)",
+    borderWidth: 1.5,
+    borderColor: "#FB923C",
     borderBottomWidth: 0,
     alignItems: "center",
     paddingTop: 8,
@@ -1953,5 +1970,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.8,
+  },
+  expandLeaderboardBtn: {
+    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: "rgba(62, 232, 181, 0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(62, 232, 181, 0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#3EE8B5",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  expandLeaderboardBtnText: {
+    color: "#3EE8B5",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+    textAlign: "center",
   },
 });

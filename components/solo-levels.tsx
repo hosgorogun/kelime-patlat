@@ -5,6 +5,7 @@ import { getSoloLevel, MAX_SOLO_LEVEL } from "@/shared/solo";
 import { MILESTONE_REWARDS, type MilestoneReward } from "@/shared/progression";
 import { gameSfx } from "@/lib/game-sfx";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
+import { LootBoxRevealModal } from "@/components/loot-box-reveal-modal";
 
 export function SoloLevels({
   unlockedLevel,
@@ -25,6 +26,7 @@ export function SoloLevels({
 }) {
   const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
   const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
+  const [activeLootBox, setActiveLootBox] = useState<MilestoneReward | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const claimingRef = useRef<Set<number>>(new Set());
 
@@ -61,7 +63,7 @@ export function SoloLevels({
       <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Top Header */}
       <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.back}>
+        <Pressable onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
@@ -110,7 +112,11 @@ export function SoloLevels({
                       )}
                       <Pressable
                         onPress={() => {
-                          triggerHapticSelection();
+                          if (locked) {
+                            gameSfx.rejected();
+                          } else {
+                            triggerHapticSelection();
+                          }
                           if (isChosen && !locked) {
                             onSelect(level);
                           } else {
@@ -151,47 +157,51 @@ export function SoloLevels({
                 const milestone = MILESTONE_REWARDS.find((m) => row.includes(m.level));
                 if (!milestone) return null;
                 const isClaimed = Boolean(claimedMilestones[milestone.level]);
-                const isUnlocked = unlockedLevel > milestone.level;
+                const isUnlocked = unlockedLevel >= milestone.level;
 
                 return (
                   <View style={styles.milestoneWrap}>
                     <View
                       style={[
                         styles.milestoneBox,
-                        isUnlocked && !isClaimed && styles.milestoneBoxReady,
+                        { borderColor: milestone.accent },
+                        isUnlocked && !isClaimed && { backgroundColor: "rgba(10, 30, 22, 0.95)" },
                         isClaimed && styles.milestoneBoxClaimed,
                       ]}
                     >
-                      <View style={styles.milestoneIconWrap}>
-                        <Text style={styles.milestoneIcon}>{milestone.level === 100 ? "👑" : "🎁"}</Text>
+                      <View style={[styles.milestoneIconWrap, { borderColor: milestone.accent }]}>
+                        <Text style={styles.milestoneIcon}>{milestone.icon}</Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                           <Text style={styles.milestoneTitle}>{milestone.title}</Text>
+                          <View style={{ backgroundColor: `${milestone.accent}22`, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: `${milestone.accent}66` }}>
+                            <Text style={{ fontSize: 9, fontWeight: "900", color: milestone.accent }}>{milestone.badge}</Text>
+                          </View>
                           {isClaimed && <Text style={styles.milestoneBadge}>AÇILDI ✓</Text>}
                         </View>
                         <Text style={styles.milestoneDesc}>{milestone.desc}</Text>
-                        <Text style={styles.milestoneRewardText}>
-                          +{milestone.coins} ÇİP · +{milestone.shields} KALKAN · +{milestone.xp} XP
+                        <Text style={[styles.milestoneRewardText, { color: milestone.accent }]}>
+                          {milestone.badgeIcon} {milestone.badgeTitle} · +{milestone.coins} ÇİP · +{milestone.shields} KALKAN · +{milestone.xp} XP
                         </Text>
                       </View>
                       <Pressable
                         onPress={() => {
                           if (!isUnlocked || isClaimed || claimingRef.current.has(milestone.level)) return;
                           claimingRef.current.add(milestone.level);
-                          gameSfx.victory();
+                          setActiveLootBox(milestone);
                           onClaimMilestone?.(milestone);
                         }}
                         disabled={!isUnlocked || isClaimed}
                         style={({ pressed }) => [
                           styles.milestoneBtn,
-                          isUnlocked && !isClaimed && styles.milestoneBtnReady,
+                          isUnlocked && !isClaimed && { backgroundColor: milestone.accent, borderColor: milestone.accent },
                           isClaimed && styles.milestoneBtnClaimed,
                           pressed && isUnlocked && !isClaimed && styles.pressed,
                         ]}
                       >
-                        <Text style={[styles.milestoneBtnText, isUnlocked && !isClaimed && { color: "#071A14" }]}>
-                          {isClaimed ? "ALINDI" : isUnlocked ? "AÇ! 🎁" : "🔒 KİLİTLİ"}
+                        <Text style={[styles.milestoneBtnText, isUnlocked && !isClaimed && { color: "#071A14", fontWeight: "900" }]}>
+                          {isClaimed ? "ALINDI" : isUnlocked ? `AÇ! ${milestone.icon}` : "🔒 KİLİTLİ"}
                         </Text>
                       </Pressable>
                     </View>
@@ -245,18 +255,25 @@ export function SoloLevels({
           ]}
         >
           <Text style={[styles.launchText, isSelectedLocked && styles.launchTextLocked]}>
-            {isSelectedLocked ? "🔒 DÜĞÜM ERİŞİMİ ENGELLENDİ" : "SİBER AĞI BAĞLA (BAŞLAT)"}
+            {isSelectedLocked ? `🔒 SEVİYE ${selectedLevel - 1}'İ TAMAMLA` : "SİBER AĞI BAĞLA (BAŞLAT)"}
           </Text>
           {!isSelectedLocked && <Text style={styles.launchArrow}>→</Text>}
         </Pressable>
       </View>
+
+      {/* Interactive LootBox Tap-to-Open Reveal Modal */}
+      <LootBoxRevealModal
+        reward={activeLootBox}
+        visible={Boolean(activeLootBox)}
+        onClose={() => setActiveLootBox(null)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 185, flexGrow: 1 },
+  content: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 210, flexGrow: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
   back: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#164036", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.25)", alignItems: "center", justifyContent: "center" },
   backText: { color: "#FFF9FC", fontSize: 26, lineHeight: 28 },

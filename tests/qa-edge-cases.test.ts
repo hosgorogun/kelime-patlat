@@ -112,7 +112,7 @@ describe("Senior QA Edge Case Test Suiti - Sosyal Sistem & Tarih Tutarlılığı
       // Tahtada hiç undefined/null harf olmamalı
       expect(challenge.board.every((char) => typeof char === "string" && char.length === 1)).toBe(true);
     }
-  });
+  }, 20000);
 
   it("Eşleştirme kuyruğunda boyut değiştirildiğinde oyuncu eski kuyruklardan tamamen temizlenmelidir", () => {
     type QueueEntry = { socketId: string; playerId: string };

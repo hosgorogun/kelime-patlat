@@ -735,8 +735,12 @@ function HomeScreen() {
           remaining.push(item);
         }
       } catch {
-        // Hâlâ çevrimdışı — kalan kuyruk korunur
-        remaining.push(item);
+        // Hâlâ çevrimdışı — bu ve kalan tüm öğeler kuyrukta tutulur, döngü durdurulur
+        const currentIndex = queue.indexOf(item);
+        if (currentIndex !== -1) {
+          remaining.push(...queue.slice(currentIndex));
+        }
+        break;
       }
     }
     try {

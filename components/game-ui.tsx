@@ -671,20 +671,39 @@ export function ConnectLine({
         overflow: "visible",
       }}
     >
-      {/* Çizgi gövdesi */}
+      {/* Dış neon ışık halkası (Glow Beam) */}
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          top: -6,
+          width: Math.max(0, length - 4),
+          height: 12,
+          backgroundColor: color,
+          borderRadius: 6,
+          opacity: opacity * 0.4,
+          shadowColor: color,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 10,
+          elevation: 6,
+        }}
+      />
+      {/* Çizgi ana neon çekirdeği */}
       <View
         style={{
           position: "absolute",
           left: 0,
           top: -3,
-          width: Math.max(0, length - 6),
+          width: Math.max(0, length - 4),
           height: 6,
           backgroundColor: color,
           borderRadius: 3,
           opacity,
-          shadowColor: color,
-          shadowOpacity: 0.8,
-          shadowRadius: 6,
+          shadowColor: "#FFFFFF",
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.9,
+          shadowRadius: 5,
           elevation: 4,
         }}
       />

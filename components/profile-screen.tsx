@@ -33,6 +33,14 @@ import {
 } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 
+const FRAME_IMAGES: Record<string, any> = {
+  signal: require("../assets/frames/signal.jpg"),
+  neon: require("../assets/frames/neon.jpg"),
+  chrome: require("../assets/frames/chrome.jpg"),
+  gold: require("../assets/frames/gold.jpg"),
+  cyber: require("../assets/frames/cyber.jpg"),
+};
+
 export function ProfileScreen({
   playerName,
   onUpdatePlayerName,
@@ -71,6 +79,7 @@ export function ProfileScreen({
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<"overview" | "settings">("overview");
+  const [customizerTab, setCustomizerTab] = useState<"frames" | "avatars" | "titles" | "badges">("frames");
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(playerName);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -176,7 +185,7 @@ export function ProfileScreen({
       {/* Top Bar Header */}
       <View style={styles.header}>
         {onBack && (
-          <Pressable onPress={onBack} style={styles.back}>
+          <Pressable onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
             <Text style={styles.backText}>‹</Text>
           </Pressable>
         )}
@@ -190,8 +199,8 @@ export function ProfileScreen({
         </View>
       </View>
 
-      {/* 1. HERO OPERATÖR KARTI (Futuristic Cyber ID) */}
-      <View style={styles.heroCard}>
+      {/* 1. HERO OPERATÖR KARTI (Futuristic Cyber ID with 3D Press Tilt) */}
+      <Pressable style={({ pressed }) => [styles.heroCard, pressed && { transform: [{ rotateX: "-3deg" }, { scale: 0.985 }] }]}>
         <View style={styles.heroTopRow}>
           {/* Avatar Ring with Camera & Level Badge */}
           <View style={styles.avatarWrapper}>
@@ -202,17 +211,20 @@ export function ProfileScreen({
                 {
                   borderColor: activeFrameColor,
                   shadowColor: activeFrameColor,
-                  shadowOpacity: 0.45,
-                  shadowRadius: 10,
-                  elevation: 6,
+                  shadowOpacity: 0.65,
+                  shadowRadius: 14,
+                  elevation: 8,
                 },
                 pressed && { opacity: 0.85 },
               ]}
             >
+              {FRAME_IMAGES[currentFrameId] ? (
+                <Image source={FRAME_IMAGES[currentFrameId]} style={{ position: "absolute", width: "100%", height: "100%", borderRadius: 44, zIndex: 1 }} resizeMode="cover" />
+              ) : null}
               {progress.avatarPhoto && !imgError ? (
-                <Image source={{ uri: progress.avatarPhoto }} style={styles.avatarImage} onError={() => setImgError(true)} />
+                <Image source={{ uri: progress.avatarPhoto }} style={[styles.avatarImage, FRAME_IMAGES[currentFrameId] && { width: "84%", height: "84%", borderRadius: 36, zIndex: 0 }]} onError={() => setImgError(true)} />
               ) : (
-                <View style={[styles.avatarInnerFallback, { backgroundColor: activeAvatar.surface || "#153E3A" }]}>
+                <View style={[styles.avatarInnerFallback, { backgroundColor: activeAvatar.surface || "#153E3A" }, FRAME_IMAGES[currentFrameId] && { width: "84%", height: "84%", borderRadius: 36, zIndex: 0 }]}>
                   <Text style={[styles.avatarGlyph, { color: activeAvatar.color || "#4ADE80" }]}>
                     {activeAvatar.icon}
                   </Text>
@@ -316,7 +328,7 @@ export function ProfileScreen({
             </Text>
           </View>
         </View>
-      </View>
+      </Pressable>
 
       {/* TABS SELECTOR (Genel Bakış vs Ayarlar) */}
       <View style={styles.tabBar}>
@@ -428,262 +440,276 @@ export function ProfileScreen({
             </View>
           </View>
 
-          {/* 3. PROFİL ÇERÇEVELERİ (PROFILE FRAMES SHOWCASE) */}
-          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
-            <Text style={styles.sectionTitle}>🖼️ PROFİL ÇERÇEVELERİ</Text>
-            <View style={styles.badgeCounterWrap}>
-              <Text style={styles.sectionMeta}>{unlockedFramesCount} / {PROFILE_FRAMES.length} AÇIK</Text>
-            </View>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-            {PROFILE_FRAMES.map(([fId, fName, fColor, fCost]) => {
-              const isUnlocked = fCost === 0 || Boolean(progress.ownedFrames?.[fId]) || progress.selectedFrame === fId;
-              const isSelected = (progress.selectedFrame || "signal") === fId;
-
-              return (
-                <Pressable
-                  key={fId}
-                  onPress={() => {
-                    if (!isUnlocked) {
-                      triggerHapticError();
-                      if (onShowToast) {
-                        onShowToast("🔒 ÇERÇEVE KİLİTLİ", `"${fName}" çerçevesini Siber Mağaza'dan açabilirsiniz.`, "🔒", "#EF4444");
-                      } else {
-                        Alert.alert("🔒 Kilitli Çerçeve", `"${fName}" çerçevesini Siber Mağaza'dan edinebilirsiniz.`);
-                      }
-                    } else {
-                      triggerHapticSuccess();
-                      onSelectFrame?.(fId);
-                      if (onShowToast) {
-                        onShowToast("🖼️ ÇERÇEVE KUŞANILDI", `"${fName}" çerçevesi aktif edildi.`, "✓", fColor);
-                      }
-                    }
-                  }}
-                  style={({ pressed }) => [
-                    styles.frameTile,
-                    isSelected && { borderColor: fColor, backgroundColor: "rgba(62, 232, 181, 0.12)" },
-                    !isUnlocked && styles.frameTileLocked,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={[styles.framePreviewCircle, { borderColor: fColor }]}>
-                    <View style={[styles.framePreviewInner, { backgroundColor: isSelected ? fColor : "transparent" }]}>
-                      <Text style={{ fontSize: 13 }}>{isUnlocked ? "✦" : "🔒"}</Text>
-                    </View>
-                  </View>
-
-                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: fColor }, !isUnlocked && { color: "#8E889C" }]}>
-                    {fName}
-                  </Text>
-
-                  <View style={[
-                    styles.titleMiniStatusPill,
-                    isSelected && { backgroundColor: `${fColor}25`, borderColor: fColor },
-                    !isUnlocked && styles.titleMiniStatusLocked,
-                  ]}>
-                    <Text style={[
-                      styles.titleMiniStatusText,
-                      isSelected && { color: fColor },
-                      !isUnlocked && { color: "#7B748C" },
-                    ]}>
-                      {isSelected ? "SEÇİLİ" : isUnlocked ? "SEÇ" : `${fCost} ÇİP`}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* 4. SİBER AVATARLAR */}
-          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
-            <Text style={styles.sectionTitle}>🤖 SİBER AVATARLAR</Text>
-            <View style={styles.badgeCounterWrap}>
-              <Text style={styles.sectionMeta}>{unlockedAvatarsCount} / {AVATARS.length} AÇIK</Text>
-            </View>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-            {AVATARS.map((avatar) => {
-              const unlocked = isAvatarUnlocked(avatar.id, progress);
-              const isSelected = (progress.selectedAvatar ?? "spark") === avatar.id && !progress.avatarPhoto;
-              return (
-                <Pressable
-                  key={avatar.id}
-                  onPress={() => {
-                    if (!unlocked) {
-                      triggerHapticError();
-                      if (onShowToast) {
-                        onShowToast(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint, "🔒", "#EF4444");
-                      } else {
-                        Alert.alert(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint);
-                      }
-                    } else {
-                      triggerHapticSuccess();
-                      if (progress.avatarPhoto) {
-                        onUpdateAvatarPhoto?.("");
-                      }
-                      onSelectAvatar?.(avatar.id);
-                      if (onShowToast) {
-                        onShowToast(`🤖 ${avatar.label}`, "Avatar profilinde aktif edildi.", avatar.icon, avatar.color);
-                      }
-                    }
-                  }}
-                  style={({ pressed }) => [
-                    styles.badgeTile,
-                    isSelected && { borderColor: avatar.color || "#3EE8B5", backgroundColor: "rgba(62, 232, 181, 0.12)" },
-                    !unlocked && styles.badgeTileLocked,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={[
-                    styles.badgeIconBubble,
-                    isSelected
-                      ? { backgroundColor: "rgba(62, 232, 181, 0.18)", borderColor: avatar.color || "#3EE8B5" }
-                      : unlocked
-                      ? { backgroundColor: avatar.surface || "rgba(255, 255, 255, 0.08)", borderColor: avatar.color || "#E8C36A" }
-                      : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
-                  ]}>
-                    <Text style={[styles.badgeIconText, { color: isSelected ? (avatar.color || "#3EE8B5") : unlocked ? (avatar.color || "#E8C36A") : "#766D89" }]}>
-                      {unlocked ? avatar.icon : "🔒"}
-                    </Text>
-                  </View>
-
-                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: avatar.color || "#3EE8B5" }, !unlocked && { color: "#8E889C" }]}>
-                    {avatar.label}
-                  </Text>
-
-                  <View style={[
-                    styles.titleMiniStatusPill,
-                    isSelected && styles.titleMiniStatusSelected,
-                    !unlocked && styles.titleMiniStatusLocked,
-                  ]}>
-                    <Text style={[
-                      styles.titleMiniStatusText,
-                      isSelected && { color: "#3EE8B5" },
-                      !unlocked && { color: "#7B748C" },
-                    ]}>
-                      {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* 5. OYUNCU UNVANLARI */}
-          <View style={[styles.sectionHeader, { marginTop: 18 }]}>
-            <Text style={styles.sectionTitle}>🎖️ OYUNCU UNVANLARI</Text>
-            <View style={styles.badgeCounterWrap}>
-              <Text style={styles.sectionMeta}>{unlockedTitlesCount} / {CYBER_TITLES.length} KAZANILDI</Text>
-            </View>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-            {[...CYBER_TITLES.filter((t) => t.unlocked(progress)), ...CYBER_TITLES.filter((t) => !t.unlocked(progress))].map((title) => {
-              const unlocked = title.unlocked(progress);
-              const isSelected = activeTitle === title.badge;
-              return (
-                <Pressable
-                  key={title.id}
-                  onPress={() => {
-                    if (!unlocked) {
-                      if (onShowToast) {
-                        onShowToast(`🔒 ${title.name.toUpperCase()} KİLİTLİ`, title.unlockHint, "🔒", "#EF4444");
-                      } else {
-                        Alert.alert(`🔒 ${title.name} KİLİTLİ`, title.unlockHint);
-                      }
-                    } else {
-                      triggerHapticSuccess();
-                      onSelectTitle?.(title.badge);
-                    }
-                  }}
-                  style={({ pressed }) => [
-                    styles.titleTile,
-                    unlocked ? styles.titleTileUnlocked : styles.titleTileLocked,
-                    isSelected && styles.titleTileSelected,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={[
-                    styles.badgeIconBubble,
-                    isSelected
-                      ? { backgroundColor: "rgba(62, 232, 181, 0.15)", borderColor: "#3EE8B5" }
-                      : unlocked
-                      ? { backgroundColor: "rgba(255, 255, 255, 0.08)", borderColor: title.accent || "rgba(167, 139, 250, 0.4)" }
-                      : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
-                  ]}>
-                    <Text style={[styles.badgeIconText, { color: isSelected ? "#3EE8B5" : unlocked ? (title.accent || "#E8C36A") : "#766D89" }]}>
-                      {unlocked ? (title.icon || "🎖️") : "🔒"}
-                    </Text>
-                  </View>
-
-                  <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: "#3EE8B5" }, !unlocked && { color: "#8E889C" }]}>
-                    {title.badge}
-                  </Text>
-
-                  <View style={[
-                    styles.titleMiniStatusPill,
-                    isSelected && styles.titleMiniStatusSelected,
-                    !unlocked && styles.titleMiniStatusLocked,
-                  ]}>
-                    <Text style={[
-                      styles.titleMiniStatusText,
-                      isSelected && { color: "#3EE8B5" },
-                      !unlocked && { color: "#7B748C" },
-                    ]}>
-                      {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* 6. BAŞARI ROZETLERİ (Trophy Showcase) */}
+          {/* 3. PROFİL ÖZELLEŞTİRME MERKEZİ (Clean Tabbed Sub-Bar) */}
           <View style={[styles.sectionHeader, { marginTop: 22 }]}>
-            <Text style={styles.sectionTitle}>🏆 BAŞARI ROZETLERİ</Text>
-            <View style={styles.badgeCounterWrap}>
-              <Text style={styles.sectionMeta}>{unlockedBadgesCount} / {badges.length} KAZANILDI</Text>
-            </View>
+            <Text style={styles.sectionTitle}>⚙️ ENVENTER VE ÖZELLEŞTİRME</Text>
+            <Text style={styles.sectionMeta}>KOLEKSİYON</Text>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
-            {[...badges.filter((b) => b.unlocked), ...badges.filter((b) => !b.unlocked)].map((badge) => {
-              const unlocked = badge.unlocked;
-              return (
-                <Pressable
-                  key={badge.id}
-                  onPress={() => {
-                    triggerHapticSelection();
-                    if (onShowToast) {
-                      onShowToast(
-                        unlocked ? `🏆 ${badge.title}` : `🔒 ${badge.title} KİLİTLİ`,
-                        unlocked ? `${badge.description} (Kazanıldı)` : badge.description,
-                        unlocked ? "🏆" : "🔒",
-                        unlocked ? badge.accent : "#EF4444"
-                      );
-                    } else {
-                      Alert.alert(
-                        unlocked ? `🏆 ${badge.title} (KAZANILDI)` : `🔒 ${badge.title} (KİLİTLİ)`,
-                        unlocked ? `${badge.description}\n\nTebrikler, bu başarıyı kazandın!` : `${badge.description}\n\nBu rozeti kazanmak için görevi tamamla.`
-                      );
-                    }
-                  }}
-                  style={({ pressed }) => [
-                    styles.badgeTile,
-                    unlocked ? { borderColor: badge.accent, backgroundColor: "rgba(20, 54, 43, 0.75)" } : styles.badgeTileLocked,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={[styles.badgeIconBubble, unlocked ? { backgroundColor: "rgba(255,255,255,0.08)", borderColor: badge.accent } : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }]}>
-                    <Text style={[styles.badgeIconText, { color: unlocked ? badge.accent : "#766D89" }]}>{unlocked ? badge.icon : "🔒"}</Text>
-                  </View>
-                  <Text numberOfLines={1} style={[styles.badgeTileTitle, !unlocked && { color: "#8E889C" }]}>{badge.title}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+          {/* Customizer Sub-Tabs */}
+          <View style={{ flexDirection: "row", backgroundColor: "rgba(5, 17, 12, 0.7)", padding: 4, borderRadius: 14, borderWidth: 1, borderColor: "rgba(244, 208, 111, 0.25)", marginBottom: 14 }}>
+            <Pressable
+              onPress={() => { triggerHapticSelection(); setCustomizerTab("frames"); }}
+              style={[{ flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 }, customizerTab === "frames" && { backgroundColor: "rgba(244, 208, 111, 0.22)", borderWidth: 1, borderColor: "#D4B45A" }]}
+            >
+              <Text style={[{ fontSize: 10, fontWeight: "900", color: "#8E889C" }, customizerTab === "frames" && { color: "#F4D06F" }]}>🖼️ ÇERÇEVE ({unlockedFramesCount})</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { triggerHapticSelection(); setCustomizerTab("avatars"); }}
+              style={[{ flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 }, customizerTab === "avatars" && { backgroundColor: "rgba(244, 208, 111, 0.22)", borderWidth: 1, borderColor: "#D4B45A" }]}
+            >
+              <Text style={[{ fontSize: 10, fontWeight: "900", color: "#8E889C" }, customizerTab === "avatars" && { color: "#F4D06F" }]}>🤖 AVATAR ({unlockedAvatarsCount})</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { triggerHapticSelection(); setCustomizerTab("titles"); }}
+              style={[{ flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 }, customizerTab === "titles" && { backgroundColor: "rgba(244, 208, 111, 0.22)", borderWidth: 1, borderColor: "#D4B45A" }]}
+            >
+              <Text style={[{ fontSize: 10, fontWeight: "900", color: "#8E889C" }, customizerTab === "titles" && { color: "#F4D06F" }]}>🎖️ UNVAN ({unlockedTitlesCount})</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { triggerHapticSelection(); setCustomizerTab("badges"); }}
+              style={[{ flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 }, customizerTab === "badges" && { backgroundColor: "rgba(244, 208, 111, 0.22)", borderWidth: 1, borderColor: "#D4B45A" }]}
+            >
+              <Text style={[{ fontSize: 10, fontWeight: "900", color: "#8E889C" }, customizerTab === "badges" && { color: "#F4D06F" }]}>🏆 ROZET ({unlockedBadgesCount})</Text>
+            </Pressable>
+          </View>
+
+          {/* Sub-Tab 1: ÇERÇEVELER */}
+          {customizerTab === "frames" && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+              {PROFILE_FRAMES.map(([fId, fName, fColor, fCost]) => {
+                const isUnlocked = fCost === 0 || Boolean(progress.ownedFrames?.[fId]) || progress.selectedFrame === fId;
+                const isSelected = (progress.selectedFrame || "signal") === fId;
+
+                return (
+                  <Pressable
+                    key={fId}
+                    onPress={() => {
+                      if (!isUnlocked) {
+                        triggerHapticError();
+                        if (onShowToast) {
+                          onShowToast("🔒 ÇERÇEVE KİLİTLİ", `"${fName}" çerçevesini Siber Mağaza'dan açabilirsiniz.`, "🔒", "#EF4444");
+                        } else {
+                          Alert.alert("🔒 Kilitli Çerçeve", `"${fName}" çerçevesini Siber Mağaza'dan edinebilirsiniz.`);
+                        }
+                      } else {
+                        triggerHapticSuccess();
+                        onSelectFrame?.(fId);
+                        if (onShowToast) {
+                          onShowToast("🖼️ ÇERÇEVE KUŞANILDI", `"${fName}" çerçevesi aktif edildi.`, "✓", fColor);
+                        }
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.frameTile,
+                      isSelected && { borderColor: fColor, backgroundColor: "rgba(62, 232, 181, 0.12)" },
+                      !isUnlocked && styles.frameTileLocked,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={[styles.framePreviewCircle, { borderColor: fColor }]}>
+                      <View style={[styles.framePreviewInner, { backgroundColor: isSelected ? fColor : "transparent" }]}>
+                        <Text style={{ fontSize: 13 }}>{isUnlocked ? "✦" : "🔒"}</Text>
+                      </View>
+                    </View>
+
+                    <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: fColor }, !isUnlocked && { color: "#8E889C" }]}>
+                      {fName}
+                    </Text>
+
+                    <View style={[
+                      styles.titleMiniStatusPill,
+                      isSelected && { backgroundColor: `${fColor}25`, borderColor: fColor },
+                      !isUnlocked && styles.titleMiniStatusLocked,
+                    ]}>
+                      <Text style={[
+                        styles.titleMiniStatusText,
+                        isSelected && { color: fColor },
+                        !isUnlocked && { color: "#7B748C" },
+                      ]}>
+                        {isSelected ? "SEÇİLİ" : isUnlocked ? "SEÇ" : `${fCost} ÇİP`}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {/* Sub-Tab 2: SİBER AVATARLAR */}
+          {customizerTab === "avatars" && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+              {AVATARS.map((avatar) => {
+                const unlocked = isAvatarUnlocked(avatar.id, progress);
+                const isSelected = (progress.selectedAvatar ?? "spark") === avatar.id && !progress.avatarPhoto;
+                return (
+                  <Pressable
+                    key={avatar.id}
+                    onPress={() => {
+                      if (!unlocked) {
+                        triggerHapticError();
+                        if (onShowToast) {
+                          onShowToast(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint, "🔒", "#EF4444");
+                        } else {
+                          Alert.alert(`🔒 ${avatar.label} KİLİTLİ`, avatar.unlockHint);
+                        }
+                      } else {
+                        triggerHapticSuccess();
+                        if (progress.avatarPhoto) {
+                          onUpdateAvatarPhoto?.("");
+                        }
+                        onSelectAvatar?.(avatar.id);
+                        if (onShowToast) {
+                          onShowToast(`🤖 ${avatar.label}`, "Avatar profilinde aktif edildi.", avatar.icon, avatar.color);
+                        }
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.badgeTile,
+                      isSelected && { borderColor: avatar.color || "#3EE8B5", backgroundColor: "rgba(62, 232, 181, 0.12)" },
+                      !unlocked && styles.badgeTileLocked,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={[
+                      styles.badgeIconBubble,
+                      isSelected
+                        ? { backgroundColor: "rgba(62, 232, 181, 0.18)", borderColor: avatar.color || "#3EE8B5" }
+                        : unlocked
+                        ? { backgroundColor: avatar.surface || "rgba(255, 255, 255, 0.08)", borderColor: avatar.color || "#E8C36A" }
+                        : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
+                    ]}>
+                      <Text style={[styles.badgeIconText, { color: isSelected ? (avatar.color || "#3EE8B5") : unlocked ? (avatar.color || "#E8C36A") : "#766D89" }]}>
+                        {unlocked ? avatar.icon : "🔒"}
+                      </Text>
+                    </View>
+
+                    <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: avatar.color || "#3EE8B5" }, !unlocked && { color: "#8E889C" }]}>
+                      {avatar.label}
+                    </Text>
+
+                    <View style={[
+                      styles.titleMiniStatusPill,
+                      isSelected && styles.titleMiniStatusSelected,
+                      !unlocked && styles.titleMiniStatusLocked,
+                    ]}>
+                      <Text style={[
+                        styles.titleMiniStatusText,
+                        isSelected && { color: "#3EE8B5" },
+                        !unlocked && { color: "#7B748C" },
+                      ]}>
+                        {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {/* Sub-Tab 3: OYUNCU UNVANLARI */}
+          {customizerTab === "titles" && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+              {[...CYBER_TITLES.filter((t) => t.unlocked(progress)), ...CYBER_TITLES.filter((t) => !t.unlocked(progress))].map((title) => {
+                const unlocked = title.unlocked(progress);
+                const isSelected = activeTitle === title.badge;
+                return (
+                  <Pressable
+                    key={title.id}
+                    onPress={() => {
+                      if (!unlocked) {
+                        if (onShowToast) {
+                          onShowToast(`🔒 ${title.name.toUpperCase()} KİLİTLİ`, title.unlockHint, "🔒", "#EF4444");
+                        } else {
+                          Alert.alert(`🔒 ${title.name} KİLİTLİ`, title.unlockHint);
+                        }
+                      } else {
+                        triggerHapticSuccess();
+                        onSelectTitle?.(title.badge);
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.titleTile,
+                      unlocked ? styles.titleTileUnlocked : styles.titleTileLocked,
+                      isSelected && styles.titleTileSelected,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={[
+                      styles.badgeIconBubble,
+                      isSelected
+                        ? { backgroundColor: "rgba(62, 232, 181, 0.15)", borderColor: "#3EE8B5" }
+                        : unlocked
+                        ? { backgroundColor: "rgba(255, 255, 255, 0.08)", borderColor: title.accent || "rgba(167, 139, 250, 0.4)" }
+                        : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }
+                    ]}>
+                      <Text style={[styles.badgeIconText, { color: isSelected ? "#3EE8B5" : unlocked ? (title.accent || "#E8C36A") : "#766D89" }]}>
+                        {unlocked ? (title.icon || "🎖️") : "🔒"}
+                      </Text>
+                    </View>
+
+                    <Text numberOfLines={1} style={[styles.badgeTileTitle, isSelected && { color: "#3EE8B5" }, !unlocked && { color: "#8E889C" }]}>
+                      {title.badge}
+                    </Text>
+
+                    <View style={[
+                      styles.titleMiniStatusPill,
+                      isSelected && styles.titleMiniStatusSelected,
+                      !unlocked && styles.titleMiniStatusLocked,
+                    ]}>
+                      <Text style={[
+                        styles.titleMiniStatusText,
+                        isSelected && { color: "#3EE8B5" },
+                        !unlocked && { color: "#7B748C" },
+                      ]}>
+                        {isSelected ? "SEÇİLİ" : unlocked ? "SEÇ" : "KİLİTLİ"}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {/* Sub-Tab 4: BAŞARI ROZETLERİ */}
+          {customizerTab === "badges" && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalRow}>
+              {[...badges.filter((b) => b.unlocked), ...badges.filter((b) => !b.unlocked)].map((badge) => {
+                const unlocked = badge.unlocked;
+                return (
+                  <Pressable
+                    key={badge.id}
+                    onPress={() => {
+                      triggerHapticSelection();
+                      if (onShowToast) {
+                        onShowToast(
+                          unlocked ? `🏆 ${badge.title}` : `🔒 ${badge.title} KİLİTLİ`,
+                          unlocked ? `${badge.description} (Kazanıldı)` : badge.description,
+                          unlocked ? "🏆" : "🔒",
+                          unlocked ? badge.accent : "#EF4444"
+                        );
+                      } else {
+                        Alert.alert(
+                          unlocked ? `🏆 ${badge.title} (KAZANILDI)` : `🔒 ${badge.title} (KİLİTLİ)`,
+                          unlocked ? `${badge.description}\n\nTebrikler, bu başarıyı kazandın!` : `${badge.description}\n\nBu rozeti kazanmak için görevi tamamla.`
+                        );
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.badgeTile,
+                      unlocked ? { borderColor: badge.accent, backgroundColor: "rgba(20, 54, 43, 0.75)" } : styles.badgeTileLocked,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={[styles.badgeIconBubble, unlocked ? { backgroundColor: "rgba(255,255,255,0.08)", borderColor: badge.accent } : { backgroundColor: "rgba(0,0,0,0.3)", borderColor: "#393151" }]}>
+                      <Text style={[styles.badgeIconText, { color: unlocked ? badge.accent : "#766D89" }]}>{unlocked ? badge.icon : "🔒"}</Text>
+                    </View>
+                    <Text numberOfLines={1} style={[styles.badgeTileTitle, !unlocked && { color: "#8E889C" }]}>{badge.title}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
         </>
       ) : (
         <>

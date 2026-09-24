@@ -202,7 +202,7 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(4, 17, 12, 0.86)",
+    backgroundColor: "rgba(4, 11, 16, 0.94)",
     justifyContent: "center",
     alignItems: "center",
     padding: 18,

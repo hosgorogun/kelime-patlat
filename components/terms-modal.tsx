@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { haptics } from "@/lib/haptics";
 
 export function TermsModal({
@@ -19,13 +19,15 @@ export function TermsModal({
           <Text style={styles.title}>HOŞ GELDİNİZ!</Text>
           <Text style={styles.subtitle}>KULLANIM ŞARTLARI VE GİZLİLİK ONAYI</Text>
 
-          <Text style={styles.body}>
-            Kelime Patlat dünyasına katılmadan önce lütfen kullanım şartlarımızı ve gizlilik politikamızı inceleyin.
-            {"\n\n"}
-            • İlerlemeniz ve skorlarınız güvende tutulur.{"\n"}
-            • Oyun içi çipleriniz ve profil özelleştirmeleriniz hesabınıza tanımlanır.{"\n"}
-            • İstediğiniz an Profil sayfasından hesabınızı kalıcı olarak silebilirsiniz.
-          </Text>
+          <ScrollView style={{ maxHeight: 220, marginVertical: 8 }} showsVerticalScrollIndicator={false}>
+            <Text style={styles.body}>
+              Kelime Patlat dünyasına katılmadan önce lütfen kullanım şartlarımızı ve gizlilik politikamızı inceleyin.
+              {"\n\n"}
+              • İlerlemeniz ve skorlarınız güvende tutulur.{"\n"}
+              • Oyun içi çipleriniz ve profil özelleştirmeleriniz hesabınıza tanımlanır.{"\n"}
+              • İstediğiniz an Profil sayfasından hesabınızı kalıcı olarak silebilirsiniz.
+            </Text>
+          </ScrollView>
 
           <View style={styles.linksRow}>
             <Pressable
