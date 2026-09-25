@@ -22,8 +22,7 @@ export function PremiumDock({
     <View style={styles.dockWrap}>
       <LinearGradient colors={["#0F382B", "#0A281E", "#051610"]} style={styles.dock}>
         <DockTab
-          imageKey="lives"
-          iconSource={ICONS.coin}
+          iconSource={ICONS.store}
           fallbackEmoji="🛍️"
           label="MAĞAZA"
           active={active === "store"}
@@ -31,8 +30,7 @@ export function PremiumDock({
           onPress={() => onNavigate("store")}
         />
         <DockTab
-          imageKey="radar"
-          iconSource={ICONS.radar}
+          iconSource={ICONS.missions}
           fallbackEmoji="🎯"
           label="GÖREVLER"
           active={active === "missions"}
@@ -53,7 +51,6 @@ export function PremiumDock({
         </Pressable>
 
         <DockTab
-          imageKey="shield"
           iconSource={ICONS.trophy}
           fallbackEmoji="🏆"
           label="LİG"
@@ -61,7 +58,7 @@ export function PremiumDock({
           onPress={() => onNavigate("season")}
         />
         <DockTab
-          imageKey="xp"
+          iconSource={ICONS.profile}
           fallbackEmoji="👤"
           label="PROFİL"
           active={active === "profile"}
@@ -188,8 +185,8 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   dockIconImage: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
   },
   iconBubbleActive: {
     backgroundColor: "rgba(62, 232, 181, 0.28)",

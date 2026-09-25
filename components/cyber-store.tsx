@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppState, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { monetizationManager } from "@/shared/monetization";
 import { gameSfx, triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
@@ -48,11 +48,21 @@ export function CyberStore({
   onSelectBoardSkin?: (skinId: string) => void;
   onBack: () => void;
 }) {
-  const todayId = getDayId();
+  const [todayId, setTodayId] = useState(() => getDayId());
   const [dailyAdCount, setDailyAdCount] = useState<number>(0);
   const [storeMessage, setStoreMessage] = useState<string | null>(null);
   const [adLoading, setAdLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<StoreTab>("equipment");
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        const current = getDayId();
+        setTodayId((prev) => (prev !== current ? current : prev));
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     let mounted = true;

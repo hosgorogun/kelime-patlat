@@ -1011,7 +1011,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingTop: 4,
-    paddingBottom: 160,
+    paddingBottom: 195,
     paddingHorizontal: 2,
   },
 

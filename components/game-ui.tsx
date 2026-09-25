@@ -26,6 +26,9 @@ export const ICONS = {
   shield: require("../assets/ui/icon-shield.png"),
   play: require("../assets/ui/icon-play.png"),
   trophy: require("../assets/ui/icon-trophy.png"),
+  store: require("../assets/ui/icon-store.png"),
+  missions: require("../assets/ui/icon-missions.png"),
+  profile: require("../assets/ui/icon-profile.png"),
 } as const;
 
 export function GameAtmosphere({ dim = 0.55 }: { dim?: number }) {

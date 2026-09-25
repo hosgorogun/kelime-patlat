@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { type MilestoneReward } from "@/shared/progression";
 import { gameSfx } from "@/lib/game-sfx";
@@ -22,8 +21,6 @@ export function LootBoxRevealModal({
   visible: boolean;
   onClose: () => void;
 }) {
-  const { width, height } = useWindowDimensions();
-
   // Animation States
   const [phase, setPhase] = useState<"idle" | "shaking" | "open" | "rewards">("idle");
   const scaleAnim = useRef(new Animated.Value(0.2)).current;
@@ -74,7 +71,21 @@ export function LootBoxRevealModal({
         })
       ).start();
     }
-  }, [visible, reward]);
+  }, [
+    visible,
+    reward,
+    scaleAnim,
+    shakeAnim,
+    lidYAnim,
+    lidOpacityAnim,
+    glowSpinAnim,
+    coinsAnim,
+    coinsOpacity,
+    badgeAnim,
+    badgeOpacity,
+    xpAnim,
+    xpOpacity,
+  ]);
 
   if (!visible || !reward) return null;
 

@@ -8,31 +8,7 @@ export type ChipEquipmentItem = {
   rewardType: "radar" | "shield" | "xp" | "lives";
 };
 
-const safeRequire = (path: string) => {
-  try {
-    // Standard Node/Metro require check
-    const r = typeof require !== "undefined" ? require : null;
-    return r ? r(path) : null;
-  } catch {
-    return null;
-  }
-};
-
-export const STORE_ASSETS: Record<string, any> = {
-  lives: safeRequire("../assets/store-assets/lives.jpg"),
-  radar: safeRequire("../assets/store-assets/radar.jpg"),
-  shield: safeRequire("../assets/store-assets/shield.jpg"),
-  xp: safeRequire("../assets/store-assets/xp.jpg"),
-  effect_pulse: safeRequire("../assets/store-assets/effect_pulse.jpg"),
-  effect_glitch: safeRequire("../assets/store-assets/effect_glitch.jpg"),
-  effect_flare: safeRequire("../assets/store-assets/effect_flare.jpg"),
-  effect_lightning: safeRequire("../assets/store-assets/effect_lightning.jpg"),
-  effect_fireworks: safeRequire("../assets/store-assets/effect_fireworks.jpg"),
-  skin_grid: safeRequire("../assets/store-assets/skin_grid.jpg"),
-  skin_night: safeRequire("../assets/store-assets/skin_night.jpg"),
-  skin_ember: safeRequire("../assets/store-assets/skin_ember.jpg"),
-  skin_gold_grid: safeRequire("../assets/store-assets/skin_gold_grid.jpg"),
-};
+export { STORE_ASSETS } from "../components/store-assets";
 
 export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
   {
