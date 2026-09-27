@@ -125,7 +125,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                 Alert.alert("Giriş Bildirimi", res.message);
               }
             } catch (e: any) {
-              console.warn(e);
+              console.warn("[OAuth] Start login failed:", e);
               Alert.alert("Hata", "Oturum açma bağlantısı başlatılamadı.");
             }
           }

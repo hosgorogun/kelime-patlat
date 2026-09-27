@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppState, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { monetizationManager } from "@/shared/monetization";
@@ -79,6 +79,20 @@ export function CyberStore({
     };
   }, [todayId]);
 
+  const storeMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showFeedbackMessage = (msg: string) => {
+    setStoreMessage(msg);
+    if (storeMessageTimeoutRef.current) clearTimeout(storeMessageTimeoutRef.current);
+    storeMessageTimeoutRef.current = setTimeout(() => setStoreMessage(null), 3500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (storeMessageTimeoutRef.current) clearTimeout(storeMessageTimeoutRef.current);
+    };
+  }, []);
+
   const remainingAds = Math.max(0, DAILY_AD_LIMIT - dailyAdCount);
 
   // Satın alma onay modalı durumu
@@ -94,21 +108,19 @@ export function CyberStore({
     if (coins < item.cost) {
       triggerHapticError();
       gameSfx.rejected();
-      setStoreMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
-      setTimeout(() => setStoreMessage(null), 3500);
+      showFeedbackMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
       return;
     }
     const success = await onSpendCoins?.(item);
     if (success !== false) {
       triggerHapticSuccess();
       gameSfx.victory();
-      setStoreMessage(`Tebrikler! ${item.name} başarıyla envanterine eklendi! 🎉`);
+      showFeedbackMessage(`Tebrikler! ${item.name} başarıyla envanterine eklendi! 🎉`);
     } else {
       triggerHapticError();
       gameSfx.rejected();
-      setStoreMessage(`İşlem gerçekleştirilemedi. Lütfen çip bakiyenizi kontrol edin.`);
+      showFeedbackMessage(`İşlem gerçekleştirilemedi. Lütfen çip bakiyenizi kontrol edin.`);
     }
-    setTimeout(() => setStoreMessage(null), 3500);
   };
 
   const handleSpendChips = (item: ChipEquipmentItem) => {
@@ -117,16 +129,14 @@ export function CyberStore({
       if (calc.lives >= MAX_LIVES) {
         triggerHapticError();
         gameSfx.rejected();
-        setStoreMessage("Canlarınız zaten tam kapasite dolu (5/5)!");
-        setTimeout(() => setStoreMessage(null), 3500);
+        showFeedbackMessage("Canlarınız zaten tam kapasite dolu (5/5)!");
         return;
       }
     }
     if (coins < item.cost) {
       triggerHapticError();
       gameSfx.rejected();
-      setStoreMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
-      setTimeout(() => setStoreMessage(null), 3500);
+      showFeedbackMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} siber çip gerekiyor.`);
       return;
     }
     triggerHapticSelection();
@@ -160,8 +170,7 @@ export function CyberStore({
     if (coins < cost) {
       triggerHapticError();
       gameSfx.rejected();
-      setStoreMessage(`Yetersiz Çip! Bu kozmetik için ${cost} siber çip gerekiyor.`);
-      setTimeout(() => setStoreMessage(null), 3500);
+      showFeedbackMessage(`Yetersiz Çip! Bu kozmetik için ${cost} siber çip gerekiyor.`);
       return;
     }
     setConfirmPurchase({
@@ -174,13 +183,12 @@ export function CyberStore({
         if (success) {
           triggerHapticSuccess();
           gameSfx.victory();
-          setStoreMessage(`Tebrikler! ${label} açıldı ve kuşanıldı! 🎉`);
+          showFeedbackMessage(`Tebrikler! ${label} açıldı ve kuşanıldı! 🎉`);
         } else {
           triggerHapticError();
           gameSfx.rejected();
-          setStoreMessage(`Kozmetik açılamadı. Lütfen çip bakiyenizi kontrol edin.`);
+          showFeedbackMessage(`Kozmetik açılamadı. Lütfen çip bakiyenizi kontrol edin.`);
         }
-        setTimeout(() => setStoreMessage(null), 3500);
       },
     });
   };
@@ -190,8 +198,7 @@ export function CyberStore({
     if (remainingAds <= 0) {
       triggerHapticError();
       gameSfx.rejected();
-      setStoreMessage(`Bugünkü ${DAILY_AD_LIMIT}/${DAILY_AD_LIMIT} reklam hakkını tamamladın! Yarın 00:00'da yenilenecek.`);
-      setTimeout(() => setStoreMessage(null), 3500);
+      showFeedbackMessage(`Bugünkü ${DAILY_AD_LIMIT}/${DAILY_AD_LIMIT} reklam hakkını tamamladın! Yarın 00:00'da yenilenecek.`);
       return;
     }
     setAdLoading(true);
@@ -207,16 +214,14 @@ export function CyberStore({
         gameSfx.victory();
         onBuyCoins(15);
         const left = Math.max(0, DAILY_AD_LIMIT - nextCount);
-        setStoreMessage(`Ödül alındı: +15 Siber Çip kazandın! 🪙 (Bugün Kalan Hak: ${left}/${DAILY_AD_LIMIT})`);
-        setTimeout(() => setStoreMessage(null), 3500);
+        showFeedbackMessage(`Ödül alındı: +15 Siber Çip kazandın! 🪙 (Bugün Kalan Hak: ${left}/${DAILY_AD_LIMIT})`);
       },
       () => {
         // Reklam oynatılamadıysa ödül VERİLMEZ (günlük hak da tüketilmez)
         setAdLoading(false);
         triggerHapticError();
         gameSfx.rejected();
-        setStoreMessage("Reklam şu anda yüklenemedi. Lütfen daha sonra tekrar dene.");
-        setTimeout(() => setStoreMessage(null), 3500);
+        showFeedbackMessage("Reklam şu anda yüklenemedi. Lütfen daha sonra tekrar dene.");
       }
     );
   };

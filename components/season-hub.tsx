@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import {
@@ -84,6 +84,20 @@ export function SeasonHub({
   const [friendsList, setFriendsList] = useState<FriendUser[]>(() => socialManager.getFriends());
   const [pendingRequestsList, setPendingRequestsList] = useState<FriendRequest[]>(() => pendingRequests || socialManager.getPendingRequests());
   const [socialMessage, setSocialMessage] = useState<string | null>(null);
+  const socialMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showSocialMessage = (msg: string) => {
+    setSocialMessage(msg);
+    if (socialMessageTimeoutRef.current) clearTimeout(socialMessageTimeoutRef.current);
+    socialMessageTimeoutRef.current = setTimeout(() => setSocialMessage(null), 3500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (socialMessageTimeoutRef.current) clearTimeout(socialMessageTimeoutRef.current);
+    };
+  }, []);
+
   // Board size picker modal state
   const [challengeTarget, setChallengeTarget] = useState<FriendUser | null>(null);
   const [remaining, setRemaining] = useState(() => getSeasonRemainingTime());
@@ -249,8 +263,7 @@ export function SeasonHub({
 
     if (cleanInput.length > 64) {
       triggerHapticError();
-      setSocialMessage("Kullanıcı adı veya kimliği en fazla 64 karakter olabilir.");
-      setTimeout(() => setSocialMessage(null), 3500);
+      showSocialMessage("Kullanıcı adı veya kimliği en fazla 64 karakter olabilir.");
       return;
     }
 
@@ -260,8 +273,7 @@ export function SeasonHub({
       cleanInput === playerId
     ) {
       triggerHapticError();
-      setSocialMessage("Kendinizi arkadaş olarak ekleyemezsiniz.");
-      setTimeout(() => setSocialMessage(null), 3500);
+      showSocialMessage("Kendinizi arkadaş olarak ekleyemezsiniz.");
       return;
     }
 
@@ -276,22 +288,20 @@ export function SeasonHub({
     );
     if (exists) {
       triggerHapticError();
-      setSocialMessage("Bu kullanıcı zaten arkadaş listenizde.");
-      setTimeout(() => setSocialMessage(null), 3500);
+      showSocialMessage("Bu kullanıcı zaten arkadaş listenizde.");
       return;
     }
 
     // Call onSendFriendRequest if provided
     if (onSendFriendRequest) {
       const res = await onSendFriendRequest(cleanInput);
-      setSocialMessage(res.message);
+      showSocialMessage(res.message);
       if (res.success) {
         triggerHapticSuccess();
         setFriendInput("");
       } else {
         triggerHapticError();
       }
-      setTimeout(() => setSocialMessage(null), 3500);
       return;
     }
 
@@ -319,14 +329,12 @@ export function SeasonHub({
       const data = await resp.json();
       if (resp.ok && data.success) {
         triggerHapticSuccess();
-        setSocialMessage(data.message || "Arkadaşlık isteği gönderildi!");
+        showSocialMessage(data.message || "Arkadaşlık isteği gönderildi!");
         setFriendInput("");
-        setTimeout(() => setSocialMessage(null), 3500);
         return;
       } else if (data.error) {
         triggerHapticError();
-        setSocialMessage(data.error);
-        setTimeout(() => setSocialMessage(null), 3500);
+        showSocialMessage(data.error);
         return;
       }
     } catch {
@@ -334,7 +342,7 @@ export function SeasonHub({
     }
 
     const res = socialManager.addFriend(cleanInput);
-    setSocialMessage(res.message);
+    showSocialMessage(res.message);
     if (res.success) {
       triggerHapticSuccess();
       const updated = [...socialManager.getFriends()];
@@ -344,7 +352,6 @@ export function SeasonHub({
     } else {
       triggerHapticError();
     }
-    setTimeout(() => setSocialMessage(null), 3500);
   };
 
   const handleRemoveFriend = (friend: FriendUser) => {

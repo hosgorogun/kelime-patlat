@@ -62,6 +62,10 @@ import { ModernAlertModal, type ModernAlertData } from "./components/modern-aler
 import { VictoryEffectOverlay } from "./components/victory-effect-overlay";
 import { GameSplashScreen } from "./components/game-splash-screen";
 import { ConnectLine } from "./components/game-ui";
+import { SeasonResetModal } from "./components/season-reset-modal";
+import { DuelInviteModal } from "./components/duel-invite-modal";
+import { MatchmakingOverlay } from "./components/matchmaking-overlay";
+import { GameCountdownOverlay } from "./components/game-countdown-overlay";
 
 type Screen = "home" | "online" | "friends" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -4160,6 +4164,7 @@ function HomeScreen() {
             await AsyncStorage.removeItem("kelime-patlat:player-id").catch(() => undefined);
             await AsyncStorage.removeItem("kelime-patlat:player-name").catch(() => undefined);
             await AsyncStorage.removeItem("@kelime_patlat:vintage_puzzle_progress").catch(() => undefined);
+            await AsyncStorage.removeItem(PENDING_AWARDS_KEY).catch(() => undefined);
             reconnectGameSocket();
           }}
           onDeleteAccount={async () => {
@@ -4185,6 +4190,7 @@ function HomeScreen() {
             await AsyncStorage.removeItem("kelime-patlat:player-name").catch(() => undefined);
             await AsyncStorage.removeItem("kelime-patlat:guide-seen").catch(() => undefined);
             await AsyncStorage.removeItem("@kelime_patlat:vintage_puzzle_progress").catch(() => undefined);
+            await AsyncStorage.removeItem(PENDING_AWARDS_KEY).catch(() => undefined);
             setAuthToken(null);
             setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
             setPlayerName("OYUNCU");
@@ -5192,17 +5198,7 @@ function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {gameCountdown !== null && (
-        <View style={styles.countdownOverlay} pointerEvents="auto">
-          <View style={styles.countdownCard}>
-            <Text style={styles.countdownOverline}>DÜELLO BAŞLIYOR</Text>
-            <Text style={styles.countdownText}>
-              {gameCountdown === 0 ? "BAŞLA!" : gameCountdown}
-            </Text>
-            <Text style={styles.countdownHint}>Gizli kelimeleri ilk bulan kazanır!</Text>
-          </View>
-        </View>
-      )}
+      <GameCountdownOverlay countdown={gameCountdown} />
 
       <UserProfileModal
         visible={inspectedUser !== null}
@@ -5548,103 +5544,7 @@ function ScoreBadge({
   );
 }
 
-const RANK_IMAGES: Record<string, any> = {
-  DEMİR: require("./assets/ranks/iron.jpg"),
-  BRONZ: require("./assets/ranks/bronze.jpg"),
-  GÜMÜŞ: require("./assets/ranks/silver.jpg"),
-  ALTIN: require("./assets/ranks/gold.jpg"),
-  PLATİN: require("./assets/ranks/platinum.jpg"),
-  ELMAS: require("./assets/ranks/diamond.jpg"),
-  YÜCELİK: require("./assets/ranks/ascendant.jpg"),
-  ÖLÜMSÜZLÜK: require("./assets/ranks/immortal.jpg"),
-  RADIAN: require("./assets/ranks/radian.jpg"),
-};
 
-function SeasonResetModal({ data, onClose }: { data: { newSeasonId: string; previousRank: string; previousLp: number; newLp: number }; onClose: () => void }) {
-  const prevTier = getLeagueTier(data.previousLp);
-  const newTier = getLeagueTier(data.newLp);
-
-  const prevImg = RANK_IMAGES[prevTier.tier];
-  const newImg = RANK_IMAGES[newTier.tier];
-
-  return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: "#0E2C22", borderColor: "#C9A227", borderWidth: 2, width: "90%", maxWidth: 390, paddingVertical: 24, paddingHorizontal: 20, borderRadius: 28 }]}>
-          {/* Header Trophy Circle */}
-          <View style={{ width: 72, height: 72, borderRadius: 26, backgroundColor: "rgba(255, 194, 74, 0.14)", borderWidth: 2, borderColor: "#FFC24A", alignItems: "center", justifyContent: "center", marginBottom: 14, shadowColor: "#FFC24A", shadowOpacity: 0.35, shadowRadius: 12, elevation: 6 }}>
-            <Text style={{ fontSize: 36 }}>🏆</Text>
-          </View>
-
-          <View style={{ backgroundColor: "rgba(255, 194, 74, 0.12)", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255, 194, 74, 0.3)", marginBottom: 8 }}>
-            <Text style={{ color: "#FFC24A", fontSize: 10, fontWeight: "900", letterSpacing: 1.5 }}>SEZON {data.newSeasonId}</Text>
-          </View>
-          
-          <Text style={{ color: "#FFFFFF", textAlign: "center", fontSize: 22, fontWeight: "900", letterSpacing: 0.5, marginBottom: 18 }}>YENİ SEZON BAŞLADI!</Text>
-
-          {/* Rank comparison cards */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, width: "100%", marginBottom: 20 }}>
-            {/* Previous season */}
-            <View style={{ flex: 1, backgroundColor: "rgba(12, 42, 34, 0.95)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.16)" }}>
-              <Text style={{ color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginBottom: 6 }}>ÖNCEKİ SEZON</Text>
-              <View style={{ width: 52, height: 52, borderRadius: 16, borderWidth: 1.5, borderColor: prevTier.color, backgroundColor: "rgba(255, 255, 255, 0.06)", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
-                {prevImg ? (
-                  <Image source={prevImg} style={{ width: 52, height: 52, borderRadius: 14 }} resizeMode="cover" />
-                ) : (
-                  <Text style={{ color: prevTier.color, fontSize: 20, fontWeight: "900" }}>{prevTier.icon}</Text>
-                )}
-              </View>
-              <Text style={{ color: prevTier.color, fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>{data.previousRank}</Text>
-              <Text style={{ color: "#94A3B8", fontSize: 10, fontWeight: "800", marginTop: 2 }}>{data.previousLp} LP</Text>
-            </View>
-
-            {/* Arrow icon */}
-            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(201, 162, 39, 0.2)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#C9A227" }}>
-              <Text style={{ color: "#E8C36A", fontSize: 13, fontWeight: "900" }}>➔</Text>
-            </View>
-
-            {/* New season */}
-            <View style={{ flex: 1, backgroundColor: "rgba(6, 182, 212, 0.14)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", borderWidth: 2, borderColor: "#3EE8B5", shadowColor: "#3EE8B5", shadowOpacity: 0.2, shadowRadius: 8 }}>
-              <Text style={{ color: "#3EE8B5", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginBottom: 6 }}>YENİ DERECE</Text>
-              <View style={{ width: 52, height: 52, borderRadius: 16, borderWidth: 2, borderColor: newTier.color, backgroundColor: "rgba(62, 232, 181, 0.15)", alignItems: "center", justifyContent: "center", marginBottom: 8, overflow: "hidden" }}>
-                {newImg ? (
-                  <Image source={newImg} style={{ width: 52, height: 52, borderRadius: 14 }} resizeMode="cover" />
-                ) : (
-                  <Text style={{ color: newTier.color, fontSize: 20, fontWeight: "900" }}>{newTier.icon}</Text>
-                )}
-              </View>
-              <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>{newTier.tier}</Text>
-              <Text style={{ color: "#3EE8B5", fontSize: 10, fontWeight: "900", marginTop: 2 }}>{data.newLp} LP</Text>
-            </View>
-          </View>
-
-          <Text style={{ color: "#CBD5E1", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 22, paddingHorizontal: 4 }}>
-            Kademeli lig puanı sıfırlaması uygulandı. Yeni sezonda liderlik sıralamasında zirveye tırmanmak için hemen yarışmaya katıl!
-          </Text>
-
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [{
-              alignSelf: "stretch",
-              height: 52,
-              borderRadius: 18,
-              backgroundColor: "#3EE8B5",
-              alignItems: "center",
-              justifyContent: "center",
-              shadowColor: "#3EE8B5",
-              shadowOpacity: 0.4,
-              shadowRadius: 10,
-              elevation: 6,
-              opacity: pressed ? 0.85 : 1,
-            } as any]}
-          >
-            <Text style={{ color: "#071A14", fontSize: 14, fontWeight: "900", letterSpacing: 1 }}>YENİ SEZONA BAŞLA 🚀</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 function MainShell({
   active,
@@ -5702,173 +5602,15 @@ function MainShell({
         <SeasonResetModal data={seasonResetModal} onClose={onCloseSeasonResetModal} />
       )}
       {duelInvite && onAcceptDuel && onRejectDuel && (
-        <Modal
-          visible={true}
-          transparent
-          animationType="fade"
-          onRequestClose={onRejectDuel}
-        >
-          <View style={duelModalStyles.overlay}>
-            <View style={duelModalStyles.card}>
-              <View style={duelModalStyles.iconWrap}>
-                <Text style={{ fontSize: 32 }}>⚔️</Text>
-              </View>
-              <Text style={duelModalStyles.kicker}>CANLI DÜELLO MEYDAN OKUMASI</Text>
-              <Text style={duelModalStyles.title}>{duelInvite.fromPlayerName}</Text>
-              <Text style={duelModalStyles.subtitle}>
-                Seni {duelInvite.size}×{duelInvite.size} boyutunda canlı düelloya davet etti!
-              </Text>
-              <View style={duelModalStyles.buttonRow}>
-                <Pressable
-                  style={({ pressed }) => [duelModalStyles.btn, duelModalStyles.acceptBtn, pressed && { opacity: 0.8 }]}
-                  onPress={onAcceptDuel}
-                >
-                  <Text style={duelModalStyles.acceptBtnText}>✓ KABUL ET</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [duelModalStyles.btn, duelModalStyles.rejectBtn, pressed && { opacity: 0.8 }]}
-                  onPress={onRejectDuel}
-                >
-                  <Text style={duelModalStyles.rejectBtnText}>✕ REDDET</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        <DuelInviteModal invite={duelInvite} onAccept={onAcceptDuel} onReject={onRejectDuel} />
       )}
       {matchmakingState && onCancelMatchmaking && (
-        <Modal
-          visible={true}
-          transparent
-          animationType="fade"
-          onRequestClose={onCancelMatchmaking}
-        >
-          <View style={styles.matchmakingOverlay}>
-            <View style={styles.matchmakingCard}>
-              <View style={styles.matchmakingRadarBox}>
-                <ActivityIndicator size="large" color="#3EE8B5" />
-                <Text style={styles.matchmakingRadarIcon}>📡</Text>
-              </View>
-              <Text style={styles.matchmakingTitle}>EŞLEŞME ARANIYOR</Text>
-              <Text style={styles.matchmakingSubtitle}>
-                {matchmakingState.size}×{matchmakingState.size} Boyutunda Canlı Rakip
-              </Text>
-              <Text style={styles.matchmakingTimer}>
-                {`00:${String(matchmakingState.elapsedSeconds).padStart(2, "0")}`}
-              </Text>
-              <Text style={styles.matchmakingStatusText}>
-                {matchmakingState.elapsedSeconds < 3
-                  ? "Uygun ligdeki rakipler taranıyor..."
-                  : "Eşleşme tamamlanıyor, arenaya bağlanılıyor..."}
-              </Text>
-              <Pressable
-                onPress={onCancelMatchmaking}
-                style={({ pressed }) => [styles.matchmakingCancelBtn, pressed && styles.pressed]}
-              >
-                <Text style={styles.matchmakingCancelText}>İPTAL ET</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
+        <MatchmakingOverlay state={matchmakingState} onCancel={onCancelMatchmaking} />
       )}
       {livesModal}
     </ScreenContainer>
   );
 }
-
-const duelModalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(4, 17, 12, 0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 340,
-    backgroundColor: "#0E2C22",
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1.5,
-    borderColor: "#D4B45A",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 14,
-  },
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(212, 180, 90, 0.15)",
-    borderWidth: 1.5,
-    borderColor: "#D4B45A",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-  kicker: {
-    color: "#3EE8B5",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1.2,
-    textAlign: "center",
-  },
-  title: {
-    color: "#FFF9FC",
-    fontSize: 22,
-    fontWeight: "900",
-    textAlign: "center",
-    marginTop: 6,
-    letterSpacing: 0.3,
-  },
-  subtitle: {
-    color: "#CBD5E1",
-    fontSize: 13,
-    fontWeight: "600",
-    textAlign: "center",
-    marginTop: 6,
-    marginBottom: 22,
-    lineHeight: 18,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 10,
-    width: "100%",
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  acceptBtn: {
-    backgroundColor: "rgba(62, 232, 181, 0.2)",
-    borderWidth: 1.5,
-    borderColor: "#3EE8B5",
-  },
-  acceptBtnText: {
-    color: "#3EE8B5",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  rejectBtn: {
-    backgroundColor: "rgba(255, 100, 124, 0.15)",
-    borderWidth: 1.5,
-    borderColor: "#FF647C",
-  },
-  rejectBtnText: {
-    color: "#FF647C",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-});
 
 const battleStyles = StyleSheet.create({
   gameScroll: { flexGrow: 1, paddingBottom: 50 },
@@ -6074,12 +5816,7 @@ const styles = StyleSheet.create({
   arcadeStartButtonText: { color: "#071A14", fontSize: 13, fontWeight: "900", letterSpacing: 1 },
   arcadeStartButtonIcon: { color: "#071A14", fontSize: 22, fontWeight: "900" },
 
-  // Ranked/Game Countdown Overlay Styles
-  countdownOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(11, 19, 43, 0.88)", justifyContent: "center", alignItems: "center", zIndex: 999 },
-  countdownCard: { alignItems: "center", justifyContent: "center", padding: 30, borderRadius: 28, backgroundColor: "rgba(28, 37, 65, 0.95)", borderWidth: 2, borderColor: "#3EE8B5", shadowColor: "#3EE8B5", shadowOpacity: 0.4, shadowRadius: 20, elevation: 15 },
-  countdownOverline: { color: "#3EE8B5", fontSize: 12, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
-  countdownText: { color: "#FFFFFF", fontSize: 68, fontWeight: "900", letterSpacing: 2, textShadowColor: "#3EE8B5", textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 16 },
-  countdownHint: { color: "#94A3B8", fontSize: 12, fontWeight: "700", marginTop: 14, textAlign: "center" },
+
 
   // Aktif Rota Kartı ve Yön Okları
   activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "rgba(8, 28, 22, 0.95)", borderWidth: 1.5, borderColor: "#2DD4BF", padding: 14, shadowColor: "#2DD4BF", shadowOpacity: 0.25, shadowRadius: 10, elevation: 6 },
@@ -6103,18 +5840,7 @@ const styles = StyleSheet.create({
   activeRouteDefText: { color: "#CBD5E1", fontSize: 12, lineHeight: 18, marginTop: 2, fontWeight: "500" },
   routeExploreHint: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginTop: 4, marginBottom: 2, textAlign: "center" },
 
-  // Matchmaking Modal Styles
-  matchmakingOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "center", alignItems: "center", padding: 24 },
-  matchmakingCard: { width: "100%", maxWidth: 360, backgroundColor: "#0E2C22", borderRadius: 24, borderWidth: 2, borderColor: "#3EE8B5", padding: 24, alignItems: "center", shadowColor: "#3EE8B5", shadowOpacity: 0.35, shadowRadius: 20, elevation: 14 },
-  matchmakingRadarBox: { width: 72, height: 72, borderRadius: 36, backgroundColor: "rgba(62,232,181,0.12)", borderWidth: 2, borderColor: "#3EE8B5", justifyContent: "center", alignItems: "center", marginBottom: 14 },
-  matchmakingRadarIcon: { fontSize: 28, position: "absolute" },
-  matchmakingKicker: { color: "#3EE8B5", fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 4 },
-  matchmakingTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", letterSpacing: 0.5, marginBottom: 8, textAlign: "center" },
-  matchmakingSubtitle: { color: "#94A3B8", fontSize: 13, fontWeight: "600", marginBottom: 12, textAlign: "center" },
-  matchmakingTimer: { color: "#3EE8B5", fontSize: 32, fontWeight: "900", letterSpacing: 2, marginBottom: 10 },
-  matchmakingStatusText: { color: "#94A3B8", fontSize: 12, fontWeight: "600", textAlign: "center", marginBottom: 20, minHeight: 34 },
-  matchmakingCancelBtn: { width: "100%", height: 46, borderRadius: 14, backgroundColor: "rgba(239,68,68,0.15)", borderWidth: 1, borderColor: "rgba(239,68,68,0.4)", justifyContent: "center", alignItems: "center" },
-  matchmakingCancelText: { color: "#F87171", fontSize: 13, fontWeight: "900", letterSpacing: 1 },
+
 
   // Live Duel Emote Styles
   emoteBar: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 6, paddingHorizontal: 10, backgroundColor: "rgba(10,32,25,0.85)", borderRadius: 20, borderWidth: 1, borderColor: "rgba(62,232,181,0.25)", marginVertical: 6 },

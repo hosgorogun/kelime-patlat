@@ -229,6 +229,13 @@ export function VintagePuzzle({
 
   const gridContainerRef = useRef<View>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+    };
+  }, []);
 
   // Bulmaca hücre haritası ve başlangıç numaraları
   const { puzzleCellsMap, cellNumbersMap } = useMemo(() => {
@@ -373,7 +380,8 @@ export function VintagePuzzle({
         Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
         Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
       ]).start();
-      setTimeout(() => setErrorMessage(null), 1400);
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = setTimeout(() => setErrorMessage(null), 1400);
     },
     [shakeAnim]
   );
