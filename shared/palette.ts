@@ -1,43 +1,50 @@
-/** Fantasy adventure UI palette — emerald forest, teal glow, warm gold/bronze. */
+/** Paper, ink and candy accents, shared across the application. */
 export const palette = {
-  bg: "#06140F",
-  bgDeep: "#04110C",
-  forest: "#0A241C",
-  panel: "#0E2C22",
-  panelLift: "#164536",
-  panelInner: "#0B231B",
-  surface: "#12362B",
-  overlay: "rgba(4, 17, 12, 0.78)",
-
-  gold: "#F4D06F",
-  goldHi: "#FFF3B0",
-  goldBright: "#FFE08A",
-  goldDeep: "#C9962A",
-  bronze: "#B8863A",
-  bronzeDark: "#6B4A18",
-  bronzeBorder: "#8C6A2E",
-
-  emerald: "#3EE8B5",
-  emeraldDeep: "#1AA87A",
-  teal: "#2DD4BF",
-  mint: "#A7F3D0",
-
-  cream: "#FFF8E7",
-  text: "#F7F3E8",
-  muted: "#A8C5B5",
-  mutedGold: "#E8D5A3",
-
-  heart: "#FF6B81",
-  danger: "#FF6B7A",
-  warning: "#FFC24A",
-
-  gemGreen: "#4ADE80",
-  gemAmber: "#FBBF24",
-  gemBlue: "#38BDF8",
-  gemRuby: "#FB7185",
+  bg: "#F7F5EE",
+  bgDeep: "#EFEEE5",
+  forest: "#E5F3EA",
+  panel: "#FFFFFF",
+  panelLift: "#F0F5F0",
+  panelInner: "#F4F5EF",
+  surface: "#FFFFFF",
+  overlay: "rgba(35, 48, 59, 0.42)",
+  gold: "#996000",
+  goldHi: "#293541",
+  goldBright: "#966000",
+  goldDeep: "#B87810",
+  bronze: "#D9DCCF",
+  bronzeDark: "#CFD5C9",
+  bronzeBorder: "#DFE3D8",
+  emerald: "#167653",
+  emeraldDeep: "#146447",
+  teal: "#167D75",
+  mint: "#DDF4E8",
+  cream: "#FFFFFF",
+  text: "#293541",
+  muted: "#626F73",
+  mutedGold: "#626F73",
+  heart: "#D84659",
+  danger: "#BA354A",
+  warning: "#A76500",
+  gemGreen: "#167653",
+  gemAmber: "#996000",
+  gemBlue: "#216A9F",
+  gemRuby: "#BA354A",
+  coral: "#FF896F",
+  yellow: "#FFD66E",
+  blue: "#D9ECFF",
+  line: "#DFE3D8",
 } as const;
-
-export const GOLD_BUTTON_GRADIENT = ["#FFF1B0", "#F0C24A", "#C48A1C"] as const;
-export const EMERALD_GRADIENT = ["#7FF5D0", "#2DD4BF", "#148F72"] as const;
-export const PANEL_SHEEN = ["rgba(255, 236, 170, 0.18)", "rgba(255, 236, 170, 0.04)", "transparent"] as const;
-export const FRAME_GRADIENT = ["#F8E19A", "#D4A84A", "#8C5E1C", "#F0D078"] as const;
+export const GOLD_BUTTON_GRADIENT = ["#FFD66E", "#FFD66E", "#FFD66E"] as const;
+export const EMERALD_GRADIENT = ["#9DE5BB", "#9DE5BB", "#9DE5BB"] as const;
+export const PANEL_SHEEN = [
+  "transparent",
+  "transparent",
+  "transparent",
+] as const;
+export const FRAME_GRADIENT = [
+  "#DFE3D8",
+  "#DFE3D8",
+  "#DFE3D8",
+  "#DFE3D8",
+] as const;

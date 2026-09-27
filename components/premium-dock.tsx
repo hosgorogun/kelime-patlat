@@ -1,11 +1,21 @@
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-
-import { ICONS } from "@/components/game-ui";
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { palette } from "@/shared/palette";
-import { STORE_ASSETS } from "@/shared/store-items";
+import { ICONS } from "@/components/game-ui";
 
-export type DockDestination = "store" | "missions" | "home" | "season" | "profile";
+export type DockDestination =
+  | "store"
+  | "missions"
+  | "home"
+  | "season"
+  | "profile";
+
+const tabs: { id: DockDestination; label: string; icon: ImageSourcePropType }[] = [
+  { id: "store", label: "Mağaza", icon: ICONS.store },
+  { id: "missions", label: "Görevler", icon: ICONS.missions },
+  { id: "home", label: "Oyna", icon: ICONS.play },
+  { id: "season", label: "Lig", icon: ICONS.trophy },
+  { id: "profile", label: "Profil", icon: ICONS.profile },
+];
 
 export function PremiumDock({
   active,
@@ -19,286 +29,137 @@ export function PremiumDock({
   storeBadgeCount?: number;
 }) {
   return (
-    <View style={styles.dockWrap}>
-      <LinearGradient colors={["#0F382B", "#0A281E", "#051610"]} style={styles.dock}>
-        <DockTab
-          iconSource={ICONS.store}
-          fallbackEmoji="🛍️"
-          label="MAĞAZA"
-          active={active === "store"}
-          badgeCount={storeBadgeCount}
-          onPress={() => onNavigate("store")}
-        />
-        <DockTab
-          iconSource={ICONS.missions}
-          fallbackEmoji="🎯"
-          label="GÖREVLER"
-          active={active === "missions"}
-          badgeCount={missionsBadgeCount}
-          onPress={() => onNavigate("missions")}
-        />
-
-        <Pressable onPress={() => onNavigate("home")} style={({ pressed }) => [styles.centerTab, pressed && styles.pressed]}>
-          <View style={[styles.centerGem, active === "home" && styles.centerGemActive]}>
-            <LinearGradient
-              colors={active === "home" ? ["#FFF8D6", "#F5BE2C", "#C48616"] : ["#1B543F", "#0E3628", "#071F17"]}
-              style={styles.centerGemFill}
+    <View style={styles.dock} accessibilityRole="tablist">
+      {tabs.map((tab) => {
+        const selected = active === tab.id;
+        const count =
+          tab.id === "missions"
+            ? missionsBadgeCount
+            : tab.id === "store"
+              ? storeBadgeCount
+              : 0;
+        return (
+          <Pressable
+            key={tab.id}
+            accessibilityRole="tab"
+            accessibilityLabel={tab.label}
+            accessibilityState={{ selected }}
+            onPress={() => onNavigate(tab.id)}
+            style={({ pressed }) => [
+              styles.tab,
+              selected && styles.active,
+              pressed && { opacity: 0.75, transform: [{ scale: 0.96 }] },
+            ]}
+          >
+            <View style={styles.iconContainer}>
+              <Image
+                source={tab.icon}
+                style={[
+                  styles.iconImage,
+                  tab.id === "home" && styles.homeIconImage,
+                  selected ? styles.iconActive : styles.iconInactive,
+                ]}
+                resizeMode="contain"
+              />
+            </View>
+            <Text
+              style={[
+                styles.label,
+                selected && styles.labelActive,
+              ]}
+              numberOfLines={1}
             >
-              <Image source={ICONS.play} style={styles.centerIcon} resizeMode="contain" />
-            </LinearGradient>
-          </View>
-          <Text style={[styles.centerLabel, active === "home" && styles.centerLabelActive]}>OYNA</Text>
-        </Pressable>
-
-        <DockTab
-          iconSource={ICONS.trophy}
-          fallbackEmoji="🏆"
-          label="LİG"
-          active={active === "season"}
-          onPress={() => onNavigate("season")}
-        />
-        <DockTab
-          iconSource={ICONS.profile}
-          fallbackEmoji="👤"
-          label="PROFİL"
-          active={active === "profile"}
-          onPress={() => onNavigate("profile")}
-        />
-      </LinearGradient>
+              {tab.label}
+            </Text>
+            {!!count && count > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{count > 9 ? "9+" : count}</Text>
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
-function DockTab({
-  imageKey,
-  iconSource,
-  fallbackEmoji,
-  label,
-  active,
-  onPress,
-  badgeCount,
-}: {
-  imageKey?: string;
-  iconSource?: any;
-  fallbackEmoji: string;
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  badgeCount?: number;
-}) {
-  const assetSource = imageKey && STORE_ASSETS[imageKey] ? STORE_ASSETS[imageKey] : null;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.tab, active && styles.tabActive, pressed && styles.pressed]}
-    >
-      <View style={styles.iconBox}>
-        <View style={[styles.iconBubble, active && styles.iconBubbleActive]}>
-          {assetSource ? (
-            <Image source={assetSource} style={styles.dockImage} resizeMode="cover" />
-          ) : iconSource ? (
-            <Image source={iconSource} style={styles.dockIconImage} resizeMode="contain" />
-          ) : (
-            <Text style={[styles.icon, active && styles.iconActive]}>{fallbackEmoji}</Text>
-          )}
-        </View>
-        {badgeCount !== undefined && badgeCount > 0 && (
-          <View style={styles.tabBadge}>
-            <Text style={styles.tabBadgeText}>{badgeCount > 9 ? "9+" : badgeCount}</Text>
-          </View>
-        )}
-      </View>
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.75}
-        style={[styles.label, active && styles.labelActive]}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  dockWrap: {
-    borderRadius: 28,
-    borderWidth: 1.5,
-    borderColor: "rgba(62, 232, 181, 0.55)",
-    backgroundColor: "#051610",
-    shadowColor: "#10B981",
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 16,
-    overflow: "visible",
-  },
   dock: {
-    height: 76,
-    borderRadius: 25,
-    overflow: "visible",
-    paddingHorizontal: 6,
-    paddingVertical: 6,
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: palette.line,
+    padding: 6,
+    gap: 4,
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   tab: {
     flex: 1,
-    height: "100%",
+    minHeight: 62,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 16,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    gap: 3,
   },
-  tabActive: {
-    backgroundColor: "rgba(62, 232, 181, 0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.45)",
-    borderRadius: 14,
+  active: {
+    backgroundColor: "#FFD66E",
+    shadowColor: "#FFD66E",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  iconBox: {
-    height: 34,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  iconBubble: {
+  iconContainer: {
     width: 34,
     height: 34,
-    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 36, 28, 0.95)",
-    borderWidth: 1.5,
-    borderColor: "rgba(62, 232, 181, 0.3)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 4,
-    elevation: 3,
-    overflow: "hidden",
   },
-  dockImage: {
-    width: "100%",
-    height: "100%",
+  iconImage: {
+    width: 30,
+    height: 30,
   },
-  dockIconImage: {
-    width: 24,
-    height: 24,
-  },
-  iconBubbleActive: {
-    backgroundColor: "rgba(62, 232, 181, 0.28)",
-    borderWidth: 2,
-    borderColor: "#3EE8B5",
-    shadowColor: "#3EE8B5",
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  tabBadge: {
-    position: "absolute",
-    top: -6,
-    right: -10,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: palette.danger,
-    borderWidth: 1.5,
-    borderColor: palette.cream,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-    shadowColor: palette.danger,
-    shadowOpacity: 0.85,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  tabBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "900",
-    lineHeight: 11,
-    textAlign: "center",
-  },
-  icon: {
-    fontSize: 16,
-    lineHeight: 20,
-    opacity: 0.95,
+  homeIconImage: {
+    width: 33,
+    height: 33,
   },
   iconActive: {
     opacity: 1,
-    transform: [{ scale: 1.15 }],
+    transform: [{ scale: 1.08 }],
+  },
+  iconInactive: {
+    opacity: 0.8,
   },
   label: {
-    color: "#BCE3D4",
-    fontSize: 8.5,
-    fontWeight: "900",
-    letterSpacing: 0.3,
-    marginTop: 3,
-    textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.8)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: palette.muted,
+    fontSize: 11,
+    fontWeight: "700",
   },
   labelActive: {
-    color: "#3EE8B5",
-    textShadowColor: "rgba(62, 232, 181, 0.6)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 5,
-  },
-  centerTab: {
-    flex: 1.2,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: -20,
-  },
-  centerGem: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    borderWidth: 3,
-    borderColor: "#3EE8B5",
-    overflow: "hidden",
-    shadowColor: "#3EE8B5",
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  centerGemActive: {
-    borderColor: "#FFF4B8",
-    shadowColor: "#F5BE2C",
-    shadowOpacity: 0.95,
-    shadowRadius: 16,
-  },
-  centerGemFill: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  centerIcon: {
-    width: 42,
-    height: 42,
-  },
-  centerLabel: {
-    color: "#7FF5D0",
-    fontSize: 9,
+    color: palette.text,
     fontWeight: "900",
-    letterSpacing: 0.8,
-    marginTop: 2,
-    textShadowColor: "rgba(0,0,0,0.9)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
-  centerLabelActive: {
-    color: "#FFE08A",
-    textShadowColor: "rgba(245, 190, 44, 0.8)",
-    textShadowRadius: 6,
+  badge: {
+    position: "absolute",
+    right: 5,
+    top: 3,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.heart,
   },
-  pressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.96 }],
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "800",
   },
 });

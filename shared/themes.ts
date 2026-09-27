@@ -14,51 +14,51 @@ export type VisualTheme = {
 export const VISUAL_THEMES: Record<string, VisualTheme> = {
   standard: {
     id: "standard",
-    name: "Zümrüt Orman",
-    background: "#06140F",
-    surface: "#164536",
-    surfaceSelected: "#1F6A52",
-    cellBorder: "#8C6A2E",
-    text: "#FFF8E7",
-    trayBackground: "#0E2C22",
-    headerText: "#A8C5B5",
-    accentColor: "#F4D06F"
+    name: "Kelime Bahçesi",
+    background: "#F7F5EE",
+    surface: "#FFFFFF",
+    surfaceSelected: "#B9EDD0",
+    cellBorder: "#CED8C9",
+    text: "#293541",
+    trayBackground: "#E9EFE3",
+    headerText: "#626F73",
+    accentColor: "#167653"
   },
   space: {
     id: "space",
-    name: "Derin Uzay",
-    background: "#080B16",
-    surface: "#182643",
-    surfaceSelected: "#2A457D",
-    cellBorder: "#2E477F",
-    text: "#E5F4FF",
-    trayBackground: "#11182C",
-    headerText: "#8FA4CF",
-    accentColor: "#50E3C2"
+    name: "Gökyüzü",
+    background: "#F0F6FD",
+    surface: "#FFFFFF",
+    surfaceSelected: "#B6DCFF",
+    cellBorder: "#C9DAE8",
+    text: "#293541",
+    trayBackground: "#E2EEFA",
+    headerText: "#526C81",
+    accentColor: "#216A9F"
   },
   cyber: {
     id: "cyber",
-    name: "Siberpunk Neon",
-    background: "#18061B",
-    surface: "#38103F",
-    surfaceSelected: "#691975",
-    cellBorder: "#781885",
-    text: "#FFF5FE",
-    trayBackground: "#28072E",
-    headerText: "#D8A3DF",
-    accentColor: "#FF647C"
+    name: "Şeker Molası",
+    background: "#FBF2F6",
+    surface: "#FFFFFF",
+    surfaceSelected: "#F4BED4",
+    cellBorder: "#E3CED8",
+    text: "#293541",
+    trayBackground: "#F5E3EC",
+    headerText: "#78596B",
+    accentColor: "#A3396A"
   },
   retro: {
     id: "retro",
-    name: "Retro Arcade",
-    background: "#1C1C18",
-    surface: "#383630",
-    surfaceSelected: "#5E5B51",
-    cellBorder: "#706B5F",
-    text: "#FFFFE0",
-    trayBackground: "#2A2924",
-    headerText: "#C4C0B5",
-    accentColor: "#FFC24A"
+    name: "Gün Işığı",
+    background: "#FFF8E8",
+    surface: "#FFFFFF",
+    surfaceSelected: "#FFD66E",
+    cellBorder: "#E1D5B8",
+    text: "#293541",
+    trayBackground: "#F4EBD0",
+    headerText: "#786941",
+    accentColor: "#996000"
   }
 };
 

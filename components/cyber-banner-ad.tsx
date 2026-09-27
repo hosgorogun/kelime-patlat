@@ -13,7 +13,7 @@ export type CyberBannerAdProps = {
 const SAMPLE_CAMPAIGNS = [
   {
     kicker: "ÖZEL ETKİNLİK",
-    title: "Siber Arena Sezonu Başladı! 🏆",
+    title: "Yeni sezon başladı! 🏆",
     sub: "Liderlik sıralamasına katıl, +1000 Çip ödülü kap!",
     badge: "SEZON",
     accent: palette.gold,
@@ -66,7 +66,7 @@ export function CyberBannerAd({ style, onPressAd }: CyberBannerAdProps) {
       style={({ pressed }) => [styles.bannerWrap, style, pressed && styles.pressed]}
     >
       <LinearGradient
-        colors={["#0A241C", "#071A14", "#04110C"]}
+        colors={["#FFFFFF", "#FFFFFF", "#FFFFFF"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.bannerContainer, { borderColor: `${campaign.accent}45` }]}
@@ -115,11 +115,11 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 8,
     borderRadius: 14,
-    shadowColor: "#10B981",
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 2,
   },
   bannerContainer: {
     height: 48,
@@ -147,7 +147,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    borderColor: "#DCE1D7",
+    backgroundColor: "#FFF8E8",
   },
   adBadgeText: {
     fontSize: 9,
@@ -167,21 +168,21 @@ const styles = StyleSheet.create({
   campaignKicker: {
     fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   dot: {
-    color: "#64748B",
+    color: "#293541",
     fontSize: 8,
   },
   campaignTitle: {
-    color: "#F8FAFC",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.2,
     flexShrink: 1,
   },
   campaignSub: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 10,
     fontWeight: "500",
     marginTop: 1,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   pressed: {
     opacity: 0.85,

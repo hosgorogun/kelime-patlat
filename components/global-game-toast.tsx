@@ -137,16 +137,16 @@ const styles = StyleSheet.create({
   toastCard: {
     width: "100%",
     maxWidth: 420,
-    backgroundColor: "rgba(8, 28, 22, 0.96)",
+    backgroundColor: "#F0F5ED",
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: "#D4B45A",
+    borderColor: "#DCE1D7",
     paddingHorizontal: 12,
     paddingVertical: 10,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   pressableRow: {
     flexDirection: "row",
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 12,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   badgePill: {
     paddingHorizontal: 6,
@@ -184,14 +184,14 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    color: "#04110C",
+    color: "#293541",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   subtitle: {
-    color: "#CBD5E1",
-    fontSize: 11,
+    color: "#293541",
+    fontSize: 14,
     lineHeight: 15,
     fontWeight: "600",
     marginTop: 2,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   closeBtnText: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "900",
   },

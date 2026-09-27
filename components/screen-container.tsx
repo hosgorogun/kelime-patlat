@@ -34,6 +34,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
     flex: 1,
   },
 });

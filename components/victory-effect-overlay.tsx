@@ -21,35 +21,35 @@ const EFFECT_META: Record<string, { label: string; glyph: string; color: string;
   pulse: {
     label: "SİBER PULSE",
     glyph: "🌊",
-    color: "#3EE8B5",
-    accentColor: "#0D9488",
+    color: "#2a9c7a",
+    accentColor: "#F0F5ED",
     description: "Rezonans Şok Dalgası",
   },
   glitch: {
     label: "MATRİS GLITCH",
     glyph: "💻",
-    color: "#E8C36A",
-    accentColor: "#10B981",
+    color: "#8c7540",
+    accentColor: "#F0F5ED",
     description: "Dijital Veri Patlaması",
   },
   flare: {
     label: "GÜNEŞ FLARE",
     glyph: "💥",
-    color: "#F97316",
+    color: "#cb5e12",
     accentColor: "#EF4444",
     description: "Kozmik Parlama Halesi",
   },
   lightning: {
     label: "ŞİMŞEK ÇARPMASI",
     glyph: "⚡",
-    color: "#FACC15",
+    color: "#967a0d",
     accentColor: "#60A5FA",
     description: "Yüksek Voltaj Boşalımı",
   },
   fireworks: {
     label: "BÜYÜK KUTLAMA",
     glyph: "🎆",
-    color: "#FF2A85",
+    color: "#ff2a85",
     accentColor: "#A855F7",
     description: "Görkemli Havai Fişek & Konfeti",
   },
@@ -89,8 +89,8 @@ export function VictoryEffectOverlay({
         : safeEffect === "flare"
         ? ["#F97316", "#FB923C", "#FFD000", "#EF4444", "#FCA5A5"]
         : safeEffect === "glitch"
-        ? ["#10B981", "#34D399", "#E8C36A", "#059669", "#A7F3D0"]
-        : ["#3EE8B5", "#2DD4BF", "#0D9488", "#5EEAD4", "#CCFBF1"];
+        ? ["#F0F5ED", "#34D399", "#E8C36A", "#F0F5ED", "#A7F3D0"]
+        : ["#3EE8B5", "#2DD4BF", "#F0F5ED", "#5EEAD4", "#CCFBF1"];
 
     const centerX = width / 2;
     const centerY = height * 0.38;
@@ -261,9 +261,9 @@ export function VictoryEffectOverlay({
               outputRange: [0.9, 0.6, 0],
             }),
             shadowColor: meta.color,
-            shadowOpacity: 0.8,
-            shadowRadius: 16,
-            elevation: 8,
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
           }}
         />
 
@@ -311,9 +311,9 @@ export function VictoryEffectOverlay({
             opacity: p.opacityAnim,
             zIndex: 95,
             shadowColor: p.color,
-            shadowOpacity: 0.9,
-            shadowRadius: 8,
-            elevation: 6,
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
             justifyContent: "center",
             alignItems: "center",
           }}
@@ -356,25 +356,25 @@ export function VictoryEffectOverlay({
           style={{
             flexDirection: "row",
             alignItems: "center",
-            backgroundColor: "rgba(10, 26, 20, 0.98)",
+            backgroundColor: "#F0F5ED",
             borderRadius: 20,
             paddingVertical: 10,
             paddingHorizontal: 18,
             borderWidth: 2,
             borderColor: meta.color,
             shadowColor: meta.color,
-            shadowOpacity: 0.6,
-            shadowRadius: 14,
-            elevation: 12,
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
             gap: 10,
           }}
         >
           <Text style={{ fontSize: 22 }}>{meta.glyph}</Text>
           <View>
-            <Text style={{ color: meta.color, fontSize: 12, fontWeight: "900", letterSpacing: 1.5 }}>
+            <Text style={{ color: meta.color, fontSize: 12, fontWeight: "900", letterSpacing: 0.5 }}>
               {meta.label} AKTİF
             </Text>
-            <Text style={{ color: "#CBD5E1", fontSize: 10, fontWeight: "700", marginTop: 1 }}>
+            <Text style={{ color: "#293541", fontSize: 10, fontWeight: "700", marginTop: 1 }}>
               {meta.description}
             </Text>
           </View>

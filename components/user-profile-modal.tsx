@@ -69,7 +69,7 @@ export function UserProfileModal({
   const activeAvatarObj = AVATARS.find((a) => a.id === user.avatar);
   const avatarIcon = activeAvatarObj ? activeAvatarObj.icon : user.avatar || (user.isBot ? "🤖" : "⚡");
   const avatarColor = activeAvatarObj ? activeAvatarObj.color : "#3EE8B5";
-  const avatarSurface = activeAvatarObj ? activeAvatarObj.surface : "#0E2C22";
+  const avatarSurface = activeAvatarObj ? activeAvatarObj.surface : "#F0F5ED";
   const activeFrameObj = PROFILE_FRAMES.find((f) => f[0] === user.selectedFrame);
   const frameBorderColor = activeFrameObj ? activeFrameObj[2] : avatarColor;
 
@@ -180,14 +180,14 @@ export function UserProfileModal({
               <View style={styles.intelDivider} />
               <View style={styles.intelCell}>
                 <Text style={styles.intelLabel}>📚 KELİME HAVUZU</Text>
-                <Text style={[styles.intelValue, { color: "#34D399" }]}>
+                <Text style={[styles.intelValue, { color: "#279f73" }]}>
                   {user.historyCount ?? (user.matches ? user.matches * 3 : 0)} KELİME
                 </Text>
               </View>
               <View style={styles.intelDivider} />
               <View style={styles.intelCell}>
                 <Text style={styles.intelLabel}>🌟 TOPLAM XP</Text>
-                <Text style={[styles.intelValue, { color: "#3EE8B5" }]}>
+                <Text style={[styles.intelValue, { color: "#2a9c7a" }]}>
                   {user.xp ?? 0}
                 </Text>
               </View>
@@ -196,8 +196,8 @@ export function UserProfileModal({
             {/* Actions Bar */}
             <View style={styles.actionsRow}>
               {isSelf ? (
-                <View style={[styles.alreadyFriendBadge, { borderColor: "#3EE8B5", backgroundColor: "rgba(62, 232, 181, 0.12)" }]}>
-                  <Text style={[styles.alreadyFriendText, { color: "#3EE8B5" }]}>⭐ SENİN HESABIN</Text>
+                <View style={[styles.alreadyFriendBadge, { borderColor: "#DCE1D7", backgroundColor: "rgba(62, 232, 181, 0.12)" }]}>
+                  <Text style={[styles.alreadyFriendText, { color: "#2a9c7a" }]}>⭐ SENİN HESABIN</Text>
                 </View>
               ) : isFriend ? (
                 <View style={styles.alreadyFriendBadge}>
@@ -247,7 +247,7 @@ export function UserProfileModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(4, 17, 12, 0.85)",
+    backgroundColor: "rgba(35,48,59,0.42)",
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
@@ -256,17 +256,17 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 380,
     maxHeight: "88%",
-    backgroundColor: "#0E2C22",
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: "rgba(212, 180, 90, 0.4)",
+    borderColor: "#DCE1D7",
     padding: 18,
     position: "relative",
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
     overflow: "hidden",
   },
   accentLine: {
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 3,
-    backgroundColor: "#3EE8B5",
+    backgroundColor: "#aef5e0",
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   closeBtnText: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 14,
     fontWeight: "900",
   },
@@ -314,11 +314,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   avatarImage: {
     width: "100%",
@@ -332,15 +332,15 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -6,
     alignSelf: "center",
-    backgroundColor: "#D4B45A",
+    backgroundColor: "#eddfba",
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderWidth: 1,
-    borderColor: "#C5D9C8",
+    borderColor: "#DCE1D7",
   },
   levelBadgeText: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     backgroundColor: "rgba(62, 232, 181, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.3)",
+    borderColor: "#DCE1D7",
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -365,20 +365,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   titleBadgeText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   userNameText: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 17,
     fontWeight: "900",
     letterSpacing: 0.5,
     marginBottom: 4,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 3,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   subMetaRow: {
     flexDirection: "row",
@@ -398,28 +398,28 @@ const styles = StyleSheet.create({
   },
   botTag: {
     backgroundColor: "rgba(239, 68, 68, 0.15)",
-    borderColor: "#EF4444",
+    borderColor: "#DCE1D7",
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
   botTagText: {
-    color: "#EF4444",
+    color: "#ed4343",
     fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   lpText: {
-    color: "#CBD5E1",
+    color: "#293541",
     fontSize: 9.5,
     fontWeight: "800",
   },
   sectionHeader: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
     marginBottom: 8,
   },
   statsContainer: {
@@ -435,74 +435,74 @@ const styles = StyleSheet.create({
     width: "48.5%",
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(10, 36, 28, 0.95)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 10,
     gap: 10,
-    borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.25)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 0,
   },
   statIcon: {
     fontSize: 18,
   },
   statNumber: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 15,
     fontWeight: "900",
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   statCaption: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 7.5,
     fontWeight: "800",
     letterSpacing: 0.4,
   },
   intelStrip: {
     flexDirection: "row",
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.25)",
+    borderWidth: 1.5,
+    borderColor: "#DCE1D7",
     marginBottom: 16,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 0,
   },
   intelCell: {
     flex: 1,
     alignItems: "center",
   },
   intelLabel: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   intelValue: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "900",
     marginTop: 2,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   intelDivider: {
     width: 1,
     height: 20,
-    backgroundColor: "rgba(212, 180, 90, 0.2)",
+    backgroundColor: "#E2E8F0",
   },
   actionsRow: {
     flexDirection: "row",
@@ -510,26 +510,26 @@ const styles = StyleSheet.create({
   },
   addFriendBtn: {
     flex: 1,
-    backgroundColor: "#D4B45A",
+    backgroundColor: "#FFD66E",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 0,
   },
   addFriendBtnText: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   alreadyFriendBadge: {
     flex: 1,
-    backgroundColor: "rgba(52, 211, 153, 0.15)",
+    backgroundColor: "#E6F7F0",
     borderColor: "#34D399",
     borderWidth: 1.5,
     borderRadius: 12,
@@ -538,27 +538,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   alreadyFriendText: {
-    color: "#34D399",
+    color: "#279f73",
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   challengeBtn: {
     flex: 1,
-    backgroundColor: "rgba(62, 232, 181, 0.15)",
-    borderColor: "#3EE8B5",
+    backgroundColor: "#3EE8B5",
+    borderColor: "#20C997",
     borderWidth: 1.5,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#3EE8B5",
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 0,
   },
   challengeBtnText: {
-    color: "#3EE8B5",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.5,

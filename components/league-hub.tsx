@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, Dimensions, FlatList } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, FlatList } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import {
@@ -13,12 +13,6 @@ import {
 import { type LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = Math.round(SCREEN_WIDTH * 0.76);
-const CARD_GAP = 14;
-const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
-const HORIZONTAL_PADDING = Math.max(0, (SCREEN_WIDTH - CARD_WIDTH) / 2);
-
 const RANK_IMAGES: Record<string, any> = {
   DEMİR: require("../assets/ranks/iron.jpg"),
   BRONZ: require("../assets/ranks/bronze.jpg"),
@@ -30,6 +24,9 @@ const RANK_IMAGES: Record<string, any> = {
   ÖLÜMSÜZLÜK: require("../assets/ranks/immortal.jpg"),
   RADIAN: require("../assets/ranks/radian.jpg"),
 };
+
+
+
 
 const LEAGUES: LeagueTierInfo[] = LEAGUE_TIERS.map((tier, idx) => {
   const next = LEAGUE_TIERS[idx + 1];
@@ -69,6 +66,11 @@ export function LeagueHub({
   onPlayRanked?: () => void;
   embedded?: boolean;
 }) {
+  const { width } = useWindowDimensions();
+  const availableWidth = Math.min(width - 28, 560);
+  const CARD_WIDTH = Math.min(300, Math.round(availableWidth * 0.82));
+  const SNAP_INTERVAL = CARD_WIDTH + 14;
+  const HORIZONTAL_PADDING = Math.max(0, (availableWidth - CARD_WIDTH) / 2);
   const current = getLeagueTier(progress);
   const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
   const currentIndex = LEAGUES.findIndex((league) => league.tier === current.tier);
@@ -121,6 +123,7 @@ export function LeagueHub({
       {/* Showcase Horizontal Carousel */}
       <View style={styles.carouselContainer}>
         <FlatList
+          key={CARD_WIDTH}
           ref={flatListRef}
           data={LEAGUES}
           horizontal
@@ -182,7 +185,7 @@ export function LeagueHub({
                     </View>
                   ) : isUnlocked ? (
                     <View style={[styles.cardPill, { backgroundColor: `${item.color}20`, borderWidth: 1, borderColor: `${item.color}55` }]}>
-                      <Text style={[styles.cardPillTextUnlocked, { color: item.color }]}>AÇIK</Text>
+                      <Text style={[styles.cardPillTextUnlocked, { color: "#293541" }]}>AÇIK</Text>
                     </View>
                   ) : (
                     <View style={[styles.cardPill, { backgroundColor: "rgba(255,255,255,0.06)" }]}>
@@ -192,11 +195,11 @@ export function LeagueHub({
                 </View>
 
                 {/* 3D Rank Artwork */}
-                <View style={[styles.artworkContainer, { borderColor: isUnlocked ? item.color : "rgba(212, 180, 90, 0.2)", shadowColor: item.color }]}>
+                <View style={[styles.artworkContainer, { borderColor: isUnlocked ? item.color : "#DCE1D7", shadowColor: item.color }]}>
                   {imgSource ? (
                     <Image source={imgSource} style={[styles.artworkImage, !isUnlocked && { opacity: 0.35 }]} resizeMode="cover" />
                   ) : (
-                    <Text style={{ fontSize: 50 }}>{item.icon}</Text>
+                    <Text style={{ fontSize: 56, color: "#293541" }}>{item.icon}</Text>
                   )}
                   {!isUnlocked && (
                     <View style={styles.artworkLockOverlay}>
@@ -206,7 +209,7 @@ export function LeagueHub({
                 </View>
 
                 {/* Title & LP Info */}
-                <Text style={[styles.cardLeagueTitle, { color: isUnlocked ? item.color : "#94A3B8" }]}>{item.name}</Text>
+                <Text style={[styles.cardLeagueTitle, { color: "#293541" }]}>{item.name}</Text>
                 <Text style={styles.cardLpRange}>
                   {item.maxPoints === Number.POSITIVE_INFINITY ? `${item.minPoints}+ LP GEREKLİ` : `${item.minPoints} - ${item.maxPoints} LP`}
                 </Text>
@@ -216,7 +219,7 @@ export function LeagueHub({
                   <View style={styles.cardLiveProgress}>
                     <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
                       <Text style={styles.cardLiveLabel}>Mevcut İlerleme:</Text>
-                      <Text style={[styles.cardLiveValue, { color: item.color }]}>{current.currentTierPoints} / {current.targetTierPoints} LP</Text>
+                      <Text style={[styles.cardLiveValue, { color: "#293541" }]}>{current.currentTierPoints} / {current.targetTierPoints} LP</Text>
                     </View>
                     <View style={styles.cardTrack}>
                       <View style={[styles.cardFill, { width: `${Math.max(6, progressRatio * 100)}%`, backgroundColor: item.color }]} />
@@ -233,7 +236,7 @@ export function LeagueHub({
       <View style={[styles.detailCard, { borderColor: `${selectedLeague.color}55` }]}>
         <View style={styles.detailHeader}>
           <Text style={styles.detailKicker}>KADEME DETAYI & AVANTAJLARI</Text>
-          <Text style={[styles.detailBadge, { color: selectedLeague.color }]}>{selectedLeague.tier}</Text>
+          <Text style={[styles.detailBadge, { color: "#293541" }]}>{selectedLeague.tier}</Text>
         </View>
 
         <View style={styles.detailGrid}>
@@ -244,7 +247,7 @@ export function LeagueHub({
           <View style={styles.detailRule} />
           <View style={styles.detailBox}>
             <Text style={styles.detailBoxLabel}>KADEME DURUMU</Text>
-            <Text numberOfLines={1} style={[styles.detailBoxValue, { color: isSelectedUnlocked ? "#22C55E" : "#EF4444" }]}>
+            <Text numberOfLines={1} style={[styles.detailBoxValue, { color: isSelectedUnlocked ? "#1daa51" : "#ed4343" }]}>
               {isSelectedCurrent ? "BURADASIN" : isSelectedUnlocked ? "AÇIK" : "KİLİTLİ"}
             </Text>
           </View>
@@ -274,7 +277,7 @@ export function LeagueHub({
           style={({ pressed }) => [styles.playCtaButton, pressed && styles.pressed]}
         >
           <LinearGradient
-            colors={["#166548", "#0E3F30", "#08291F"]}
+            colors={["#F0F5ED", "#F0F5ED", "#F0F5ED"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.playCtaGradient}
@@ -312,7 +315,7 @@ export function LeagueHub({
         <View style={styles.top3Row}>
           {effectiveStandings.slice(0, 3).map((entry, idx) => {
             const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
-            const borderCol = idx === 0 ? "#FFD000" : idx === 1 ? "#94A3B8" : "#F97316";
+            const borderCol = idx === 0 ? "#DCE1D7" : idx === 1 ? "#DCE1D7" : "#DCE1D7";
             const displayLp = entry.lp ?? (entry.tier ? getMinLpForTier(entry.tier) : 0);
             return (
               <View key={entry.id || idx} style={[styles.top3Item, { borderColor: borderCol }]}>
@@ -342,54 +345,54 @@ const styles = StyleSheet.create({
   content: { paddingVertical: 12, paddingBottom: 140 },
   embeddedContainer: { paddingTop: 4, paddingBottom: 24 },
   header: { flexDirection: "row", alignItems: "center", marginBottom: 12, paddingHorizontal: 18 },
-  backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#164536", borderWidth: 1, borderColor: "rgba(212, 180, 90, 0.3)", alignItems: "center", justifyContent: "center", marginRight: 10 },
-  backText: { color: "#FFF9FC", fontSize: 28, lineHeight: 30, marginTop: -3 },
+  backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  backText: { color: "#293541", fontSize: 28, lineHeight: 30, marginTop: -3 },
   headerCopy: { flex: 1 },
-  overline: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
-  title: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginTop: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
-  timerPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#164536", borderWidth: 1, borderColor: "rgba(251, 191, 36, 0.4)", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
+  overline: { color: "#293541", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  title: { color: "#293541", fontSize: 26, fontWeight: "900", letterSpacing: 0.5, marginTop: 1, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  timerPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
   timerIcon: { fontSize: 12 },
-  timerLabel: { color: "#FBBF24", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.8 },
-  timerValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
+  timerLabel: { color: "#9b7616", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.5 },
+  timerValue: { color: "#293541", fontSize: 11, fontWeight: "900" },
 
   carouselContainer: { marginVertical: 8 },
-  carouselCard: { backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1.5, borderColor: "rgba(212, 180, 90, 0.25)", borderRadius: 24, padding: 16, marginRight: 14, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.45, shadowRadius: 8, elevation: 6 },
-  carouselCardSelected: { backgroundColor: "rgba(22, 69, 54, 0.95)", borderWidth: 2, shadowOpacity: 0.5, shadowRadius: 14, elevation: 8 },
-  carouselCardLocked: { opacity: 0.6 },
+  carouselCard: { backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", borderRadius: 24, padding: 16, marginRight: 14, alignItems: "center", shadowColor: "#293541", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  carouselCardSelected: { backgroundColor: "#FFFFFF", borderWidth: 2.5, shadowOpacity: 0.12, shadowRadius: 6, elevation: 3 },
+  carouselCardLocked: { opacity: 0.7 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: 12 },
-  cardIndexText: { color: "#94A3B8", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  cardIndexText: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
   cardPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  cardPillTextCurrent: { color: "#071A14", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
-  cardPillTextUnlocked: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
-  cardPillTextLocked: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.6 },
+  cardPillTextCurrent: { color: "#293541", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  cardPillTextUnlocked: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  cardPillTextLocked: { color: "#64748B", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
 
-  artworkContainer: { width: 110, height: 110, borderRadius: 24, borderWidth: 2.5, backgroundColor: "#0E2C22", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, position: "relative", shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 },
+  artworkContainer: { width: 110, height: 110, borderRadius: 24, borderWidth: 2.5, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, position: "relative" },
   artworkImage: { width: 104, height: 104, borderRadius: 20 },
-  artworkLockOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(14, 44, 34, 0.65)", alignItems: "center", justifyContent: "center" },
+  artworkLockOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.45)", alignItems: "center", justifyContent: "center" },
 
-  cardLeagueTitle: { fontSize: 20, fontWeight: "900", letterSpacing: 0.6, marginBottom: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
-  cardLpRange: { color: "#94A3B8", fontSize: 11, fontWeight: "700", marginBottom: 12 },
+  cardLeagueTitle: { fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginBottom: 2, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  cardLpRange: { color: "#293541", fontSize: 11, fontWeight: "700", marginBottom: 12 },
 
-  cardLiveProgress: { width: "100%", marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" },
-  cardLiveLabel: { color: "#94A3B8", fontSize: 9.5, fontWeight: "700" },
+  cardLiveProgress: { width: "100%", marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#DCE1D7" },
+  cardLiveLabel: { color: "#293541", fontSize: 9.5, fontWeight: "700" },
   cardLiveValue: { fontSize: 10.5, fontWeight: "900" },
-  cardTrack: { width: "100%", height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4, overflow: "hidden" },
+  cardTrack: { width: "100%", height: 6, borderRadius: 3, backgroundColor: "#E2E8F0", marginTop: 4, overflow: "hidden" },
   cardFill: { height: "100%", borderRadius: 3 },
 
-  detailCard: { marginHorizontal: 18, marginTop: 6, padding: 14, borderRadius: 18, backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1.5, borderColor: "rgba(212, 180, 90, 0.3)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
+  detailCard: { marginHorizontal: 18, marginTop: 6, padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   detailHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  detailKicker: { color: "#94A3B8", fontSize: 8.5, fontWeight: "900", letterSpacing: 1 },
-  detailBadge: { fontSize: 10.5, fontWeight: "900", letterSpacing: 0.8 },
+  detailKicker: { color: "#293541", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  detailBadge: { fontSize: 10.5, fontWeight: "900", letterSpacing: 0.5 },
 
-  detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#0B231B", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 12, marginBottom: 8, gap: 2 },
+  detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F7F5EE", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 12, marginBottom: 8, gap: 2 },
   detailBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-  detailBoxLabel: { color: "#A8C5B5", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
-  detailBoxValue: { color: "#FFFFFF", fontSize: 10.5, fontWeight: "900", marginTop: 2, textAlign: "center" },
-  detailRule: { width: 1, height: 20, backgroundColor: "rgba(255,255,255,0.1)" },
+  detailBoxLabel: { color: "#293541", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
+  detailBoxValue: { color: "#293541", fontSize: 10.5, fontWeight: "900", marginTop: 2, textAlign: "center" },
+  detailRule: { width: 1, height: 20, backgroundColor: "#DCE1D7" },
 
-  detailDesc: { color: "#CBD5E1", fontSize: 10.5, fontWeight: "600", lineHeight: 15, textAlign: "center" },
+  detailDesc: { color: "#293541", fontSize: 10.5, fontWeight: "600", lineHeight: 15, textAlign: "center" },
 
   playCtaButton: {
     marginHorizontal: 18,
@@ -397,12 +400,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1.5,
-    borderColor: "#3EE8B5",
-    shadowColor: "#3EE8B5",
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   playCtaGradient: {
     paddingVertical: 14,
@@ -424,18 +427,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(62, 232, 181, 0.18)",
     borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.4)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
   playCtaTitle: {
-    color: "#FFFFFF",
+    color: "#293541",
     fontSize: 13,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   playCtaSubtitle: {
-    color: "#A8C5B5",
+    color: "#293541",
     fontSize: 9.5,
     fontWeight: "700",
     marginTop: 2,
@@ -444,25 +447,25 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#3EE8B5",
+    backgroundColor: "#aef5e0",
     alignItems: "center",
     justifyContent: "center",
   },
   playCtaArrow: {
-    color: "#071A14",
+    color: "#293541",
     fontSize: 16,
     fontWeight: "900",
   },
 
-  standingsCard: { marginHorizontal: 18, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: "rgba(14, 44, 34, 0.92)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
+  standingsCard: { marginHorizontal: 18, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   standingsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  standingsTitle: { color: "#FFF9FC", fontSize: 11, fontWeight: "900", letterSpacing: 0.8, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-  standingsBadge: { backgroundColor: "rgba(62, 232, 181, 0.15)", borderWidth: 1, borderColor: "rgba(62, 232, 181, 0.3)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  standingsBadgeText: { color: "#3EE8B5", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  standingsTitle: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  standingsBadge: { backgroundColor: "rgba(62, 232, 181, 0.15)", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  standingsBadgeText: { color: "#2a9c7a", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
 
   top3Row: { flexDirection: "row", gap: 8 },
-  top3Item: { flex: 1, backgroundColor: "#0B231B", borderWidth: 1, borderRadius: 12, padding: 8, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 3, elevation: 2 },
+  top3Item: { flex: 1, backgroundColor: "#F7F5EE", borderWidth: 1, borderColor: "#DCE1D7", borderRadius: 12, padding: 8, alignItems: "center", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
   top3Medal: { fontSize: 14, marginBottom: 2 },
-  top3Name: { color: "#FFFFFF", fontSize: 10, fontWeight: "900", width: "100%", textAlign: "center", textShadowColor: "rgba(0,0,0,0.4)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1 },
-  top3Lp: { color: "#3EE8B5", fontSize: 8.5, fontWeight: "800", marginTop: 1 },
+  top3Name: { color: "#293541", fontSize: 10, fontWeight: "900", width: "100%", textAlign: "center", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  top3Lp: { color: "#2a9c7a", fontSize: 8.5, fontWeight: "800", marginTop: 1 },
 });

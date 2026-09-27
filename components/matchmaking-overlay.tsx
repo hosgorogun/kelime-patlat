@@ -26,7 +26,7 @@ export function MatchmakingOverlay({
       <View style={styles.matchmakingOverlay}>
         <View style={styles.matchmakingCard}>
           <View style={styles.matchmakingRadarBox}>
-            <ActivityIndicator size="large" color="#3EE8B5" />
+            <ActivityIndicator size="large" color="#2a9c7a" />
             <Text style={styles.matchmakingRadarIcon}>📡</Text>
           </View>
           <Text style={styles.matchmakingTitle}>EŞLEŞME ARANIYOR</Text>
@@ -56,7 +56,7 @@ export function MatchmakingOverlay({
 const styles = StyleSheet.create({
   matchmakingOverlay: {
     flex: 1,
-    backgroundColor: "rgba(4, 17, 12, 0.88)",
+    backgroundColor: "rgba(35,48,59,0.42)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
@@ -64,17 +64,17 @@ const styles = StyleSheet.create({
   matchmakingCard: {
     width: "100%",
     maxWidth: 320,
-    backgroundColor: "#0B261D",
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: "#3EE8B5",
+    borderColor: "#DCE1D7",
     padding: 24,
     alignItems: "center",
-    shadowColor: "#3EE8B5",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   matchmakingRadarBox: {
     width: 72,
@@ -89,30 +89,30 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   matchmakingTitle: {
-    color: "#FFFFFF",
+    color: "#293541",
     fontSize: 18,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginBottom: 6,
     textAlign: "center",
   },
   matchmakingSubtitle: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "700",
     marginBottom: 16,
     textAlign: "center",
   },
   matchmakingTimer: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 32,
     fontWeight: "900",
-    letterSpacing: 2,
+    letterSpacing: 0.5,
     marginBottom: 12,
     fontFamily: "monospace",
   },
   matchmakingStatusText: {
-    color: "#CBD5E1",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "600",
     textAlign: "center",
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   matchmakingCancelBtn: {
     backgroundColor: "rgba(239, 68, 68, 0.15)",
     borderWidth: 1.5,
-    borderColor: "#EF4444",
+    borderColor: "#DCE1D7",
     paddingVertical: 10,
     paddingHorizontal: 28,
     borderRadius: 12,
@@ -130,10 +130,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   matchmakingCancelText: {
-    color: "#EF4444",
+    color: "#ed4343",
     fontSize: 12,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   pressed: {
     opacity: 0.8,

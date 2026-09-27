@@ -127,7 +127,7 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
         >
           {/* Icon Circle */}
           {alert.icon && (
-            <View style={[styles.iconCircle, { borderColor: accentColor, backgroundColor: "#04110C" }]}>
+            <View style={[styles.iconCircle, { borderColor: accentColor, backgroundColor: "#F0F5ED" }]}>
               <Text style={styles.iconText}>{alert.icon}</Text>
             </View>
           )}
@@ -202,24 +202,24 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(4, 11, 16, 0.94)",
+    backgroundColor: "rgba(35,48,59,0.42)",
     justifyContent: "center",
     alignItems: "center",
     padding: 18,
   },
   card: {
-    backgroundColor: "#0E2C22",
+    backgroundColor: "#FFFFFF",
     borderWidth: 2.5,
-    borderColor: "#D4B45A",
+    borderColor: "#DCE1D7",
     borderRadius: 24,
     paddingHorizontal: 22,
     paddingTop: 24,
     paddingBottom: 20,
     alignItems: "center",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.55,
-    shadowRadius: 20,
-    elevation: 16,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconCircle: {
     width: 64,
@@ -229,11 +229,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconText: {
     fontSize: 28,
@@ -241,28 +241,28 @@ const styles = StyleSheet.create({
   kickerText: {
     fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
     marginBottom: 6,
     textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   titleText: {
-    color: "#FFFFFF",
+    color: "#293541",
     fontSize: 19,
     fontWeight: "900",
     textAlign: "center",
     lineHeight: 25,
     marginBottom: 8,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 3,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   messageText: {
-    color: "#A8C5B5",
-    fontSize: 13,
+    color: "#293541",
+    fontSize: 14,
     lineHeight: 19,
     textAlign: "center",
     marginBottom: 16,
@@ -279,13 +279,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255, 255, 255, 0.05)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: "#DCE1D7",
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   detailLabel: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "800",
   },
@@ -306,10 +306,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryButtonText: {
-    color: "#06140F",
+    color: "#293541",
     fontSize: 14,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   secondaryButton: {
@@ -318,12 +318,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(255, 255, 255, 0.07)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderColor: "#DCE1D7",
     justifyContent: "center",
     alignItems: "center",
   },
   secondaryButtonText: {
-    color: "#A8C5B5",
+    color: "#293541",
     fontSize: 13,
     fontWeight: "800",
   },

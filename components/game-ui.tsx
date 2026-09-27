@@ -1,9 +1,6 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
-  Animated,
-  Easing,
   Image,
-  ImageBackground,
   Pressable,
   StyleSheet,
   Text,
@@ -14,11 +11,8 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { palette } from "@/shared/palette";
 
-import { FRAME_GRADIENT, PANEL_SHEEN, palette } from "@/shared/palette";
-
-const BG = require("../assets/ui/game-bg-forest.png");
 export const ICONS = {
   coin: require("../assets/ui/icon-coin.png"),
   heart: require("../assets/ui/icon-heart.png"),
@@ -30,92 +24,64 @@ export const ICONS = {
   missions: require("../assets/ui/icon-missions.png"),
   profile: require("../assets/ui/icon-profile.png"),
 } as const;
-
-export function GameAtmosphere({ dim = 0.55 }: { dim?: number }) {
-  const drift = useRef(new Animated.Value(0)).current;
-  const sparkle = useRef(new Animated.Value(0.25)).current;
-
-  useEffect(() => {
-    const driftLoop = Animated.loop(
-      Animated.timing(drift, { toValue: 1, duration: 18000, easing: Easing.linear, useNativeDriver: true })
-    );
-    const sparkleLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(sparkle, { toValue: 0.9, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(sparkle, { toValue: 0.2, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ])
-    );
-    driftLoop.start();
-    sparkleLoop.start();
-    return () => {
-      driftLoop.stop();
-      sparkleLoop.stop();
-    };
-  }, [drift, sparkle]);
-
-  const motes = useMemo(
-    () =>
-      Array.from({ length: 16 }, (_, i) => ({
-        left: `${(i * 19 + 7) % 94}%`,
-        top: `${(i * 13 + 9) % 88}%`,
-        size: 2 + (i % 4),
-        gold: i % 3 !== 0,
-      })),
-    []
-  );
-
-  const floatY = drift.interpolate({ inputRange: [0, 1], outputRange: [0, -18] });
-
+const glyphs = new Map<ImageSourcePropType, string>([
+  [ICONS.coin, "●"],
+  [ICONS.heart, "♥"],
+  [ICONS.radar, "⌕"],
+  [ICONS.shield, "◆"],
+  [ICONS.play, "▶"],
+  [ICONS.trophy, "★"],
+  [ICONS.store, "▣"],
+  [ICONS.missions, "✓"],
+  [ICONS.profile, "☺"],
+]);
+export function GameGlyph({
+  source,
+  size = 24,
+  color: _color,
+}: {
+  source: ImageSourcePropType;
+  size?: number;
+  color?: string;
+}) {
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover" imageStyle={{ opacity: 0.72 }} />
-      <LinearGradient
-        colors={[`rgba(4,17,12,${dim})`, "rgba(6,20,15,0.35)", `rgba(4,17,12,${Math.min(0.88, dim + 0.22)})`]}
-        locations={[0, 0.42, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.vignette} />
-      <Animated.View style={[styles.glowOrb, styles.glowLeft, { opacity: sparkle }]} />
-      <Animated.View style={[styles.glowOrb, styles.glowRight, { opacity: sparkle }]} />
-      {motes.map((mote, i) => (
-        <Animated.View
-          key={i}
-          style={{
-            position: "absolute",
-            left: mote.left as any,
-            top: mote.top as any,
-            width: mote.size,
-            height: mote.size,
-            borderRadius: mote.size,
-            backgroundColor: mote.gold ? palette.goldHi : palette.emerald,
-            opacity: sparkle,
-            transform: [{ translateY: floatY }],
-            shadowColor: mote.gold ? palette.gold : palette.emerald,
-            shadowOpacity: 0.9,
-            shadowRadius: 6,
-          }}
-        />
-      ))}
-    </View>
+    <Image
+      source={source}
+      style={{ width: size, height: size }}
+      resizeMode="contain"
+    />
   );
 }
-
-function CornerJewel({ style, colors }: { style: ViewStyle; colors?: readonly [string, string] }) {
+export function GameAtmosphere({ dim: _dim }: { dim?: number }) {
   return (
-    <View style={[styles.cornerJewel, style]}>
-      <LinearGradient colors={colors || [palette.goldHi, palette.goldDeep]} style={styles.cornerJewelInner} />
-    </View>
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { backgroundColor: palette.bg }]}
+    />
   );
 }
-
-export type OrnatePanelAccent = "gold" | "emerald" | "ruby" | "cyan" | "amber" | "sapphire" | "purple";
-
+export type OrnatePanelAccent =
+  | "gold"
+  | "emerald"
+  | "ruby"
+  | "cyan"
+  | "amber"
+  | "sapphire"
+  | "purple";
+const panelColors = {
+  gold: "#FFFFFF",
+  emerald: "#EDF8F0",
+  ruby: "#FFF0EB",
+  cyan: "#EDF7FC",
+  amber: "#FFF6DE",
+  sapphire: "#EDF4FC",
+  purple: "#F5F0FC",
+};
 export function OrnatePanel({
   children,
   style,
   contentStyle,
   accent = "gold",
-  showJewels = true,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -123,69 +89,28 @@ export function OrnatePanel({
   accent?: OrnatePanelAccent;
   showJewels?: boolean;
 }) {
-  const frame =
-    accent === "ruby"
-      ? (["#FDA4AF", "#FB7185", "#881337", "#E11D48"] as const)
-      : accent === "cyan"
-      ? (["#A5F3FC", "#38BDF8", "#0369A1", "#0284C7"] as const)
-      : accent === "amber"
-      ? (["#FFE08A", "#FFC24A", "#B45309", "#78350F"] as const)
-      : accent === "sapphire"
-      ? (["#BAE6FD", "#38BDF8", "#0284C7", "#0C4A6E"] as const)
-      : accent === "purple"
-      ? (["#E9D5FF", "#C084FC", "#7E22CE", "#581C87"] as const)
-      : accent === "emerald"
-      ? ([palette.mint, palette.emeraldDeep, palette.bronzeDark, palette.teal] as const)
-      : FRAME_GRADIENT;
-
-  const innerBg =
-    accent === "gold"
-      ? "rgba(34, 26, 12, 0.96)"
-      : accent === "amber"
-      ? "rgba(42, 26, 6, 0.96)"
-      : accent === "sapphire"
-      ? "rgba(10, 24, 44, 0.96)"
-      : accent === "ruby"
-      ? "rgba(44, 14, 22, 0.96)"
-      : accent === "cyan"
-      ? "rgba(10, 32, 44, 0.96)"
-      : accent === "purple"
-      ? "rgba(32, 12, 44, 0.96)"
-      : "rgba(10, 38, 28, 0.96)";
-
-  const jewelColors: readonly [string, string] =
-    accent === "ruby"
-      ? ["#FDA4AF", "#BE123C"]
-      : accent === "cyan" || accent === "sapphire"
-      ? ["#BAE6FD", "#0284C7"]
-      : accent === "emerald"
-      ? [palette.mint, palette.emeraldDeep]
-      : accent === "purple"
-      ? ["#E9D5FF", "#7E22CE"]
-      : [palette.goldHi, palette.goldDeep];
-
   return (
-    <View style={[styles.panelOuter, style]}>
-      <LinearGradient colors={[...frame]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.panelFrame}>
-        <View style={[styles.panelInner, { backgroundColor: innerBg }, contentStyle]}>
-          <LinearGradient colors={[...PANEL_SHEEN]} style={styles.panelSheen} pointerEvents="none" />
-          {showJewels && (
-            <>
-              <CornerJewel style={styles.jewelTL} colors={jewelColors} />
-              <CornerJewel style={styles.jewelTR} colors={jewelColors} />
-              <CornerJewel style={styles.jewelBL} colors={jewelColors} />
-              <CornerJewel style={styles.jewelBR} colors={jewelColors} />
-            </>
-          )}
-          {children}
-        </View>
-      </LinearGradient>
+    <View style={[styles.panel, style]}>
+      <View
+        style={[
+          styles.panelContent,
+          { backgroundColor: panelColors[accent] },
+          contentStyle,
+        ]}
+      >
+        {children}
+      </View>
     </View>
   );
 }
-
 type GameButtonVariant = "gold" | "emerald" | "ruby" | "sapphire" | "dark";
-
+const buttons = {
+  gold: ["#FFD66E", "#D3A63D"],
+  emerald: ["#9DE5BB", "#64AD84"],
+  ruby: ["#FFAA99", "#CE796B"],
+  sapphire: ["#B6DCFF", "#7BA9D0"],
+  dark: ["#E9EDE7", "#BFC8BD"],
+} as const;
 export function GameButton({
   label,
   icon,
@@ -205,142 +130,74 @@ export function GameButton({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const height = size === "lg" ? 56 : size === "md" ? 46 : 38;
-  const radius = height / 2;
-
-  const colors =
-    variant === "gold"
-      ? (["#FFE885", "#F5BE2C", "#C48616"] as const)
-      : variant === "emerald"
-      ? (["#6EE7B7", "#10B981", "#059669"] as const)
-      : variant === "ruby"
-      ? (["#FB7185", "#E11D48", "#BE123C"] as const)
-      : variant === "sapphire"
-      ? (["#38BDF8", "#0EA5E9", "#0284C7"] as const)
-      : (["#1E4A3C", "#0E2C22", "#071A14"] as const);
-
-  const bottomBorderColor =
-    variant === "gold"
-      ? "#8B5E14"
-      : variant === "emerald"
-      ? "#064E3B"
-      : variant === "ruby"
-      ? "#881337"
-      : variant === "sapphire"
-      ? "#0369A1"
-      : "#05160E";
-
-  const labelColor =
-    variant === "gold"
-      ? "#3A2408"
-      : variant === "emerald"
-      ? "#06281C"
-      : variant === "sapphire"
-      ? "#042033"
-      : variant === "dark"
-      ? palette.goldHi
-      : "#FFFFFF";
-
-  const shadowGlowColor =
-    variant === "gold"
-      ? "rgba(245, 190, 44, 0.45)"
-      : variant === "emerald"
-      ? "rgba(16, 185, 129, 0.4)"
-      : variant === "ruby"
-      ? "rgba(244, 63, 94, 0.4)"
-      : variant === "sapphire"
-      ? "rgba(14, 165, 233, 0.4)"
-      : "rgba(0, 0, 0, 0.6)";
-
+  const [backgroundColor, borderColor] = buttons[variant];
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
-        styles.btnWrap,
-        { height, borderRadius: radius, opacity: disabled ? 0.55 : 1, shadowColor: shadowGlowColor },
-        pressed && styles.btnPressed,
+        styles.button,
+        {
+          minHeight: size === "lg" ? 56 : 44,
+          backgroundColor,
+          borderColor,
+          opacity: disabled ? 0.45 : 1,
+        },
         style,
+        pressed && { transform: [{ translateY: 2 }], borderBottomWidth: 2 },
       ]}
     >
-      <View
-        style={[
-          styles.btnRing,
-          {
-            borderRadius: radius,
-            height,
-            borderBottomColor: bottomBorderColor,
-            borderBottomWidth: size === "sm" ? 3 : 4,
-          },
-        ]}
+      {iconSource ? (
+        <GameGlyph source={iconSource} size={18} />
+      ) : icon ? (
+        <Text style={{ fontSize: 18 }}>{icon}</Text>
+      ) : null}
+      <Text
+        numberOfLines={2}
+        style={[styles.buttonText, { fontSize: size === "sm" ? 12 : 14 }]}
       >
-        <LinearGradient colors={[...colors]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={[styles.btnFill, { borderRadius: radius - 2 }]}>
-          <View style={styles.btnGloss} />
-          <View style={styles.btnRow}>
-            {iconSource ? <Image source={iconSource} style={styles.btnIconImg} /> : null}
-            {icon && !iconSource ? <Text style={styles.btnEmoji}>{icon}</Text> : null}
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit={true}
-              minimumFontScale={0.72}
-              style={[
-                styles.btnLabel,
-                {
-                  color: labelColor,
-                  fontSize: size === "lg" ? 13.5 : size === "md" ? 12 : 10.5,
-                  textShadowColor: variant === "dark" || variant === "ruby" ? "#000" : "rgba(255,255,255,0.45)",
-                  textShadowOffset: { width: 0, height: 1 },
-                  textShadowRadius: 1,
-                },
-              ]}
-            >
-              {label}
-            </Text>
-          </View>
-        </LinearGradient>
-      </View>
+        {label}
+      </Text>
     </Pressable>
   );
 }
-
 export function GameIcon({
   source,
   emoji,
   size = 44,
-  glow,
 }: {
   source?: ImageSourcePropType;
   emoji?: string;
   size?: number;
   glow?: string;
 }) {
+  if (source) {
+    return (
+      <Image
+        source={source}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
+    );
+  }
   return (
     <View
       style={{
         width: size,
         height: size,
-        borderRadius: size / 2,
-        borderWidth: 2,
-        borderColor: palette.gold,
-        backgroundColor: palette.panelInner,
+        borderRadius: size * 0.3,
+        backgroundColor: "#FFF0C7",
         alignItems: "center",
         justifyContent: "center",
-        overflow: "hidden",
-        shadowColor: glow || palette.gold,
-        shadowOpacity: 0.55,
-        shadowRadius: 8,
-        elevation: 6,
       }}
     >
-      {source ? (
-        <Image source={source} style={{ width: size * 0.75, height: size * 0.75 }} resizeMode="contain" />
-      ) : (
-        <Text style={{ fontSize: size * 0.46 }}>{emoji}</Text>
-      )}
+      <Text style={{ fontSize: size * 0.46 }}>{emoji}</Text>
     </View>
   );
 }
-
 export function GemChip({
   icon,
   iconSource,
@@ -360,289 +217,61 @@ export function GemChip({
   plus?: boolean;
   badge?: boolean;
 }) {
-  const bgColors =
-    color === palette.gemBlue || color === "#38BDF8"
-      ? (["#0E3248", "#061824"] as const)
-      : color === palette.gold || color === "#F4D06F" || color === "#FFC24A"
-      ? (["#382408", "#1A1003"] as const)
-      : (["#10382B", "#061C14"] as const);
-
   return (
     <Pressable
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={`${label ?? ""}: ${value}`}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        {
-          borderColor: `${color}55`,
-          shadowColor: color,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
-          elevation: 3,
-        },
-        pressed && { transform: [{ scale: 0.96 }] },
-      ]}
+      style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
     >
-      <LinearGradient colors={[...bgColors]} style={styles.chipFill}>
-        {iconSource ? <Image source={iconSource} style={styles.chipIcon} /> : <Text style={styles.chipEmoji}>{icon}</Text>}
-        <View style={{ flex: 1, minWidth: 0 }}>
-          {label ? <Text numberOfLines={1} style={styles.chipLabel}>{label}</Text> : null}
-          <Text style={[styles.chipValue, { color }]}>{value}</Text>
-        </View>
-        {plus ? (
-          <View style={[styles.plusBubble, { backgroundColor: color }]}>
-            <Text style={[styles.plusText, { color: "#06140F" }]}>+</Text>
-          </View>
+      {iconSource ? (
+        <GameGlyph source={iconSource} size={19} color={color} />
+      ) : (
+        <Text>{icon}</Text>
+      )}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        {label ? (
+          <Text numberOfLines={1} style={styles.chipLabel}>
+            {label}
+          </Text>
         ) : null}
-        {badge ? <View style={styles.chipBadge} /> : null}
-      </LinearGradient>
+        <Text style={styles.chipValue}>{value}</Text>
+      </View>
+      {plus ? <Text style={styles.plus}>+</Text> : null}
+      {badge ? <View style={styles.badge} /> : null}
     </Pressable>
   );
 }
-
-export function JewelTitle({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
-  return (
-    <Text style={[styles.jewelTitle, style]}>
-      {children}
-    </Text>
-  );
+export function JewelTitle({
+  children,
+  style,
+}: {
+  children: ReactNode;
+  style?: StyleProp<TextStyle>;
+}) {
+  return <Text style={[styles.title, style]}>{children}</Text>;
 }
-
-export function SectionLabel({ title, meta }: { title: string; meta?: string }) {
+export function SectionLabel({
+  title,
+  meta,
+}: {
+  title: string;
+  meta?: string;
+}) {
   return (
-    <View style={styles.sectionHead}>
-      <View style={styles.sectionRule} />
-      <View style={styles.sectionTitleWrap}>
-        <Text style={styles.sectionDiamond}>✦</Text>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {meta ? <Text style={styles.sectionMeta}>· {meta}</Text> : null}
-        <Text style={styles.sectionDiamond}>✦</Text>
-      </View>
-      <View style={styles.sectionRule} />
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {meta ? <Text style={styles.sectionMeta}>{meta}</Text> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  vignette: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    borderWidth: 0,
-    backgroundColor: "transparent",
-    shadowColor: "#000",
-    shadowOpacity: 0.9,
-    shadowRadius: 40,
-  },
-  glowOrb: {
-    position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-  },
-  glowLeft: {
-    left: -60,
-    top: 120,
-    backgroundColor: "rgba(46, 180, 120, 0.16)",
-  },
-  glowRight: {
-    right: -40,
-    bottom: 90,
-    backgroundColor: "rgba(244, 208, 111, 0.12)",
-  },
-  panelOuter: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  panelFrame: {
-    borderRadius: 26,
-    padding: 3,
-  },
-  panelInner: {
-    backgroundColor: palette.panel,
-    borderRadius: 23,
-    overflow: "hidden",
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(14, 28, 22, 0.9)",
-  },
-  panelSheen: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 70,
-  },
-  cornerJewel: {
-    position: "absolute",
-    width: 12,
-    height: 12,
-    zIndex: 4,
-  },
-  cornerJewelInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 2,
-    transform: [{ rotate: "45deg" }],
-    borderWidth: 1,
-    borderColor: palette.goldHi,
-  },
-  jewelTL: { top: 8, left: 8 },
-  jewelTR: { top: 8, right: 8 },
-  jewelBL: { bottom: 8, left: 8 },
-  jewelBR: { bottom: 8, right: 8 },
-  btnWrap: {
-    shadowColor: palette.gold,
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 8,
-  },
-  btnPressed: {
-    transform: [{ translateY: 2 }, { scale: 0.985 }],
-    shadowOpacity: 0.2,
-  },
-  btnRing: {
-    borderWidth: 2,
-    borderColor: palette.bronzeDark,
-    overflow: "hidden",
-    backgroundColor: palette.bronzeDark,
-    width: "100%",
-  },
-  btnFill: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  btnGloss: {
-    position: "absolute",
-    top: 2,
-    left: 10,
-    right: 10,
-    height: "42%",
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.32)",
-  },
-  btnRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: 8,
-    maxWidth: "100%",
-  },
-  btnEmoji: { fontSize: 16 },
-  btnIconImg: { width: 20, height: 20, borderRadius: 10 },
-  btnLabel: {
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    textAlign: "center",
-    flexShrink: 1,
-  },
-  chip: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: palette.bronzeBorder,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  chipFill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 7,
-    gap: 5,
-    position: "relative",
-  },
-  chipIcon: { width: 22, height: 22, borderRadius: 11 },
-  chipEmoji: { fontSize: 14 },
-  chipLabel: { color: palette.muted, fontSize: 7.5, fontWeight: "900", letterSpacing: 0.4 },
-  chipValue: { fontSize: 12, fontWeight: "900" },
-  plusBubble: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: palette.gold,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  plusText: { color: "#3A2408", fontSize: 11, fontWeight: "900", lineHeight: 13 },
-  chipBadge: {
-    position: "absolute",
-    top: 3,
-    right: 3,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: palette.danger,
-    borderWidth: 1,
-    borderColor: palette.cream,
-  },
-  jewelTitle: {
-    color: palette.goldHi,
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: 1.2,
-    textShadowColor: "#5A3A10",
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 0,
-  },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  sectionTitleWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  sectionDiamond: {
-    color: palette.gold,
-    fontSize: 8,
-    opacity: 0.85,
-  },
-  sectionTitle: {
-    color: palette.goldBright,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.4,
-    textAlign: "center",
-  },
-  sectionMeta: {
-    color: palette.muted,
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.6,
-  },
-  sectionRule: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(184, 134, 58, 0.45)",
-  },
-});
-
 export function ConnectLine({
   x1,
   y1,
   x2,
   y2,
   color,
-  opacity = 0.95,
+  opacity = 0.85,
   showArrow = true,
 }: {
   x1: number;
@@ -653,12 +282,7 @@ export function ConnectLine({
   opacity?: number;
   showArrow?: boolean;
 }) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  const angle = Math.atan2(dy, dx);
-  const arrowPos = Math.max(0, length - 18);
-
+  const length = Math.hypot(x2 - x1, y2 - y1);
   return (
     <View
       pointerEvents="none"
@@ -668,94 +292,106 @@ export function ConnectLine({
         top: y1,
         width: length,
         height: 0,
-        transform: [{ rotate: `${angle}rad` }],
+        transform: [{ rotate: `${Math.atan2(y2 - y1, x2 - x1)}rad` }],
         transformOrigin: "0% 50%",
         zIndex: 20,
-        overflow: "visible",
+        opacity,
       }}
     >
-      {/* Dış neon ışık halkası (Glow Beam) */}
       <View
         style={{
           position: "absolute",
-          left: 0,
-          top: -6,
-          width: Math.max(0, length - 4),
-          height: 12,
-          backgroundColor: color,
-          borderRadius: 6,
-          opacity: opacity * 0.4,
-          shadowColor: color,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 1,
-          shadowRadius: 10,
-          elevation: 6,
-        }}
-      />
-      {/* Çizgi ana neon çekirdeği */}
-      <View
-        style={{
-          position: "absolute",
-          left: 0,
           top: -3,
-          width: Math.max(0, length - 4),
+          width: length,
           height: 6,
-          backgroundColor: color,
           borderRadius: 3,
-          opacity,
-          shadowColor: "#FFFFFF",
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.9,
-          shadowRadius: 5,
-          elevation: 4,
+          backgroundColor: color,
         }}
       />
-      {/* Vektörel Yön Oku (Ok Sonu ->) */}
-      {showArrow && length > 14 && (
+      {showArrow && length > 14 ? (
         <View
           style={{
             position: "absolute",
-            left: arrowPos,
-            top: -8,
-            width: 14,
-            height: 16,
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 25,
-            opacity,
+            left: length - 12,
+            top: -6,
+            borderTopWidth: 6,
+            borderBottomWidth: 6,
+            borderLeftWidth: 10,
+            borderTopColor: "transparent",
+            borderBottomColor: "transparent",
+            borderLeftColor: color,
           }}
-        >
-          {/* Dış renkli ok */}
-          <View
-            style={{
-              position: "absolute",
-              width: 0,
-              height: 0,
-              borderTopWidth: 8,
-              borderBottomWidth: 8,
-              borderLeftWidth: 14,
-              borderTopColor: "transparent",
-              borderBottomColor: "transparent",
-              borderLeftColor: color,
-            }}
-          />
-          {/* İç beyaz keskin ok */}
-          <View
-            style={{
-              position: "absolute",
-              left: 1,
-              width: 0,
-              height: 0,
-              borderTopWidth: 5,
-              borderBottomWidth: 5,
-              borderLeftWidth: 9,
-              borderTopColor: "transparent",
-              borderBottomColor: "transparent",
-              borderLeftColor: "#FFFFFF",
-            }}
-          />
-        </View>
-      )}
+        />
+      ) : null}
     </View>
   );
 }
+const styles = StyleSheet.create({
+  panel: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderBottomWidth: 3,
+    borderColor: palette.line,
+    overflow: "hidden",
+  },
+  panelContent: { borderRadius: 22, padding: 20, overflow: "hidden" },
+  button: {
+    borderRadius: 17,
+    borderWidth: 1,
+    borderBottomWidth: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  buttonText: {
+    color: palette.text,
+    fontWeight: "800",
+    textAlign: "center",
+    flexShrink: 1,
+  },
+  chip: {
+    flex: 1,
+    minHeight: 48,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 15,
+    backgroundColor: palette.panel,
+    borderWidth: 1,
+    borderColor: palette.line,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  chipLabel: { color: palette.muted, fontSize: 9, fontWeight: "700" },
+  chipValue: { color: palette.text, fontSize: 15, fontWeight: "800" },
+  plus: { color: palette.text, fontSize: 20, fontWeight: "700" },
+  badge: {
+    position: "absolute",
+    right: 5,
+    top: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: palette.heart,
+  },
+  title: {
+    color: palette.text,
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: "900",
+    letterSpacing: -1.1,
+  },
+  section: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  sectionTitle: { color: palette.text, fontSize: 13, fontWeight: "800" },
+  sectionMeta: { color: palette.muted, fontSize: 10, flexShrink: 1 },
+});

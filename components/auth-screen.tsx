@@ -147,7 +147,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
         )}
         <OrnatePanel style={{ width: "100%", maxWidth: 360 }} contentStyle={{ paddingVertical: 22, paddingHorizontal: 18 }}>
           <JewelTitle style={{ textAlign: "center", fontSize: 26, lineHeight: 30 }}>KELİME PATLAT</JewelTitle>
-          <Text style={styles.subtitle}>{isSignUp ? "YENİ HESAP" : "MACERAYA KATIL"}</Text>
+          <Text style={styles.subtitle}>{isSignUp ? "YENİ HESAP" : "Bir kelimeyle başla"}</Text>
 
           {isSignUp ? (
             <>
@@ -160,7 +160,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                 autoCorrect={false}
                 style={styles.input}
                 placeholder="Adınızı ve soyadınızı girin"
-                placeholderTextColor="#6F879A"
+                placeholderTextColor="#293541"
               />
 
               <Text style={styles.label}>E-POSTA</Text>
@@ -172,7 +172,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                 autoCorrect={false}
                 style={styles.input}
                 placeholder="E-posta adresinizi girin"
-                placeholderTextColor="#6F879A"
+                placeholderTextColor="#293541"
               />
 
               <Text style={styles.label}>CİNSİYET</Text>
@@ -182,16 +182,16 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                   style={[styles.genderBtn, gender === "male" && styles.genderBtnActiveMale]}
                 >
                   <Text style={styles.genderBtnIcon}>👨</Text>
-                  <Text style={[styles.genderBtnLabel, gender === "male" && { color: "#38BDF8", fontWeight: "900" }]}>ERKEK</Text>
-                  {gender === "male" && <View style={[styles.genderDot, { backgroundColor: "#38BDF8" }]}><Text style={styles.genderDotText}>✓</Text></View>}
+                  <Text style={[styles.genderBtnLabel, gender === "male" && { color: "#2a8fbc", fontWeight: "900" }]}>ERKEK</Text>
+                  {gender === "male" && <View style={[styles.genderDot, { backgroundColor: "#abe3fc" }]}><Text style={styles.genderDotText}>✓</Text></View>}
                 </Pressable>
                 <Pressable
                   onPress={() => { haptics.light(); setGender("female"); }}
                   style={[styles.genderBtn, gender === "female" && styles.genderBtnActiveFemale]}
                 >
                   <Text style={styles.genderBtnIcon}>👩</Text>
-                  <Text style={[styles.genderBtnLabel, gender === "female" && { color: "#F472B6", fontWeight: "900" }]}>KADIN</Text>
-                  {gender === "female" && <View style={[styles.genderDot, { backgroundColor: "#F472B6" }]}><Text style={styles.genderDotText}>✓</Text></View>}
+                  <Text style={[styles.genderBtnLabel, gender === "female" && { color: "#b35486", fontWeight: "900" }]}>KADIN</Text>
+                  {gender === "female" && <View style={[styles.genderDot, { backgroundColor: "#fac4e0" }]}><Text style={styles.genderDotText}>✓</Text></View>}
                 </Pressable>
               </View>
             </>
@@ -205,7 +205,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
             autoCorrect={false}
             style={styles.input}
             placeholder={isSignUp ? "Kullanıcı adınızı seçin (min 3 harf)" : "Kullanıcı adı veya e-posta girin"}
-            placeholderTextColor="#6F879A"
+            placeholderTextColor="#293541"
           />
 
           <Text style={styles.label}>ŞİFRE</Text>
@@ -218,7 +218,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
               autoCorrect={false}
               style={[styles.input, styles.passwordInput]}
               placeholder={isSignUp ? "Şifrenizi belirleyin" : "Şifrenizi girin"}
-              placeholderTextColor="#6F879A"
+              placeholderTextColor="#293541"
               returnKeyType="done"
               onSubmitEditing={handleSubmit}
             />
@@ -318,16 +318,16 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#164036",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1.5,
-    borderColor: "rgba(212, 180, 90, 0.5)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-start",
     marginBottom: 10,
   },
   backButtonText: {
-    color: "#D4B45A",
+    color: "#8c763b",
     fontSize: 26,
     lineHeight: 30,
     fontWeight: "300",
@@ -340,14 +340,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.3)",
+    borderColor: "#DCE1D7",
     backgroundColor: "rgba(62, 232, 181, 0.05)",
   },
   guestText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   scroll: {
     flexGrow: 1,
@@ -359,51 +359,51 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 360,
-    backgroundColor: "#0E2C22",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "rgba(212, 180, 90, 0.4)",
+    borderColor: "#DCE1D7",
     borderRadius: 24,
     paddingVertical: 22,
     paddingHorizontal: 20,
-    shadowColor: "#D4B45A",
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   glowTitle: {
     fontSize: 28,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: "#293541",
     textAlign: "center",
-    textShadowColor: "rgba(62, 232, 181, 0.8)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
-    letterSpacing: 2,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 9,
+    fontSize: 14,
     fontWeight: "900",
-    color: "#F4D06F",
+    color: "#8b763f",
     textAlign: "center",
-    letterSpacing: 3,
+    letterSpacing: 0.5,
     marginTop: 4,
     marginBottom: 12,
   },
   label: {
-    color: "#8FBAAB",
-    fontSize: 8,
+    color: "#293541",
+    fontSize: 12,
     fontWeight: "900",
-    letterSpacing: 1.2,
+    letterSpacing: 0.5,
     marginBottom: 5,
     marginTop: 10,
   },
   input: {
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#14352B",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1,
-    borderColor: "rgba(184, 134, 58, 0.4)",
-    color: "#FFFFFF",
+    borderColor: "#DCE1D7",
+    color: "#293541",
     paddingHorizontal: 16,
     fontSize: 13,
     fontWeight: "700",
@@ -435,10 +435,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "rgba(62, 232, 181, 0.08)",
     borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.25)",
+    borderColor: "#DCE1D7",
   },
   demoFillText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.4,
@@ -446,33 +446,33 @@ const styles = StyleSheet.create({
   submitButton: {
     height: 46,
     borderRadius: 12,
-    backgroundColor: "#3EE8B5",
+    backgroundColor: "#aef5e0",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 14,
-    shadowColor: "#3EE8B5",
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   submitText: {
-    color: "#04110C",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   switchButton: {
     marginTop: 12,
     alignItems: "center",
   },
   switchText: {
-    color: "#D4B45A",
+    color: "#8c763b",
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   errorText: {
-    color: "#FF5E7E",
+    color: "#ce4c66",
     fontSize: 10,
     fontWeight: "800",
     marginTop: 12,
@@ -490,10 +490,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(181, 169, 205, 0.2)",
   },
   dividerText: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 8,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   socialContainer: {
     flexDirection: "row",
@@ -518,23 +518,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   googleButton: {
-    backgroundColor: "#FFFFFF",
-    borderColor: "#E5E7EB",
+    backgroundColor: "#ffffff",
+    borderColor: "#DCE1D7",
   },
   appleButton: {
-    backgroundColor: "#000000",
-    borderColor: "#1E1E1E",
+    backgroundColor: "#F0F5ED",
+    borderColor: "#DCE1D7",
   },
   googleIconCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#4285F4",
+    backgroundColor: "#b0ccfa",
     alignItems: "center",
     justifyContent: "center",
   },
   googleIconText: {
-    color: "#FFFFFF",
+    color: "#293541",
     fontSize: 13,
     fontWeight: "900",
     lineHeight: 16,
@@ -542,19 +542,19 @@ const styles = StyleSheet.create({
   googleText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#293541",
     letterSpacing: 0.2,
   },
   appleIconText: {
     fontSize: 18,
-    color: "#FFFFFF",
+    color: "#293541",
     lineHeight: 22,
     fontWeight: "400",
   },
   appleText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#293541",
     letterSpacing: 0.2,
   },
   pressed: {
@@ -573,21 +573,21 @@ const styles = StyleSheet.create({
   },
   genderBtn: {
     flex: 1,
-    backgroundColor: "#14352B",
+    backgroundColor: "#F0F5ED",
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "rgba(184, 134, 58, 0.4)",
+    borderColor: "#DCE1D7",
     paddingVertical: 9,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
   genderBtnActiveMale: {
-    borderColor: "#38BDF8",
+    borderColor: "#DCE1D7",
     backgroundColor: "rgba(56, 189, 248, 0.12)",
   },
   genderBtnActiveFemale: {
-    borderColor: "#F472B6",
+    borderColor: "#DCE1D7",
     backgroundColor: "rgba(244, 114, 182, 0.12)",
   },
   genderBtnIcon: {
@@ -595,10 +595,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   genderBtnLabel: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   genderDot: {
     position: "absolute",
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   genderDotText: {
-    color: "#04110C",
+    color: "#293541",
     fontSize: 10,
     fontWeight: "900",
   },

@@ -19,7 +19,7 @@ const DIFFICULTY_CONFIG = {
   easy: { label: "KOLAY", color: palette.gemGreen, bg: "rgba(74, 222, 128, 0.16)", border: palette.gemGreen },
   medium: { label: "ORTA", color: palette.gold, bg: "rgba(244, 208, 111, 0.16)", border: palette.gold },
   hard: { label: "ZOR", color: palette.danger, bg: "rgba(255, 107, 122, 0.16)", border: palette.danger },
-  epic: { label: "DESTANSI", color: "#F0C27A", bg: "rgba(232, 165, 75, 0.18)", border: palette.bronze },
+  epic: { label: "DESTANSI", color: "#8e7348", bg: "rgba(232, 165, 75, 0.18)", border: palette.bronze },
 };
 
 function getMissionIcon(actionType: string): string {
@@ -172,12 +172,12 @@ export function MissionsScreen({
     return (
       <View key={mission.id} style={[styles.missionWrap, isClaimed && { opacity: 0.72 }]}>
         <LinearGradient
-          colors={isDone && !isClaimed ? ["#F8E19A", "#C9962A", "#8C5E1C"] : [palette.goldHi, palette.bronze, palette.bronzeDark]}
+          colors={isDone && !isClaimed ? ["#fcf2d5", "#e8d3a6", "#FFF0E8"] : [palette.line, palette.line, palette.line]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.missionFrame}
         >
-          <LinearGradient colors={["#164536", "#0C2A20"]} style={[styles.missionCard, { borderColor }]}>
+          <LinearGradient colors={["#FFFFFF", "#FFFFFF"]} style={[styles.missionCard, { borderColor }]}>
             <GameIcon
               emoji={isClaimed ? "✓" : isDone ? "🎁" : icon}
               size={44}
@@ -212,7 +212,7 @@ export function MissionsScreen({
 
               <View style={styles.cardTrack}>
                 <LinearGradient
-                  colors={isClaimed ? ["#475569", "#334155"] : isDone ? [palette.goldHi, palette.goldDeep] : [diffConfig.color, palette.emerald]}
+                  colors={isClaimed ? ["#EDF4FC", "#EDF4FC"] : isDone ? [palette.goldHi, palette.goldDeep] : [diffConfig.color, palette.emerald]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[styles.cardFill, { width: `${Math.max(8, pct)}%` }]}
@@ -304,8 +304,8 @@ export function MissionsScreen({
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.overline}>MACERA PARŞÖMENİ</Text>
-          <JewelTitle style={styles.pageTitle}>GÖREVLER</JewelTitle>
+          <Text style={styles.overline}>KÜÇÜK HEDEFLER, GÜZEL ÖDÜLLER</Text>
+          <JewelTitle style={styles.pageTitle}>Görevler</JewelTitle>
         </View>
         <View style={styles.totalBadge}>
           <Text style={styles.totalBadgeLabel}>TOPLAM</Text>
@@ -314,7 +314,7 @@ export function MissionsScreen({
       </View>
 
       {toast && (
-        <LinearGradient colors={["#1A4A38", "#0E2C22"]} style={styles.toastCard}>
+        <LinearGradient colors={["#F0F5ED", "#F0F5ED"]} style={styles.toastCard}>
           <GameIcon emoji="🎉" size={42} glow={palette.gold} />
           <View style={{ flex: 1 }}>
             <Text style={styles.toastTitle}>{toast.title}</Text>
@@ -357,7 +357,7 @@ export function MissionsScreen({
       </OrnatePanel>
 
       <View style={styles.tabFrame}>
-        <LinearGradient colors={["#1A4A38", "#0A241C"]} style={styles.tabContainer}>
+        <LinearGradient colors={["#F0F5ED", "#F0F5ED"]} style={styles.tabContainer}>
           <Pressable
             onPress={() => {
               haptics.select();
@@ -366,7 +366,7 @@ export function MissionsScreen({
             style={styles.tabHit}
           >
             {activeTab === "daily" ? (
-              <LinearGradient colors={["#FFF1B0", "#F0C24A", "#C48A1C"]} style={styles.tabButtonActive}>
+              <LinearGradient colors={["#fff9de", "#f9e5b3", "#e6cea0"]} style={styles.tabButtonActive}>
                 <Text numberOfLines={1} style={styles.tabButtonTextOn}>☀️ GÜNLÜK</Text>
                 <View style={styles.tabBadgeOn}>
                   <Text style={styles.tabBadgeTextOn}>{dailyCompletedCount}/{dailyMissions.length}</Text>
@@ -390,7 +390,7 @@ export function MissionsScreen({
             style={styles.tabHit}
           >
             {activeTab === "weekly" ? (
-              <LinearGradient colors={["#FFF1B0", "#F0C24A", "#C48A1C"]} style={styles.tabButtonActive}>
+              <LinearGradient colors={["#fff9de", "#f9e5b3", "#e6cea0"]} style={styles.tabButtonActive}>
                 <Text numberOfLines={1} style={styles.tabButtonTextOn}>🏆 HAFTALIK</Text>
                 <View style={styles.tabBadgeOn}>
                   <Text style={styles.tabBadgeTextOn}>{weeklyCompletedCount}/{weeklyMissions.length}</Text>
@@ -411,7 +411,7 @@ export function MissionsScreen({
       {activeTab === "daily" ? (
         <>
           <View style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>GÜNLÜK GÖREVLER</Text>
+            <Text style={styles.sectionTitle}>GÜNLÜK Görevler</Text>
             <Text style={styles.sectionMeta}>
               {timeUntilDailyReset ? `⏳ ${timeUntilDailyReset}` : "00:00'DA YENİLENİR"}
             </Text>
@@ -449,15 +449,15 @@ const styles = StyleSheet.create({
     borderColor: palette.bronzeBorder,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   backText: { color: palette.goldHi, fontSize: 28, lineHeight: 30, marginTop: -3, fontWeight: "300" },
-  overline: { color: palette.gold, fontSize: 8.5, fontWeight: "900", letterSpacing: 1.2 },
-  pageTitle: { fontSize: 22, lineHeight: 26, marginTop: 1, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
+  overline: { color: palette.gold, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  pageTitle: { fontSize: 26, lineHeight: 26, marginTop: 1, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   totalBadge: {
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -466,11 +466,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: palette.gold,
     alignItems: "flex-end",
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   totalBadgeLabel: { color: palette.mutedGold, fontSize: 7, fontWeight: "900", letterSpacing: 0.5 },
   totalBadgeText: { color: palette.goldHi, fontSize: 12, fontWeight: "900" },
@@ -484,14 +484,14 @@ const styles = StyleSheet.create({
     borderColor: palette.gold,
     marginBottom: 14,
     gap: 10,
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  toastTitle: { color: palette.gold, fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
-  toastDesc: { color: palette.cream, fontSize: 12, fontWeight: "800", marginTop: 2 },
+  toastTitle: { color: palette.gold, fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  toastDesc: { color: palette.text, fontSize: 12, fontWeight: "800", marginTop: 2 },
   toastPillsRow: { flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" },
   toastRewardPill: {
     paddingHorizontal: 8,
@@ -507,9 +507,9 @@ const styles = StyleSheet.create({
 
   summaryInner: { padding: 14 },
   summaryHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  summaryKicker: { color: palette.gold, fontSize: 9, fontWeight: "900", letterSpacing: 0.9 },
-  summaryTitle: { color: palette.cream, fontSize: 14, fontWeight: "900", marginTop: 2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: "#071A14", overflow: "hidden", marginBottom: 10, borderWidth: 1, borderColor: palette.bronzeDark },
+  summaryKicker: { color: palette.gold, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  summaryTitle: { color: palette.text, fontSize: 14, fontWeight: "900", marginTop: 2, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: "#E2E8F0", overflow: "hidden", marginBottom: 10, borderWidth: 1, borderColor: palette.bronzeBorder },
   progressFill: { height: "100%", borderRadius: 4 },
   summaryHint: { color: palette.muted, fontSize: 11, lineHeight: 15, fontWeight: "600" },
 
@@ -520,11 +520,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: palette.bronzeBorder,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabContainer: {
     flexDirection: "row",
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     borderColor: palette.bronzeDark,
   },
   tabButtonText: { color: palette.muted, fontSize: 11, fontWeight: "900", letterSpacing: 0.3, flexShrink: 1 },
-  tabButtonTextOn: { color: "#3A2408", fontSize: 11, fontWeight: "900", letterSpacing: 0.3, flexShrink: 1 },
+  tabButtonTextOn: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.3, flexShrink: 1 },
   tabBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -564,22 +564,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
-    backgroundColor: "rgba(58, 36, 8, 0.18)",
+    backgroundColor: "#FFF0E8",
   },
   tabBadgeText: { color: palette.mutedGold, fontSize: 9, fontWeight: "900" },
-  tabBadgeTextOn: { color: "#3A2408", fontSize: 9, fontWeight: "900" },
+  tabBadgeTextOn: { color: "#293541", fontSize: 9, fontWeight: "900" },
 
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 },
-  sectionTitle: { color: palette.goldBright, fontSize: 11, fontWeight: "900", letterSpacing: 1.1, textShadowColor: "rgba(0,0,0,0.6)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 1 },
+  sectionTitle: { color: palette.goldBright, fontSize: 12, fontWeight: "900", letterSpacing: 0.5, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   sectionMeta: { color: palette.muted, fontSize: 8.5, fontWeight: "900", letterSpacing: 0.4, flexShrink: 1, textAlign: "right" },
 
   missionList: { gap: 10, marginBottom: 20 },
   missionWrap: {
-    shadowColor: "#000",
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 7,
+    elevation: 2,
   },
   missionFrame: { borderRadius: 20, padding: 2.5 },
   missionCard: {
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
 
   infoBox: { flex: 1, minWidth: 0 },
   cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4, gap: 6 },
-  missionTitle: { flex: 1, color: palette.cream, fontSize: 14, fontWeight: "900", letterSpacing: 0.2, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
+  missionTitle: { flex: 1, color: palette.text, fontSize: 14, fontWeight: "900", letterSpacing: 0.2, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   diffBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 7, borderWidth: 1 },
   diffBadgeText: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
   missionDesc: { color: palette.muted, fontSize: 11, marginBottom: 8, lineHeight: 15, fontWeight: "600" },
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "rgba(62, 232, 181, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.4)",
+    borderColor: "#DCE1D7",
   },
   rewardChipText: { color: palette.emerald, fontSize: 9.5, fontWeight: "900" },
   rewardChipGold: {
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
   },
   rewardChipShieldText: { color: palette.gemBlue, fontSize: 9.5, fontWeight: "900" },
 
-  cardTrack: { height: 7, borderRadius: 4, backgroundColor: "#071A14", overflow: "hidden", marginBottom: 8, borderWidth: 1, borderColor: palette.bronzeDark },
+  cardTrack: { height: 7, borderRadius: 4, backgroundColor: "#E2E8F0", overflow: "hidden", marginBottom: 8, borderWidth: 1, borderColor: palette.bronzeBorder },
   cardFill: { height: "100%", borderRadius: 4 },
 
   cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
@@ -635,9 +635,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    backgroundColor: "#F1F3EE",
     borderWidth: 1,
-    borderColor: palette.bronzeDark,
+    borderColor: palette.bronzeBorder,
   },
   claimedText: { color: palette.muted, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   inProgressPill: {
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "rgba(244, 208, 111, 0.08)",
     borderWidth: 1,
-    borderColor: "rgba(184, 134, 58, 0.35)",
+    borderColor: "#DCE1D7",
   },
   inProgressText: { color: palette.mutedGold, fontSize: 8.5, fontWeight: "800" },
   claimBtn: { minWidth: 128 },

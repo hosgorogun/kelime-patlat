@@ -91,7 +91,7 @@ export function MatchHistoryModal({
         <Pressable style={styles.containerCard} onPress={(e) => e.stopPropagation()}>
           {/* Top Decorative Border */}
           <LinearGradient
-            colors={["#50E3C2", "#C9A227", "#34D399"]}
+            colors={["#b5f3e5", "#e8d8a4", "#aaedd4"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.topGlowBar}
@@ -129,17 +129,17 @@ export function MatchHistoryModal({
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>GALİBİYET</Text>
-              <Text style={[styles.statValue, { color: "#34D399" }]}>{winsCount}</Text>
+              <Text style={[styles.statValue, { color: "#279f73" }]}>{winsCount}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>ORAN</Text>
-              <Text style={[styles.statValue, { color: "#FBBF24" }]}>%{winRate}</Text>
+              <Text style={[styles.statValue, { color: "#9b7616" }]}>%{winRate}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>EN YÜKSEK</Text>
-              <Text style={[styles.statValue, { color: "#38BDF8" }]}>{highestScore}</Text>
+              <Text style={[styles.statValue, { color: "#2a8fbc" }]}>{highestScore}</Text>
             </View>
           </View>
 
@@ -213,7 +213,7 @@ export function MatchHistoryModal({
                   : isDraw
                   ? "#F59E0B"
                   : isWon
-                  ? "#10B981"
+                  ? "#F0F5ED"
                   : "#EF4444";
 
                 const resultLabel = isSoloMode
@@ -273,7 +273,7 @@ export function MatchHistoryModal({
                             <Text
                               style={[
                                 styles.scoreSideValue,
-                                isWon && !isDraw ? { color: "#34D399" } : { color: "#FFF" },
+                                isWon && !isDraw ? { color: "#279f73" } : { color: "#293541" },
                               ]}
                             >
                               {match.myScore}
@@ -294,7 +294,7 @@ export function MatchHistoryModal({
                             <Text
                               style={[
                                 styles.scoreSideValue,
-                                !isWon && !isDraw ? { color: "#EF4444" } : { color: "#FFF" },
+                                !isWon && !isDraw ? { color: "#ed4343" } : { color: "#293541" },
                               ]}
                             >
                               {match.opponentScore ?? 0}
@@ -321,7 +321,7 @@ export function MatchHistoryModal({
                             <Text
                               style={[
                                 styles.rewardChipText,
-                                { color: match.lpChange >= 0 ? "#34D399" : "#F87171" },
+                                { color: match.lpChange >= 0 ? "#279f73" : "#bf5757" },
                               ]}
                             >
                               {match.lpChange >= 0 ? `+${match.lpChange}` : match.lpChange} LP
@@ -332,7 +332,7 @@ export function MatchHistoryModal({
 
                       {(match.xpEarned ?? 0) > 0 && (
                         <View style={[styles.rewardChip, styles.xpChip]}>
-                          <Text style={[styles.rewardChipText, { color: "#38BDF8" }]}>
+                          <Text style={[styles.rewardChipText, { color: "#2a8fbc" }]}>
                             +{match.xpEarned} XP
                           </Text>
                         </View>
@@ -340,7 +340,7 @@ export function MatchHistoryModal({
 
                       {(match.coinsEarned ?? 0) > 0 && (
                         <View style={[styles.rewardChip, styles.coinChip]}>
-                          <Text style={[styles.rewardChipText, { color: "#FBBF24" }]}>
+                          <Text style={[styles.rewardChipText, { color: "#9b7616" }]}>
                             +{match.coinsEarned} Çip
                           </Text>
                         </View>
@@ -348,7 +348,7 @@ export function MatchHistoryModal({
 
                       {(match.wordsCount ?? 0) > 0 && (
                         <View style={[styles.rewardChip, styles.wordChip]}>
-                          <Text style={[styles.rewardChipText, { color: "#A7F3D0" }]}>
+                          <Text style={[styles.rewardChipText, { color: "#5b8571" }]}>
                             {match.wordsCount} Kelime
                           </Text>
                         </View>
@@ -381,7 +381,7 @@ export function MatchHistoryModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(3, 10, 8, 0.88)",
+    backgroundColor: "rgba(35,48,59,0.42)",
     justifyContent: "center",
     alignItems: "center",
     padding: 16,
@@ -391,16 +391,16 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     height: "82%",
     maxHeight: "88%",
-    backgroundColor: "#071B14",
+    backgroundColor: "#F0F5ED",
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: "rgba(212, 180, 90, 0.35)",
+    borderColor: "#DCE1D7",
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
     display: "flex",
     flexDirection: "column",
   },
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(212, 180, 90, 0.15)",
+    borderBottomColor: "#DCE1D7",
   },
   headerLeft: {
     flexDirection: "row",
@@ -429,13 +429,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(80, 227, 194, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(80, 227, 194, 0.35)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#50E3C2",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerIcon: {
     fontSize: 22,
@@ -443,18 +443,18 @@ const styles = StyleSheet.create({
   headerKicker: {
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1.2,
-    color: "#50E3C2",
+    letterSpacing: 0.5,
+    color: "#359580",
     marginBottom: 2,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 26,
     fontWeight: "900",
-    letterSpacing: 0.8,
-    color: "#FFF",
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 3,
+    letterSpacing: 0.5,
+    color: "#293541",
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   closeBtn: {
     width: 34,
@@ -462,12 +462,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
   closeBtnText: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 15,
     fontWeight: "900",
   },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(10, 32, 25, 0.9)",
+    backgroundColor: "#F0F5ED",
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 10,
@@ -483,12 +483,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.2)",
-    shadowColor: "#000",
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statBox: {
     flex: 1,
@@ -497,17 +497,17 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 9,
     fontWeight: "800",
-    color: "#94A3B8",
-    letterSpacing: 0.6,
+    color: "#293541",
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
   statValue: {
     fontSize: 15,
     fontWeight: "900",
-    color: "#FFF",
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: "#293541",
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   statDivider: {
     width: 1,
@@ -524,27 +524,27 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 7,
     borderRadius: 10,
-    backgroundColor: "rgba(10, 36, 28, 0.6)",
+    backgroundColor: "rgba(35,48,59,0.42)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
   tabBtnActive: {
     backgroundColor: "rgba(80, 227, 194, 0.16)",
-    borderColor: "#50E3C2",
-    shadowColor: "#50E3C2",
-    shadowOpacity: 0.3,
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   },
   tabText: {
-    color: "#94A3B8",
-    fontSize: 11,
+    color: "#293541",
+    fontSize: 12,
     fontWeight: "700",
   },
   tabTextActive: {
-    color: "#50E3C2",
+    color: "#359580",
     fontWeight: "900",
   },
   listScroll: {
@@ -557,16 +557,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   matchCard: {
-    backgroundColor: "rgba(14, 38, 30, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.2)",
-    shadowColor: "#000",
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: "row",
@@ -579,13 +579,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   cardModeTitle: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.4,
   },
   cardTimeText: {
-    color: "#64748B",
+    color: "#293541",
     fontSize: 10,
     fontWeight: "600",
     marginTop: 2,
@@ -608,18 +608,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: "#F7F5EE",
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#DCE1D7",
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
   soloScoreLabel: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "700",
   },
   soloScoreValue: {
-    color: "#38BDF8",
+    color: "#2a8fbc",
     fontSize: 14,
     fontWeight: "900",
   },
@@ -627,8 +629,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(0,0,0,0.25)",
+    backgroundColor: "#F7F5EE",
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#DCE1D7",
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -636,7 +640,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scoreSideLabel: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "700",
     marginBottom: 2,
@@ -652,7 +656,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   vsText: {
-    color: "#C9A227",
+    color: "#95781d",
     fontSize: 11,
     fontWeight: "900",
   },
@@ -662,7 +666,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.06)",
+    borderTopColor: "#DCE1D7",
   },
   rewardChip: {
     paddingHorizontal: 8,
@@ -674,32 +678,32 @@ const styles = StyleSheet.create({
   },
   lpPositiveChip: {
     backgroundColor: "rgba(52, 211, 153, 0.12)",
-    borderColor: "rgba(52, 211, 153, 0.35)",
+    borderColor: "#DCE1D7",
   },
   lpNegativeChip: {
     backgroundColor: "rgba(239, 68, 68, 0.12)",
-    borderColor: "rgba(239, 68, 68, 0.35)",
+    borderColor: "#DCE1D7",
   },
   friendChip: {
     backgroundColor: "rgba(168, 85, 247, 0.12)",
-    borderColor: "rgba(168, 85, 247, 0.35)",
+    borderColor: "#DCE1D7",
   },
   friendChipText: {
-    color: "#C084FC",
+    color: "#8a5fb6",
     fontSize: 10,
     fontWeight: "800",
   },
   xpChip: {
     backgroundColor: "rgba(56, 189, 248, 0.12)",
-    borderColor: "rgba(56, 189, 248, 0.35)",
+    borderColor: "#DCE1D7",
   },
   coinChip: {
     backgroundColor: "rgba(251, 191, 36, 0.12)",
-    borderColor: "rgba(251, 191, 36, 0.35)",
+    borderColor: "#DCE1D7",
   },
   wordChip: {
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
-    borderColor: "rgba(16, 185, 129, 0.35)",
+    backgroundColor: "#F0F5ED",
+    borderColor: "#DCE1D7",
   },
   rewardChipText: {
     fontSize: 10,
@@ -717,14 +721,14 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   emptyTitle: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 16,
     fontWeight: "900",
     marginBottom: 6,
     textAlign: "center",
   },
   emptySub: {
-    color: "#94A3B8",
+    color: "#293541",
     fontSize: 12,
     textAlign: "center",
     lineHeight: 18,
@@ -735,24 +739,24 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 22,
     borderRadius: 12,
-    backgroundColor: "#10B981",
-    shadowColor: "#10B981",
+    backgroundColor: "#F0F5ED",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   playNowBtnText: {
-    color: "#042F1A",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   modalBottomBar: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(212, 180, 90, 0.15)",
+    borderTopColor: "#DCE1D7",
   },
   bottomCloseBtn: {
     width: "100%",
@@ -760,15 +764,15 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
   bottomCloseBtnText: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 13,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   pressed: {
     opacity: 0.75,

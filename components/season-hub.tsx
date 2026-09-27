@@ -388,10 +388,10 @@ export function SeasonHub({
   };
 
   const SIZE_LABELS: Record<BoardSize, { label: string; desc: string; color: string }> = {
-    4:  { label: "4×4", desc: "Hızlı · 55 sn", color: "#3EE8B5" },
-    6:  { label: "6×6", desc: "Orta · 75 sn",  color: "#E8C36A" },
-    8:  { label: "8×8", desc: "Zorlu · 95 sn", color: "#FB923C" },
-    10: { label: "10×10", desc: "Efsane · 125 sn", color: "#FFC24A" },
+    4:  { label: "4×4", desc: "Hızlı · 55 sn", color: "#2a9c7a" },
+    6:  { label: "6×6", desc: "Orta · 75 sn",  color: "#8c7540" },
+    8:  { label: "8×8", desc: "Zorlu · 95 sn", color: "#b1672a" },
+    10: { label: "10×10", desc: "Efsane · 125 sn", color: "#98732c" },
   };
 
   return (
@@ -445,7 +445,7 @@ export function SeasonHub({
           <View style={{ flex: 1, marginRight: 6 }}>
             <Text style={styles.overline}>SEZON 01 · LİG &amp; REKABET</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.title}>
-              LİG &amp; SEZON MERKEZİ
+              Lig & Sezon
             </Text>
           </View>
           <View style={styles.timerPill}>
@@ -465,7 +465,7 @@ export function SeasonHub({
           >
             <Text style={styles.segmentedTabIcon}>👑</Text>
             <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "leagues" && styles.segmentedTabTextActive]}>
-              KADEMELER
+              Ligler
             </Text>
           </Pressable>
 
@@ -475,7 +475,7 @@ export function SeasonHub({
           >
             <Text style={styles.segmentedTabIcon}>🏆</Text>
             <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "leaderboard" && styles.segmentedTabTextActive]}>
-              LİDERLİK
+              Sıralama
             </Text>
           </Pressable>
 
@@ -485,7 +485,7 @@ export function SeasonHub({
           >
             <Text style={styles.segmentedTabIcon}>👥</Text>
             <Text numberOfLines={1} style={[styles.segmentedTabText, activeTab === "friends" && styles.segmentedTabTextActive]}>
-              ARKADAŞLAR ({friendsList.length})
+              Arkadaşlar
             </Text>
             {onlineFriendsCount > 0 && (
               <View style={styles.onlineBadgeDot} />
@@ -652,7 +652,7 @@ export function SeasonHub({
                         <Text style={[styles.tierBadgeText, { color: getTierColor(top1.tier) }]}>{top1.tier}</Text>
                       </View>
                     ) : null}
-                    <Text style={[styles.podiumScore, { color: "#FFD000" }]}>
+                    <Text style={[styles.podiumScore, { color: "#987c00" }]}>
                       {rankingType === "level"
                         ? `Lv.${top1.level ?? Math.floor(top1.score / 200) + 1} (${top1.score} XP)`
                         : `${top1.lp ?? (top1.tier ? getMinLpForTier(top1.tier) : 0)} LP`}
@@ -764,7 +764,7 @@ export function SeasonHub({
                           </View>
                           <View style={styles.playerCopy}>
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                              <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#3EE8B5" }]}>
+                              <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#2a9c7a" }]}>
                                 {entry.name}
                               </Text>
                               {isUser && (
@@ -793,10 +793,10 @@ export function SeasonHub({
                           <View style={{ alignItems: "flex-end" }}>
                             {rankingType === "level" ? (
                               <View style={{ alignItems: "flex-end" }}>
-                                <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
-                                  <Text style={{ color: "#38BDF8", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? Math.floor(entry.score / 200) + 1}</Text>
+                                <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
+                                  <Text style={{ color: "#2a8fbc", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? Math.floor(entry.score / 200) + 1}</Text>
                                 </View>
-                                <Text style={{ color: "#94A3B8", fontSize: 10, fontWeight: "700" }}>{entry.score} XP</Text>
+                                <Text style={{ color: "#293541", fontSize: 10, fontWeight: "700" }}>{entry.score} XP</Text>
                               </View>
                             ) : (
                               <View style={{ alignItems: "flex-end" }}>
@@ -861,7 +861,7 @@ export function SeasonHub({
                   value={friendInput}
                   onChangeText={setFriendInput}
                   placeholder="Kullanıcı adı girin (Örn: neon_007)"
-                  placeholderTextColor="#877A9E"
+                  placeholderTextColor="#293541"
                   autoCapitalize="none"
                   style={styles.addFriendInput}
                 />
@@ -926,8 +926,8 @@ export function SeasonHub({
                           <View style={{ flex: 1, minWidth: 0 }}>
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                               <Text numberOfLines={1} style={styles.friendNameText}>{f.name}</Text>
-                              <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
-                                <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {f.level ?? Math.floor(f.xp / 200) + 1}</Text>
+                              <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                                <Text style={{ color: "#2a8fbc", fontSize: 9, fontWeight: "900" }}>SEVİYE {f.level ?? Math.floor(f.xp / 200) + 1}</Text>
                               </View>
                             </View>
                             <Text numberOfLines={1} style={styles.friendXpText}>@{f.username} · {f.tier ?? "DEMİR"} ({f.lp ?? f.xp} LP) · {f.xp} XP</Text>
@@ -982,8 +982,8 @@ export function SeasonHub({
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                             <Text numberOfLines={1} style={styles.friendNameText}>{req.fromName}</Text>
-                            <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#38BDF855", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
-                              <Text style={{ color: "#38BDF8", fontSize: 9, fontWeight: "900" }}>SEVİYE {req.fromLevel ?? 1}</Text>
+                            <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                              <Text style={{ color: "#2a8fbc", fontSize: 9, fontWeight: "900" }}>SEVİYE {req.fromLevel ?? 1}</Text>
                             </View>
                           </View>
                           <Text numberOfLines={1} style={styles.friendXpText}>@{req.fromUsername} · {req.fromTier ?? "DEMİR"} ({req.fromLp ?? 0} LP)</Text>
@@ -1050,51 +1050,51 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 13,
-    backgroundColor: "#164536",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.3)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
-  backText: { color: "#FFF9FC", fontSize: 30, lineHeight: 30 },
-  overline: { color: "#A8C5B5", fontSize: 8, letterSpacing: 0.8, fontWeight: "900" },
-  title: { color: "#FFF9FC", fontSize: 16, fontWeight: "900", marginTop: 2, letterSpacing: 0.2 },
+  backText: { color: "#293541", fontSize: 30, lineHeight: 30 },
+  overline: { color: "#293541", fontSize: 8, letterSpacing: 0.5, fontWeight: "900" },
+  title: { color: "#293541", fontSize: 26, fontWeight: "900", marginTop: 2, letterSpacing: 0.2 },
   rankOrb: {
     width: 35,
     height: 35,
     borderRadius: 18,
     marginLeft: "auto",
-    backgroundColor: "#164536",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1,
-    borderColor: "#FFC24A",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
-  rankOrbText: { color: "#FFC24A", fontWeight: "900" },
+  rankOrbText: { color: "#98732c", fontWeight: "900" },
   timerPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#164536",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.4)",
+    borderColor: "#DCE1D7",
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 12,
   },
   timerIcon: { fontSize: 12 },
-  timerLabel: { color: "#FBBF24", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.8 },
-  timerValue: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
+  timerLabel: { color: "#9b7616", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.5 },
+  timerValue: { color: "#293541", fontSize: 11, fontWeight: "900" },
 
   /* Modern Segmented Tab Controller */
   segmentedTabContainer: {
     flexDirection: "row",
-    backgroundColor: "rgba(8, 28, 22, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderRadius: 20,
     padding: 5,
     marginTop: 16,
     borderWidth: 1.5,
-    borderColor: "rgba(212, 180, 90, 0.35)",
+    borderColor: "#DCE1D7",
     gap: 4,
   },
   segmentedTabBtn: {
@@ -1111,24 +1111,24 @@ const styles = StyleSheet.create({
   segmentedTabBtnActive: {
     backgroundColor: "rgba(244, 208, 111, 0.18)",
     borderWidth: 1.5,
-    borderColor: "#F4D06F",
-    shadowColor: "#F4D06F",
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 5,
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   segmentedTabIcon: {
     fontSize: 14,
   },
   segmentedTabText: {
-    color: "#A8C5B5",
+    color: "#293541",
     fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
     flexShrink: 1,
   },
   segmentedTabTextActive: {
-    color: "#F4D06F",
+    color: "#8b763f",
   },
   onlineBadgeDot: {
     position: "absolute",
@@ -1137,9 +1137,9 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: "#22C55E",
+    backgroundColor: "#a2e7bb",
     borderWidth: 1.5,
-    borderColor: "#06140F",
+    borderColor: "#DCE1D7",
   },
 
   /* Compact Filter Toolbar */
@@ -1152,10 +1152,10 @@ const styles = StyleSheet.create({
   toolbarSegment: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "rgba(10, 32, 24, 0.92)",
+    backgroundColor: "#F0F5ED",
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "rgba(62, 232, 181, 0.3)",
+    borderColor: "#DCE1D7",
     padding: 3,
     gap: 3,
   },
@@ -1169,36 +1169,36 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   toolbarPillText: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.5,
     textAlign: "center",
   },
   toolbarPillTextActive: {
-    color: "#071A14",
+    color: "#293541",
     fontWeight: "900",
   },
   toolbarPillActiveLp: {
-    backgroundColor: "#FBBF24",
-    shadowColor: "#FBBF24",
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: "#fde4a3",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   toolbarPillActiveLevel: {
-    backgroundColor: "#38BDF8",
-    shadowColor: "#38BDF8",
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: "#abe3fc",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   toolbarPillActiveScope: {
-    backgroundColor: "#3EE8B5",
-    shadowColor: "#3EE8B5",
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: "#aef5e0",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   /* Hero Cards */
@@ -1206,28 +1206,28 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 18,
     borderRadius: 24,
-    backgroundColor: "rgba(22, 28, 14, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1.5,
-    borderColor: "#F4D06F",
-    shadowColor: "#F4D06F",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  heroKicker: { color: "#FFD37F", fontSize: 8, letterSpacing: 1, fontWeight: "900" },
-  heroTitle: { color: "#FFF9FC", fontSize: 25, fontWeight: "900", marginTop: 6, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
-  heroBody: { color: "#A8C5B5", fontSize: 11, marginTop: 4 },
+  heroKicker: { color: "#8c7446", fontSize: 8, letterSpacing: 0.5, fontWeight: "900" },
+  heroTitle: { color: "#293541", fontSize: 25, fontWeight: "900", marginTop: 6, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  heroBody: { color: "#293541", fontSize: 11, marginTop: 4 },
   heroStats: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(212, 180, 90, 0.2)",
+    borderTopColor: "#DCE1D7",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  statLabel: { color: "#A8C5B5", fontSize: 7, fontWeight: "900", letterSpacing: 0.7 },
-  statValue: { color: "#FFF9FC", fontSize: 14, fontWeight: "900", marginTop: 3, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
+  statLabel: { color: "#293541", fontSize: 7, fontWeight: "900", letterSpacing: 0.5 },
+  statValue: { color: "#293541", fontSize: 14, fontWeight: "900", marginTop: 3, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   statRule: { width: 1, height: 27, backgroundColor: "rgba(212, 180, 90, 0.2)" },
 
   /* Social Hero */
@@ -1235,26 +1235,26 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 18,
     borderRadius: 24,
-    backgroundColor: "rgba(10, 32, 42, 0.95)",
+    backgroundColor: "#EDF4FC",
     borderWidth: 1.5,
-    borderColor: "#38BDF8",
-    shadowColor: "#38BDF8",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 4,
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  socialHeroKicker: { color: "#38BDF8", fontSize: 8, letterSpacing: 1, fontWeight: "900" },
-  socialHeroTitle: { color: "#FFF9FC", fontSize: 23, fontWeight: "900", marginTop: 6, textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 3 },
-  socialHeroBody: { color: "#A8C5B5", fontSize: 11, marginTop: 4 },
+  socialHeroKicker: { color: "#2a8fbc", fontSize: 8, letterSpacing: 0.5, fontWeight: "900" },
+  socialHeroTitle: { color: "#293541", fontSize: 23, fontWeight: "900", marginTop: 6, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  socialHeroBody: { color: "#293541", fontSize: 11, marginTop: 4 },
 
   /* Mystery Card */
   mysteryCard: {
     marginTop: 12,
     padding: 14,
     borderRadius: 20,
-    backgroundColor: "rgba(36, 26, 8, 0.95)",
+    backgroundColor: "#FFF0E8",
     borderWidth: 1.5,
-    borderColor: "#FFC24A",
+    borderColor: "#DCE1D7",
   },
   mysteryHeader: {
     flexDirection: "row",
@@ -1262,33 +1262,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 6,
   },
-  mysteryKicker: { color: "#C5D9C8", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  mysteryReward: { color: "#3EE8B5", fontSize: 9, fontWeight: "900" },
+  mysteryKicker: { color: "#293541", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  mysteryReward: { color: "#2a9c7a", fontSize: 9, fontWeight: "900" },
   mysteryDef: {
-    color: "#FFF9FC",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "700",
     fontStyle: "italic",
     lineHeight: 17,
   },
-  mysteryHint: { color: "#E8C36A", fontSize: 8, fontWeight: "800", marginTop: 6 },
+  mysteryHint: { color: "#8c7540", fontSize: 8, fontWeight: "800", marginTop: 6 },
 
   /* User Status Banner */
   userStatusCard: {
     marginTop: 14,
     padding: 14,
     borderRadius: 20,
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1.5,
-    borderColor: "rgba(244, 208, 111, 0.4)",
+    borderColor: "#DCE1D7",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#F4D06F",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   userStatusLeft: {
     flexDirection: "row",
@@ -1301,24 +1301,24 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#C9A227",
+    backgroundColor: "#e8d8a4",
     borderWidth: 2,
-    borderColor: "#3EE8B5",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
   userStatusAvatarText: {
-    color: "#FFFFFF",
+    color: "#293541",
     fontSize: 20,
     fontWeight: "900",
   },
   userStatusName: {
-    color: "#FFFFFF",
+    color: "#293541",
     fontSize: 14,
     fontWeight: "900",
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   userRankBadge: {
     backgroundColor: "rgba(62, 232, 181, 0.15)",
@@ -1326,16 +1326,16 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#3EE8B5",
+    borderColor: "#DCE1D7",
   },
   userRankBadgeText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   userStatusSub: {
-    color: "#B7AAD1",
+    color: "#293541",
     fontSize: 10,
     fontWeight: "800",
     marginTop: 3,
@@ -1347,13 +1347,13 @@ const styles = StyleSheet.create({
   leaderCrownBadge: {
     backgroundColor: "rgba(255, 208, 0, 0.15)",
     borderWidth: 1,
-    borderColor: "#FFD000",
+    borderColor: "#DCE1D7",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   leaderCrownText: {
-    color: "#FFD000",
+    color: "#987c00",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1365,16 +1365,16 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "#DCE1D7",
   },
   diffKicker: {
-    color: "#9F93B6",
+    color: "#293541",
     fontSize: 7.5,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   diffScore: {
-    color: "#FFC24A",
+    color: "#98732c",
     fontSize: 11,
     fontWeight: "900",
     marginTop: 1,
@@ -1421,23 +1421,23 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#3A2A68",
-    borderColor: "#FFD000",
-    shadowColor: "#FFD000",
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 6,
+    backgroundColor: "#EDF4FC",
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   podiumAvatarWrap2: {
-    backgroundColor: "#2E2452",
-    borderColor: "#94A3B8",
+    backgroundColor: "#EDF4FC",
+    borderColor: "#DCE1D7",
   },
   podiumAvatarWrap3: {
-    backgroundColor: "#2E2452",
-    borderColor: "#FB923C",
+    backgroundColor: "#EDF4FC",
+    borderColor: "#DCE1D7",
   },
   podiumAvatarText: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 20,
     fontWeight: "900",
   },
@@ -1452,31 +1452,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   podiumRankBadge1: {
-    backgroundColor: "#FFD000",
-    borderColor: "#FFF",
+    backgroundColor: "#ffeb94",
+    borderColor: "#DCE1D7",
   },
   podiumRankBadge2: {
-    backgroundColor: "#94A3B8",
-    borderColor: "#FFF",
+    backgroundColor: "#d2d8e1",
+    borderColor: "#DCE1D7",
   },
   podiumRankBadge3: {
-    backgroundColor: "#FB923C",
-    borderColor: "#FFF",
+    backgroundColor: "#fdd1ad",
+    borderColor: "#DCE1D7",
   },
   podiumRankNum: {
-    color: "#000",
+    color: "#293541",
     fontSize: 10,
     fontWeight: "900",
   },
   podiumName: {
-    color: "#FFFFFF",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "900",
     marginTop: 8,
     textAlign: "center",
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   tierBadge: {
     marginTop: 3,
@@ -1484,7 +1484,8 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 5,
     borderWidth: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    borderColor: "#DCE1D7",
+    backgroundColor: "#F0F5ED",
   },
   tierBadgeText: {
     fontSize: 7.5,
@@ -1496,7 +1497,8 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 4,
     borderWidth: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderColor: "#DCE1D7",
+    backgroundColor: "#F0F5ED",
   },
   rowTierText: {
     fontSize: 7,
@@ -1504,28 +1506,28 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   rowLpText: {
-    color: "#FFC24A",
+    color: "#98732c",
     fontSize: 8.5,
     fontWeight: "800",
     marginTop: 2,
   },
   podiumScore: {
-    color: "#55E6B2",
+    color: "#389674",
     fontSize: 11,
     fontWeight: "900",
     marginTop: 2,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowColor: "transparent",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   podiumBar1: {
     width: "100%",
     height: 64,
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#FFD000",
+    borderColor: "#DCE1D7",
     borderBottomWidth: 0,
     alignItems: "center",
     paddingTop: 8,
@@ -1534,11 +1536,11 @@ const styles = StyleSheet.create({
   podiumBar2: {
     width: "100%",
     height: 48,
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#94A3B8",
+    borderColor: "#DCE1D7",
     borderBottomWidth: 0,
     alignItems: "center",
     paddingTop: 8,
@@ -1547,21 +1549,21 @@ const styles = StyleSheet.create({
   podiumBar3: {
     width: "100%",
     height: 38,
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#FB923C",
+    borderColor: "#DCE1D7",
     borderBottomWidth: 0,
     alignItems: "center",
     paddingTop: 8,
     marginTop: 8,
   },
   podiumBarLabel: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 8,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
 
   /* Section Head */
@@ -1572,21 +1574,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  sectionTitle: { color: "#FFF9FC", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
-  sectionMeta: { color: "#988CAC", fontSize: 8, fontWeight: "900", letterSpacing: 0.6 },
+  sectionTitle: { color: "#293541", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
+  sectionMeta: { color: "#293541", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
 
   /* Board & Rows */
   board: {
     borderRadius: 20,
-    backgroundColor: "#0E2C22",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.25)",
+    borderColor: "#DCE1D7",
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   row: {
     minHeight: 54,
@@ -1595,21 +1597,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 9,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(212, 180, 90, 0.15)",
+    borderBottomColor: "#DCE1D7",
   },
   rowUser: {
     backgroundColor: "rgba(62, 232, 181, 0.08)",
     borderLeftWidth: 4,
-    borderLeftColor: "#3EE8B5",
+    borderLeftColor: "#DCE1D7",
   },
   userSelfTag: {
-    backgroundColor: "#3EE8B5",
+    backgroundColor: "#aef5e0",
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
   },
   userSelfTagText: {
-    color: "#04110C",
+    color: "#293541",
     fontSize: 7.5,
     fontWeight: "900",
   },
@@ -1625,102 +1627,102 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   winRateText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 7.5,
     fontWeight: "900",
   },
   rowTop1: {
     backgroundColor: "rgba(255, 208, 0, 0.08)",
     borderLeftWidth: 4,
-    borderLeftColor: "#FFD000",
+    borderLeftColor: "#DCE1D7",
   },
   rowTop2: {
     backgroundColor: "rgba(148, 163, 184, 0.06)",
     borderLeftWidth: 4,
-    borderLeftColor: "#94A3B8",
+    borderLeftColor: "#DCE1D7",
   },
   rowTop3: {
     backgroundColor: "rgba(251, 146, 96, 0.06)",
     borderLeftWidth: 4,
-    borderLeftColor: "#FB923C",
+    borderLeftColor: "#DCE1D7",
   },
   position: {
     width: 23,
     height: 23,
     borderRadius: 8,
-    backgroundColor: "#164536",
+    backgroundColor: "#F0F5ED",
     alignItems: "center",
     justifyContent: "center",
   },
-  positionFirst: { backgroundColor: "#FFD000" },
-  positionSecond: { backgroundColor: "#94A3B8" },
-  positionThird: { backgroundColor: "#FB923C" },
-  positionText: { color: "#D9CDEB", fontSize: 9, fontWeight: "900" },
+  positionFirst: { backgroundColor: "#ffeb94" },
+  positionSecond: { backgroundColor: "#d2d8e1" },
+  positionThird: { backgroundColor: "#fdd1ad" },
+  positionText: { color: "#293541", fontSize: 9, fontWeight: "900" },
   playerMark: {
     width: 29,
     height: 29,
     borderRadius: 10,
-    backgroundColor: "#3C2D62",
+    backgroundColor: "#EDF4FC",
     alignItems: "center",
     justifyContent: "center",
   },
-  playerMarkText: { color: "#FFC24A", fontSize: 11, fontWeight: "900" },
+  playerMarkText: { color: "#98732c", fontSize: 11, fontWeight: "900" },
   playerCopy: { flex: 1 },
-  playerName: { color: "#F9F5FF", fontSize: 11, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-  playerMeta: { color: "#9F93B6", fontSize: 7, marginTop: 3, fontWeight: "800" },
-  score: { color: "#55E6B2", fontSize: 13, fontWeight: "900", textShadowColor: "#000", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 2 },
+  playerName: { color: "#293541", fontSize: 11, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  playerMeta: { color: "#293541", fontSize: 7, marginTop: 3, fontWeight: "800" },
+  score: { color: "#389674", fontSize: 13, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   emptyBoard: { padding: 22, alignItems: "center" },
-  emptyTitle: { color: "#FFF9FC", fontSize: 12, fontWeight: "900" },
-  emptyCopy: { color: "#B8ADCD", fontSize: 10, textAlign: "center", marginTop: 5 },
+  emptyTitle: { color: "#293541", fontSize: 12, fontWeight: "900" },
+  emptyCopy: { color: "#293541", fontSize: 10, textAlign: "center", marginTop: 5 },
 
   /* Add Friend Card */
   addCard: {
     marginTop: 12,
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#F0F5ED",
     borderRadius: 20,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.25)",
-    shadowColor: "#000",
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addCardLabel: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
     marginBottom: 8,
   },
   addFriendRow: { flexDirection: "row", gap: 8 },
   addFriendInput: {
     flex: 1,
-    backgroundColor: "#0A241C",
+    backgroundColor: "#F0F5ED",
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    color: "#FFF",
+    color: "#293541",
     fontSize: 12,
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.25)",
+    borderColor: "#DCE1D7",
   },
   addFriendBtn: {
-    backgroundColor: "#C9A227",
+    backgroundColor: "#e8d8a4",
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   addFriendBtnText: {
-    color: "#FFF",
+    color: "#293541",
     fontWeight: "900",
     fontSize: 11,
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   socialMsg: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 10,
     fontWeight: "800",
     marginTop: 6,
@@ -1731,17 +1733,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   friendRow: {
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#F0F5ED",
     padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.25)",
+    borderColor: "#DCE1D7",
     gap: 10,
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   friendRowTop: {
     flexDirection: "row",
@@ -1749,19 +1751,19 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   friendAvatarText: { fontSize: 24 },
-  friendNameText: { color: "#FFF", fontSize: 13, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
-  friendXpText: { color: "#8FBAAB", fontSize: 9.5, marginTop: 2 },
+  friendNameText: { color: "#293541", fontSize: 13, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
+  friendXpText: { color: "#293541", fontSize: 9.5, marginTop: 2 },
   statusWrap: { alignItems: "flex-end", gap: 3 },
   onlineDot: { width: 8, height: 8, borderRadius: 4 },
   onlineDotActive: {
-    backgroundColor: "#3EE8B5",
-    shadowColor: "#3EE8B5",
-    shadowOpacity: 0.8,
+    backgroundColor: "#aef5e0",
+    shadowColor: "#293541",
+    shadowOpacity: 0.08,
     shadowRadius: 4,
   },
-  onlineDotOffline: { backgroundColor: "#4C3F68" },
+  onlineDotOffline: { backgroundColor: "#EDF4FC" },
   onlineStatusText: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 7.5,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1769,7 +1771,7 @@ const styles = StyleSheet.create({
   challengeBtn: {
     backgroundColor: "rgba(62, 232, 181, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(62, 232, 181, 0.5)",
+    borderColor: "#DCE1D7",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -1777,7 +1779,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   challengeBtnText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1791,7 +1793,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
   removeFriendText: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 12,
     fontWeight: "900",
   },
@@ -1799,12 +1801,12 @@ const styles = StyleSheet.create({
   /* Sub Tab Container */
   subTabContainer: {
     flexDirection: "row",
-    backgroundColor: "rgba(10, 32, 24, 0.9)",
+    backgroundColor: "#F0F5ED",
     borderRadius: 14,
     padding: 3,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.2)",
+    borderColor: "#DCE1D7",
     gap: 4,
   },
   subTabBtn: {
@@ -1820,20 +1822,20 @@ const styles = StyleSheet.create({
   subTabBtnActive: {
     backgroundColor: "rgba(244, 208, 111, 0.18)",
     borderWidth: 1,
-    borderColor: "#F4D06F",
+    borderColor: "#DCE1D7",
   },
   subTabText: {
-    color: "#8FBAAB",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
   subTabTextActive: {
-    color: "#F4D06F",
+    color: "#8b763f",
     fontWeight: "900",
   },
   requestBadgeDot: {
-    backgroundColor: "#FF647C",
+    backgroundColor: "#ffbec8",
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -1842,24 +1844,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   requestBadgeText: {
-    color: "#FFF",
+    color: "#293541",
     fontSize: 9,
     fontWeight: "900",
   },
 
   /* Request Row */
   requestRow: {
-    backgroundColor: "rgba(14, 44, 34, 0.95)",
+    backgroundColor: "#F0F5ED",
     padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(212, 180, 90, 0.25)",
+    borderColor: "#DCE1D7",
     gap: 12,
-    shadowColor: "#000",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   requestActionRow: {
     flexDirection: "row",
@@ -1870,14 +1872,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(62, 232, 181, 0.18)",
     borderWidth: 1.5,
-    borderColor: "#3EE8B5",
+    borderColor: "#DCE1D7",
     paddingVertical: 9,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   acceptBtnText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.4,
@@ -1886,14 +1888,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(255, 100, 124, 0.15)",
     borderWidth: 1.5,
-    borderColor: "#FF647C",
+    borderColor: "#DCE1D7",
     paddingVertical: 9,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   rejectBtnText: {
-    color: "#FF647C",
+    color: "#ca4f62",
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.4,
@@ -1902,7 +1904,7 @@ const styles = StyleSheet.create({
   /* Board Size Picker Modal */
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(4, 17, 12, 0.82)",
+    backgroundColor: "rgba(35,48,59,0.42)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -1910,33 +1912,33 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 340,
-    backgroundColor: "#0E2C22",
+    backgroundColor: "#FFFFFF",
     borderRadius: 22,
     padding: 20,
     borderWidth: 1.5,
-    borderColor: "#D4B45A",
-    shadowColor: "#000",
+    borderColor: "#DCE1D7",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   modalKicker: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     textAlign: "center",
   },
   modalTitle: {
-    color: "#FFF9FC",
+    color: "#293541",
     fontSize: 18,
     fontWeight: "900",
     textAlign: "center",
     marginTop: 4,
   },
   modalSubtitle: {
-    color: "#A89BC2",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "700",
     textAlign: "center",
@@ -1951,7 +1953,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#0E2C22",
+    backgroundColor: "#F0F5ED",
     borderWidth: 1.5,
     borderRadius: 12,
     paddingVertical: 10,
@@ -1962,7 +1964,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   sizeBtnDesc: {
-    color: "#9F92BA",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "700",
   },
@@ -1973,10 +1975,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalCancelText: {
-    color: "#D2C5E8",
+    color: "#293541",
     fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   expandLeaderboardBtn: {
     marginTop: 8,
@@ -1985,20 +1987,20 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "rgba(62, 232, 181, 0.12)",
     borderWidth: 1.5,
-    borderColor: "rgba(62, 232, 181, 0.4)",
+    borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#3EE8B5",
+    shadowColor: "#293541",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   expandLeaderboardBtnText: {
-    color: "#3EE8B5",
+    color: "#2a9c7a",
     fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
     textAlign: "center",
   },
 });
