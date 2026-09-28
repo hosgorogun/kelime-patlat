@@ -100,6 +100,46 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
     }
   };
 
+  const handleDemoLogin = async () => {
+    setUsername("siber_oyuncu");
+    setPassword("siber123");
+    setError("");
+    setLoading(true);
+    haptics.light();
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "siber_oyuncu", password: "siber123" }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Demo girişi başarısız.");
+      }
+
+      const previousGuestToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+      await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
+      await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
+      await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || data.user.username);
+      await AsyncStorage.setItem(`kelime-patlat:guide-seen:${data.user.openId}`, "true");
+      await AsyncStorage.setItem("kelime-patlat:guide-seen", "true");
+      haptics.success();
+      onSuccess(data.token, data.user.name || data.user.username, data.user.progress, data.user.openId, previousGuestToken);
+    } catch (err: any) {
+      haptics.error();
+      const rawMsg = err.message || "";
+      if (rawMsg.includes("Network request failed") || rawMsg.includes("Failed to fetch")) {
+        setError("Sunucuya bağlanılamadı. Lütfen sunucunun açık olduğundan ve internet bağlantınızdan emin olun.");
+      } else {
+        setError(rawMsg || "Demo girişinde bir hata oluştu.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleThirdPartyPress = (provider: string) => {
     haptics.light();
     if (!isOAuthConfigured()) {
@@ -236,15 +276,11 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 
           {!isSignUp && (
             <Pressable
-              onPress={() => {
-                haptics.light();
-                setUsername("siber_oyuncu");
-                setPassword("siber123");
-                setError("");
-              }}
-              style={styles.demoFillBtn}
+              onPress={handleDemoLogin}
+              disabled={loading}
+              style={({ pressed }) => [styles.demoFillBtn, pressed && styles.pressed]}
             >
-              <Text style={styles.demoFillText}>⚡ Demo Bilgileriyle Doldur</Text>
+              <Text style={styles.demoFillText}>⚡ Demo Hesabıyla Giriş Yap (Hızlı)</Text>
             </Pressable>
           )}
 

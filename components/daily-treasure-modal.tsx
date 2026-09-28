@@ -19,6 +19,13 @@ export function DailyTreasureModal({
   onClaim,
 }: DailyTreasureModalProps) {
   const [isClaiming, setIsClaiming] = React.useState(false);
+  const claimTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+    };
+  }, []);
   const todayId = getDayId();
   const isClaimedToday = progress.lastLoginDay === todayId;
   const currentCount = progress.loginDaysCount || 0;
@@ -232,7 +239,8 @@ export function DailyTreasureModal({
                   setIsClaiming(true);
                   triggerHapticSelection();
                   onClaim();
-                  setTimeout(() => setIsClaiming(false), 2000);
+                  if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+                  claimTimerRef.current = setTimeout(() => setIsClaiming(false), 2000);
                 }}
                 style={styles.claimButton}
               />

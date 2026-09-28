@@ -108,14 +108,14 @@ export function GameSplashScreen({ isReady, onFinish }: GameSplashScreenProps) {
     });
   }, [isReady, progressAnim, fadeAnim, onFinish]);
 
-  // Safety fallback timeout: never block longer than 4.5 seconds
+  // Safety fallback timeout: never block longer than 2.5 seconds
   useEffect(() => {
     const safety = setTimeout(() => {
       if (!finishedRef.current) {
         finishedRef.current = true;
         onFinish();
       }
-    }, 4500);
+    }, 2500);
     return () => clearTimeout(safety);
   }, [onFinish]);
 
@@ -128,9 +128,15 @@ export function GameSplashScreen({ isReady, onFinish }: GameSplashScreenProps) {
     <Animated.View style={[styles.root, { opacity: fadeAnim }]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <ImageBackground
-        source={require("@/assets/images/splash.png")}
+        source={require("../assets/images/splash.png")}
         style={[styles.background, { width, height }]}
         resizeMode="cover"
+        onError={() => {
+          if (!finishedRef.current) {
+            finishedRef.current = true;
+            onFinish();
+          }
+        }}
       >
         {/* Top Vignette */}
         <LinearGradient
@@ -195,16 +201,15 @@ export function GameSplashScreen({ isReady, onFinish }: GameSplashScreenProps) {
 
 const styles = StyleSheet.create({
   root: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
+    width: "100%",
+    height: "100%",
     backgroundColor: "#050B14",
-    zIndex: 9999,
   },
   background: {
     flex: 1,
+    width: "100%",
+    height: "100%",
     justifyContent: "flex-end",
     alignItems: "center",
   },

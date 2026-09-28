@@ -52,10 +52,14 @@ export function UserProfileModal({
 }) {
   const [imgError, setImgError] = React.useState(false);
   const [isSendingFriend, setIsSendingFriend] = React.useState(false);
+  const friendTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     setImgError(false);
     setIsSendingFriend(false);
+    return () => {
+      if (friendTimerRef.current) clearTimeout(friendTimerRef.current);
+    };
   }, [user?.id, user?.avatarPhoto]);
 
   if (!user) return null;
@@ -211,7 +215,8 @@ export function UserProfileModal({
                     setIsSendingFriend(true);
                     triggerHapticSuccess();
                     onAddFriend?.(user);
-                    setTimeout(() => setIsSendingFriend(false), 2000);
+                    if (friendTimerRef.current) clearTimeout(friendTimerRef.current);
+                    friendTimerRef.current = setTimeout(() => setIsSendingFriend(false), 2000);
                   }}
                   style={({ pressed }) => [
                     styles.addFriendBtn,

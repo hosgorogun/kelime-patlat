@@ -100,14 +100,14 @@ export function CommandCenter({
   const displayDayNumber = activeDayIndex + 1;
 
   useEffect(() => {
-    if (!isClaimedToday && !hasAutoOpenedDailyRewardRef.current) {
+    if (!isClaimedToday && !hasAutoOpenedDailyRewardRef.current && progress.welcomeRewardClaimed) {
       hasAutoOpenedDailyRewardRef.current = true;
       const timer = setTimeout(() => {
         setShowDailyRewardModal(true);
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [isClaimedToday]);
+  }, [isClaimedToday, progress.welcomeRewardClaimed]);
 
 
 
@@ -644,8 +644,8 @@ const styles = StyleSheet.create({
   },
   topIconText: { fontSize: 13 },
   topIconBtnGlow: {
-    borderColor: "#DCE1D7",
-    backgroundColor: "rgba(255, 194, 74, 0.25)",
+    backgroundColor: "#FFF2C8",
+    borderColor: "#F0C855",
     shadowColor: "#293541",
     shadowOpacity: 0.08,
     shadowRadius: 4,
@@ -665,9 +665,9 @@ const styles = StyleSheet.create({
   dailyMiniPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 194, 74, 0.14)",
+    backgroundColor: "#FFF9E6",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderColor: "#FDE68A",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -685,9 +685,9 @@ const styles = StyleSheet.create({
   missionsMiniPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(62, 232, 181, 0.12)",
+    backgroundColor: "#E6F9F0",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderColor: "#A7F3D0",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
   dailyRewardDayPill: { backgroundColor: "rgba(184, 134, 58, 0.28)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: palette.bronzeBorder },
   dailyRewardDayPillText: { color: palette.gold, fontSize: 8.5, fontWeight: "900" },
   dailyStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
-  dailyStatusBadgeReady: { backgroundColor: "rgba(244, 208, 111, 0.14)", borderColor: "#DCE1D7" },
+  dailyStatusBadgeReady: { backgroundColor: "#FFF9E6", borderColor: "#F0C855" },
   dailyStatusBadgeClaimed: { backgroundColor: "rgba(62, 232, 181, 0.12)", borderColor: "#DCE1D7" },
   dailyStatusBadgeText: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
   dailyDaysRow: { flexDirection: "row", gap: 5, marginTop: 10, width: "100%" },
@@ -1061,9 +1061,9 @@ const styles = StyleSheet.create({
   streakWarningPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(239, 68, 68, 0.16)",
+    backgroundColor: "#FEE2E2",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderColor: "#FECACA",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,

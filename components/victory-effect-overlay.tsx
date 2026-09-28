@@ -1,385 +1,103 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { Animated, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { gameSfx } from "@/lib/game-sfx";
-import { triggerHapticLongWord } from "@/shared/audio-haptics";
+import React, { useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 export type VictoryEffectId = "pulse" | "glitch" | "flare" | "lightning" | "fireworks";
-
-type Particle = {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  color: string;
-  glyph?: string;
-  anim: Animated.ValueXY;
-  scaleAnim: Animated.Value;
-  opacityAnim: Animated.Value;
+const COLORS: Record<VictoryEffectId, string[]> = {
+  pulse: ["#35BA92", "#FFD66E", "#78C9ED"],
+  glitch: ["#35BA92", "#A5D98C", "#FFD66E"],
+  flare: ["#F28A58", "#FFD66E", "#EE8496"],
+  lightning: ["#FFD66E", "#78C9ED", "#AFA0E8"],
+  fireworks: ["#EE8496", "#FFD66E", "#35BA92", "#78C9ED", "#AFA0E8"],
 };
 
-const EFFECT_META: Record<string, { label: string; glyph: string; color: string; accentColor: string; description: string }> = {
-  pulse: {
-    label: "SİBER PULSE",
-    glyph: "🌊",
-    color: "#2a9c7a",
-    accentColor: "#F0F5ED",
-    description: "Rezonans Şok Dalgası",
-  },
-  glitch: {
-    label: "MATRİS GLITCH",
-    glyph: "💻",
-    color: "#8c7540",
-    accentColor: "#F0F5ED",
-    description: "Dijital Veri Patlaması",
-  },
-  flare: {
-    label: "GÜNEŞ FLARE",
-    glyph: "💥",
-    color: "#cb5e12",
-    accentColor: "#EF4444",
-    description: "Kozmik Parlama Halesi",
-  },
-  lightning: {
-    label: "ŞİMŞEK ÇARPMASI",
-    glyph: "⚡",
-    color: "#967a0d",
-    accentColor: "#60A5FA",
-    description: "Yüksek Voltaj Boşalımı",
-  },
-  fireworks: {
-    label: "BÜYÜK KUTLAMA",
-    glyph: "🎆",
-    color: "#ff2a85",
-    accentColor: "#A855F7",
-    description: "Görkemli Havai Fişek & Konfeti",
-  },
-};
+/** A lasting success marker, separate from the short-lived celebration. */
+export function VictoryBanner({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <View style={styles.banner} accessibilityRole="summary">
+      <Text style={styles.stars}>★  ★  ★</Text>
+      <Text style={styles.bannerTitle}>{title}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    </View>
+  );
+}
 
 export function VictoryEffectOverlay({
-  effectId = "pulse",
-  visible = true,
-  onFinish,
+  effectId = "pulse", visible = true, onFinish,
+  title = "Harika oynadın!", subtitle = "Bu başarı senin.",
 }: {
-  effectId?: string;
-  visible?: boolean;
-  onFinish?: () => void;
+  effectId?: string; visible?: boolean; onFinish?: () => void;
+  title?: string; subtitle?: string;
 }) {
-  const { width, height } = useWindowDimensions();
-  const safeEffect = EFFECT_META[effectId] ? effectId : "pulse";
-  const meta = EFFECT_META[safeEffect]!;
-
-  // Animasyon Değerleri
-  const shockwave1 = useRef(new Animated.Value(0)).current;
-  const shockwave2 = useRef(new Animated.Value(0)).current;
-  const flashAnim = useRef(new Animated.Value(0)).current;
-  const badgeAnim = useRef(new Animated.Value(0)).current;
-  const particlesRef = useRef<Particle[]>([]);
-
-  // Parçacıkları oluştur
-  const particles = useMemo(() => {
-    if (!visible) return [];
-    const count = safeEffect === "fireworks" ? 36 : safeEffect === "lightning" ? 28 : safeEffect === "flare" ? 30 : safeEffect === "glitch" ? 26 : 24;
-    const list: Particle[] = [];
-
-    const colorPalette =
-      safeEffect === "fireworks"
-        ? ["#FF2A85", "#3EE8B5", "#FACC15", "#A855F7", "#38BDF8", "#FF647C"]
-        : safeEffect === "lightning"
-        ? ["#FACC15", "#FEF08A", "#FFFFFF", "#60A5FA", "#93C5FD"]
-        : safeEffect === "flare"
-        ? ["#F97316", "#FB923C", "#FFD000", "#EF4444", "#FCA5A5"]
-        : safeEffect === "glitch"
-        ? ["#F0F5ED", "#34D399", "#E8C36A", "#F0F5ED", "#A7F3D0"]
-        : ["#3EE8B5", "#2DD4BF", "#F0F5ED", "#5EEAD4", "#CCFBF1"];
-
-    const centerX = width / 2;
-    const centerY = height * 0.38;
-
-    for (let i = 0; i < count; i++) {
-      const pColor = colorPalette[i % colorPalette.length]!;
-      const anim = new Animated.ValueXY({ x: 0, y: 0 });
-      const scaleAnim = new Animated.Value(0);
-      const opacityAnim = new Animated.Value(1);
-
-      list.push({
-        id: i,
-        x: centerX,
-        y: centerY,
-        size: safeEffect === "glitch" ? 8 : safeEffect === "fireworks" ? 6 + (i % 5) : 5 + (i % 4),
-        color: pColor,
-        glyph: safeEffect === "glitch" && i % 3 === 0 ? (i % 2 === 0 ? "1" : "0") : undefined,
-        anim,
-        scaleAnim,
-        opacityAnim,
-      });
-    }
-    particlesRef.current = list;
-    return list;
-  }, [visible, safeEffect, width, height]);
+  const progress = useRef(new Animated.Value(0)).current;
+  const finishRef = useRef(onFinish);
+  finishRef.current = onFinish;
+  const [done, setDone] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
+  const colors = COLORS[effectId as VictoryEffectId] ?? COLORS.pulse;
 
   useEffect(() => {
-    if (!visible) return;
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(value => {
+      if (active) setReduceMotion(value);
+    }).catch(() => { if (active) setReduceMotion(false); });
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    return () => { active = false; subscription.remove(); };
+  }, []);
 
-    // Haptics ve ses
-    triggerHapticLongWord();
-    gameSfx.victory();
-
-    // 1. Rozet açılışı
-    Animated.spring(badgeAnim, {
-      toValue: 1,
-      friction: 5,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-
-    // 2. Flaş / Şok Dalgası
-    if (safeEffect === "lightning") {
-      Animated.sequence([
-        Animated.timing(flashAnim, { toValue: 0.65, duration: 80, useNativeDriver: true }),
-        Animated.timing(flashAnim, { toValue: 0.1, duration: 60, useNativeDriver: true }),
-        Animated.timing(flashAnim, { toValue: 0.85, duration: 90, useNativeDriver: true }),
-        Animated.timing(flashAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.sequence([
-        Animated.timing(flashAnim, { toValue: 0.45, duration: 120, useNativeDriver: true }),
-        Animated.timing(flashAnim, { toValue: 0, duration: 450, useNativeDriver: true }),
-      ]).start();
-    }
-
-    // 3. Şok dalgaları (Pulse & Flare için)
-    Animated.parallel([
-      Animated.timing(shockwave1, {
-        toValue: 1,
-        duration: 900,
-        useNativeDriver: true,
-      }),
-      Animated.sequence([
-        Animated.delay(180),
-        Animated.timing(shockwave2, {
-          toValue: 1,
-          duration: 950,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-
-    // 4. Parçacık Animasyonları
-    const particleAnimations = particles.map((p, idx) => {
-      const angle = (idx / particles.length) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-      const speed = safeEffect === "fireworks" ? 90 + Math.random() * 140 : safeEffect === "lightning" ? 110 + Math.random() * 160 : 70 + Math.random() * 110;
-      const targetX = Math.cos(angle) * speed;
-      const targetY = Math.sin(angle) * speed + (safeEffect === "fireworks" ? 40 : 0);
-
-      return Animated.parallel([
-        Animated.timing(p.anim, {
-          toValue: { x: targetX, y: targetY },
-          duration: 850 + Math.random() * 400,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(p.scaleAnim, {
-            toValue: 1.2,
-            duration: 180,
-            useNativeDriver: true,
-          }),
-          Animated.timing(p.scaleAnim, {
-            toValue: 0.2,
-            duration: 750,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.sequence([
-          Animated.delay(450),
-          Animated.timing(p.opacityAnim, {
-            toValue: 0,
-            duration: 450,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]);
+  useEffect(() => {
+    if (!visible || reduceMotion === null) return;
+    setDone(false);
+    progress.setValue(0);
+    const animation = Animated.timing(progress, {
+      toValue: 1, duration: 3000, easing: Easing.linear, useNativeDriver: true,
     });
+    animation.start(({ finished }) => {
+      if (finished) { setDone(true); finishRef.current?.(); }
+    });
+    return () => animation.stop();
+  }, [visible, reduceMotion, progress]);
 
-    Animated.stagger(15, particleAnimations).start();
-
-    // Otomatik kapanış / geri çağırma zamanlayıcısı
-    const timer = setTimeout(() => {
-      onFinish?.();
-    }, 2800);
-
-    return () => clearTimeout(timer);
-    // Anim değerleri sabit Animated.Value ref'leridir; onFinish her render'da değişebilir ama efekt yalnızca görünür olduğunda çalışır
-  }, [visible, safeEffect, particles, badgeAnim, flashAnim, shockwave1, shockwave2, onFinish]);
-
-  if (!visible) return null;
-
+  if (!visible || done || reduceMotion === null) return null;
+  const opacity = reduceMotion ? 1 : progress.interpolate({ inputRange: [0, 0.06, 0.78, 1], outputRange: [0, 1, 1, 0] });
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {/* 1. Ekran Işıması / Parlama Flaş Katmanı */}
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            backgroundColor: meta.color,
-            opacity: flashAnim,
-            zIndex: 90,
-          },
-        ]}
-      />
-
-      {/* 2. Merkez Şok Dalgası Halkaları */}
-      <View
-        style={{
-          position: "absolute",
-          left: width / 2 - 120,
-          top: height * 0.38 - 120,
-          width: 240,
-          height: 240,
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 92,
-        }}
-      >
-        <Animated.View
-          style={{
-            position: "absolute",
-            width: 240,
-            height: 240,
-            borderRadius: 120,
-            borderWidth: 3,
-            borderColor: meta.color,
-            transform: [
-              {
-                scale: shockwave1.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.2, 2.4],
-                }),
-              },
-            ],
-            opacity: shockwave1.interpolate({
-              inputRange: [0, 0.4, 1],
-              outputRange: [0.9, 0.6, 0],
-            }),
-            shadowColor: meta.color,
-            shadowOpacity: 0.08,
-            shadowRadius: 4,
-            elevation: 2,
-          }}
-        />
-
-        <Animated.View
-          style={{
-            position: "absolute",
-            width: 240,
-            height: 240,
-            borderRadius: 120,
-            borderWidth: 2,
-            borderColor: meta.accentColor,
-            borderStyle: "dashed",
-            transform: [
-              {
-                scale: shockwave2.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.1, 2.1],
-                }),
-              },
-            ],
-            opacity: shockwave2.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0.8, 0.4, 0],
-            }),
-          }}
-        />
-      </View>
-
-      {/* 3. Animasyonlu Parçacıklar / Kıvılcımlar / Konfetiler */}
-      {particles.map((p) => (
-        <Animated.View
-          key={p.id}
-          style={{
-            position: "absolute",
-            left: p.x - p.size / 2,
-            top: p.y - p.size / 2,
-            width: p.glyph ? p.size * 2 : p.size,
-            height: p.size,
-            borderRadius: safeEffect === "glitch" ? 1 : p.size / 2,
-            backgroundColor: p.glyph ? "transparent" : p.color,
-            transform: [
-              ...p.anim.getTranslateTransform(),
-              { scale: p.scaleAnim },
-            ],
-            opacity: p.opacityAnim,
-            zIndex: 95,
-            shadowColor: p.color,
-            shadowOpacity: 0.08,
-            shadowRadius: 4,
-            elevation: 2,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          {p.glyph ? (
-            <Text style={{ color: p.color, fontSize: 11, fontWeight: "900", fontFamily: "monospace" }}>
-              {p.glyph}
-            </Text>
-          ) : null}
-        </Animated.View>
-      ))}
-
-      {/* 4. Şık Kutlama ve Efekt Bilgi Rozeti (Banner) */}
-      <Animated.View
-        style={{
-          position: "absolute",
-          top: 60,
-          left: 20,
-          right: 20,
-          alignItems: "center",
-          zIndex: 100,
-          transform: [
-            {
-              scale: badgeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.7, 1],
-              }),
+    <View pointerEvents="none" style={styles.overlay} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {!reduceMotion && Array.from({ length: 32 }, (_, i) => {
+        const angle = (i / 32) * Math.PI * 2;
+        const reach = 100 + (i % 5) * 24;
+        return (
+          <Animated.View key={i} style={[
+            styles.confetti,
+            { backgroundColor: colors[i % colors.length], borderRadius: i % 3 === 0 ? 7 : 2,
+              opacity: progress.interpolate({ inputRange: [0, 0.08, 0.65, 0.95, 1], outputRange: [0, 1, 1, 0, 0] }),
+              transform: [
+                { translateX: progress.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, Math.cos(angle) * reach, Math.cos(angle) * reach * 1.25] }) },
+                { translateY: progress.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, Math.sin(angle) * reach - 55, 280 + (i % 4) * 35] }) },
+                { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ["0deg", `${i % 2 ? 540 : -420}deg`] }) },
+              ],
             },
-            {
-              translateY: badgeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-30, 0],
-              }),
-            },
-          ],
-          opacity: badgeAnim,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "#F0F5ED",
-            borderRadius: 20,
-            paddingVertical: 10,
-            paddingHorizontal: 18,
-            borderWidth: 2,
-            borderColor: meta.color,
-            shadowColor: meta.color,
-            shadowOpacity: 0.08,
-            shadowRadius: 4,
-            elevation: 2,
-            gap: 10,
-          }}
-        >
-          <Text style={{ fontSize: 22 }}>{meta.glyph}</Text>
-          <View>
-            <Text style={{ color: meta.color, fontSize: 12, fontWeight: "900", letterSpacing: 0.5 }}>
-              {meta.label} AKTİF
-            </Text>
-            <Text style={{ color: "#293541", fontSize: 10, fontWeight: "700", marginTop: 1 }}>
-              {meta.description}
-            </Text>
-          </View>
-        </View>
+          ]} />
+        );
+      })}
+      <Animated.View style={[styles.toast, { opacity, transform: [{ scale: reduceMotion ? 1 : progress.interpolate({ inputRange: [0, 0.12, 0.2, 1], outputRange: [0.75, 1.06, 1, 1] }) }] }]}>
+        <View style={styles.medal}><Text style={styles.trophy}>🏆</Text></View>
+        <Text style={styles.kicker}>TEBRİKLER!</Text>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
       </Animated.View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFill, zIndex: 10000, elevation: 30, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  confetti: { position: "absolute", left: "50%", top: "40%", width: 9, height: 14 },
+  toast: { width: "88%", maxWidth: 340, backgroundColor: "#FFFDF5", borderRadius: 30, borderWidth: 2, borderColor: "#E7C875", alignItems: "center", padding: 22, shadowColor: "#293541", shadowOpacity: 0.18, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
+  medal: { width: 82, height: 82, borderRadius: 28, backgroundColor: "#FFE59A", alignItems: "center", justifyContent: "center", marginBottom: 12, transform: [{ rotate: "-7deg" }] },
+  trophy: { fontSize: 48 },
+  kicker: { color: "#96732C", fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 6 },
+  title: { color: "#293541", fontSize: 27, fontWeight: "900", textAlign: "center" },
+  subtitle: { color: "#59665D", fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 7 },
+  banner: { width: "100%", backgroundColor: "#FFF7D8", borderRadius: 20, borderWidth: 1, borderColor: "#E7D697", padding: 16, alignItems: "center", marginBottom: 12 },
+  stars: { color: "#B98419", fontSize: 24, letterSpacing: 5, marginBottom: 5 },
+  bannerTitle: { color: "#293541", fontSize: 23, fontWeight: "900", textAlign: "center" },
+});

@@ -414,18 +414,21 @@ async function startServer() {
         if (name && typeof name === "string" && name.trim().length >= 2) {
           dbUser.name = name.trim().slice(0, 32);
         }
-
         const currentProg = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
-        // Bakiye alanları istemci tarafından artırılamaz (yalnızca kozmetik harcamasında azalabilir)
-        const nextCoins = typeof progress.coins === "number" && progress.coins < (currentProg.coins ?? 0)
-          ? Math.max(0, progress.coins)
+        // Bakiye alanları: istemciden gelen ödül/hediye ve harcamalar güvenli sınırlarla korunur
+        const incomingCoins = typeof progress.coins === "number" && Number.isFinite(progress.coins)
+          ? Math.max(0, Math.min(2_000_000, progress.coins))
           : (currentProg.coins ?? 0);
-        const nextShields = typeof progress.streakShields === "number" && progress.streakShields < (currentProg.streakShields ?? 0)
-          ? Math.max(0, progress.streakShields)
+        const incomingShields = typeof progress.streakShields === "number" && Number.isFinite(progress.streakShields)
+          ? Math.max(0, Math.min(99, progress.streakShields))
           : (currentProg.streakShields ?? 0);
-        const nextRadar = typeof progress.radarChargesBonus === "number" && progress.radarChargesBonus < (currentProg.radarChargesBonus ?? 0)
-          ? Math.max(0, progress.radarChargesBonus)
+        const incomingRadar = typeof progress.radarChargesBonus === "number" && Number.isFinite(progress.radarChargesBonus)
+          ? Math.max(0, Math.min(99, progress.radarChargesBonus))
           : (currentProg.radarChargesBonus ?? 0);
+
+        const nextCoins = Math.max(currentProg.coins ?? 0, incomingCoins);
+        const nextShields = Math.max(currentProg.streakShields ?? 0, incomingShields);
+        const nextRadar = Math.max(currentProg.radarChargesBonus ?? 0, incomingRadar);
 
         const isClaimingWelcome = !currentProg.welcomeRewardClaimed && Boolean(progress.welcomeRewardClaimed);
         const welcomeCoinsBonus = isClaimingWelcome ? 50 : 0;

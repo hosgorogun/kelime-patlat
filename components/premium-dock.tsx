@@ -109,6 +109,8 @@ const styles = StyleSheet.create({
   },
   active: {
     backgroundColor: "#FFD66E",
+    borderWidth: 1.5,
+    borderColor: "#F0C855",
     shadowColor: "#FFD66E",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.35,

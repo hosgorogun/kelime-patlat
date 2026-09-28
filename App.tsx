@@ -59,13 +59,14 @@ import { UserProfileModal, type InspectableUser } from "./components/user-profil
 import { LivesModal } from "./components/lives-modal";
 import { ErrorBoundary } from "./components/error-boundary";
 import { ModernAlertModal, type ModernAlertData } from "./components/modern-alert-modal";
-import { VictoryEffectOverlay } from "./components/victory-effect-overlay";
+import { VictoryBanner, VictoryEffectOverlay } from "./components/victory-effect-overlay";
 import { GameSplashScreen } from "./components/game-splash-screen";
 import { ConnectLine } from "./components/game-ui";
 import { SeasonResetModal } from "./components/season-reset-modal";
 import { DuelInviteModal } from "./components/duel-invite-modal";
 import { MatchmakingOverlay } from "./components/matchmaking-overlay";
 import { GameCountdownOverlay } from "./components/game-countdown-overlay";
+import { CelebrationModal, type CelebrationModalData, getLevelUpDetails } from "./components/celebration-modal";
 
 type Screen = "home" | "online" | "friends" | "profile" | "levels" | "solo" | "room" | "game" | "season" | "league" | "arcade" | "daily-lobby" | "missions" | "auth" | "store" | "vintage";
 
@@ -272,8 +273,13 @@ function HomeScreen() {
   }, [progress.selectedVictoryEffect]);
   const [seasonResetModal, setSeasonResetModal] = useState<{ newSeasonId: string; previousRank: string; previousLp: number; newLp: number } | null>(null);
   const [globalToast, setGlobalToast] = useState<ToastData | null>(null);
+  const [celebrationQueue, setCelebrationQueue] = useState<CelebrationModalData[]>([]);
   const prevLevelRef = useRef<number | null>(null);
   const prevTierRef = useRef<string | null>(null);
+  const lastAwardedLevelRef = useRef<number | null>(null);
+  const handleDismissCelebration = useCallback(() => {
+    setCelebrationQueue((prev) => prev.slice(1));
+  }, []);
   const lastTouchedIndexRef = useRef<number | null>(null);
   const incomingUrl = Linking.useURL();
   const recordedRoundRef = useRef<string | null>(null);
@@ -427,30 +433,61 @@ function HomeScreen() {
     const currentLevel = getPlayerLevel(progress.xp);
     const currentTier = getLeagueTier(progress).tier;
 
-    if (prevLevelRef.current !== null && currentLevel > prevLevelRef.current) {
-      let unlockHint = "Yeni rozetler ve unvanlar açıldı!";
-      if (currentLevel === 3) unlockHint = "Yeni Avatar Açıldı: Orbit 🪐";
-      else if (currentLevel === 5) unlockHint = "Yeni Mod Açıldı: 6×6 Matris Düellosu ⚡";
-      else if (currentLevel === 6) unlockHint = "Yeni Avatar Açıldı: Bilge Sage 🧙";
-      else if (currentLevel === 8) unlockHint = "Yeni Mod Açıldı: 8×8 Matris Düellosu 🏆";
-      else if (currentLevel === 10) unlockHint = "Yeni Mod Açıldı: 10×10 Matris Düellosu 👑";
+    const didLevelUp = prevLevelRef.current !== null && currentLevel > prevLevelRef.current;
+    const tierOrder = ["DEMİR", "BRONZ", "GÜMÜŞ", "ALTIN", "PLATİN", "ELMAS", "YÜCELİK", "ÖLÜMSÜZLÜK", "RADIAN"];
+    const prevTier = prevTierRef.current;
+    const isTierPromo = prevTier !== null && currentTier !== prevTier && tierOrder.indexOf(currentTier) > tierOrder.indexOf(prevTier);
 
-      setGlobalToast({
-        id: `lvl-${currentLevel}-${Date.now()}`,
-        title: `SEVİYE ATLADIN! (SEVİYE ${currentLevel})`,
-        subtitle: unlockHint,
-        icon: "🚀",
-        accentColor: "#3EE8B5",
-        badge: `LVL ${currentLevel}`,
-      });
-    }
-    prevLevelRef.current = currentLevel;
+    if (didLevelUp || isTierPromo) {
+      const newItems: CelebrationModalData[] = [];
 
-    if (prevTierRef.current !== null && currentTier !== prevTierRef.current) {
-      const tierOrder = ["DEMİR", "BRONZ", "GÜMÜŞ", "ALTIN", "PLATİN", "ELMAS", "YÜCELİK", "ÖLÜMSÜZLÜK", "RADIAN"];
-      const prevIdx = tierOrder.indexOf(prevTierRef.current);
-      const currIdx = tierOrder.indexOf(currentTier);
-      if (currIdx > prevIdx) {
+      if (didLevelUp) {
+        let unlockHint = "Yeni rozetler ve unvanlar açıldı!";
+        if (currentLevel === 3) unlockHint = "Yeni Avatar Açıldı: Orbit 🪐";
+        else if (currentLevel === 5) unlockHint = "Yeni Mod Açıldı: 6×6 Matris Düellosu ⚡";
+        else if (currentLevel === 6) unlockHint = "Yeni Avatar Açıldı: Bilge Sage 🧙";
+        else if (currentLevel === 8) unlockHint = "Yeni Mod Açıldı: 8×8 Matris Düellosu 🏆";
+        else if (currentLevel === 10) unlockHint = "Yeni Mod Açıldı: 10×10 Matris Düellosu 👑";
+
+        const levelDetails = getLevelUpDetails(currentLevel);
+
+        newItems.push({
+          type: "level-up",
+          level: currentLevel,
+          unlockHint,
+          bonusCoins: levelDetails.coins,
+        });
+
+        // Seviye atlayınca ödül çiplerini ekle ve canları tamamen tazele
+        if (lastAwardedLevelRef.current !== currentLevel) {
+          lastAwardedLevelRef.current = currentLevel;
+          if (levelDetails.coins > 0) {
+            setProgress((curr) => ({
+              ...curr,
+              coins: (curr.coins ?? 0) + levelDetails.coins,
+              lives: MAX_LIVES,
+            }));
+          }
+        }
+
+        setGlobalToast({
+          id: `lvl-${currentLevel}-${Date.now()}`,
+          title: `SEVİYE ATLADIN! (SEVİYE ${currentLevel})`,
+          subtitle: unlockHint,
+          icon: "🚀",
+          accentColor: "#3EE8B5",
+          badge: `LVL ${currentLevel}`,
+        });
+      }
+
+      if (isTierPromo && prevTier) {
+        newItems.push({
+          type: "league-promotion",
+          previousTier: prevTier,
+          newTier: currentTier,
+          newLp: progress.lp || 0,
+        });
+
         const tierToastData = {
           id: `tier-${currentTier}-${Date.now()}`,
           title: `LİG TERFİSİ! ${currentTier} LİGİ`,
@@ -459,13 +496,16 @@ function HomeScreen() {
           accentColor: "#FFC24A",
           badge: currentTier,
         };
-        if (prevLevelRef.current !== null && currentLevel > prevLevelRef.current) {
+        if (didLevelUp) {
           setTimeout(() => setGlobalToast(tierToastData), 4500);
         } else {
           setGlobalToast(tierToastData);
         }
       }
+
+      setCelebrationQueue((prev) => [...prev, ...newItems]);
     }
+    prevLevelRef.current = currentLevel;
     prevTierRef.current = currentTier;
 
     // Schedule local push notifications for streak & lives refill
@@ -765,9 +805,13 @@ function HomeScreen() {
           return;
         }
         try {
+          const authAbort = new AbortController();
+          const timeoutId = setTimeout(() => authAbort.abort(), 2500);
           const response = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { "Authorization": `Bearer ${token}` },
+            signal: authAbort.signal,
           });
+          clearTimeout(timeoutId);
           if (response.ok) {
             const data = await response.json();
             const user = data?.user || data;
@@ -1013,7 +1057,7 @@ function HomeScreen() {
   }, [progress.sfxEnabled, progress.hapticsEnabled, progress.friends, progressReady]);
 
   useEffect(() => {
-    if (!progressReady) return;
+    if (!progressReady || !authToken || screen === "auth") return;
     if (progress.welcomeRewardClaimed) return;
     void AsyncStorage.getItem("kelime-patlat:player-id").then((openId) => {
       const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
@@ -1066,7 +1110,7 @@ function HomeScreen() {
         },
       });
     }
-  }, [progressReady]);
+  }, [progressReady, authToken, screen, progress.welcomeRewardClaimed]);
 
   // Handle app resuming from background / sleep mode (day change & streak check)
   useEffect(() => {
@@ -2392,6 +2436,13 @@ function HomeScreen() {
     />
   );
 
+  const celebrationModalElement = (
+    <CelebrationModal
+      data={celebrationQueue[0] || null}
+      onClose={handleDismissCelebration}
+    />
+  );
+
   const openSoloLevel = (level: number) => {
     const calc = getCalculatedLives(progress);
     if (calc.lives <= 0) {
@@ -2620,10 +2671,12 @@ function HomeScreen() {
 
   if (!splashFinished) {
     return (
-      <GameSplashScreen
-        isReady={!authLoading}
-        onFinish={() => setSplashFinished(true)}
-      />
+      <View style={{ flex: 1, width: "100%", height: "100%", backgroundColor: "#050B14" }}>
+        <GameSplashScreen
+          isReady={!authLoading}
+          onFinish={() => setSplashFinished(true)}
+        />
+      </View>
     );
   }
 
@@ -2633,6 +2686,50 @@ function HomeScreen() {
         onCancel={async () => {
           if (!authToken) {
             try {
+              const cachedToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+              const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
+              const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
+              const cachedProgressStr = await AsyncStorage.getItem(PROGRESS_KEY);
+
+              if (cachedToken && cachedId && cachedToken !== "guest") {
+                try {
+                  const checkRes = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
+                    headers: { Authorization: `Bearer ${cachedToken}` },
+                  });
+                  if (checkRes.ok) {
+                    const checkData = await checkRes.json();
+                    if (checkData.user?.openId) {
+                      setAuthToken(cachedToken);
+                      setPlayerId(checkData.user.openId);
+                      setPlayerName(checkData.user.name || cachedName || "Misafir");
+                      if (checkData.user.progress) {
+                        setProgress(checkData.user.progress);
+                      }
+                      reconnectGameSocket();
+                      setScreen("home");
+                      return;
+                    }
+                  }
+                } catch {
+                  // Ağ hatasında yerel önbellek ile devam
+                }
+              }
+
+              if (cachedToken && cachedId && cachedProgressStr) {
+                try {
+                  const parsed = JSON.parse(cachedProgressStr);
+                  setAuthToken(cachedToken);
+                  setPlayerId(cachedId);
+                  setPlayerName(cachedName || "Misafir");
+                  setProgress(parsed);
+                  reconnectGameSocket();
+                  setScreen("home");
+                  return;
+                } catch {
+                  // Devam et
+                }
+              }
+
               const response = await fetch(`${getApiBaseUrl()}/api/auth/guest`, { method: "POST" });
               const data = await response.json();
               if (response.ok && data.token && data.user?.openId) {
@@ -2644,7 +2741,6 @@ function HomeScreen() {
                 await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
                 await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
                 await AsyncStorage.setItem("kelime-patlat:player-name", finalGuestName);
-                // Yerel ilerlemeyi koru; sunucudan gelen misafir verisiyle birleştir
                 if (data.user.progress) {
                   setProgress((current) => mergePlayerProgress(current, data.user.progress, { preferRemoteBalances: true }));
                 }
@@ -2701,9 +2797,9 @@ function HomeScreen() {
           const mergedProgress = mergePlayerProgress(progress, cloudProgress, { preferRemoteBalances: true });
 
           setProgress(mergedProgress);
+          await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(mergedProgress)).catch(() => undefined);
           await syncProgressToCloud(mergedProgress);
           reconnectGameSocket();
-          setScreen("home");
 
           const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
           const seen = await AsyncStorage.getItem(key);
@@ -2711,7 +2807,13 @@ function HomeScreen() {
             setTimeout(() => {
               setShowWelcomeModal(true);
             }, 300);
+          } else {
+            setShowWelcomeModal(false);
+            setShowGuide(false);
+            await AsyncStorage.setItem(key, "true").catch(() => undefined);
+            await AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
           }
+          setScreen("home");
         }}
       />
     );
@@ -2719,7 +2821,7 @@ function HomeScreen() {
 
   if (screen === "home") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} showGuide={showGuide} onCloseGuide={handleCloseGuide} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} seasonResetModal={seasonResetModal} onCloseSeasonResetModal={() => setSeasonResetModal(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <CommandCenter
           playerName={safeName}
@@ -3109,7 +3211,7 @@ function HomeScreen() {
   if (screen === "daily-lobby") {
     const dailyDone = progress.dailyCompletedId === daily.id;
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -3231,7 +3333,7 @@ function HomeScreen() {
 
   if (screen === "season" || screen === "league") {
     return (
-      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
+      <MainShell active="season" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <SeasonHub
           initialTab={screen === "league" ? "leagues" : seasonInitialTab}
@@ -3358,6 +3460,7 @@ function HomeScreen() {
           <PremiumDock active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} />
         </View>
         {livesModalElement}
+        {celebrationModalElement}
       </ScreenContainer>
     );
   }
@@ -3402,13 +3505,14 @@ function HomeScreen() {
           }}
         />
         {livesModalElement}
+        {celebrationModalElement}
       </ScreenContainer>
     );
   }
 
   if (screen === "store") {
     return (
-      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
+      <MainShell active="store" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <CyberStore
           coins={progress.coins ?? 0}
@@ -3574,7 +3678,7 @@ function HomeScreen() {
     if (!arcadeStarted) {
       const bestScore = progress.bestArcadeScore || 0;
       return (
-        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
+        <MainShell active="home" onNavigate={(destination) => { setArcadeStarted(false); setScreen(destination); }} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
           <StatusBar style="dark" />
           <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.subHeader}>
@@ -3689,13 +3793,14 @@ function HomeScreen() {
             );
           }}
         />
+        {celebrationModalElement}
       </ScreenContainer>
     );
   }
 
   if (screen === "online") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -3810,7 +3915,7 @@ function HomeScreen() {
 
   if (screen === "friends") {
     return (
-      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement}>
+      <MainShell active="home" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} matchmakingState={matchmakingState} onCancelMatchmaking={cancelMatchmaking} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <View style={styles.subHeader}>
@@ -4015,13 +4120,14 @@ function HomeScreen() {
         />
         {globalToast && <GlobalGameToast toast={globalToast} onDismiss={() => setGlobalToast(null)} />}
         {livesModalElement}
+        {celebrationModalElement}
       </ScreenContainer>
     );
   }
 
   if (screen === "missions") {
     return (
-      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
+      <MainShell active="missions" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <MissionsScreen
           progress={progress}
@@ -4052,7 +4158,7 @@ function HomeScreen() {
 
   if (screen === "profile") {
     return (
-      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement}>
+      <MainShell active="profile" onNavigate={(destination) => setScreen(destination)} missionsBadgeCount={unclaimedMissions} storeBadgeCount={hasClaimableDailyReward ? 1 : undefined} toast={globalToast} onDismissToast={() => setGlobalToast(null)} duelInvite={incomingDuelInvite} onAcceptDuel={handleAcceptDuelInvite} onRejectDuel={handleRejectDuelInvite} livesModal={livesModalElement} celebrationModal={celebrationModalElement}>
         <StatusBar style="dark" />
         <ProfileScreen
           playerName={safeName}
@@ -4151,6 +4257,7 @@ function HomeScreen() {
             setProgress(DEFAULT_PROGRESS);
             setSoloUnlockedLevel(1);
             setShowGuide(false);
+            setShowWelcomeModal(false);
             setScreen("auth");
             await socialManager.reset().catch(() => undefined);
             await AsyncStorage.removeItem(SESSION_TOKEN_KEY).catch(() => undefined);
@@ -4245,6 +4352,7 @@ function HomeScreen() {
           onAddFriend={handleAddFriendTarget}
           onChallenge={handleChallengeTarget}
         />
+        {celebrationModalElement}
       </ScreenContainer>
     );
   }
@@ -4720,6 +4828,8 @@ function HomeScreen() {
               <VictoryEffectOverlay
                 effectId={progress.selectedVictoryEffect}
                 visible={Boolean(room?.status === "finished" && iWon)}
+                title="Kazandın!"
+                subtitle={`${myScore} puan · ${myWordCount} kelime. Bu tur senin!`}
               />
             )}
             <Pressable
@@ -4747,6 +4857,7 @@ function HomeScreen() {
                 bounces={false}
               >
                 <View style={styles.resultModalHeader}>
+                  {iWon && <VictoryBanner title="Bu tur senin!" subtitle={`${myScore} puanla zirvedesin.`} />}
                   <Text style={styles.resultModalIcon}>{isDraw ? "⚔️" : iWon ? `${activeVictoryEffect} 🏆 ${activeVictoryEffect}` : "💔"}</Text>
                   <Text style={[styles.resultModalTitle, { color: isDraw ? "#8c7540" : iWon ? "#219d8d" : "#bd5564" }]}>
                     {isDraw ? "BERABERE BİTTİ!" : iWon ? `TUR SENİN! ${activeVictoryEffect}` : "TUR RAKİBİNİN"}
@@ -5211,6 +5322,7 @@ function HomeScreen() {
       />
 
       {livesModalElement}
+      {celebrationModalElement}
     </ScreenContainer>
   );
 }
@@ -5564,6 +5676,7 @@ function MainShell({
   matchmakingState,
   onCancelMatchmaking,
   livesModal,
+  celebrationModal,
 }: {
   active: DockDestination;
   children: React.ReactNode;
@@ -5582,6 +5695,7 @@ function MainShell({
   matchmakingState?: { size: BoardSize; elapsedSeconds: number } | null;
   onCancelMatchmaking?: () => void;
   livesModal?: React.ReactNode;
+  celebrationModal?: React.ReactNode;
 }) {
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} style={{ paddingHorizontal: 14, paddingTop: 6 }}>
@@ -5608,6 +5722,7 @@ function MainShell({
         <MatchmakingOverlay state={matchmakingState} onCancel={onCancelMatchmaking} />
       )}
       {livesModal}
+      {celebrationModal}
     </ScreenContainer>
   );
 }
@@ -5652,9 +5767,9 @@ const styles = StyleSheet.create({
   sizeRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
   sizeCard: { width: "48%", backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", borderRadius: 20, padding: 14 },
   dailyThemeCard: { width: "100%", backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", borderRadius: 20, padding: 14 },
-  sizeCardSelected: { borderColor: "#DCE1D7", backgroundColor: "rgba(244, 208, 111, 0.12)", shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4 },
+  sizeCardSelected: { borderColor: "#F0C855", borderWidth: 2, backgroundColor: "#FFF9E6", shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4 },
   sizeValue: { color: "#293541", fontSize: 25, fontWeight: "900" },
-  sizeValueSelected: { color: "#8b763f" },
+  sizeValueSelected: { color: "#293541" },
   sizeCaption: { color: "#293541", fontSize: 13, fontWeight: "800", marginTop: 4 },
   sizeDetail: { color: "#293541", fontSize: 11, marginTop: 3 },
   primaryButton: { marginTop: 18, height: 58, backgroundColor: "#faebc3", borderRadius: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4, elevation: 2, borderWidth: 2, borderColor: "#DCE1D7" },
@@ -5666,8 +5781,8 @@ const styles = StyleSheet.create({
   joinTitle: { color: "#293541", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
   joinRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 9 },
   codeInput: { color: "#293541", fontSize: 16, fontWeight: "900", letterSpacing: 0.5, flex: 1, paddingVertical: 7 },
-  joinButton: { backgroundColor: "rgba(244, 208, 111, 0.16)", borderRadius: 12, paddingHorizontal: 17, paddingVertical: 12, borderWidth: 1.5, borderColor: "#DCE1D7" },
-  joinButtonText: { color: "#8b763f", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  joinButton: { backgroundColor: "#FFD66E", borderRadius: 12, paddingHorizontal: 17, paddingVertical: 12, borderWidth: 1.5, borderColor: "#F0C855" },
+  joinButtonText: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
   customRoomButton: { marginTop: 12, height: 52, backgroundColor: "rgba(201, 162, 39, 0.2)", borderWidth: 1.5, borderColor: "#DCE1D7", borderRadius: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 },
   customRoomButtonText: { color: "#293541", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 },
   customRoomButtonIcon: { color: "#293541", fontSize: 20, fontWeight: "900" },
@@ -5915,14 +6030,14 @@ const styles = StyleSheet.create({
   },
   emptyFriendsText: { color: "#293541", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 12 },
   emptyFriendsButton: {
-    backgroundColor: "rgba(244, 208, 111, 0.15)",
+    backgroundColor: "#FFD66E",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+    borderWidth: 1.5,
+    borderColor: "#F0C855",
   },
-  emptyFriendsButtonText: { color: "#8b763f", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  emptyFriendsButtonText: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
 });
 
 export default function App() {

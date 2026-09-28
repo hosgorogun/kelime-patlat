@@ -18,7 +18,7 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
-import { VictoryEffectOverlay } from "./victory-effect-overlay";
+import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
 import { ConnectLine } from "./game-ui";
 import { GameCountdownOverlay } from "./game-countdown-overlay";
 
@@ -114,13 +114,15 @@ function FloatingTimeBonus({ text }: { text: string | null }) {
 type Feedback = "idle" | "invalid" | "accepted";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
+// Keep omitted exclusions stable so timer updates cannot regenerate the board.
+const EMPTY_EXCLUDED_WORDS: string[] = [];
 
 export function SoloChallenge({
   level,
   theme = "general",
   variationSeed,
   daily = false,
-  excludeWords = [],
+  excludeWords = EMPTY_EXCLUDED_WORDS,
   radarChargesBonus = 0,
   lives,
   onOpenLivesModal,
@@ -155,7 +157,11 @@ export function SoloChallenge({
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
   
-  const challenge = useMemo(() => createSoloBoard(level, variation, theme, excludeWords), [level, variation, theme, excludeWords]);
+  // History changes after a win must not replace the completed board. Read the
+  // latest exclusions only when the player starts another level or variation.
+  const excludedWordsRef = useRef(excludeWords);
+  excludedWordsRef.current = excludeWords;
+  const challenge = useMemo(() => createSoloBoard(level, variation, theme, excludedWordsRef.current), [level, variation, theme]);
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
@@ -1195,10 +1201,8 @@ export function SoloChallenge({
     </View>
     {status === "won" && (
       <>
-        <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "won"} />
         <View style={[styles.result, boardSkinColor && { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor }]}>
-          <Text style={styles.resultTitle}>{daily ? "GÜNLÜK ROTA TAMAMLANDI" : "SEVİYE TAMAMLANDI"}</Text>
-          <Text style={styles.resultCopy}>{daily ? "Bugünün XP ödülü sezon ilerlemene eklendi." : "Yeni rota yoğunluğu ve daha kısa süre seni bekliyor."}</Text>
+          <VictoryBanner title={daily ? "Günün yıldızı sensin!" : "Seviye senin!"} subtitle={`${found.length} kelime buldun · ${seconds} saniye artırdın`} />
         
         {daily && (
           <View style={[styles.chestCard, { borderColor: activeTheme.accentColor }]}>
@@ -1356,6 +1360,9 @@ export function SoloChallenge({
         </View>
       )}
       </ScrollView>
+      <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "won"}
+        title={daily ? "Günlük rota tamam!" : "Seviye senin!"}
+        subtitle={`${found.length} kelimeyi de buldun. Harika iş!`} />
 
 
 

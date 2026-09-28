@@ -227,6 +227,8 @@ function databaseUri() {
   return uri || "mongodb://127.0.0.1:27017/kelime_patlat";
 }
 
+import { DEFAULT_PROGRESS, getDayId, getSeasonId } from "../shared/progression";
+
 export async function seedDemoUser() {
   // Üretim ortamında bilinen şifreli demo hesabı OLUŞTURULMAZ (güvenlik riski)
   if (process.env.NODE_ENV === "production") {
@@ -248,8 +250,43 @@ export async function seedDemoUser() {
         createdAt: new Date(),
         updatedAt: new Date(),
         lastSignedIn: new Date(),
+        progress: {
+          ...DEFAULT_PROGRESS,
+          xp: 1250,
+          coins: 250,
+          streak: 3,
+          streakShields: 2,
+          radarChargesBonus: 3,
+          soloUnlockedLevel: 8,
+          welcomeRewardClaimed: true,
+          lastLoginDay: getDayId(),
+          loginDaysCount: 3,
+          lastSeasonResetId: getSeasonId(),
+        },
       });
       console.log("[Database] Demo hesabı başarıyla oluşturuldu: siber_oyuncu / siber123");
+    } else {
+      let changed = false;
+      const currentProg = existing.progress || { ...DEFAULT_PROGRESS };
+      if (!currentProg.welcomeRewardClaimed) {
+        currentProg.welcomeRewardClaimed = true;
+        changed = true;
+      }
+      if (!currentProg.lastSeasonResetId) {
+        currentProg.lastSeasonResetId = getSeasonId();
+        changed = true;
+      }
+      if ((currentProg.coins ?? 0) < 150) {
+        currentProg.coins = 250;
+        changed = true;
+      }
+      if (changed) {
+        existing.progress = currentProg;
+        existing.markModified("progress");
+        existing.updatedAt = new Date();
+        await existing.save();
+        console.log("[Database] Demo hesabı progress verisi güncellendi: siber_oyuncu");
+      }
     }
   } catch (err) {
     console.error("[Database] seedDemoUser hatası:", err);

@@ -6,7 +6,6 @@ import {
   Pressable,
   ScrollView,
   Animated,
-  useWindowDimensions,
   BackHandler,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -22,7 +21,7 @@ import {
 import { generatePuzzle, PuzzleResult, PlacedWord } from "@/shared/puzzle-generator";
 import { MAX_LIVES } from "@/shared/progression";
 import { ModernAlertModal } from "./modern-alert-modal";
-import { VictoryEffectOverlay } from "./victory-effect-overlay";
+import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
 
 const TR_ALPHABET = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
 const VINTAGE_STORAGE_KEY = "@kelime_patlat:vintage_puzzle_progress";
@@ -162,8 +161,13 @@ export function VintagePuzzle({
   onSpendCoins,
   selectedVictoryEffect,
 }: VintagePuzzleProps) {
-  const { width: windowWidth } = useWindowDimensions();
-  const cellSize = Math.max(26, Math.floor((windowWidth - 28) / 10));
+  const [containerWidth, setContainerWidth] = useState(0);
+  // The screen is capped at 560px; window width is not the board's usable width.
+  // Reserve the paper's 20px and the grid's 4px horizontal padding.
+  const cellSize = Math.max(1, Math.floor((containerWidth - 24) / 10));
+  const measureContainer = useCallback((event: import("react-native").LayoutChangeEvent) => {
+    setContainerWidth(event.nativeEvent.layout.width);
+  }, []);
 
   const [viewMode, setViewMode] = useState<"map" | "play">("map");
   const [maxUnlockedLevel, setMaxUnlockedLevel] = useState<number>(() => vintageProgress?.maxUnlockedLevel ?? 1);
@@ -861,29 +865,35 @@ export function VintagePuzzle({
   // 1. SEVİYE HARİTASI EKRANI
   if (viewMode === "map") {
     return (
-      <View style={styles.outerContainer}>
+      <View style={styles.outerContainer} onLayout={measureContainer}>
         {/* Üst Başlık */}
-        <View style={styles.header}>
-          <Pressable onPress={onBack} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>‹ ANA MENÜ</Text>
-          </Pressable>
-          <View style={styles.titleWrap}>
-            <Text style={styles.newspaperKicker}>NOSTALJİ KELİME BULMACA</Text>
-            <Text style={styles.newspaperTitle}>SEVİYE HARİTASI</Text>
+        <View style={styles.headerContainer}>
+          <View style={styles.headerNavRow}>
+            <View style={styles.headerNavLeft}>
+              <Pressable onPress={onBack} style={styles.backBtn}>
+                <Text style={styles.backBtnText}>‹ ANA MENÜ</Text>
+              </Pressable>
+            </View>
+            <View style={styles.titleWrap}>
+              <Text style={styles.newspaperKicker}>NOSTALJİ KELİME BULMACA</Text>
+              <Text style={styles.newspaperTitle}>SEVİYE HARİTASI</Text>
+            </View>
+            <View style={styles.headerNavRight} />
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={styles.statusBarRow}>
             <Pressable
               onPress={() => {
                 triggerHapticSelection();
                 onOpenLivesModal?.();
               }}
-              style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
+              style={({ pressed }) => [styles.statusPill, styles.livesPill, pressed && styles.pressedPill]}
             >
-              <Text style={styles.livesIcon}>💚</Text>
-              <Text style={styles.livesText}>{lives}/{MAX_LIVES}</Text>
+              <Text style={styles.statusPillIcon}>💚</Text>
+              <Text style={[styles.statusPillText, styles.livesPillText]}>{lives}/{MAX_LIVES}</Text>
             </Pressable>
-            <View style={styles.scorePill}>
-              <Text style={styles.scoreText}>🪙 {coins !== undefined ? coins : score}</Text>
+            <View style={[styles.statusPill, styles.scorePill]}>
+              <Text style={styles.statusPillIcon}>🪙</Text>
+              <Text style={[styles.statusPillText, styles.scorePillText]}>{coins !== undefined ? coins : score}</Text>
             </View>
           </View>
         </View>
@@ -975,38 +985,50 @@ export function VintagePuzzle({
 
   // 2. BULMACA OYNANIŞ EKRANI
   return (
-    <View style={styles.outerContainer}>
-      {/* Üst Başlık */}
-      <View style={styles.header}>
-        <Pressable onPress={handlePlayBackPress} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>‹ HARİTA</Text>
-        </Pressable>
-        <View style={styles.titleWrap}>
-          <Text style={styles.newspaperKicker}>10×10 KELİME BULMACA</Text>
-          <Text style={styles.newspaperTitle}>{levelIndex}. BÖLÜM</Text>
+    <View style={styles.outerContainer} onLayout={measureContainer}>
+      {/* Üst Başlık & Kontroller */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerNavRow}>
+          <View style={styles.headerNavLeft}>
+            <Pressable onPress={handlePlayBackPress} style={styles.backBtn}>
+              <Text style={styles.backBtnText}>‹ HARİTA</Text>
+            </Pressable>
+          </View>
+          <View style={styles.titleWrap}>
+            <Text style={styles.newspaperKicker}>10×10 KELİME BULMACA</Text>
+            <Text style={styles.newspaperTitle}>{levelIndex}. BÖLÜM</Text>
+          </View>
+          <View style={styles.headerNavRight} />
         </View>
-        <View style={styles.headerRightRow}>
+
+        <View style={styles.statusBarRow}>
           <Pressable
             onPress={() => {
               triggerHapticSelection();
               onOpenLivesModal?.();
             }}
-            style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [styles.statusPill, styles.livesPill, pressed && styles.pressedPill]}
           >
-            <Text style={styles.livesIcon}>💚</Text>
-            <Text style={styles.livesText}>{lives}/{MAX_LIVES}</Text>
+            <Text style={styles.statusPillIcon}>💚</Text>
+            <Text style={[styles.statusPillText, styles.livesPillText]}>{lives}/{MAX_LIVES}</Text>
           </Pressable>
           <Pressable
             onPress={handleUseHint}
-            style={({ pressed }) => [styles.hintBtn, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [styles.statusPill, styles.hintPill, pressed && styles.pressedPill]}
           >
-            <Text style={styles.hintBtnText}>💡 {VINTAGE_HINT_COST}</Text>
+            <Text style={styles.statusPillIcon}>💡</Text>
+            <Text style={[styles.statusPillText, styles.hintPillText]}>{VINTAGE_HINT_COST}</Text>
           </Pressable>
-          <Pressable onPress={handleResetLevel} style={styles.resetBtn}>
-            <Text style={styles.resetBtnText}>🔄 [{boardSwapCount}]</Text>
+          <Pressable
+            onPress={handleResetLevel}
+            style={({ pressed }) => [styles.statusPill, styles.resetPill, pressed && styles.pressedPill]}
+          >
+            <Text style={styles.statusPillIcon}>🔄</Text>
+            <Text style={[styles.statusPillText, styles.resetPillText]}>[{boardSwapCount}]</Text>
           </Pressable>
-          <View style={styles.scorePill}>
-            <Text style={styles.scoreText}>🪙 {coins !== undefined ? coins : score}</Text>
+          <View style={[styles.statusPill, styles.scorePill]}>
+            <Text style={styles.statusPillIcon}>🪙</Text>
+            <Text style={[styles.statusPillText, styles.scorePillText]}>{coins !== undefined ? coins : score}</Text>
           </View>
         </View>
       </View>
@@ -1148,14 +1170,11 @@ export function VintagePuzzle({
       {/* Seviye Başarı Modalı */}
       {isLevelComplete && (
         <>
-          <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={isLevelComplete} />
+          <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={isLevelComplete}
+            title="Hepsi yerine oturdu!" subtitle={`${levelIndex}. bölüm tamamlandı. Ellerine sağlık!`} />
           <View style={styles.winOverlay}>
           <View style={styles.winCard}>
-            <Text style={{ fontSize: 44 }}>🎉🗞️</Text>
-            <Text style={styles.winTitle}>BÖLÜM {levelIndex} TAMAMLANDI!</Text>
-            <Text style={styles.winDesc}>
-              Tüm kesişen gizli kelimeleri 10×10 tahtaya başarıyla yerleştirdin!
-            </Text>
+            <VictoryBanner title="Bulmaca tamam!" subtitle={`${levelIndex}. bölümde bütün kelimeleri yerleştirdin.`} />
             <Text style={styles.winReward}>
               +{levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100} XP KAZANILDI
             </Text>
@@ -1265,20 +1284,38 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingHorizontal: 0,
   },
-  header: {
+  headerContainer: {
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  headerNavRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
-    paddingHorizontal: 10,
+    minHeight: 36,
+  },
+  headerNavLeft: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  headerNavRight: {
+    flex: 1,
+    alignItems: "flex-end",
   },
   backBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderWidth: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
     borderColor: "#DCE1D7",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   backBtnText: {
     color: "#2a9c7a",
@@ -1287,65 +1324,82 @@ const styles = StyleSheet.create({
   },
   titleWrap: {
     alignItems: "center",
+    justifyContent: "center",
   },
   newspaperKicker: {
     color: "#98732c",
-    fontSize: 8,
+    fontSize: 8.5,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   newspaperTitle: {
     color: "#293541",
-    fontSize: 13.5,
+    fontSize: 14.5,
     fontWeight: "900",
-    letterSpacing: 0.5,
-    textShadowColor: "transparent",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 0,
+    letterSpacing: 0.4,
   },
-  scorePill: {
-    backgroundColor: "rgba(255, 194, 74, 0.15)",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  scoreText: {
-    color: "#98732c",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  headerRightRow: {
+  statusBarRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "center",
+    gap: 8,
+    width: "100%",
   },
-  resetBtn: {
-    paddingHorizontal: 8,
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+    minHeight: 30,
   },
-  resetBtnText: {
-    color: "#293541",
-    fontSize: 10.5,
-    fontWeight: "800",
+  pressedPill: {
+    opacity: 0.75,
+    transform: [{ scale: 0.96 }],
   },
-  hintBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 208, 0, 0.15)",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+  statusPillIcon: {
+    fontSize: 12,
   },
-  hintBtnText: {
-    color: "#987c00",
-    fontSize: 10.5,
+  statusPillText: {
+    fontSize: 11.5,
     fontWeight: "900",
+  },
+  livesPill: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#bbf7d0",
+  },
+  livesPillText: {
+    color: "#16a34a",
+  },
+  hintPill: {
+    backgroundColor: "#fefce8",
+    borderColor: "#fef08a",
+  },
+  hintPillText: {
+    color: "#ca8a04",
+  },
+  resetPill: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#cbd5e1",
+  },
+  resetPillText: {
+    color: "#475569",
+  },
+  scorePill: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
+  },
+  scorePillText: {
+    color: "#b45309",
   },
   paperBoardScroll: {
     flex: 1,
@@ -1942,20 +1996,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
   },
-
-  livesPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: "rgba(34, 197, 94, 0.12)",
-    borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-  },
-  livesIcon: { fontSize: 12 },
-  livesText: { color: "#1daa51", fontSize: 11, fontWeight: "900" },
 
   exitModalOverlay: {
     flex: 1,

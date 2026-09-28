@@ -67,8 +67,8 @@ export function SoloLevels({
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={styles.overline}>TEKLİ OYUNCU · SİBER AĞ</Text>
-          <Text style={styles.title}>OPERASYON MERKEZİ</Text>
+          <Text style={styles.overline}>HER BÖLÜMDE YENİ KELİMELER</Text>
+          <Text style={styles.title}>Seviyeler</Text>
         </View>
         <Pressable
           onPress={() => {
@@ -86,7 +86,7 @@ export function SoloLevels({
       </View>
 
       {/* Cyber Grid Map */}
-      <Text style={styles.sectionTitle}>SİBER AĞ HARİTASI</Text>
+      <Text style={styles.sectionTitle}>Kelime yolculuğun</Text>
       <View style={styles.gridContainer}>
         {gridRows.map((row, rowIndex) => {
           const isRowEven = rowIndex % 2 === 0;
@@ -218,7 +218,7 @@ export function SoloLevels({
       <View style={styles.dockedDeck}>
         <View style={styles.deckHead}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.deckKicker}>SEÇİLİ DÜĞÜM DETAYLARI</Text>
+            <Text style={styles.deckKicker}>SIRADAKİ HEDEFİN</Text>
             <Text numberOfLines={1} style={styles.deckTitle}>SEVİYE {selectedLevel}: {selectedData.title.toLocaleUpperCase("tr-TR")}</Text>
           </View>
           <View style={[styles.statusBadge, isSelectedLocked ? styles.badgeLocked : selectedLevel === unlockedLevel ? styles.badgeActive : styles.badgeCompleted]}>
@@ -246,6 +246,9 @@ export function SoloLevels({
         </View>
 
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isSelectedLocked ? `Önce seviye ${selectedLevel - 1}'i tamamla` : `Seviye ${selectedLevel}'i oyna`}
+          accessibilityState={{ disabled: isSelectedLocked }}
           disabled={isSelectedLocked}
           onPress={() => onSelect(selectedLevel)}
           style={({ pressed }) => [
@@ -255,7 +258,7 @@ export function SoloLevels({
           ]}
         >
           <Text style={[styles.launchText, isSelectedLocked && styles.launchTextLocked]}>
-            {isSelectedLocked ? `🔒 SEVİYE ${selectedLevel - 1}'İ TAMAMLA` : "SİBER AĞI BAĞLA (BAŞLAT)"}
+            {isSelectedLocked ? `🔒 SEVİYE ${selectedLevel - 1}'İ TAMAMLA` : "Hadi oynayalım"}
           </Text>
           {!isSelectedLocked && <Text style={styles.launchArrow}>→</Text>}
         </Pressable>
@@ -557,16 +560,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   milestoneBoxReady: {
-    borderColor: "#DCE1D7",
-    backgroundColor: "rgba(255, 194, 74, 0.12)",
+    borderColor: "#F0C855",
+    backgroundColor: "#FFF9E6",
     shadowColor: "#293541",
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   },
   milestoneBoxClaimed: {
-    borderColor: "#DCE1D7",
-    backgroundColor: "rgba(80, 227, 194, 0.06)",
+    borderColor: "#A7F3D0",
+    backgroundColor: "#E8F8F0",
   },
   milestoneIconWrap: {
     width: 44,

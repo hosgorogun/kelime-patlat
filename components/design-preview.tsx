@@ -18,8 +18,39 @@ import {
   getDayId,
 } from "@/shared/progression";
 import { palette } from "@/shared/palette";
+import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
+
+const celebrationSamples = [
+  { mode: "Solo", title: "Seviye senin!", subtitle: "4 kelimeyi de buldun. Harika iş!" },
+  { mode: "Günlük", title: "Günlük rota tamam!", subtitle: "Bugünün kelimelerini buldun. Harika iş!" },
+  { mode: "Arcade", title: "Güzel turdu!", subtitle: "840 puan topladın. Bir tur daha?" },
+  { mode: "Bulmaca", title: "Hepsi yerine oturdu!", subtitle: "3. bölüm tamamlandı. Ellerine sağlık!" },
+  { mode: "Düello / Bot", title: "Kazandın!", subtitle: "320 puan · 8 kelime. Bu tur senin!" },
+];
+function CelebrationPreview() {
+  const [selected, setSelected] = useState(0);
+  const [replay, setReplay] = useState(0);
+  const sample = celebrationSamples[selected]!;
+  return (
+    <View style={{ flex: 1, justifyContent: "center", gap: 14 }}>
+      <Text style={{ color: palette.text, fontSize: 25, fontWeight: "900" }}>Biraz kutlayalım!</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {celebrationSamples.map((item, index) => (
+          <Pressable key={item.mode} accessibilityRole="button" onPress={() => { setSelected(index); setReplay(n => n + 1); }}
+            style={{ padding: 12, borderRadius: 14, backgroundColor: selected === index ? "#FFD66E" : "#FFFFFF" }}>
+            <Text style={{ color: palette.text, fontWeight: "800" }}>{item.mode}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <VictoryBanner title={sample.title} subtitle={sample.subtitle} />
+      <Pressable accessibilityRole="button" onPress={() => setReplay(n => n + 1)} style={{ padding: 16, backgroundColor: "#A5E4BE", borderRadius: 16 }}>
+        <Text style={{ color: palette.text, textAlign: "center", fontWeight: "900" }}>Kutlamayı tekrar oynat</Text>
+      </Pressable>
+      <VictoryEffectOverlay key={replay} {...sample} effectId="fireworks" />
+    </View>
+  );
+}
 const noop = () => {};
-const excludedWords: string[] = [];
 // Isolated visual fixtures: no account, purchases, consent changes or server writes.
 const progress = {
   ...DEFAULT_PROGRESS,
@@ -63,8 +94,12 @@ export default function DesignPreview() {
           <Pressable onPress={home}>
             <Text style={{ color: palette.text, fontSize: 11 }}>Ana sayfa</Text>
           </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => setScreen("celebration")}>
+            <Text style={{ color: palette.text, fontSize: 11 }}>Kutlamalar</Text>
+          </Pressable>
         </View>
         <View style={{ flex: 1 }}>
+          {screen === "celebration" && <CelebrationPreview />}
           {screen === "home" && (
             <CommandCenter
               playerName="Deniz"
@@ -131,7 +166,6 @@ export default function DesignPreview() {
           )}
           {screen === "solo" && (
             <SoloChallenge
-              excludeWords={excludedWords}
               level={level}
               variationSeed={1}
               lives={5}

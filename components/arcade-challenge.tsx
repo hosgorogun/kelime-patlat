@@ -24,7 +24,7 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
-import { VictoryEffectOverlay } from "./victory-effect-overlay";
+import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
 import { ConnectLine } from "./game-ui";
 import { GameCountdownOverlay } from "./game-countdown-overlay";
 
@@ -1143,9 +1143,8 @@ export function ArcadeChallenge({
     </View>
     {status === "lost" && (
       <>
-        {score > 0 && <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "lost"} />}
         <View style={[styles.result, boardSkinColor ? { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor } : null]}>
-        <Text style={styles.resultTitle}>SÜRE DOLDU!</Text>
+        {score > 0 ? <VictoryBanner title="Güzel turdu!" subtitle="Topladığın puanlar ve ödüller burada." /> : <Text style={styles.resultTitle}>SÜRE DOLDU!</Text>}
         <Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text>
         <Text style={styles.finalScore}>{score}</Text>
 
@@ -1206,6 +1205,8 @@ export function ArcadeChallenge({
       </>
     )}
       </ScrollView>
+      <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "lost" && score > 0}
+        title="Güzel turdu!" subtitle={`${score} puan topladın. Bir tur daha?`} />
 
 
 
