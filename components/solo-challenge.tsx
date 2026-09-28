@@ -20,6 +20,7 @@ import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
 import { VictoryEffectOverlay } from "./victory-effect-overlay";
 import { ConnectLine } from "./game-ui";
+import { GameCountdownOverlay } from "./game-countdown-overlay";
 
 function FloatingTimeBonus({ text }: { text: string | null }) {
   const animVal = useRef(new Animated.Value(0)).current;
@@ -1419,13 +1420,12 @@ export function SoloChallenge({
         onDismiss={() => setShowExitModal(false)}
       />
 
-      {countdown !== null && (
-        <View style={styles.countdownOverlay} pointerEvents="auto">
-          <Text style={styles.countdownText}>
-            {countdown === 0 ? "BAŞLA!" : countdown}
-          </Text>
-        </View>
-      )}
+      <GameCountdownOverlay
+        countdown={countdown}
+        title={daily ? "GÜNLÜK BULMACA" : "SOLO MÜCADELE"}
+        subtitle="Kelimeleri birleştir, rekoru kır!"
+        icon={daily ? "📅" : "🎯"}
+      />
 
     </View>
   );
@@ -1458,8 +1458,6 @@ const styles = StyleSheet.create({
   modalBody: { color: "#293541", fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20, fontWeight: "600" },
   modalCloseButton: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   modalCloseText: { color: "#293541", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
-  countdownOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(35, 48, 59, 0.65)", justifyContent: "center", alignItems: "center", zIndex: 200 },
-  countdownText: { color: "#FFFFFF", fontSize: 72, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   chestCard: { width: "100%", marginTop: 12, padding: 16, borderRadius: 16, borderStyle: "dashed", borderWidth: 1.5, borderColor: "#E6D5A8", backgroundColor: "#FFFBF0", alignItems: "center" },
   chestIcon: { fontSize: 36, marginBottom: 8 },
   chestTitle: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5, textAlign: "center" },

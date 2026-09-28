@@ -66,6 +66,7 @@ const GridCellItem = React.memo(
     isCenterWordPlaced,
     isSelected,
     isTargetWordCell,
+    isErrorCell = false,
     cellSize,
     onPress,
   }: {
@@ -79,6 +80,7 @@ const GridCellItem = React.memo(
     isCenterWordPlaced: boolean;
     isSelected: boolean;
     isTargetWordCell: boolean;
+    isErrorCell?: boolean;
     cellSize: number;
     onPress: (r: number, c: number) => void;
   }) => {
@@ -102,11 +104,12 @@ const GridCellItem = React.memo(
           isCellCompleted && !isCenterWordPlaced && styles.gridCellCompleted,
           char && !isCellCompleted && styles.gridCellDraft,
           isSelected && styles.gridCellSelected,
+          isErrorCell && styles.gridCellError,
           pressed && { opacity: 0.8 },
         ]}
       >
         {cellNumber !== undefined && (
-          <Text style={[styles.cellNumberBadge, isSelected && styles.cellNumberBadgeSelected]}>
+          <Text style={[styles.cellNumberBadge, isSelected && styles.cellNumberBadgeSelected, isErrorCell && styles.cellNumberBadgeError]}>
             {cellNumber}
           </Text>
         )}
@@ -116,6 +119,7 @@ const GridCellItem = React.memo(
             styles.cellCharText,
             isCellCompleted && styles.cellCharCompletedText,
             isSelected && styles.cellCharSelectedText,
+            isErrorCell && styles.cellCharErrorText,
           ]}
         >
           {char || ""}
@@ -230,10 +234,14 @@ export function VintagePuzzle({
   const gridContainerRef = useRef<View>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isClearingErrorRef = useRef(false);
+  const [errorCells, setErrorCells] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     return () => {
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (clearErrorTimeoutRef.current) clearTimeout(clearErrorTimeoutRef.current);
     };
   }, []);
 
@@ -362,6 +370,12 @@ export function VintagePuzzle({
     setSelectedCell([generated.centerWord.row, generated.centerWord.col]);
     setIsLevelComplete(false);
     setErrorMessage(null);
+    if (clearErrorTimeoutRef.current) {
+      clearTimeout(clearErrorTimeoutRef.current);
+      clearErrorTimeoutRef.current = null;
+    }
+    isClearingErrorRef.current = false;
+    setErrorCells(new Set());
   }, []);
 
   useEffect(() => {
@@ -472,6 +486,7 @@ export function VintagePuzzle({
           setMaxUnlockedLevel(nextMax);
 
           persistProgress(nextMax, nextCompleted, nextScore);
+          return;
         } else {
           // Çözülen kelimeden sonra çözülmemiş sıradaki kelimeye otomatik geç
           const nextUnsolved = puzzle.words.find((w) => !newSolvedIds.has(w.id));
@@ -485,14 +500,99 @@ export function VintagePuzzle({
           }
         }
       }
+
+      // Kelime boyutu tamamlandığında doğru değilse: Kırmızı yanıp sönme & otomatik geri alma
+      const wrongFullWords = puzzle.words.filter((w) => {
+        if (newSolvedIds.has(w.id)) return false;
+        return w.cells.every(([r, c]) => currentBoard[r]?.[c] !== null);
+      });
+
+      if (wrongFullWords.length > 0) {
+        const errorCellsSet = new Set<string>();
+        wrongFullWords.forEach((w) => {
+          w.cells.forEach(([r, c]) => {
+            errorCellsSet.add(`${r},${c}`);
+          });
+        });
+
+        setErrorCells(errorCellsSet);
+        triggerHapticError();
+        playErrorSound();
+
+        // Tahtada sarsılma animasyonu
+        Animated.sequence([
+          Animated.timing(shakeAnim, { toValue: 8, duration: 45, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -8, duration: 45, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 6, duration: 45, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -6, duration: 45, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 45, useNativeDriver: true }),
+        ]).start();
+
+        setErrorMessage("Hatalı kelime! Harfler temizleniyor...");
+        if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = setTimeout(() => setErrorMessage(null), 1200);
+
+        isClearingErrorRef.current = true;
+
+        if (clearErrorTimeoutRef.current) {
+          clearTimeout(clearErrorTimeoutRef.current);
+        }
+
+        clearErrorTimeoutRef.current = setTimeout(() => {
+          isClearingErrorRef.current = false;
+          setErrorCells(new Set());
+
+          setPlayerBoard((prevBoard) => {
+            const nextBoard = prevBoard.map((rowArr) => [...rowArr]);
+            const clearedCellKeys = new Set<string>();
+            const lettersToReturn: string[] = [];
+
+            wrongFullWords.forEach((w) => {
+              w.cells.forEach(([r, c]) => {
+                const key = `${r},${c}`;
+                if (!clearedCellKeys.has(key)) {
+                  clearedCellKeys.add(key);
+                  // Yalnızca çözülmüş kelimelere kilitlenmemiş hücreleri sil ve havuza iade et
+                  if (!isCellLocked(r, c, newSolvedIds)) {
+                    const ch = nextBoard[r]?.[c];
+                    if (ch !== null && ch !== undefined) {
+                      lettersToReturn.push(ch);
+                      nextBoard[r]![c] = null;
+                    }
+                  }
+                }
+              });
+            });
+
+            if (lettersToReturn.length > 0) {
+              const newTiles: PoolTile[] = lettersToReturn.map((ch, idx) => ({
+                id: `p-ret-err-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+                letter: ch,
+              }));
+              setLetterPool((prevPool) => [...prevPool, ...newTiles]);
+            }
+
+            // İmleci hatalı kelimenin ilk boş hücresine geri odakla
+            const activeWrongWord = wrongFullWords.find((w) => w.id === selectedWordId) || wrongFullWords[0];
+            if (activeWrongWord) {
+              const firstEmpty = activeWrongWord.cells.find(([r, c]) => nextBoard[r]?.[c] === null);
+              if (firstEmpty) {
+                setSelectedCell(firstEmpty);
+              }
+            }
+
+            return nextBoard;
+          });
+        }, 650);
+      }
     },
-    [puzzle, solvedWordIds, score, completedLevels, levelIndex, maxUnlockedLevel, onRewardXp, persistProgress]
+    [puzzle, solvedWordIds, score, completedLevels, levelIndex, maxUnlockedLevel, onRewardXp, persistProgress, isCellLocked, shakeAnim, selectedWordId]
   );
 
   // Dokunulan Harf Taşını Doğrudan Tahtadaki Uygun Hücreye Koy
   const handlePressPoolLetterToBoard = useCallback(
     (tile: PoolTile) => {
-      if (!puzzle) return;
+      if (!puzzle || isClearingErrorRef.current) return;
 
       const letter = tile.letter;
       let targetR: number | null = null;
@@ -582,6 +682,7 @@ export function VintagePuzzle({
   // Tahtadaki Harfe Dokunarak Geri Havuza Gönder & Hücre/Kelime Seç
   const handleCellPress = useCallback(
     (r: number, c: number) => {
+      if (isClearingErrorRef.current) return;
       const cellInfo = puzzleCellsMap.get(`${r},${c}`);
       if (!cellInfo || cellInfo.words.length === 0) {
         return;
@@ -653,7 +754,7 @@ export function VintagePuzzle({
 
   // Joker İpucu: Seçili veya ilk çözülmemiş kelimeden 1 harfi tahtaya yerleştirir
   const handleUseHint = useCallback(() => {
-    if (!puzzle || isLevelComplete) return;
+    if (!puzzle || isLevelComplete || isClearingErrorRef.current) return;
     const availableCoins = coins ?? 0;
     if (availableCoins < VINTAGE_HINT_COST) {
       triggerError(`Yetersiz Çip! 1 harf açmak için ${VINTAGE_HINT_COST} Çip gerekir.`);
@@ -988,18 +1089,20 @@ export function VintagePuzzle({
           </ScrollView>
 
           {/* 10×10 OYUN TAHTASI */}
-          <View ref={gridContainerRef} style={styles.gridContainer}>
+          <Animated.View ref={gridContainerRef} style={[styles.gridContainer, { transform: [{ translateX: shakeAnim }] }]}>
             {playerBoard.map((row, rIdx) => (
               <View key={rIdx} style={styles.gridRow}>
                 {row.map((char, cIdx) => {
+                  const cellKey = `${rIdx},${cIdx}`;
                   const isSelected = selectedCell?.[0] === rIdx && selectedCell?.[1] === cIdx;
-                  const cellInfo = puzzleCellsMap.get(`${rIdx},${cIdx}`);
+                  const cellInfo = puzzleCellsMap.get(cellKey);
                   const isPuzzleCell = !!cellInfo;
-                  const cellNumber = cellNumbersMap.get(`${rIdx},${cIdx}`);
+                  const cellNumber = cellNumbersMap.get(cellKey);
                   const isCenterArea = cellInfo?.isCenter ?? false;
                   const isCellCompleted = isCellLockedByCompletedWord(rIdx, cIdx);
                   const isCenterWordPlaced = puzzle?.centerWord ? solvedWordIds.has(puzzle.centerWord.id) : false;
-                  const isTargetWordCell = activeTargetCellsMap.has(`${rIdx},${cIdx}`);
+                  const isTargetWordCell = activeTargetCellsMap.has(cellKey);
+                  const isErrorCell = errorCells.has(cellKey);
 
                   return (
                     <GridCellItem
@@ -1014,6 +1117,7 @@ export function VintagePuzzle({
                       isCenterWordPlaced={isCenterWordPlaced}
                       isSelected={isSelected}
                       isTargetWordCell={isTargetWordCell}
+                      isErrorCell={isErrorCell}
                       cellSize={cellSize}
                       onPress={handleCellPress}
                     />
@@ -1021,11 +1125,11 @@ export function VintagePuzzle({
                 })}
               </View>
             ))}
-          </View>
+          </Animated.View>
 
           {/* HARF TAŞLARI HAVUZU */}
           <Text style={styles.sectionLabelCompact}>HARF TAŞLARI (DOKUN TAHTAYA KOY):</Text>
-          <View style={styles.letterPoolContainer}>
+          <View style={styles.letterPoolContainer} pointerEvents={errorCells.size > 0 ? "none" : "auto"}>
             {letterPool.length === 0 ? (
               <Text style={styles.emptyPoolText}>Tüm harfler yerleştirildi.</Text>
             ) : (
@@ -1537,6 +1641,16 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     backgroundColor: "#aef5e0",
   },
+  gridCellError: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#EF4444",
+    borderWidth: 2.5,
+    shadowColor: "#EF4444",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 5,
+    elevation: 4,
+  },
   centerStarIcon: {
     fontSize: 10,
     position: "absolute",
@@ -1553,6 +1667,13 @@ const styles = StyleSheet.create({
   },
   cellCharSelectedText: {
     color: "#293541",
+  },
+  cellCharErrorText: {
+    color: "#DC2626",
+    fontWeight: "900",
+  },
+  cellNumberBadgeError: {
+    color: "#EF4444",
   },
   letterPoolContainer: {
     flexDirection: "row",

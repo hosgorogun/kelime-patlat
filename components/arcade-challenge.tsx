@@ -26,6 +26,7 @@ import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
 import { VictoryEffectOverlay } from "./victory-effect-overlay";
 import { ConnectLine } from "./game-ui";
+import { GameCountdownOverlay } from "./game-countdown-overlay";
 
 function FloatingTimeBonus({ text }: { text: string | null }) {
   const animVal = useRef(new Animated.Value(0)).current;
@@ -1267,11 +1268,12 @@ export function ArcadeChallenge({
         onDismiss={() => setShowExitModal(false)}
       />
 
-      {countdown !== null && (
-        <View style={styles.countdownOverlay} pointerEvents="none">
-          <Text style={styles.countdownText}>{countdown === 0 ? "BAŞLA!" : countdown}</Text>
-        </View>
-      )}
+      <GameCountdownOverlay
+        countdown={countdown}
+        title="ARCADE MODU"
+        subtitle="Süreye karşı yarış, komboları yakala!"
+        icon="⚡"
+      />
     </View>
   );
 }
@@ -1303,8 +1305,6 @@ const styles = StyleSheet.create({
   modalBody: { color: "#293541", fontSize: 14, lineHeight: 21, textAlign: "center", marginBottom: 20, fontWeight: "600" },
   modalCloseButton: { borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   modalCloseText: { color: "#293541", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
-  countdownOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(35, 48, 59, 0.65)", justifyContent: "center", alignItems: "center", zIndex: 200 },
-  countdownText: { color: "#FFFFFF", fontSize: 72, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   arcadeRewardsRow: { flexDirection: "row", gap: 10, marginBottom: 8, marginTop: 4 },
   arcadeRewardPill: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
   arcadeRewardIcon: { fontSize: 13 },

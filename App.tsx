@@ -528,16 +528,11 @@ function HomeScreen() {
       return () => clearTimeout(timer);
     }
     const timer = setTimeout(() => {
-      // Yan etkiler (ses/titreşim) updater DIŞINDA çalıştırılır — updater saf kalır
       if (gameCountdown === 1) {
-        gameSfx.accepted();
-        haptics.success();
         setGameCountdown(0);
         return;
       }
       if (gameCountdown > 1) {
-        gameSfx.tap();
-        haptics.select();
         setGameCountdown(gameCountdown - 1);
       }
     }, 1000);
@@ -5198,7 +5193,12 @@ function HomeScreen() {
         </Pressable>
       </Modal>
 
-      <GameCountdownOverlay countdown={gameCountdown} />
+      <GameCountdownOverlay
+        countdown={gameCountdown}
+        title="CANLI DÜELLO"
+        subtitle="Gizli kelimeleri rakibinden önce bul ve kazan!"
+        icon="⚔️"
+      />
 
       <UserProfileModal
         visible={inspectedUser !== null}
