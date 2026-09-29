@@ -408,7 +408,7 @@ export function getSoloLevelWords(level: number, variation = 0, theme: WordTheme
 
   // Build preceding levels sequentially so each level accurately excludes the previous levels
   const startLevel = Math.max(1, level - 3);
-  for (let p = 1; p < level; p++) {
+  for (let p = startLevel; p < level; p++) {
     const pKey = `${p}:${variation}:${theme}`;
     if (!soloLevelWordsCache.has(pKey)) {
       getSoloLevelWords(p, variation, theme);

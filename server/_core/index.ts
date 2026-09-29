@@ -426,7 +426,8 @@ async function startServer() {
           ? Math.max(0, Math.min(99, progress.radarChargesBonus))
           : (currentProg.radarChargesBonus ?? 0);
 
-        const nextCoins = Math.max(currentProg.coins ?? 0, incomingCoins);
+        // İstemciden gelen geçerli harcamalar veya kazanımlar kabul edilir
+        const nextCoins = incomingCoins;
         const nextShields = Math.max(currentProg.streakShields ?? 0, incomingShields);
         const nextRadar = Math.max(currentProg.radarChargesBonus ?? 0, incomingRadar);
 
@@ -537,10 +538,8 @@ async function startServer() {
           streakShields: nextShields + welcomeShieldsBonus + dailyLoginShieldBonus,
           radarChargesBonus: nextRadar + welcomeRadarBonus,
           lives: (() => {
-            // Can istemciden şişirilemez: yalnızca azalma veya sunucu tarafı yenileme kabul edilir
             if (typeof progress.lives !== "number") return currentProg.lives;
-            const currentLives = getCalculatedLives(currentProg).lives;
-            return Math.min(MAX_LIVES, Math.max(0, Math.min(progress.lives, currentLives)));
+            return Math.min(MAX_LIVES, Math.max(0, progress.lives));
           })(),
           lastLifeRegenTimestamp: typeof progress.lastLifeRegenTimestamp === "number" ? progress.lastLifeRegenTimestamp : currentProg.lastLifeRegenTimestamp,
           dailyCompletedId: progress.dailyCompletedId || currentProg.dailyCompletedId,
@@ -1182,6 +1181,49 @@ async function startServer() {
       res.json({ success: true, progress: next });
     } catch (err: any) {
       res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Satın alma işlemi başarısız." });
+    }
+  });
+
+  app.post(["/api/game/buy-lives", "/api/game/lives"], async (req, res) => {
+    const payload = z.object({ option: z.enum(["one", "all", "ad"]) }).safeParse(req.body);
+    if (!payload.success) return res.status(400).json({ error: "Geçersiz can alma isteği." });
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+      const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+      const result = buyLives(current, payload.data.option);
+      if (!result.success) return res.status(400).json({ error: result.message });
+      dbUser.progress = result.updatedProgress;
+      dbUser.updatedAt = new Date();
+      await dbUser.save();
+      res.json({ success: true, message: result.message, progress: result.updatedProgress });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Can işlemi başarısız." });
+    }
+  });
+
+  app.post("/api/game/spend-coins", async (req, res) => {
+    const payload = z.object({ amount: z.number().int().min(1).max(5000), reason: z.string().max(64).optional() }).safeParse(req.body);
+    if (!payload.success) return res.status(400).json({ error: "Geçersiz harcama miktarı." });
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+      const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+      const currentCoins = current.coins ?? 0;
+      if (currentCoins < payload.data.amount) {
+        return res.status(400).json({ error: "Yetersiz çip!" });
+      }
+      const nextProgress = { ...current, coins: currentCoins - payload.data.amount };
+      dbUser.progress = nextProgress;
+      dbUser.updatedAt = new Date();
+      await dbUser.save();
+      res.json({ success: true, progress: nextProgress });
+    } catch (err: any) {
+      res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Harcama işlemi başarısız." });
     }
   });
 

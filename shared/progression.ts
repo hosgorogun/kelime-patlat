@@ -465,13 +465,18 @@ export function applyMatchProgress(
   type: "pvp" | "bot" | "solo" | "daily" = "pvp"
 ) {
   const isFriend = Boolean(result.isFriendGame);
+  const foundWordsList = result.foundWords || [];
+  const wordsCount = foundWordsList.length;
+  const hasContributed = wordsCount > 0 || (result.score || 0) > 0;
+
   const previousDuels = progress.missions?.duels ?? 0;
   const previousWordsmith = progress.missions?.wordsmith ?? 0;
 
-  const duelProgress = Math.min(2, previousDuels + (type !== "solo" && type !== "daily" && !isFriend ? 1 : 0));
-  const hasLongWord = result.longWord || (result.foundWords && result.foundWords.some((w) => w.length >= 7));
+  // AFK veya sıfır kelimeli yenilgide düello görevi ilerlemez (hile/farm önleme)
+  const duelProgress = Math.min(2, previousDuels + (type !== "solo" && type !== "daily" && !isFriend && (hasContributed || result.won) ? 1 : 0));
+  const hasLongWord = result.longWord || foundWordsList.some((w) => w.length >= 7);
   const wordsmithProgress = Math.min(1, previousWordsmith + (hasLongWord ? 1 : 0));
-  const newHistory = [...(progress.history || []), ...(result.foundWords || [])].slice(-150);
+  const newHistory = [...(progress.history || []), ...foundWordsList].slice(-150);
 
   // --- KADEMELİ VE DİNAMİK LİG PUANI (LP) HESAPLAMASI ---
   const currentLp = Math.max(0, progress.lp ?? 0);
@@ -502,6 +507,16 @@ export function applyMatchProgress(
     // Arkadaş maçları özel dostluk maçıdır; LP, XP ve Çip kazandırmaz
     baseXP = 0;
     lpGain = 0;
+  } else if (!hasContributed && !result.won) {
+    // SIFIR KELİME & YENİLGİ (AFK / Katkısız maç): Kesinlikle taban EXP verilmez, ancak lig cezası düşülür!
+    baseXP = 0;
+    if (type === "pvp") {
+      lpGain = isEntryTier ? -10 : isHighTier ? -22 : -18;
+    } else if (type === "bot") {
+      lpGain = isHighTier ? -15 : -10;
+    } else {
+      lpGain = 0;
+    }
   } else if (type === "pvp") {
     if (result.won) {
       baseXP = 25;
@@ -514,6 +529,7 @@ export function applyMatchProgress(
       baseXP = 12;
       lpGain = 0;
     } else {
+      // Kaybetti ama en az 1 kelime bildi veya puan üretti (çaba/teselli ödülü)
       baseXP = 5;
       lpGain = isEntryTier ? -10 : isHighTier ? -22 : -18;
     }
@@ -525,24 +541,25 @@ export function applyMatchProgress(
       baseXP = 8;
       lpGain = 0;
     } else {
+      // Kaybetti ama kelime bildi
       baseXP = 3;
       lpGain = isHighTier ? -15 : -10;
     }
   } else if (type === "solo") {
-    baseXP = 10;
+    baseXP = hasContributed || result.won ? 10 : 0;
     lpGain = 0;
   }
 
   // 2. Kelime Dağarcığı ve Harf Uzunluğu Bonusu (Harf Başı İlerleme)
   let wordLengthBonus = 0;
-  if (!isFriend) {
-    if (result.foundWords && result.foundWords.length > 0) {
-      result.foundWords.forEach((w) => {
+  if (!isFriend && (hasContributed || result.won)) {
+    if (foundWordsList.length > 0) {
+      foundWordsList.forEach((w) => {
         if (w.length >= 7) wordLengthBonus += 8; // 7+ Harfli efsanevi kelime
-        else if (w.length >= 5) wordLengthBonus += 3; // 5-6 Harfli kelime
-        else if (w.length >= 3) wordLengthBonus += 1; // 3-4 Harfli kelime
+        else if (w.length >= 5) wordLengthBonus += 4; // 5-6 Harfli kelime
+        else if (w.length >= 3) wordLengthBonus += 2; // 3-4 Harfli kelime
       });
-      wordLengthBonus = Math.min(25, wordLengthBonus); // Maksimum uzunluk bonus tavanı: +25 XP
+      wordLengthBonus = Math.min(30, wordLengthBonus); // Maksimum uzunluk bonus tavanı: +30 XP
     } else if (result.longWord) {
       wordLengthBonus = 10;
     }
@@ -556,10 +573,12 @@ export function applyMatchProgress(
     else if (result.tempo >= 1.0) speedBonus = 5; // Normal Çözüm (< 60 saniye)
   }
 
-  let xpGain = isFriend ? 0 : (baseXP + wordLengthBonus + speedBonus);
+  let xpGain = isFriend || (!hasContributed && !result.won)
+    ? 0
+    : (baseXP + wordLengthBonus + speedBonus);
 
-  // Mission completion XP rewards (arkadaş maçında görev ilerlemez)
-  if (!isFriend) {
+  // Mission completion XP rewards (arkadaş maçında veya AFK 0 kelimede görev ilerlemez)
+  if (!isFriend && (hasContributed || result.won)) {
     if (previousDuels < 2 && duelProgress >= 2) {
       xpGain += 50;
     }
@@ -569,14 +588,14 @@ export function applyMatchProgress(
 
     // Daily Mystery Word bonus (+150 XP)
     const mystery = getDailyMysteryWord();
-    if (result.foundWords && result.foundWords.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
+    if (foundWordsList.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
       xpGain += mystery.rewardXp;
     }
   }
 
-  // Coin earnings (Dengeli Çip İlerlemesi - arkadaş maçında 0)
+  // Coin earnings (Dengeli Çip İlerlemesi - arkadaş maçında veya 0 kelimeli yenilgide 0)
   let coinsEarned = 0;
-  if (!isFriend) {
+  if (!isFriend && (hasContributed || result.won)) {
     if (result.won) {
       if (type === "pvp") {
         coinsEarned = isCrushingWin ? 15 : 10;
@@ -588,6 +607,7 @@ export function applyMatchProgress(
     } else if (result.isDraw) {
       coinsEarned = type === "pvp" ? 3 : 1;
     } else {
+      // Kaybetti ama en az 1 kelime bildi
       coinsEarned = type === "pvp" ? 2 : 1;
     }
   }
@@ -603,8 +623,8 @@ export function applyMatchProgress(
   const weekId = getWeekId();
   const activeCatalogMissions = [...getDailyMissions(todayId), ...getWeeklyMissions(weekId)];
 
-  if (!isFriend) {
-    // Update duel_play
+  if (!isFriend && (hasContributed || result.won)) {
+    // Update duel_play (yalnızca aktif katılım sağlayan maçlar)
     if (type !== "solo" && type !== "daily") {
       nextMissions = updateMissionAction(nextMissions, activeCatalogMissions, "duel_play", 1, result.size);
     }

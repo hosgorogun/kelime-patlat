@@ -1,5 +1,35 @@
+import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { getLeagueTier, type PlayerProgress } from "../shared/progression";
+
+function useAnimatedCounter(targetValue: number, duration: number = 700) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (targetValue === 0) {
+      setDisplayValue(0);
+      return;
+    }
+    let startTimestamp: number | null = null;
+    let frameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(easeProgress * targetValue));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(step);
+      }
+    };
+
+    frameId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frameId);
+  }, [targetValue, duration]);
+
+  return displayValue;
+}
 
 export function MatchRewardsCard({
   progress,
@@ -26,6 +56,10 @@ export function MatchRewardsCard({
   const isLpGain = lpEarned > 0;
   const isLpLoss = lpEarned < 0;
 
+  const animatedXp = useAnimatedCounter(xpEarned, 700);
+  const animatedLp = useAnimatedCounter(Math.abs(lpEarned), 700);
+  const animatedCoins = useAnimatedCounter(coinsEarned ?? 0, 600);
+
   const winStreak = pvpWinStreak ?? progress?.lastMatchReward?.pvpWinStreak ?? progress?.pvpWinStreak ?? 0;
   const streakBonusLp = streakBonus ?? progress?.lastMatchReward?.streakBonus ?? 0;
   const crushing = isCrushingWin ?? progress?.lastMatchReward?.isCrushingWin ?? false;
@@ -37,7 +71,7 @@ export function MatchRewardsCard({
         <Text style={styles.title}>{isCustom ? "🤝 DOSTLUK MAÇI" : "🎖️ MAÇ SONU KAZANIMLARI"}</Text>
         {!isCustom && coinsEarned !== undefined && coinsEarned > 0 && (
           <View style={styles.coinsBadge}>
-            <Text style={styles.coinsText}>🪙 +{coinsEarned} ÇİP</Text>
+            <Text style={styles.coinsText}>🪙 +{animatedCoins} ÇİP</Text>
           </View>
         )}
       </View>
@@ -91,13 +125,17 @@ export function MatchRewardsCard({
           {/* İki Ayrı Kart: EXP ve LİG PUANI */}
           <View style={styles.badgesRow}>
             {/* EXP Kartı */}
-            <View style={[styles.badge, styles.expBadge]}>
+            <View style={[styles.badge, xpEarned > 0 ? styles.expBadge : styles.expZeroBadge]}>
               <View style={styles.badgeTop}>
                 <Text style={styles.badgeIcon}>⚡</Text>
-                <Text style={styles.expLabel}>KAZANILAN EXP</Text>
+                <Text style={[styles.expLabel, xpEarned === 0 && styles.textGray]}>KAZANILAN EXP</Text>
               </View>
-              <Text style={styles.expValue}>+{xpEarned} EXP</Text>
-              <Text style={styles.badgeSub}>Profil seviyene eklendi</Text>
+              <Text style={[styles.expValue, xpEarned === 0 && styles.textGray]}>
+                {xpEarned > 0 ? `+${animatedXp} EXP` : "0 EXP"}
+              </Text>
+              <Text style={styles.badgeSub}>
+                {xpEarned > 0 ? "Profil seviyene eklendi" : "Kelime bulunamadı"}
+              </Text>
             </View>
 
             {/* LP Kartı */}
@@ -124,7 +162,7 @@ export function MatchRewardsCard({
                   isLpGain ? styles.textGreen : isLpLoss ? styles.textRed : styles.textGray,
                 ]}
               >
-                {isLpGain ? `+${lpEarned} LP` : isLpLoss ? `${lpEarned} LP` : "0 LP"}
+                {isLpGain ? `+${animatedLp} LP` : isLpLoss ? `-${animatedLp} LP` : "0 LP"}
               </Text>
               <Text style={styles.badgeSub}>
                 {isLpGain ? "Liginde yükseliyorsun!" : isLpLoss ? "Rövanşla puanı geri al!" : "Puanın korundu"}
@@ -200,6 +238,10 @@ const styles = StyleSheet.create({
   },
   expBadge: {
     backgroundColor: "rgba(245, 158, 11, 0.1)",
+    borderColor: "#DCE1D7",
+  },
+  expZeroBadge: {
+    backgroundColor: "rgba(148, 163, 184, 0.08)",
     borderColor: "#DCE1D7",
   },
   lpGainBadge: {

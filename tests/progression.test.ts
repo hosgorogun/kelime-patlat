@@ -942,5 +942,66 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     // Hiçbir katalog görevi tamamlanmamışken rozet sayısı 0 olmalıdır (hayalet rozet engellendi)
     expect(getUnclaimedMissionsCount(modernPlayer)).toBe(0);
   });
+
+  it("dereceli modda 0 kelime ve 0 skor ile kaybedildiğinde EXP ve Çip verilmez, kelime bilince ödül verilir", () => {
+    const base = { ...DEFAULT_PROGRESS, xp: 500, lp: 40, coins: 20, missions: { duels: 2, wordsmith: 1 } };
+
+    // 1. Sıfır kelime ve sıfır skor ile yenilgi (AFK / Katkısız bot veya pvp maçı)
+    const zeroLossBot = applyMatchProgress(base, {
+      score: 0,
+      tempo: 0,
+      won: false,
+      foundWords: [],
+      opponentScore: 42,
+    }, "bot");
+
+    expect(zeroLossBot.xp).toBe(500); // 0 EXP eklendi
+    expect(zeroLossBot.coins).toBe(20); // 0 Çip eklendi
+    expect(zeroLossBot.lastMatchReward?.xp).toBe(0);
+    expect(zeroLossBot.lastMatchReward?.coins).toBe(0);
+    expect(zeroLossBot.lp).toBeLessThan(40); // LP cezası normal şekilde kesildi
+
+    const zeroLossPvp = applyMatchProgress(base, {
+      score: 0,
+      tempo: 0,
+      won: false,
+      foundWords: [],
+      opponentScore: 50,
+    }, "pvp");
+
+    expect(zeroLossPvp.xp).toBe(500); // 0 EXP
+    expect(zeroLossPvp.coins).toBe(20); // 0 Çip
+    expect(zeroLossPvp.lastMatchReward?.xp).toBe(0);
+    expect(zeroLossPvp.lastMatchReward?.coins).toBe(0);
+
+    // 2. Kaybetti ama kelimeler bildi (Çaba ve kelime ödülü)
+    const effortLoss = applyMatchProgress(base, {
+      score: 30,
+      tempo: 1.2,
+      won: false,
+      foundWords: ["KAPI", "MASA"], // İki adet 4 harfli kelime (+2 +2 = +4 XP)
+      opponentScore: 45,
+    }, "pvp");
+
+    // baseXP (5) + wordLengthBonus (4) = 9 XP
+    expect(effortLoss.xp).toBe(509);
+    expect(effortLoss.lastMatchReward?.xp).toBe(9);
+    expect(effortLoss.coins).toBe(22); // +2 çip teselli ödülü
+
+    // 3. Maçı kazandı ve uzun kelimeler bildi (Galibiyet + kelime bonusu)
+    const bigWin = applyMatchProgress(base, {
+      score: 100,
+      tempo: 2.5, // tempo bonus: +10 XP
+      won: true,
+      foundWords: ["PENCERE", "KİTAP"], // 7 harfli (+8), 5 harfli (+4) = +12 XP
+      opponentScore: 40,
+    }, "pvp");
+
+    // baseXP (25) + wordLengthBonus (12) + speedBonus (10) = 47 XP
+    expect(bigWin.xp).toBe(500 + 47);
+    expect(bigWin.lastMatchReward?.xp).toBe(47);
+    expect(bigWin.coins).toBe(20 + 10);
+  });
 });
+
 

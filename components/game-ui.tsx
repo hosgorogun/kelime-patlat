@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import React, { useRef, useEffect, type ReactNode } from "react";
 import {
+  Animated,
   Image,
   Pressable,
   StyleSheet,
@@ -68,14 +69,23 @@ export type OrnatePanelAccent =
   | "amber"
   | "sapphire"
   | "purple";
-const panelColors = {
+const panelColors: Record<OrnatePanelAccent, string> = {
   gold: "#FFFFFF",
-  emerald: "#EDF8F0",
+  emerald: "#E8F7EE",
   ruby: "#FFF0EB",
-  cyan: "#EDF7FC",
-  amber: "#FFF6DE",
-  sapphire: "#EDF4FC",
-  purple: "#F5F0FC",
+  cyan: "#E4F3FA",
+  amber: "#FFF5DA",
+  sapphire: "#E7F2FC",
+  purple: "#F3EDFA",
+};
+const panelBorders: Record<OrnatePanelAccent, string> = {
+  gold: "#DFD7CA",
+  emerald: "#B2DEBE",
+  ruby: "#F3BFB3",
+  cyan: "#B4DBEE",
+  amber: "#EDCD8A",
+  sapphire: "#BCD8F0",
+  purple: "#D3BFE8",
 };
 export function OrnatePanel({
   children,
@@ -90,7 +100,13 @@ export function OrnatePanel({
   showJewels?: boolean;
 }) {
   return (
-    <View style={[styles.panel, style]}>
+    <View
+      style={[
+        styles.panel,
+        { borderColor: panelBorders[accent] },
+        style,
+      ]}
+    >
       <View
         style={[
           styles.panelContent,
@@ -271,7 +287,7 @@ export function ConnectLine({
   x2,
   y2,
   color,
-  opacity = 0.85,
+  opacity = 0.95,
   showArrow = true,
 }: {
   x1: number;
@@ -298,14 +314,41 @@ export function ConnectLine({
         opacity,
       }}
     >
+      {/* Outer ambient glow */}
       <View
         style={{
           position: "absolute",
-          top: -3,
-          width: length,
-          height: 6,
-          borderRadius: 3,
+          top: -6,
+          left: -2,
+          width: length + 4,
+          height: 12,
+          borderRadius: 6,
           backgroundColor: color,
+          opacity: 0.28,
+        }}
+      />
+      {/* Main vibrant beam */}
+      <View
+        style={{
+          position: "absolute",
+          top: -3.5,
+          left: 0,
+          width: length,
+          height: 7,
+          borderRadius: 3.5,
+          backgroundColor: color,
+        }}
+      />
+      {/* Inner high-energy bright core */}
+      <View
+        style={{
+          position: "absolute",
+          top: -1.25,
+          left: 2,
+          width: Math.max(0, length - 4),
+          height: 2.5,
+          borderRadius: 1.5,
+          backgroundColor: "rgba(255, 255, 255, 0.72)",
         }}
       />
       {showArrow && length > 14 ? (
@@ -324,6 +367,102 @@ export function ConnectLine({
         />
       ) : null}
     </View>
+  );
+}
+
+export function BoardCountdownShield({
+  countdown,
+  theme = "light",
+}: {
+  countdown: number | null;
+  theme?: "light" | "dark";
+}) {
+  const fadeAnim = useRef(new Animated.Value(countdown !== null ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (countdown === 0) {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }).start();
+    } else if (countdown !== null) {
+      fadeAnim.setValue(1);
+    } else {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [countdown, fadeAnim]);
+
+  if (countdown === null) return null;
+
+  const isDark = theme === "dark";
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          borderRadius: 22,
+          backgroundColor: isDark ? "rgba(15, 23, 42, 0.94)" : "rgba(248, 250, 252, 0.94)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          zIndex: 80,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: fadeAnim,
+          overflow: "hidden",
+        } as any,
+      ]}
+    >
+      <View
+        style={{
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 22,
+          paddingVertical: 18,
+          borderRadius: 22,
+          backgroundColor: isDark ? "rgba(30, 41, 59, 0.88)" : "rgba(255, 255, 255, 0.92)",
+          borderWidth: 1.5,
+          borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(226, 232, 240, 0.95)",
+          shadowColor: "#0F172A",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.12,
+          shadowRadius: 12,
+          elevation: 6,
+        }}
+      >
+        <Text style={{ fontSize: 32, marginBottom: 8 }}>🔒</Text>
+        <Text
+          style={{
+            color: isDark ? "#F8FAFC" : "#1E293B",
+            fontSize: 14,
+            fontWeight: "900",
+            letterSpacing: 0.8,
+            textTransform: "uppercase",
+          }}
+        >
+          HARFLER GİZLENDİ
+        </Text>
+        <Text
+          style={{
+            color: isDark ? "#94A3B8" : "#64748B",
+            fontSize: 11,
+            fontWeight: "700",
+            marginTop: 4,
+            textAlign: "center",
+          }}
+        >
+          {countdown > 0
+            ? `${countdown} saniye sonra açılacak`
+            : "Hazırlan, başlıyor!"}
+        </Text>
+      </View>
+    </Animated.View>
   );
 }
 const styles = StyleSheet.create({
@@ -358,15 +497,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 15,
-    backgroundColor: palette.panel,
-    borderWidth: 1,
-    borderColor: palette.line,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: "#D2DAD0",
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
   },
-  chipLabel: { color: palette.muted, fontSize: 9, fontWeight: "700" },
-  chipValue: { color: palette.text, fontSize: 15, fontWeight: "800" },
+  chipLabel: { color: "#54646B", fontSize: 9, fontWeight: "800", letterSpacing: 0.3 },
+  chipValue: { color: palette.text, fontSize: 15, fontWeight: "900" },
   plus: { color: palette.text, fontSize: 20, fontWeight: "700" },
   badge: {
     position: "absolute",
@@ -393,5 +538,5 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: { color: palette.text, fontSize: 13, fontWeight: "800" },
-  sectionMeta: { color: palette.muted, fontSize: 10, flexShrink: 1 },
+  sectionMeta: { color: "#54646B", fontSize: 10, fontWeight: "700", flexShrink: 1 },
 });

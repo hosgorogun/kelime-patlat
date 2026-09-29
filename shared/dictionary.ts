@@ -268,11 +268,22 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
     return DETAIL_CACHE.get(trUpper)!;
   }
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
   // 1. Sunucu API proxy üzerinden sorgula (Hızlı, sunucu önbellekli ve CORS problemsiz)
   if (apiBaseUrl) {
     try {
       const url = `${apiBaseUrl.replace(/\/$/, "")}/api/dictionary/${encodeURIComponent(clean)}`;
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const res = await fetchWithTimeout(url, { headers: { Accept: "application/json" } }, 2000);
       if (res.ok) {
         const data = await res.json();
         if (data && data.definition) {
@@ -297,7 +308,7 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
   // 2. Doğrudan TDK GTS API sorgusu
   try {
     const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(clean.toLocaleLowerCase("tr-TR"))}`;
-    const res = await fetch(tdkUrl);
+    const res = await fetchWithTimeout(tdkUrl, undefined, 2500);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data[0]?.anlamlarListe && data[0].anlamlarListe.length > 0) {

@@ -4,12 +4,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { monetizationManager } from "@/shared/monetization";
 import { gameSfx, triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { getCalculatedLives, MAX_LIVES, getPlayerLevel, getDayId, type PlayerProgress } from "@/shared/progression";
-import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS, STORE_ASSETS } from "@/shared/store-items";
+import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "@/shared/store-items";
+import { STORE_ASSETS } from "./store-assets";
 
 const DAILY_AD_LIMIT = 3;
 
 export type { ChipEquipmentItem };
-export { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS };
+export { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS, STORE_ASSETS };
 
 const FRAME_IMAGES: Record<string, any> = {
   signal: require("../assets/frames/signal.jpg"),
@@ -525,8 +526,8 @@ export function CyberStore({
                   onPress={() => handleCosmeticPress("frame", id, label, color, cost, owned, onSelectFrame)}
                   style={({ pressed }) => [
                     styles.cosmeticCard,
+                    isSelected && styles.cosmeticCardSelected,
                     { borderColor: isSelected ? color : "#DCE1D7" },
-                    isSelected && { backgroundColor: `${color}12` },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
@@ -582,8 +583,8 @@ export function CyberStore({
                   onPress={() => handleCosmeticPress("effect", id, label, themeColor, cost, owned, onSelectVictoryEffect)}
                   style={({ pressed }) => [
                     styles.cosmeticCard,
+                    isSelected && styles.cosmeticCardSelected,
                     { borderColor: isSelected ? themeColor : "#DCE1D7" },
-                    isSelected && { backgroundColor: `${themeColor}12` },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
@@ -638,8 +639,8 @@ export function CyberStore({
                   onPress={() => handleCosmeticPress("board", id, label, color, cost, owned, onSelectBoardSkin)}
                   style={({ pressed }) => [
                     styles.cosmeticCard,
+                    isSelected && styles.cosmeticCardSelected,
                     { borderColor: isSelected ? color : "#DCE1D7" },
-                    isSelected && { backgroundColor: `${color}12` },
                     pressed && { opacity: 0.8 },
                   ]}
                 >
@@ -726,6 +727,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
+  },
+  cosmeticCardSelected: {
+    backgroundColor: "#EBFBFA",
+    borderWidth: 2,
   },
   cosmeticRing: {
     width: 48,

@@ -11,15 +11,19 @@ import {
   playSelectionNote,
   playSuccessSound,
   playErrorSound,
+  playComboSound,
+  playTimerTick,
   triggerHapticSelection,
   triggerHapticSuccess,
   triggerHapticError,
-  triggerHapticLongWord
+  triggerHapticLongWord,
+  getSfxEnabled,
+  setSfxEnabled,
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
 import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
-import { ConnectLine } from "./game-ui";
+import { ConnectLine, BoardCountdownShield } from "./game-ui";
 import { GameCountdownOverlay } from "./game-countdown-overlay";
 
 function FloatingTimeBonus({ text }: { text: string | null }) {
@@ -81,29 +85,103 @@ function FloatingTimeBonus({ text }: { text: string | null }) {
         style={{
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: isCombo ? "#FFF0E8" : "#F0F5ED",
+          backgroundColor: isCombo ? "#FEF3C7" : "#DCFCE7",
           borderWidth: 1.5,
-          borderColor: isCombo ? "#DCE1D7" : "#DCE1D7",
+          borderColor: isCombo ? "#F59E0B" : "#10B981",
           borderRadius: 12,
-          paddingHorizontal: 9,
+          paddingHorizontal: 10,
           paddingVertical: 4,
-          shadowColor: isCombo ? "#293541" : "#293541",
-          shadowOpacity: 0.08,
-          shadowRadius: 4,
-          elevation: 2,
+          shadowColor: isCombo ? "#F59E0B" : "#10B981",
+          shadowOpacity: 0.35,
+          shadowRadius: 6,
+          elevation: 4,
         }}
       >
         <Text
           style={{
-            color: isCombo ? "#98732c" : "#2a9c7a",
-            fontSize: 11,
+            color: isCombo ? "#B45309" : "#047857",
+            fontSize: 12,
             fontWeight: "900",
             letterSpacing: 0.5,
-            textShadowColor: "transparent",
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 0,
           }}
         >
+          {text}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+function FloatingScoreBurst({ text }: { text: string | null }) {
+  const animVal = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (text) {
+      animVal.setValue(0);
+      Animated.sequence([
+        Animated.spring(animVal, {
+          toValue: 1,
+          friction: 5,
+          tension: 110,
+          useNativeDriver: true,
+        }),
+        Animated.delay(650),
+        Animated.timing(animVal, {
+          toValue: 2,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [text, animVal]);
+
+  if (!text) return null;
+
+  const translateY = animVal.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [12, -22, -54],
+  });
+
+  const scale = animVal.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [0.5, 1.15, 0.85],
+  });
+
+  const opacity = animVal.interpolate({
+    inputRange: [0, 0.15, 0.85, 2],
+    outputRange: [0, 1, 1, 0],
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        alignSelf: "center",
+        top: "40%",
+        transform: [{ translateY }, { scale }],
+        opacity,
+        zIndex: 200,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          backgroundColor: "#FEF3C7",
+          borderWidth: 2,
+          borderColor: "#F59E0B",
+          borderRadius: 20,
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          shadowColor: "#F59E0B",
+          shadowOpacity: 0.45,
+          shadowRadius: 10,
+          elevation: 8,
+        }}
+      >
+        <Text style={{ color: "#B45309", fontSize: 18, fontWeight: "900", letterSpacing: 0.5 }}>
           {text}
         </Text>
       </View>
@@ -185,6 +263,7 @@ export function SoloChallenge({
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [comboStreak, setComboStreak] = useState<number>(0);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
+  const [scoreBurstText, setScoreBurstText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{
     word: string;
     definition: string;
@@ -363,6 +442,7 @@ export function SoloChallenge({
   }, [onComplete, found, level, daily]);
 
   const [isPaused, setIsPaused] = useState(false);
+  const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -400,7 +480,15 @@ export function SoloChallenge({
 
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
-    const timer = setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
+    const timer = setInterval(() => {
+      setSeconds((value) => {
+        const next = Math.max(0, value - 1);
+        if (next <= 8 && next > 0) {
+          playTimerTick(true);
+        }
+        return next;
+      });
+    }, 1000);
     return () => clearInterval(timer);
   }, [status, countdown, isPaused, showExitModal]);
 
@@ -572,12 +660,21 @@ export function SoloChallenge({
     const bonusTextTimer = setTimeout(() => setTimeBonusText(null), 1500);
     particleTimers.current.push(bonusTextTimer);
 
+    const scoreVal = word.length * 15 * (isCombo ? nextStreak : 1);
+    setScoreBurstText(`+${scoreVal} ${isCombo ? "🔥" : "⭐"}`);
+    const scoreBurstTimer = setTimeout(() => setScoreBurstText(null), 1200);
+    particleTimers.current.push(scoreBurstTimer);
+
+    if (isCombo) {
+      playComboSound(nextStreak);
+    } else {
+      playSuccessSound(word.length);
+    }
     if (word.length >= 6) {
       triggerHapticLongWord();
     } else {
       triggerHapticSuccess();
     }
-    playSuccessSound();
 
     if (nextFound.length === challenge.words.length) {
       hasFinishedRef.current = true;
@@ -765,6 +862,20 @@ export function SoloChallenge({
 
   return (
     <View style={{ flex: 1, backgroundColor: activeTheme.background }}>
+      {/* Pulsing Red Vignette for Urgent Time (seconds <= 8) */}
+      {seconds <= 8 && status === "playing" && (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderWidth: 6,
+              borderColor: "rgba(239, 68, 68, 0.45)",
+              zIndex: 99,
+            },
+          ]}
+        />
+      )}
       <ScrollView contentContainerStyle={[styles.content, { backgroundColor: activeTheme.background }]} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
       <Pressable onPress={handleExitPress} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>‹</Text></Pressable>
@@ -843,6 +954,12 @@ export function SoloChallenge({
         isUrgent && styles.boardUrgent,
       ]}
     >
+      {/* Floating Animated Score Burst (+150 ⭐ / +320 🔥) */}
+      <FloatingScoreBurst text={scoreBurstText} />
+
+      {/* Countdown Blur Shield to prevent pre-reading letters */}
+      <BoardCountdownShield countdown={countdown} theme="light" />
+
       {/* HUD Matrix Grid Backing */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={{ position: "absolute", top: 0, bottom: 0, left: "25%", width: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
@@ -993,8 +1110,12 @@ export function SoloChallenge({
                   challenge.size === 6 && styles.letterMedium,
                   challenge.size === 8 && styles.letterSmall,
                   challenge.size === 10 && styles.letterExtraSmall,
+                  isSelected && { color: "#78350F" },
+                  feedback === "accepted" && isSelected && { color: "#065F46" },
+                  feedback === "invalid" && isSelected && { color: "#991B1B" },
                   foundColor && !isSolution && { color: foundColor.letterText },
                   isRadar && styles.letterRadar,
+                  countdown !== null && countdown > 0 && { opacity: 0 },
                 ]}
               >
                 {letter}
@@ -1071,7 +1192,7 @@ export function SoloChallenge({
       {particles.map(p => (
         <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
       ))}
-      <View onPointerDown={(e: any) => { if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId); handleGestureStart(e); }} onPointerMove={handleGestureMove} onPointerUp={handleGestureEnd} onPointerCancel={() => { pointerActive.current = false; setIsSelecting(false); }} onPointerLeave={finish} onTouchStart={handleGestureStart} onTouchMove={handleGestureMove} onTouchEnd={handleGestureEnd} style={StyleSheet.absoluteFill} />
+      <View onPointerDown={(e: any) => { if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId); handleGestureStart(e); }} onPointerMove={handleGestureMove} onPointerUp={handleGestureEnd} onPointerCancel={() => { pointerActive.current = false; setIsSelecting(false); }} onTouchStart={handleGestureStart} onTouchMove={handleGestureMove} onTouchEnd={handleGestureEnd} style={StyleSheet.absoluteFill} />
     </Animated.View>
     <View style={[styles.tray, { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder }, feedback === "invalid" && styles.trayInvalid, feedback === "accepted" && styles.trayAccepted]}>
       <Text style={styles.trayLabel}>
@@ -1386,6 +1507,17 @@ export function SoloChallenge({
               </Pressable>
               <Pressable
                 onPress={() => {
+                  const nextState = !getSfxEnabled();
+                  setSfxEnabled(nextState);
+                  setSoundOn(nextState);
+                  triggerHapticSelection();
+                }}
+                style={styles.pauseSoundBtn}
+              >
+                <Text style={styles.pauseSoundBtnText}>{soundOn ? "🔊 OYUN SESİ: AÇIK" : "🔇 OYUN SESİ: KAPALI"}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
                   setIsPaused(false);
                   handleExitPress();
                 }}
@@ -1439,7 +1571,61 @@ export function SoloChallenge({
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center" }, exitText: { color: "#293541", fontSize: 23, lineHeight: 23 }, kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5 }, title: { color: "#293541", fontSize: 14, fontWeight: "900", marginTop: 2, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, borderWidth: 1, position: "relative", overflow: "visible", shadowColor: "#293541", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, timerUrgent: { backgroundColor: "#FFF0E8", borderColor: "#DCE1D7" }, timerText: { color: "#98732c", fontSize: 13, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, radarButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, radarUsedBtn: { backgroundColor: "#EDF4FC", borderColor: "#DCE1D7", opacity: 0.6 }, radarText: { color: "#98732c", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#349d5a", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#98732c", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 1, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#DCE1D7", shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 12, borderBottomWidth: 4, borderWidth: 2, alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { borderColor: "#DCE1D7" }, cellTail: { borderWidth: 2, borderColor: "#DCE1D7", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#FFF0E8", borderColor: "#DCE1D7" }, cellAccepted: { backgroundColor: "#F0F5ED", borderColor: "#DCE1D7" }, cellFound: { backgroundColor: "#F0F5ED", borderColor: "#DCE1D7" }, cellRadar: { backgroundColor: "#FFF0E8", borderColor: "#DCE1D7", borderWidth: 2 }, check: { position: "absolute", left: 4, bottom: 2, color: "#293541", fontSize: 9, fontWeight: "900" }, solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#293541", fontSize: 13, fontWeight: "900" }, letter: { color: "#293541", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, letterRadar: { color: "#98732c" }, order: { position: "absolute", top: 3, right: 4, color: "#293541", fontSize: 8, fontWeight: "900" }, tray: { minHeight: 77, marginTop: 12, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#293541", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, trayInvalid: { backgroundColor: "#FFF0E8", borderColor: "#DCE1D7" }, trayAccepted: { backgroundColor: "#F0F5ED", borderColor: "#DCE1D7" }, trayLabel: { color: "#293541", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, word: { color: "#293541", fontSize: 18, fontWeight: "900", letterSpacing: 0.5, marginTop: 3, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, hint: { color: "#293541", fontSize: 8, textAlign: "center", marginTop: 3 }, found: { marginTop: 10, padding: 11, borderRadius: 15, borderWidth: 1, shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2 }, tagText: { color: "#293541", fontSize: 10, fontWeight: "900" }, empty: { color: "#293541", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#FFF0E8", borderWidth: 1, borderColor: "#DCE1D7", alignItems: "center" }, resultTitle: { color: "#293541", fontSize: 15, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, resultCopy: { color: "#293541", fontSize: 10, textAlign: "center", marginTop: 4 }, solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 }, solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 }, solutionTagText: { color: "#293541", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#293541", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 }, actionArrow: { color: "#293541", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 },
+  header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  exit: { width: 35, height: 35, borderRadius: 12, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "#E2E8F0", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  exitText: { color: "#293541", fontSize: 23, lineHeight: 23 },
+  kicker: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  title: { color: "#1E293B", fontSize: 14, fontWeight: "900", marginTop: 2 },
+  timer: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5, position: "relative", overflow: "visible", shadowColor: "#293541", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  timerUrgent: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", shadowColor: "#EF4444", shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 },
+  timerText: { color: "#DC2626", fontSize: 13, fontWeight: "900" },
+  radarButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1.5, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  radarUsedBtn: { opacity: 0.6 },
+  radarText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  bonusText: { position: "absolute", top: -18, right: 0, color: "#10B981", fontSize: 11, fontWeight: "900" },
+  progress: { alignItems: "center", paddingVertical: 12 },
+  progressLabel: { fontSize: 20, fontWeight: "900", letterSpacing: 0.5 },
+  progressMeta: { fontSize: 9, fontWeight: "800", marginTop: 3 },
+  board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", borderWidth: 2, borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 } as any,
+  boardUrgent: { borderColor: "#EF4444", shadowColor: "#EF4444", shadowOpacity: 0.35, shadowRadius: 10, elevation: 6 },
+  cellWrap: { padding: 5 },
+  cell: { flex: 1, borderRadius: 12, borderBottomWidth: 3.5, borderWidth: 1.5, alignItems: "center", justifyContent: "center", aspectRatio: 1, shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2 },
+  cellSelected: { backgroundColor: "#FEF3C7", borderColor: "#F59E0B", borderBottomColor: "#D97706", borderWidth: 2, shadowColor: "#F59E0B", shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
+  cellTail: { backgroundColor: "#FDE68A", borderColor: "#D97706", borderBottomColor: "#B45309", borderWidth: 2.5, shadowColor: "#D97706", shadowOpacity: 0.6, shadowRadius: 8, elevation: 6 },
+  cellInvalid: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", borderBottomColor: "#DC2626", borderWidth: 2, shadowColor: "#EF4444", shadowOpacity: 0.4, shadowRadius: 5, elevation: 4 },
+  cellAccepted: { backgroundColor: "#D1FAE5", borderColor: "#10B981", borderBottomColor: "#059669", borderWidth: 2, shadowColor: "#10B981", shadowOpacity: 0.5, shadowRadius: 6, elevation: 5 },
+  cellFound: { backgroundColor: "#F1F5F9", borderColor: "#CBD5E1", borderBottomColor: "#94A3B8" },
+  cellRadar: { backgroundColor: "#FEF3C7", borderColor: "#F59E0B", borderWidth: 2 },
+  check: { position: "absolute", left: 4, bottom: 2, color: "#293541", fontSize: 9, fontWeight: "900" },
+  solutionMark: { position: "absolute", left: 5, bottom: 1, color: "#293541", fontSize: 13, fontWeight: "900" },
+  letter: { color: "#1E293B", fontSize: 25, fontWeight: "900" },
+  letterMedium: { fontSize: 21 },
+  letterSmall: { fontSize: 17 },
+  letterExtraSmall: { fontSize: 13 },
+  letterRadar: { color: "#B45309" },
+  order: { position: "absolute", top: 3, right: 4, color: "#B45309", fontSize: 8, fontWeight: "900" },
+  tray: { minHeight: 77, marginTop: 12, borderRadius: 20, borderWidth: 2, borderBottomWidth: 4, borderColor: "#E2E8F0", borderBottomColor: "#CBD5E1", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
+  trayInvalid: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", borderBottomColor: "#DC2626" },
+  trayAccepted: { backgroundColor: "#D1FAE5", borderColor: "#10B981", borderBottomColor: "#059669" },
+  trayLabel: { color: "#64748B", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  word: { color: "#0F172A", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginTop: 3 },
+  hint: { color: "#64748B", fontSize: 9, textAlign: "center", marginTop: 3 },
+  found: { marginTop: 10, padding: 11, borderRadius: 16, borderWidth: 1.5, borderColor: "#E2E8F0", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  foundLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 },
+  tag: { borderRadius: 9, paddingHorizontal: 9, paddingVertical: 4, shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1 },
+  tagText: { color: "#1E293B", fontSize: 10, fontWeight: "900" },
+  empty: { color: "#64748B", fontSize: 10 },
+  result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#FCA5A5", alignItems: "center" },
+  resultTitle: { color: "#991B1B", fontSize: 16, fontWeight: "900" },
+  resultCopy: { color: "#7F1D1D", fontSize: 11, textAlign: "center", marginTop: 4 },
+  solutionLegend: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, marginTop: 9 },
+  solutionTag: { borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4 },
+  solutionTagText: { color: "#1E293B", fontSize: 9, fontWeight: "900", letterSpacing: 0.4 },
+  action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#FEE2E2", borderWidth: 1, borderColor: "#FCA5A5", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  actionText: { color: "#991B1B", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  actionArrow: { color: "#991B1B", fontSize: 20, fontWeight: "900" },
   activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "#F0F5ED", borderWidth: 1.5, borderColor: "#DCE1D7", padding: 14, shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   activeRouteTitle: { color: "#293541", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
@@ -1480,6 +1666,8 @@ const styles = StyleSheet.create({
   pauseSub: { color: "#293541", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
   resumeBtn: { width: "100%", height: 46, borderRadius: 14, backgroundColor: "#FFD66E", alignItems: "center", justifyContent: "center", marginBottom: 10 },
   resumeBtnText: { color: "#293541", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
+  pauseSoundBtn: { width: "100%", height: 42, borderRadius: 14, borderWidth: 1.5, borderColor: "#DCE1D7", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  pauseSoundBtnText: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.4 },
   pauseExitBtn: { width: "100%", height: 42, borderRadius: 14, borderWidth: 1.5, borderColor: "#DCE1D7", backgroundColor: "#F7F5EE", alignItems: "center", justifyContent: "center" },
   pauseExitBtnText: { color: "#293541", fontSize: 11, fontWeight: "800", letterSpacing: 0.4 },
   adOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(35,48,59,0.42)", justifyContent: "center", alignItems: "center", zIndex: 300 },

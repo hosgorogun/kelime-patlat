@@ -17,15 +17,19 @@ import {
   playSelectionNote,
   playSuccessSound,
   playErrorSound,
+  playComboSound,
+  playTimerTick,
   triggerHapticSelection,
   triggerHapticSuccess,
   triggerHapticError,
-  triggerHapticLongWord
+  triggerHapticLongWord,
+  getSfxEnabled,
+  setSfxEnabled,
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { ModernAlertModal } from "./modern-alert-modal";
 import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
-import { ConnectLine } from "./game-ui";
+import { ConnectLine, BoardCountdownShield } from "./game-ui";
 import { GameCountdownOverlay } from "./game-countdown-overlay";
 
 function FloatingTimeBonus({ text }: { text: string | null }) {
@@ -87,29 +91,103 @@ function FloatingTimeBonus({ text }: { text: string | null }) {
         style={{
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: isCombo ? "#FFF0E8" : "#F0F5ED",
+          backgroundColor: isCombo ? "#FEF3C7" : "#DCFCE7",
           borderWidth: 1.5,
-          borderColor: isCombo ? "#DCE1D7" : "#DCE1D7",
+          borderColor: isCombo ? "#F59E0B" : "#10B981",
           borderRadius: 12,
-          paddingHorizontal: 9,
+          paddingHorizontal: 10,
           paddingVertical: 4,
-          shadowColor: isCombo ? "#293541" : "#293541",
-          shadowOpacity: 0.08,
-          shadowRadius: 4,
-          elevation: 2,
+          shadowColor: isCombo ? "#F59E0B" : "#10B981",
+          shadowOpacity: 0.35,
+          shadowRadius: 6,
+          elevation: 4,
         }}
       >
         <Text
           style={{
-            color: isCombo ? "#98732c" : "#2a9c7a",
-            fontSize: 11,
+            color: isCombo ? "#B45309" : "#047857",
+            fontSize: 12,
             fontWeight: "900",
             letterSpacing: 0.5,
-            textShadowColor: "transparent",
-            textShadowOffset: { width: 0, height: 0 },
-            textShadowRadius: 0,
           }}
         >
+          {text}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+function FloatingScoreBurst({ text }: { text: string | null }) {
+  const animVal = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (text) {
+      animVal.setValue(0);
+      Animated.sequence([
+        Animated.spring(animVal, {
+          toValue: 1,
+          friction: 5,
+          tension: 110,
+          useNativeDriver: true,
+        }),
+        Animated.delay(650),
+        Animated.timing(animVal, {
+          toValue: 2,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [text, animVal]);
+
+  if (!text) return null;
+
+  const translateY = animVal.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [12, -22, -54],
+  });
+
+  const scale = animVal.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [0.5, 1.15, 0.85],
+  });
+
+  const opacity = animVal.interpolate({
+    inputRange: [0, 0.15, 0.85, 2],
+    outputRange: [0, 1, 1, 0],
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        alignSelf: "center",
+        top: "40%",
+        transform: [{ translateY }, { scale }],
+        opacity,
+        zIndex: 200,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+          backgroundColor: "#FEF3C7",
+          borderWidth: 2,
+          borderColor: "#F59E0B",
+          borderRadius: 20,
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          shadowColor: "#F59E0B",
+          shadowOpacity: 0.45,
+          shadowRadius: 10,
+          elevation: 8,
+        }}
+      >
+        <Text style={{ color: "#B45309", fontSize: 18, fontWeight: "900", letterSpacing: 0.5 }}>
           {text}
         </Text>
       </View>
@@ -152,9 +230,12 @@ export function ArcadeChallenge({
   const lastWordTimeRef = useRef<number>(0);
   const [feedback, setFeedback] = useState<Feedback>("idle");
   const [status, setStatus] = useState<"playing" | "lost">("playing");
+  const [showResultModal, setShowResultModal] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
   const [doubled, setDoubled] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
+  const [scoreBurstText, setScoreBurstText] = useState<string | null>(null);
   const [selectedWordInfo, setSelectedWordInfo] = useState<{
     word: string;
     definition: string;
@@ -280,6 +361,7 @@ export function ArcadeChallenge({
   }, [score, onComplete]);
 
   const [isPaused, setIsPaused] = useState(false);
+  const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -295,7 +377,15 @@ export function ArcadeChallenge({
   // Time Countdown (pauses when paused, countdown is active, or exit confirmation modal is open)
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
-    const timer = setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
+    const timer = setInterval(() => {
+      setSeconds((value) => {
+        const next = Math.max(0, value - 1);
+        if (next <= 8 && next > 0) {
+          playTimerTick(true);
+        }
+        return next;
+      });
+    }, 1000);
     return () => clearInterval(timer);
   }, [status, countdown, isPaused, showExitModal]);
 
@@ -304,7 +394,12 @@ export function ArcadeChallenge({
     if (seconds > 0 || status !== "playing" || countdown !== null || isPaused || showExitModal) return;
     if (savedRef.current) return;
     savedRef.current = true;
+    pointerActive.current = false;
+    setIsSelecting(false);
+    selectionRef.current = [];
+    setSelected([]);
     setStatus("lost");
+    setShowResultModal(true);
     triggerHapticError();
     playErrorSound();
     onCompleteRef.current(scoreRef.current, totalWordsFoundRef.current, false, totalCombosRef.current, allFoundWordsRef.current);
@@ -321,6 +416,10 @@ export function ArcadeChallenge({
         setShowExitModal(false);
         return true;
       }
+      if (showResultModal) {
+        setShowResultModal(false);
+        return true;
+      }
       if (status === "playing") {
         if (score > 0) {
           setShowExitModal(true);
@@ -335,7 +434,7 @@ export function ArcadeChallenge({
 
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [isPaused, showExitModal, status, score, onExit]);
+  }, [isPaused, showExitModal, showResultModal, status, score, onExit]);
 
   useEffect(() => () => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
@@ -480,6 +579,10 @@ export function ArcadeChallenge({
     const baseScoreGain = word.length * 10;
     const scoreGain = baseScoreGain + comboInfo.bonusScore;
     setScore((s) => s + scoreGain);
+    setScoreBurstText(`+${scoreGain} ${nextCombo >= 2 ? "🔥" : "⭐"}`);
+    const scoreBurstTimer = setTimeout(() => setScoreBurstText(null), 1200);
+    particleTimers.current.push(scoreBurstTimer);
+
     setFound(nextFound);
     setFoundPaths((current) => [...current, path]);
     setFeedback("accepted");
@@ -498,7 +601,11 @@ export function ArcadeChallenge({
     const bonusTextTimer = setTimeout(() => setTimeBonusText(null), 1200);
     particleTimers.current.push(bonusTextTimer);
 
-    playSuccessSound();
+    if (nextCombo >= 2) {
+      playComboSound(nextCombo);
+    } else {
+      playSuccessSound(word.length);
+    }
     if (word.length >= 6 || comboInfo.bonusSeconds > 0) {
       triggerHapticLongWord();
     } else {
@@ -541,6 +648,7 @@ export function ArcadeChallenge({
 
   const handleRestart = () => {
     triggerHapticSelection();
+    setShowResultModal(false);
     savedRef.current = false;
     setDoubled(false);
     totalWordsFoundRef.current = 0;
@@ -565,6 +673,7 @@ export function ArcadeChallenge({
     setInspectedColor(null);
     hasAutoInspectedRef.current = false;
     setCountdown(3);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   };
 
   const handleExitPress = () => {
@@ -575,7 +684,14 @@ export function ArcadeChallenge({
     }
   };
 
-  const finish = () => { if (!pointerActive.current) return; pointerActive.current = false; setIsSelecting(false); submit(); };
+  const finish = () => {
+    const wasPointerActive = pointerActive.current;
+    pointerActive.current = false;
+    setIsSelecting(false);
+    if (wasPointerActive) {
+      submit();
+    }
+  };
   
   const handleGesture = (locationX: number, locationY: number) => {
     if (status !== "playing") return;
@@ -633,20 +749,26 @@ export function ArcadeChallenge({
   };
 
   const handleGestureStart = (event: any) => {
+    if (status !== "playing") return;
     event.preventDefault?.(); event.stopPropagation?.();
-    setIsSelecting(true); measureBoard();
+    measureBoard();
     const { x, y } = getEventBoardCoords(event);
     handleGesture(x, y);
   };
 
   const handleGestureMove = (event: any) => {
+    if (status !== "playing" || !pointerActive.current) return;
     event.preventDefault?.(); event.stopPropagation?.();
-    if (!pointerActive.current) return;
     const { x, y } = getEventBoardCoords(event);
     handleGesture(x, y);
   };
 
-  const handleGestureEnd = () => { finish(); };
+  const handleGestureEnd = (event?: any) => {
+    if (event?.target?.releasePointerCapture) {
+      try { event.target.releasePointerCapture(event.pointerId ?? event.nativeEvent?.pointerId); } catch {}
+    }
+    finish();
+  };
 
   const { foundCells, foundCellColors } = useMemo(() => {
     const cells = new Set(foundPaths.flat());
@@ -710,14 +832,14 @@ export function ArcadeChallenge({
           style={[
             StyleSheet.absoluteFill,
             {
-              borderWidth: 8,
-              borderColor: "#DCE1D7",
+              borderWidth: 6,
+              borderColor: "rgba(239, 68, 68, 0.45)",
               zIndex: 99,
             },
           ]}
         />
       )}
-      <ScrollView contentContainerStyle={styles.content} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content} scrollEnabled={status !== "playing" || !isSelecting} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
       <Pressable onPress={handleExitPress} style={({ pressed }) => [styles.exit, pressed && { opacity: 0.7 }]}>
         <Text style={styles.exitText}>‹</Text>
@@ -773,6 +895,12 @@ export function ArcadeChallenge({
         isUrgent && styles.boardUrgent,
       ]}
     >
+      {/* Animated Floating Score Burst (+150 ⭐ / +320 🔥) */}
+      <FloatingScoreBurst text={scoreBurstText} />
+
+      {/* Countdown Blur Shield to prevent pre-reading letters */}
+      <BoardCountdownShield countdown={countdown} theme="light" />
+
       {/* HUD Matrix Grid Backing */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={{ position: "absolute", top: 0, bottom: 0, left: "25%", width: 1, backgroundColor: "rgba(212, 180, 90, 0.06)" }} />
@@ -924,8 +1052,12 @@ export function ArcadeChallenge({
                 challenge.size === 6 && styles.letterMedium,
                 challenge.size === 8 && styles.letterSmall,
                 challenge.size === 10 && styles.letterExtraSmall,
+                isSelected && { color: "#78350F" },
+                feedback === "accepted" && isSelected && { color: "#065F46" },
+                feedback === "invalid" && isSelected && { color: "#991B1B" },
                 foundColor && { color: foundColor.text },
                 missedColor && { color: missedColor.text },
+                countdown !== null && countdown > 0 && { opacity: 0 },
               ]}>{letter}</Text>
               {isSelected && (
                 <Text
@@ -979,7 +1111,24 @@ export function ArcadeChallenge({
       {particles.map(p => (
         <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
       ))}
-      <View onPointerDown={(e: any) => { if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId); handleGestureStart(e); }} onPointerMove={handleGestureMove} onPointerUp={handleGestureEnd} onPointerCancel={() => { pointerActive.current = false; setIsSelecting(false); }} onPointerLeave={finish} onTouchStart={handleGestureStart} onTouchMove={handleGestureMove} onTouchEnd={handleGestureEnd} style={StyleSheet.absoluteFill} />
+      <View
+        pointerEvents={status === "playing" ? "auto" : "none"}
+        onPointerDown={(e: any) => {
+          if (status !== "playing") return;
+          if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
+          handleGestureStart(e);
+        }}
+        onPointerMove={handleGestureMove}
+        onPointerUp={handleGestureEnd}
+        onPointerCancel={() => {
+          pointerActive.current = false;
+          setIsSelecting(false);
+        }}
+        onTouchStart={handleGestureStart}
+        onTouchMove={handleGestureMove}
+        onTouchEnd={handleGestureEnd}
+        style={StyleSheet.absoluteFill}
+      />
     </Animated.View>
     <View style={[styles.wordTray, feedback === "invalid" && styles.trayInvalid, feedback === "accepted" && styles.trayAccepted]}>
       <Text style={styles.trayLabel}>
@@ -1152,7 +1301,7 @@ export function ArcadeChallenge({
         <View style={styles.arcadeRewardsRow}>
           <View style={styles.arcadeRewardPill}>
             <Text style={styles.arcadeRewardIcon}>⚡</Text>
-            <Text style={styles.arcadeRewardText}>+{doubled ? Math.max(5, Math.floor(score / 10)) * 2 : Math.max(5, Math.floor(score / 10))} XP</Text>
+            <Text style={styles.arcadeRewardText}>+{doubled ? (score > 0 ? Math.max(5, Math.floor(score / 10)) * 2 : 0) : (score > 0 ? Math.max(5, Math.floor(score / 10)) : 0)} EXP</Text>
           </View>
           <View style={[styles.arcadeRewardPill, { borderColor: "#DCE1D7" }]}>
             <Text style={styles.arcadeRewardIcon}>🪙</Text>
@@ -1192,6 +1341,11 @@ export function ArcadeChallenge({
           </Pressable>
         )}
 
+        <Pressable onPress={() => setShowResultModal(true)} style={[styles.action, { backgroundColor: "#EDF4FC", borderWidth: 1, borderColor: "#DCE1D7", marginBottom: 8 }]}>
+          <Text style={[styles.actionText, { color: "#293541" }]}>📊 SKOR VE ÖDÜL KARTINI AÇ</Text>
+          <Text style={[styles.actionArrow, { color: "#293541" }]}>↗</Text>
+        </Pressable>
+
         <Pressable onPress={handleRestart} style={[styles.action, { backgroundColor: "#aef5e0", marginBottom: 8 }]}>
           <Text style={[styles.actionText, { color: "#293541" }]}>↺ YENİDEN DENE (REKOR KIR)</Text>
           <Text style={[styles.actionArrow, { color: "#293541" }]}>⚡</Text>
@@ -1207,6 +1361,106 @@ export function ArcadeChallenge({
       </ScrollView>
       <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "lost" && score > 0}
         title="Güzel turdu!" subtitle={`${score} puan topladın. Bir tur daha?`} />
+
+      {/* Arcade Oyun Sonu / Skor ve Ödül Modali */}
+      {status === "lost" && showResultModal && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowResultModal(false)}
+        >
+          <View style={styles.pauseOverlay}>
+            <View style={[styles.pauseCard, { maxWidth: 360, paddingVertical: 20 }]}>
+              {score > 0 ? (
+                <VictoryBanner title="Güzel turdu!" subtitle="Topladığın puanlar ve ödüller burada." />
+              ) : (
+                <View style={{ alignItems: "center", marginBottom: 6 }}>
+                  <Text style={{ fontSize: 44, marginBottom: 4 }}>⏱️</Text>
+                  <Text style={styles.resultTitle}>SÜRE DOLDU!</Text>
+                </View>
+              )}
+              <Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text>
+              <Text style={styles.finalScore}>{score}</Text>
+
+              {/* Rewards Breakdown Strip */}
+              <View style={styles.arcadeRewardsRow}>
+                <View style={styles.arcadeRewardPill}>
+                  <Text style={styles.arcadeRewardIcon}>⚡</Text>
+                  <Text style={styles.arcadeRewardText}>
+                    +{doubled ? (score > 0 ? Math.max(5, Math.floor(score / 10)) * 2 : 0) : (score > 0 ? Math.max(5, Math.floor(score / 10)) : 0)} EXP
+                  </Text>
+                </View>
+                <View style={[styles.arcadeRewardPill, { borderColor: "#DCE1D7" }]}>
+                  <Text style={styles.arcadeRewardIcon}>🪙</Text>
+                  <Text style={[styles.arcadeRewardText, { color: "#98732c" }]}>
+                    +{doubled ? Math.floor(score / 40) * 2 : Math.floor(score / 40)} ÇİP
+                  </Text>
+                </View>
+              </View>
+
+              {!doubled && score > 0 && (
+                <Pressable
+                  onPress={() => {
+                    const applyDoubleReward = () => {
+                      triggerHapticSuccess();
+                      gameSfx.victory();
+                      setDoubled(true);
+                      onCompleteRef.current(score, totalWordsFoundRef.current, true, totalCombosRef.current, allFoundWordsRef.current);
+                    };
+                    if (watchAd) {
+                      watchAd(applyDoubleReward);
+                    } else {
+                      Alert.alert(
+                        "📺 Ödülü 2X Yap",
+                        "15 saniyelik sponsorlu reklam izleyerek bu turdaki XP ve Çip ödülünü 2 katına çıkarmak ister misin?",
+                        [
+                          { text: "Vazgeç", style: "cancel" },
+                          {
+                            text: "İzle ve 2X Yap",
+                            onPress: applyDoubleReward,
+                          },
+                        ]
+                      );
+                    }
+                  }}
+                  style={[styles.action, { backgroundColor: "rgba(255, 208, 0, 0.2)", borderColor: "#DCE1D7", borderWidth: 1.5, marginBottom: 8 }]}
+                >
+                  <Text style={[styles.actionText, { color: "#987c00" }]}>🎁 REKLAM İZLE: KAZANILAN ÖDÜLLERİ 2X YAP 🔥</Text>
+                  <Text style={[styles.actionArrow, { color: "#987c00" }]}>⚡</Text>
+                </Pressable>
+              )}
+
+              <Pressable
+                onPress={handleRestart}
+                style={[styles.action, { backgroundColor: "#aef5e0", marginBottom: 8 }]}
+              >
+                <Text style={[styles.actionText, { color: "#293541" }]}>↺ YENİDEN DENE (REKOR KIR)</Text>
+                <Text style={[styles.actionArrow, { color: "#293541" }]}>⚡</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  setShowResultModal(false);
+                }}
+                style={[styles.action, { backgroundColor: "#EDF4FC", borderWidth: 1, borderColor: "#DCE1D7", marginBottom: 8 }]}
+              >
+                <Text style={[styles.actionText, { color: "#293541" }]}>🔍 TAHTAYI & KELİMELERİ İNCELE</Text>
+                <Text style={[styles.actionArrow, { color: "#293541", fontSize: 16 }]}>↓</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={onExit}
+                style={[styles.action, { backgroundColor: "rgba(255, 100, 124, 0.2)", borderWidth: 1, borderColor: "#DCE1D7" }]}
+              >
+                <Text style={[styles.actionText, { color: "#293541" }]}>KOMUTA MERKEZİNE DÖN</Text>
+                <Text style={[styles.actionArrow, { color: "#293541" }]}>→</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
 
 
 
@@ -1227,6 +1481,17 @@ export function ArcadeChallenge({
                 style={styles.resumeBtn}
               >
                 <Text style={styles.resumeBtnText}>▶️ DEVAM ET ({seconds}s)</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const nextState = !getSfxEnabled();
+                  setSfxEnabled(nextState);
+                  setSoundOn(nextState);
+                  triggerHapticSelection();
+                }}
+                style={styles.pauseSoundBtn}
+              >
+                <Text style={styles.pauseSoundBtnText}>{soundOn ? "🔊 OYUN SESİ: AÇIK" : "🔇 OYUN SESİ: KAPALI"}</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -1280,7 +1545,57 @@ export function ArcadeChallenge({
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#F0F5ED" }, header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#EDF4FC", alignItems: "center", justifyContent: "center" }, exitText: { color: "#293541", fontSize: 23, lineHeight: 23 }, kicker: { color: "#98732c", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 }, title: { color: "#293541", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, scoreContainer: { alignItems: "center" }, scoreLabel: { color: "#687796", fontSize: 8, fontWeight: "900" }, scoreValue: { color: "#293541", fontSize: 16, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, timer: { borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: "#EDF4FC", borderWidth: 1, position: "relative", overflow: "visible" }, timerUrgent: { backgroundColor: "#FFF0E8", borderColor: "#DCE1D7" }, timerText: { color: "#ca4f62", fontSize: 13, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, bonusText: { position: "absolute", top: -18, right: 0, color: "#349d5a", fontSize: 11, fontWeight: "900" }, progress: { alignItems: "center", paddingVertical: 12 }, progressLabel: { color: "#98732c", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, progressMeta: { color: "#293541", fontSize: 9, fontWeight: "800", marginTop: 3 }, board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#EDF4FC", borderWidth: 1, borderColor: "#DCE1D7", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none" } as any, boardUrgent: { borderColor: "#DCE1D7", shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, cellWrap: { padding: 5 }, cell: { flex: 1, borderRadius: 12, borderBottomWidth: 4, backgroundColor: "#EDF4FC", borderWidth: 2, borderColor: "#DCE1D7", alignItems: "center", justifyContent: "center", aspectRatio: 1 }, cellSelected: { backgroundColor: "#EDF4FC", borderColor: "#DCE1D7" }, cellTail: { borderWidth: 2, borderColor: "#DCE1D7", transform: [{ scale: 1.04 }] }, cellInvalid: { backgroundColor: "#FFF0E8", borderColor: "#DCE1D7" }, cellAccepted: { backgroundColor: "#F0F5ED", borderColor: "#DCE1D7" }, cellFound: { backgroundColor: "#F0F5ED", borderColor: "#DCE1D7" },  check: { position: "absolute", left: 4, bottom: 2, color: "#293541", fontSize: 9, fontWeight: "900" }, letter: { color: "#293541", fontSize: 25, fontWeight: "900" }, letterMedium: { fontSize: 21 }, letterSmall: { fontSize: 17 }, letterExtraSmall: { fontSize: 13 }, comboPill: { marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, backgroundColor: "rgba(255, 194, 74, 0.2)", borderWidth: 1, borderColor: "#DCE1D7" }, comboPillText: { color: "#98732c", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 }, order: { position: "absolute", top: 3, right: 4, color: "#293541", fontSize: 8, fontWeight: "900" }, wordTray: { minHeight: 77, marginTop: 12, borderRadius: 18, backgroundColor: "#EDF4FC", borderWidth: 1, borderColor: "#DCE1D7", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#293541", shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, trayInvalid: { backgroundColor: "#FFF0E8", borderColor: "#DCE1D7" }, trayAccepted: { backgroundColor: "#F0F5ED", borderColor: "#DCE1D7" }, trayLabel: { color: "#293541", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }, word: { color: "#293541", fontSize: 18, fontWeight: "900", letterSpacing: 0.5, marginTop: 3, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, found: { marginTop: 10, padding: 11, borderRadius: 15, backgroundColor: "#EDF4FC", borderWidth: 1, borderColor: "#DCE1D7", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }, foundLabel: { color: "#293541", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 }, tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 }, tag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: "#EDF4FC", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 3, elevation: 2 }, tagText: { color: "#293541", fontSize: 10, fontWeight: "900" }, empty: { color: "#293541", fontSize: 10 }, result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#FFF0E8", borderWidth: 1, borderColor: "#DCE1D7", alignItems: "center" }, resultTitle: { color: "#293541", fontSize: 15, fontWeight: "900", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, resultCopy: { color: "#293541", fontSize: 10, textAlign: "center", marginTop: 4 }, finalScore: { color: "#98732c", fontSize: 32, fontWeight: "900", marginVertical: 12, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 }, action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 13, paddingHorizontal: 13, backgroundColor: "#ffbec8", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, actionText: { color: "#293541", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 }, actionArrow: { color: "#293541", fontSize: 20, fontWeight: "900" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#F0F5ED" },
+  header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", alignItems: "center", justifyContent: "center", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  exitText: { color: "#293541", fontSize: 23, lineHeight: 23 },
+  kicker: { color: "#D97706", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  title: { color: "#1E293B", fontSize: 13, fontWeight: "900", marginTop: 2 },
+  scoreContainer: { alignItems: "center", backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5, shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2 },
+  scoreLabel: { color: "#64748B", fontSize: 8, fontWeight: "900" },
+  scoreValue: { color: "#0F172A", fontSize: 16, fontWeight: "900" },
+  timer: { borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", position: "relative", overflow: "visible", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2 },
+  timerUrgent: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", shadowColor: "#EF4444", shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 },
+  timerText: { color: "#DC2626", fontSize: 13, fontWeight: "900" },
+  bonusText: { position: "absolute", top: -18, right: 0, color: "#10B981", fontSize: 11, fontWeight: "900" },
+  progress: { alignItems: "center", paddingVertical: 12 },
+  progressLabel: { color: "#D97706", fontSize: 20, fontWeight: "900", letterSpacing: 0.5 },
+  progressMeta: { color: "#475569", fontSize: 9, fontWeight: "800", marginTop: 3 },
+  board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#FFFFFF", borderWidth: 2, borderColor: "#CBD5E1", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 } as any,
+  boardUrgent: { borderColor: "#EF4444", shadowColor: "#EF4444", shadowOpacity: 0.35, shadowRadius: 10, elevation: 6 },
+  cellWrap: { padding: 5 },
+  cell: { flex: 1, borderRadius: 12, borderBottomWidth: 3.5, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", borderBottomColor: "#CBD5E1", alignItems: "center", justifyContent: "center", aspectRatio: 1, shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2 },
+  cellSelected: { backgroundColor: "#FEF3C7", borderColor: "#F59E0B", borderBottomColor: "#D97706", borderWidth: 2, shadowColor: "#F59E0B", shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
+  cellTail: { backgroundColor: "#FDE68A", borderColor: "#D97706", borderBottomColor: "#B45309", borderWidth: 2.5, shadowColor: "#D97706", shadowOpacity: 0.6, shadowRadius: 8, elevation: 6 },
+  cellInvalid: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", borderBottomColor: "#DC2626", borderWidth: 2, shadowColor: "#EF4444", shadowOpacity: 0.4, shadowRadius: 5, elevation: 4 },
+  cellAccepted: { backgroundColor: "#D1FAE5", borderColor: "#10B981", borderBottomColor: "#059669", borderWidth: 2, shadowColor: "#10B981", shadowOpacity: 0.5, shadowRadius: 6, elevation: 5 },
+  cellFound: { backgroundColor: "#F1F5F9", borderColor: "#CBD5E1", borderBottomColor: "#94A3B8" },
+  check: { position: "absolute", left: 4, bottom: 2, color: "#293541", fontSize: 9, fontWeight: "900" },
+  letter: { color: "#1E293B", fontSize: 25, fontWeight: "900" },
+  letterMedium: { fontSize: 21 },
+  letterSmall: { fontSize: 17 },
+  letterExtraSmall: { fontSize: 13 },
+  comboPill: { marginTop: 4, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, backgroundColor: "#FEF3C7", borderWidth: 1.5, borderColor: "#F59E0B", shadowColor: "#F59E0B", shadowOpacity: 0.25, shadowRadius: 4, elevation: 3 },
+  comboPillText: { color: "#B45309", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  order: { position: "absolute", top: 3, right: 4, color: "#B45309", fontSize: 8, fontWeight: "900" },
+  wordTray: { minHeight: 77, marginTop: 12, borderRadius: 20, backgroundColor: "#FFFFFF", borderWidth: 2, borderBottomWidth: 4, borderColor: "#E2E8F0", borderBottomColor: "#CBD5E1", alignItems: "center", justifyContent: "center", paddingHorizontal: 18, shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
+  trayInvalid: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", borderBottomColor: "#DC2626" },
+  trayAccepted: { backgroundColor: "#D1FAE5", borderColor: "#10B981", borderBottomColor: "#059669" },
+  trayLabel: { color: "#64748B", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  word: { color: "#0F172A", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginTop: 3 },
+  found: { marginTop: 10, padding: 11, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  foundLabel: { color: "#64748B", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 7 },
+  tag: { borderRadius: 9, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1 },
+  tagText: { color: "#1E293B", fontSize: 11, fontWeight: "900" },
+  empty: { color: "#64748B", fontSize: 10 },
+  result: { marginTop: 10, padding: 14, borderRadius: 18, backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#FCA5A5", alignItems: "center" },
+  resultTitle: { color: "#991B1B", fontSize: 16, fontWeight: "900" },
+  resultCopy: { color: "#7F1D1D", fontSize: 11, textAlign: "center", marginTop: 4 },
+  finalScore: { color: "#D97706", fontSize: 34, fontWeight: "900", marginVertical: 12 },
+  action: { height: 44, alignSelf: "stretch", marginTop: 12, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#FEE2E2", borderWidth: 1, borderColor: "#FCA5A5", flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  actionText: { color: "#991B1B", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
+  actionArrow: { color: "#991B1B", fontSize: 20, fontWeight: "900" },
   activeRouteCard: { marginTop: 10, borderRadius: 18, backgroundColor: "#F0F5ED", borderWidth: 1.5, borderColor: "#DCE1D7", padding: 14, shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   activeRouteHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   activeRouteTitle: { color: "#293541", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
@@ -1317,6 +1632,8 @@ const styles = StyleSheet.create({
   pauseSub: { color: "#293541", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 20 },
   resumeBtn: { width: "100%", height: 46, borderRadius: 14, backgroundColor: "#FFD66E", alignItems: "center", justifyContent: "center", marginBottom: 10 },
   resumeBtnText: { color: "#293541", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
+  pauseSoundBtn: { width: "100%", height: 42, borderRadius: 14, borderWidth: 1.5, borderColor: "#DCE1D7", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  pauseSoundBtnText: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.4 },
   pauseExitBtn: { width: "100%", height: 42, borderRadius: 14, borderWidth: 1.5, borderColor: "#DCE1D7", backgroundColor: "#F7F5EE", alignItems: "center", justifyContent: "center" },
   pauseExitBtnText: { color: "#293541", fontSize: 11, fontWeight: "800", letterSpacing: 0.4 },
 });

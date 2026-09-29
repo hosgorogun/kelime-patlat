@@ -49,9 +49,16 @@ type Room = {
   disconnectPlayerId?: string | null;
   disconnectExpiresAt?: number | null;
   rematchTimer?: NodeJS.Timeout | null;
+  botTurnTimer?: NodeJS.Timeout | null;
+  roundEndTimer?: NodeJS.Timeout | null;
+  botFillTimer?: NodeJS.Timeout | null;
   isCustom?: boolean;
   isRanked?: boolean;
 };
+
+export function cleanCode(code: string): string {
+  return code.trim().replace(/i/g, "I").replace(/ı/g, "I").replace(/İ/g, "I").toUpperCase();
+}
 
 type QueueEntry = {
   playerId: string;
@@ -210,6 +217,8 @@ function publishLeaderboard(io: Server) {
   io.emit("leaderboard:update", leaderboardSnapshot());
   void loadLeaderboard().then((persisted) => {
     if (persisted) io.emit("leaderboard:update", persisted);
+  }).catch((err) => {
+    console.error("[Leaderboard] Error loading persisted leaderboard:", err);
   });
 }
 
@@ -323,6 +332,8 @@ async function recordRoundForLeaderboard(io: Server, room: Room) {
     publishLeaderboard(io);
     void recordLeaderboardRounds(roundsToRecord).then((persisted) => {
       if (persisted) io.emit("leaderboard:update", persisted);
+    }).catch((err) => {
+      console.error("[Leaderboard] Error recording leaderboard rounds:", err);
     });
   }
 }
@@ -378,6 +389,14 @@ function finishRound(io: Server, room: Room) {
     room.disconnectTimer = null;
     room.disconnectPlayerId = null;
     room.disconnectExpiresAt = null;
+  }
+  if (room.botTurnTimer) {
+    clearTimeout(room.botTurnTimer);
+    room.botTurnTimer = null;
+  }
+  if (room.roundEndTimer) {
+    clearTimeout(room.roundEndTimer);
+    room.roundEndTimer = null;
   }
   const players = [room.host, room.guest].filter(Boolean);
   const hostScore = room.scores[room.host.id] ?? 0;
@@ -448,13 +467,20 @@ function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = fa
   const delay = botThinkDelayMs(room.size, word.length) + (isFirstTurn ? 2500 : 0);
   const selectTriggerDelay = Math.max(800, delay - 1200);
 
-  setTimeout(() => {
+  if (room.botTurnTimer) {
+    clearTimeout(room.botTurnTimer);
+    room.botTurnTimer = null;
+  }
+
+  room.botTurnTimer = setTimeout(() => {
+    room.botTurnTimer = null;
     const current = rooms.get(room.code);
     if (!current || current !== room || room.roundToken !== token || room.status !== "playing") return;
     const path = room.routes[word] || findWordPath(room.board, room.size, word);
     if (path) {
       room.botSelection = path;
-      setTimeout(() => {
+      room.botTurnTimer = setTimeout(() => {
+        room.botTurnTimer = null;
         const finalCurrent = rooms.get(room.code);
         if (!finalCurrent || finalCurrent !== room || room.roundToken !== token || room.status !== "playing") return;
         claimWord(io, room, bot.id, word, path);
@@ -467,15 +493,25 @@ function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = fa
 }
 
 function scheduleRoundEnd(io: Server, room: Room, token: number) {
+  if (room.roundEndTimer) {
+    clearTimeout(room.roundEndTimer);
+    room.roundEndTimer = null;
+  }
   const duration = getRoundDurationMs(room.size) + 3000;
-  setTimeout(() => {
+  room.roundEndTimer = setTimeout(() => {
+    room.roundEndTimer = null;
     if (rooms.get(room.code) === room && room.roundToken === token) finishRound(io, room);
   }, duration);
 }
 
 function scheduleBotFill(io: Server, room: Room) {
   const token = ++room.botFillToken;
-  setTimeout(() => {
+  if (room.botFillTimer) {
+    clearTimeout(room.botFillTimer);
+    room.botFillTimer = null;
+  }
+  room.botFillTimer = setTimeout(() => {
+    room.botFillTimer = null;
     if (rooms.get(room.code) !== room || room.botFillToken !== token || room.guest || room.status !== "waiting") return;
     const botPersona = getRandomBotPersona(room.host);
     room.guest = {
@@ -522,6 +558,18 @@ function destroyRoom(code: string, room?: Room | null) {
     if (target.rematchTimer) {
       clearTimeout(target.rematchTimer);
       target.rematchTimer = null;
+    }
+    if (target.botTurnTimer) {
+      clearTimeout(target.botTurnTimer);
+      target.botTurnTimer = null;
+    }
+    if (target.roundEndTimer) {
+      clearTimeout(target.roundEndTimer);
+      target.roundEndTimer = null;
+    }
+    if (target.botFillTimer) {
+      clearTimeout(target.botFillTimer);
+      target.botFillTimer = null;
     }
     target.roundToken = -1;
     target.botFillToken = -1;
@@ -967,7 +1015,7 @@ export function registerGameRooms(io: Server) {
     socket.on("room:join", (payload: { code: string; playerId: string; playerName: string; profile?: z.infer<typeof playerProfileSchema> }) => {
       if (!isValidPayload(roomJoinSchema, payload)) return fail(socket, "Geçersiz oda katılımı.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
-      const room = rooms.get(payload.code.trim().toUpperCase());
+      const room = rooms.get(cleanCode(payload.code));
       if (!room) return fail(socket, "Bu oda bulunamadı veya süresi doldu.");
       if (room.status === "playing" || room.status === "finished") return fail(socket, "Bu odada maç başladı; yeni oda kurun.");
       if (room.host.id === payload.playerId) {
@@ -997,7 +1045,7 @@ export function registerGameRooms(io: Server) {
     socket.on("room:reconnect", (payload: { code: string; playerId: string }) => {
       if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz yeniden bağlanma isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
-      const room = rooms.get(payload.code.trim().toUpperCase());
+      const room = rooms.get(cleanCode(payload.code));
       const player = room ? roomForPlayer(room, payload.playerId) : null;
       if (!room || !player) {
         socket.emit("room:error", { message: "Oda süresi doldu veya sonlandırıldı." });
@@ -1028,7 +1076,7 @@ export function registerGameRooms(io: Server) {
     socket.on("room:ready", (payload: { code: string; playerId: string }) => {
       if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz hazır olma isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
-      const room = rooms.get(payload.code.trim().toUpperCase());
+      const room = rooms.get(cleanCode(payload.code));
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || !room.guest) return fail(socket, "Önce iki oyuncunun da odaya katılması gerekiyor.");
       if (room.status !== "lobby") return;
@@ -1054,7 +1102,7 @@ export function registerGameRooms(io: Server) {
       socket.data.submitCount = (socket.data.submitCount || 0) + 1;
       if (socket.data.submitCount > 12) return;
 
-      const room = rooms.get(payload.code.trim().toUpperCase());
+      const room = rooms.get(cleanCode(payload.code));
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || room.status !== "playing") return;
       if (room.startedAt) {
@@ -1087,7 +1135,7 @@ export function registerGameRooms(io: Server) {
     socket.on("room:rematch", (payload: { code: string; playerId: string }) => {
       if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz rövanş isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
-      const room = rooms.get(payload.code.trim().toUpperCase());
+      const room = rooms.get(cleanCode(payload.code));
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || !room.guest || room.status !== "finished") return;
       if (player.rematch && room.guest.isBot && room.rematchTimer) return;
@@ -1120,7 +1168,7 @@ export function registerGameRooms(io: Server) {
     socket.on("room:leave", (payload: { code: string; playerId: string }) => {
       if (!isValidPayload(roomPlayerActionSchema, payload)) return fail(socket, "Geçersiz ayrılma isteği.");
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
-      const room = rooms.get(payload.code.trim().toUpperCase());
+      const room = rooms.get(cleanCode(payload.code));
       if (room && playerForSocket(room, socket, payload.playerId)) leaveRoom(io, socket, room, payload.playerId);
     });
 
@@ -1130,7 +1178,7 @@ export function registerGameRooms(io: Server) {
       const now = Date.now();
       if (socket.data.lastEmoteAt && now - socket.data.lastEmoteAt < 800) return;
       socket.data.lastEmoteAt = now;
-      const room = rooms.get(payload.code.trim().toUpperCase());
+      const room = rooms.get(cleanCode(payload.code));
       if (!room) return;
       const player = playerForSocket(room, socket, payload.playerId);
       if (!player) return;

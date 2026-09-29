@@ -1,6 +1,6 @@
 export function normalizeRoomCode(value: unknown) {
   if (typeof value !== "string") return null;
-  const code = value.trim().toUpperCase();
+  const code = value.trim().replace(/i/g, "I").replace(/ı/g, "I").replace(/İ/g, "I").toUpperCase();
   return /^[A-Z0-9]{5}$/.test(code) ? code : null;
 }
 

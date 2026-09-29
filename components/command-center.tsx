@@ -50,6 +50,15 @@ function InfoMini({ color, onPress }: { color: string; onPress: () => void }) {
   );
 }
 
+const PATLAT_TILES = [
+  { letter: "P", bg: "#FF6B8B", border: "#D84265", text: "#FFFFFF" },
+  { letter: "A", bg: "#FFB703", border: "#D48B00", text: "#293541" },
+  { letter: "T", bg: "#2EC4B6", border: "#1B9A8E", text: "#FFFFFF" },
+  { letter: "L", bg: "#3A86FF", border: "#1E65DE", text: "#FFFFFF" },
+  { letter: "A", bg: "#A06CD5", border: "#7B46B0", text: "#FFFFFF" },
+  { letter: "T", bg: "#FB8500", border: "#CF6200", text: "#FFFFFF" },
+];
+
 export function CommandCenter({
   playerName,
   progress,
@@ -213,7 +222,7 @@ export function CommandCenter({
     </Modal>
 
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={["#FFF0E8", "#FFF0E8"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hud, { borderColor: "#DCE1D7" }]}>
+      <LinearGradient colors={["#FFFFFF", "#FAF4EC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hud, { borderColor: "#DED6C7" }]}>
         <View style={styles.hudInner}>
           <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
             <View style={[styles.avatar, { borderColor: activeFrameColor, backgroundColor: activeAvatar.surface }]}>
@@ -352,11 +361,33 @@ export function CommandCenter({
 
       <OrnatePanel accent="sapphire" showJewels={false} style={{ marginTop: 12 }}>
         <View style={styles.heroHead}>
-          <Text style={[styles.deckEyebrow, { color: "#2a8fbc" }]}>BİR KELİMEYLE BAŞLA</Text>
-          <InfoMini color="#2a8fbc" onPress={() => setInfoModal("rotani")} />
+          <Text style={[styles.deckEyebrow, { color: "#176C97" }]}>BİR KELİMEYLE BAŞLA</Text>
+          <InfoMini color="#176C97" onPress={() => setInfoModal("rotani")} />
         </View>
         <JewelTitle>Azıcık mola. {"\n"}Bolca kelime.</JewelTitle>
-        <View accessible={false} style={{ flexDirection: "row", gap: 7, marginTop: 16, marginBottom: 4 }}>{["O", "Y", "N", "A"].map((letter, index) => <View key={letter} style={{ width: 42, height: 46, borderRadius: 12, borderWidth: 1, borderBottomWidth: 4, borderColor: "#D6B05B", backgroundColor: index === 3 ? "#FFAA99" : "#FFD66E", alignItems: "center", justifyContent: "center", transform: [{ rotate: index % 2 ? "5deg" : "-5deg" }] }}><Text style={{ color: palette.text, fontWeight: "900", fontSize: 24 }}>{letter}</Text></View>)}</View>
+        <View accessible={false} style={{ flexDirection: "row", gap: 6, marginTop: 16, marginBottom: 4 }}>
+          {PATLAT_TILES.map((tile, index) => (
+            <View
+              key={`${tile.letter}-${index}`}
+              style={{
+                width: 38,
+                height: 44,
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderBottomWidth: 4,
+                borderColor: tile.border,
+                backgroundColor: tile.bg,
+                alignItems: "center",
+                justifyContent: "center",
+                transform: [{ rotate: index % 2 ? "5deg" : "-5deg" }],
+              }}
+            >
+              <Text style={{ color: tile.text, fontWeight: "900", fontSize: 22 }}>
+                {tile.letter}
+              </Text>
+            </View>
+          ))}
+        </View>
         <Text style={styles.deckBody}>Harfleri birleştir. Kelimeleri bul. Kendi rekorunu geç.</Text>
 
         <Pressable
@@ -364,18 +395,18 @@ export function CommandCenter({
             triggerHapticSelection();
             onNavigate("league");
           }}
-          style={({ pressed }) => [styles.xpPanel, { borderColor: "#DCE1D7", backgroundColor: "#EDF4FC" }, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.xpPanel, { borderColor: "#BCD8F0", backgroundColor: "#FFFFFF" }, pressed && styles.pressed]}
         >
           <View style={styles.xpHead}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <Text style={[styles.xpLabel, { color: "#4e839d" }]}>LİG · {league.name}</Text>
-              <Text style={{ color: "#2a8fbc", fontSize: 10, fontWeight: "900" }}>➔</Text>
+              <Text style={[styles.xpLabel, { color: "#2C6B8D" }]}>LİG · {league.name}</Text>
+              <Text style={{ color: "#176C97", fontSize: 10, fontWeight: "900" }}>➔</Text>
             </View>
-            <Text style={[styles.xpValue, { color: "#2a8fbc" }]}>{league.currentTierPoints} / {league.targetTierPoints} LP</Text>
+            <Text style={[styles.xpValue, { color: "#16648B" }]}>{league.currentTierPoints} / {league.targetTierPoints} LP</Text>
           </View>
           <View style={styles.track}>
             <LinearGradient
-              colors={[league.color, "#abe3fc"]}
+              colors={[league.color, "#38BDF8"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[styles.trackFill, { width: `${Math.max(8, leagueProgressPercent)}%` }]}
@@ -413,14 +444,14 @@ export function CommandCenter({
           <Text style={styles.botPracticeArrow}>➔</Text>
         </Pressable>
 
-        <View style={[styles.signalFooter, { borderTopColor: "#DCE1D7" }]}>
+        <View style={[styles.signalFooter, { borderTopColor: "rgba(33, 106, 159, 0.2)" }]}>
           <View style={styles.footerCol}>
-            <Text style={[styles.signalLabel, { color: "#4e839d" }]}>ORT. TEMPO</Text>
+            <Text style={[styles.signalLabel, { color: "#466E85" }]}>ORT. TEMPO</Text>
             <Text style={styles.signalValue}>{progress.bestTempo || 0} <Text style={styles.signalUnit}>K/DK</Text></Text>
           </View>
-          <View style={[styles.signalRule, { backgroundColor: "rgba(56, 189, 248, 0.2)" }]} />
+          <View style={[styles.signalRule, { backgroundColor: "rgba(33, 106, 159, 0.25)" }]} />
           <Pressable onPress={() => onNavigate("league")} style={styles.footerCol}>
-            <Text style={[styles.signalLabel, { color: "#4e839d" }]}>GALİBİYET</Text>
+            <Text style={[styles.signalLabel, { color: "#466E85" }]}>GALİBİYET</Text>
             <Text style={styles.signalValue}>{progress.wins} <Text style={styles.signalUnit}>MAÇ</Text></Text>
           </Pressable>
         </View>
@@ -436,9 +467,9 @@ export function CommandCenter({
         style={({ pressed }) => [styles.mysteryStripWrap, pressed && styles.pressed]}
       >
         <LinearGradient
-          colors={["#EDF4FC", "#EDF4FC"]}
+          colors={["#EAF3FD", "#D8EAFB"]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.mysteryStrip}
         >
           <View style={styles.mysteryStripLeft}>
@@ -465,24 +496,29 @@ export function CommandCenter({
 
       <View style={styles.cardsRow}>
         <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
-          <LinearGradient colors={["#F0F5ED", "#F0F5ED"]} style={[styles.columnCard, { borderColor: dailyDone ? palette.bronzeDark : "#DCE1D7" }]}>
+          <LinearGradient
+            colors={dailyDone ? ["#F4F6F2", "#E5ECE2"] : ["#E7F7EE", "#D3F2E0"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={[styles.columnCard, { borderColor: dailyDone ? "#CBD6C6" : "#99DFC1" }]}
+          >
             <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
               <View style={styles.cardRibbonMint}>
                 <Text style={styles.cardRibbonText}>GÜNÜN BULMACASI</Text>
               </View>
               {onOpenModeInfo && (
                 <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
-                  <InfoMini color="#219d8d" onPress={() => onOpenModeInfo("daily")} />
+                  <InfoMini color="#147A57" onPress={() => onOpenModeInfo("daily")} />
                 </View>
               )}
             </View>
             <View style={{ alignItems: "center", marginVertical: 4 }}>
-              <View style={[styles.cardIconCircle, { borderColor: dailyDone ? palette.bronze : "#DCE1D7", backgroundColor: dailyDone ? palette.panelInner : "rgba(45, 212, 191, 0.16)" }]}>
-                <Text style={[styles.cardIconText, { color: dailyDone ? palette.muted : "#219d8d" }]}>{activeTheme.icon}</Text>
+              <View style={[styles.cardIconCircle, { borderColor: dailyDone ? "#CBD6C6" : "#7ED8AA", backgroundColor: dailyDone ? "#E6EDE3" : "#D0F4E1" }]}>
+                <Text style={[styles.cardIconText, { color: dailyDone ? palette.muted : "#127552" }]}>{activeTheme.icon}</Text>
               </View>
             </View>
             <Text style={[styles.cardTitle, { textAlign: "center" }]}>{dailyDone ? "TAMAMLANDI" : (daily.title || "GÜNÜN ROTASI").toLocaleUpperCase("tr-TR")}</Text>
-            <Text style={[styles.cardBody, { textAlign: "center" }]}>{dailyDone ? "Günün rotasını tekrar incele." : "Kelime paketini seç ve rotayı başlat!"}</Text>
+            <Text style={[styles.cardBodyMint, { textAlign: "center" }]}>{dailyDone ? "Günün rotasını tekrar incele." : "Kelime paketini seç ve rotayı başlat!"}</Text>
             <View style={{ marginTop: "auto", paddingTop: 6, width: "100%" }}>
               <GameButton
                 label={dailyDone ? "İNCELE" : "OYNA ▶"}
@@ -495,24 +531,29 @@ export function CommandCenter({
         </Pressable>
 
         <Pressable onPress={() => onNavigate("arcade")} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
-          <LinearGradient colors={["#FFF0E8", "#FFF0E8"]} style={[styles.columnCard, { borderColor: "#DCE1D7" }]}>
+          <LinearGradient
+            colors={["#FFF4EA", "#FFE2CC"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={[styles.columnCard, { borderColor: "#F7BE93" }]}
+          >
             <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
               <View style={styles.cardRibbonAmber}>
-                <Text style={styles.cardRibbonText}>REKOR YARIŞI</Text>
+                <Text style={styles.cardRibbonTextAmber}>REKOR YARIŞI</Text>
               </View>
               {onOpenModeInfo && (
                 <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
-                  <InfoMini color="#b1672a" onPress={() => onOpenModeInfo("arcade")} />
+                  <InfoMini color="#B25610" onPress={() => onOpenModeInfo("arcade")} />
                 </View>
               )}
             </View>
             <View style={{ alignItems: "center", marginVertical: 4 }}>
-              <View style={[styles.cardIconCircle, { borderColor: "#DCE1D7", backgroundColor: "rgba(251, 146, 60, 0.16)" }]}>
-                <Text style={[styles.cardIconText, { color: "#b1672a" }]}>⚡</Text>
+              <View style={[styles.cardIconCircle, { borderColor: "#F4AF79", backgroundColor: "#FFE0C0" }]}>
+                <Text style={[styles.cardIconText, { color: "#B25610" }]}>⚡</Text>
               </View>
             </View>
             <Text style={[styles.cardTitle, { textAlign: "center" }]}>SKOR HÜCUMU</Text>
-            <Text style={[styles.cardBody, { textAlign: "center" }]}>Süre dolmadan en çok kelimeyi bağla ve rekor kır!</Text>
+            <Text style={[styles.cardBodyAmber, { textAlign: "center" }]}>Süre dolmadan en çok kelimeyi bağla ve rekor kır!</Text>
             <View style={{ marginTop: "auto", paddingTop: 6, width: "100%" }}>
               <GameButton
                 label="YARIŞ ▶"
@@ -532,17 +573,17 @@ export function CommandCenter({
             <GameIcon source={ICONS.trophy} size={42} glow="#3EE8B5" />
             <View style={styles.soloMetaCol}>
               <View style={styles.soloEyebrowRow}>
-                <Text style={[styles.soloEyebrowText, { color: "#2a9c7a" }]}>
+                <Text style={[styles.soloEyebrowText, { color: "#117753" }]}>
                   {unclaimedMilestonesCount > 0 ? `🎁 ${unclaimedMilestonesCount} SANDIK BEKLİYOR` : "100 SEVİYE"}
                 </Text>
               </View>
               <Text numberOfLines={1} style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
-              <Text numberOfLines={1} style={styles.soloDesc}>
+              <Text numberOfLines={1} style={styles.soloDescEmerald}>
                 Her bölümde yeni kelimeler
               </Text>
             </View>
             {onOpenModeInfo && (
-              <InfoMini color="#2a9c7a" onPress={() => onOpenModeInfo("solo")} />
+              <InfoMini color="#117753" onPress={() => onOpenModeInfo("solo")} />
             )}
             <GameButton label="BAŞLA ▶" size="sm" variant="emerald" onPress={onSolo} style={styles.soloActionBtn} />
           </OrnatePanel>
@@ -553,17 +594,17 @@ export function CommandCenter({
             <GameIcon emoji="🗞️" size={42} glow="#FB7185" />
             <View style={styles.soloMetaCol}>
               <View style={styles.soloEyebrowRow}>
-                <Text style={[styles.soloEyebrowText, { color: "#bd5564" }]}>
+                <Text style={[styles.soloEyebrowText, { color: "#B73F50" }]}>
                   20 BÖLÜM
                 </Text>
               </View>
               <Text numberOfLines={1} style={styles.soloHeading}>GAZETE BULMACASI</Text>
-              <Text numberOfLines={1} style={styles.soloDesc}>
+              <Text numberOfLines={1} style={styles.soloDescRuby}>
                 Kare bulmaca ipuçlarını çöz
               </Text>
             </View>
             {onOpenModeInfo && (
-              <InfoMini color="#bd5564" onPress={() => onOpenModeInfo("vintage")} />
+              <InfoMini color="#B73F50" onPress={() => onOpenModeInfo("vintage")} />
             )}
             <GameButton label="ÇÖZ ▶" size="sm" variant="ruby" onPress={() => onNavigate("vintage")} style={styles.soloActionBtn} />
           </OrnatePanel>
@@ -596,11 +637,13 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 170 },
   hud: {
     borderRadius: 22,
-    borderWidth: 2,
-    borderColor: palette.bronzeBorder,
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: "#DED6C7",
     marginBottom: 8,
     overflow: "hidden",
     shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
@@ -614,7 +657,7 @@ const styles = StyleSheet.create({
   },
   identity: { flexDirection: "row", gap: 8, alignItems: "center", flex: 1, minWidth: 0 },
   identityMeta: { flex: 1, minWidth: 0 },
-  avatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, justifyContent: "center", alignItems: "center", overflow: "hidden" },
+  avatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, justifyContent: "center", alignItems: "center", overflow: "hidden", backgroundColor: "#FFFFFF" },
   avatarImage: { width: "100%", height: "100%", borderRadius: 18 },
   avatarText: { color: palette.text, fontWeight: "900", fontSize: 16 },
   name: { color: palette.text, fontSize: 15, fontWeight: "800", letterSpacing: 0.2 },
@@ -636,38 +679,40 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "rgba(184, 134, 58, 0.2)",
+    backgroundColor: "#FFF4DD",
     borderWidth: 1.5,
-    borderColor: palette.bronzeBorder,
+    borderBottomWidth: 2.5,
+    borderColor: "#E5CCA0",
     alignItems: "center",
     justifyContent: "center",
   },
   topIconText: { fontSize: 13 },
   topIconBtnGlow: {
-    backgroundColor: "#FFF2C8",
-    borderColor: "#F0C855",
+    backgroundColor: "#FFE89E",
+    borderColor: "#E5B02B",
     shadowColor: "#293541",
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   topNotificationDot: {
     position: "absolute",
     top: -2,
     right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#f8b0b0",
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: "#E53935",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderColor: "#FFFFFF",
   },
   dailyMiniPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF9E6",
+    backgroundColor: "#FFF5D6",
     borderWidth: 1.5,
-    borderColor: "#FDE68A",
+    borderBottomWidth: 3,
+    borderColor: "#F3D267",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -675,19 +720,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     gap: 8,
     shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
   },
   dailyMiniIcon: { fontSize: 15 },
-  dailyMiniText: { flex: 1, color: "#877647", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
-  dailyMiniAction: { color: "#98732c", fontSize: 11, fontWeight: "900" },
+  dailyMiniText: { flex: 1, color: "#7A5910", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
+  dailyMiniAction: { color: "#925D00", fontSize: 11, fontWeight: "900" },
   missionsMiniPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E6F9F0",
+    backgroundColor: "#DEF7EC",
     borderWidth: 1.5,
-    borderColor: "#A7F3D0",
+    borderBottomWidth: 3,
+    borderColor: "#88DFB3",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -695,22 +742,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     gap: 8,
     shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
   },
   missionsMiniIcon: { fontSize: 15 },
-  missionsMiniText: { flex: 1, color: "#5b8571", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
-  missionsMiniAction: { color: "#2a9c7a", fontSize: 11, fontWeight: "900" },
+  missionsMiniText: { flex: 1, color: "#166544", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
+  missionsMiniAction: { color: "#0E7A4A", fontSize: 11, fontWeight: "900" },
   livesHeaderPill: {
     height: 30,
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: "rgba(255, 107, 129, 0.16)",
+    backgroundColor: "#FFEBEF",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-    paddingHorizontal: 7,
+    borderBottomWidth: 2.5,
+    borderColor: "#F6BAC3",
+    paddingHorizontal: 8,
     borderRadius: 15,
   },
   livesHeaderIcon: { width: 16, height: 16 },
@@ -760,13 +809,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(255, 248, 231, 0.06)",
+    backgroundColor: "#F8F5EE",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 12,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+    borderWidth: 1.5,
+    borderColor: "#DCD5C6",
   },
   modalCountLabel: { color: palette.mutedGold, fontSize: 9.5, fontWeight: "800", letterSpacing: 0.5 },
   modalCountValue: { fontSize: 13, fontWeight: "900" },
@@ -779,11 +828,11 @@ const styles = StyleSheet.create({
   },
   modalTipBox: {
     width: "100%",
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F4F7F2",
     borderRadius: 14,
     padding: 12,
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+    borderWidth: 1.5,
+    borderColor: "#D5DED0",
     marginBottom: 16,
   },
   modalTipTitle: {
@@ -807,21 +856,35 @@ const styles = StyleSheet.create({
   orbit: { position: "absolute", right: -18, top: -22, width: 120, height: 120, borderRadius: 60, borderWidth: 1, borderColor: palette.bronze, justifyContent: "flex-start", alignItems: "center", zIndex: 2 },
   orbitNode: { width: 12, height: 12, borderRadius: 6, marginTop: -6, backgroundColor: palette.gold, shadowColor: palette.gold, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   deckEyebrow: { color: palette.gold, fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
-  deckBody: { color: palette.mutedGold, fontSize: 14, lineHeight: 21, marginTop: 10, maxWidth: 300 },
-  xpPanel: { marginTop: 12, borderRadius: 12, backgroundColor: "#F7F5EE", borderWidth: 1, borderColor: palette.bronzeBorder, padding: 9 },
+  deckBody: { color: "#475D6D", fontSize: 14, lineHeight: 21, marginTop: 10, maxWidth: 300, fontWeight: "600" },
+  xpPanel: {
+    marginTop: 12,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: "#BCD8F0",
+    padding: 10,
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
   xpHead: { flexDirection: "row", justifyContent: "space-between" },
-  xpLabel: { color: palette.mutedGold, fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
-  xpValue: { color: palette.text, fontSize: 8, fontWeight: "900" },
-  track: { height: 7, marginTop: 6, borderRadius: 4, overflow: "hidden", backgroundColor: "#F0F5ED" },
+  xpLabel: { color: "#2C6B8D", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  xpValue: { color: "#16648B", fontSize: 9, fontWeight: "900" },
+  track: { height: 8, marginTop: 6, borderRadius: 4, overflow: "hidden", backgroundColor: "#D8EBF9" },
   trackFill: { height: "100%", borderRadius: 4 },
   heroActions: { flexDirection: "column", gap: 8, marginTop: 14 },
   botPracticeBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F0F8FF",
+    backgroundColor: "#E2F0FD",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderBottomWidth: 2.5,
+    borderColor: "#B4D5F2",
     borderRadius: 14,
     paddingVertical: 9,
     paddingHorizontal: 12,
@@ -829,11 +892,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   botPracticeIcon: { fontSize: 14 },
-  botPracticeText: { color: "#4e839d", fontSize: 10.5, fontWeight: "900", letterSpacing: 0.5 },
-  botPracticeArrow: { color: "#2a8fbc", fontSize: 11, fontWeight: "900" },
+  botPracticeText: { color: "#1D6B94", fontSize: 10.5, fontWeight: "900", letterSpacing: 0.5 },
+  botPracticeArrow: { color: "#18709E", fontSize: 11, fontWeight: "900" },
   signalFooter: { marginTop: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", width: "100%" },
   footerCol: { flex: 1, alignItems: "center" },
-  signalLabel: { color: palette.muted, fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  signalLabel: { color: "#466E85", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
   signalValue: { color: palette.text, fontSize: 14, fontWeight: "900", marginTop: 2 },
   signalUnit: { color: palette.gold, fontSize: 8 },
   signalRule: { width: 1, height: 18, backgroundColor: palette.bronzeBorder },
@@ -887,10 +950,11 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 160,
     borderRadius: 18,
-    borderWidth: 2,
+    borderWidth: 1.5,
+    borderBottomWidth: 3.5,
     padding: 10,
     shadowColor: "#293541",
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
@@ -900,24 +964,30 @@ const styles = StyleSheet.create({
   cardRibbonWrap: { width: "100%", alignItems: "center" },
   cardRibbonMint: {
     alignSelf: "center",
-    backgroundColor: "rgba(45, 212, 191, 0.2)",
+    backgroundColor: "#C5F3DB",
     borderWidth: 1,
-    borderColor: "#DCE1D7",
+    borderColor: "#78D9A7",
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 7,
   },
   cardRibbonAmber: {
     alignSelf: "center",
-    backgroundColor: "rgba(251, 146, 60, 0.2)",
+    backgroundColor: "#FFE1C4",
     borderWidth: 1,
-    borderColor: "#DCE1D7",
+    borderColor: "#F4AF79",
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 7,
   },
   cardRibbonText: {
-    color: "#293541",
+    color: "#0F6144",
+    fontSize: 7.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  cardRibbonTextAmber: {
+    color: "#9A4B0A",
     fontSize: 7.5,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -956,6 +1026,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 0,
   },
   cardBody: { color: palette.muted, fontSize: 9, lineHeight: 12, marginTop: 3 },
+  cardBodyMint: { color: "#3D584D", fontSize: 9, lineHeight: 12, marginTop: 3, fontWeight: "600" },
+  cardBodyAmber: { color: "#695040", fontSize: 9, lineHeight: 12, marginTop: 3, fontWeight: "600" },
 
   soloHorizontalSkin: {
     flexDirection: "row",
@@ -990,6 +1062,20 @@ const styles = StyleSheet.create({
   },
   soloDesc: {
     color: palette.muted,
+    fontSize: 9.5,
+    lineHeight: 13,
+    marginTop: 1,
+    fontWeight: "600",
+  },
+  soloDescEmerald: {
+    color: "#3D5949",
+    fontSize: 9.5,
+    lineHeight: 13,
+    marginTop: 1,
+    fontWeight: "600",
+  },
+  soloDescRuby: {
+    color: "#68484E",
     fontSize: 9.5,
     lineHeight: 13,
     marginTop: 1,
@@ -1061,22 +1147,24 @@ const styles = StyleSheet.create({
   streakWarningPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEE2E2",
+    backgroundColor: "#FEEBEB",
     borderWidth: 1.5,
-    borderColor: "#FECACA",
+    borderBottomWidth: 3,
+    borderColor: "#FCA5A5",
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginTop: 10,
     gap: 8,
     shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
   },
   streakWarningIcon: { fontSize: 14 },
-  streakWarningText: { flex: 1, color: "#293541", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.3 },
-  streakWarningArrow: { color: "#ed4343", fontSize: 13, fontWeight: "900" },
+  streakWarningText: { flex: 1, color: "#8E1E2E", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.3 },
+  streakWarningArrow: { color: "#BA354A", fontSize: 13, fontWeight: "900" },
 
   milestoneBadgePill: {
     backgroundColor: palette.gold,
@@ -1098,14 +1186,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 9,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderBottomWidth: 3,
+    borderColor: "#B5D5F4",
     shadowColor: "#293541",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -1117,12 +1206,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   mysteryIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "rgba(56, 189, 248, 0.16)",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#CFE4FA",
+    borderWidth: 1.5,
+    borderColor: "#A3CAF2",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -1143,26 +1232,26 @@ const styles = StyleSheet.create({
   mysteryStripEyebrow: {
     fontSize: 8,
     fontWeight: "900",
-    color: "#2a8fbc",
+    color: "#156F9F",
     letterSpacing: 0.5,
   },
   mysteryStripDot: {
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: "#abe3fc",
+    backgroundColor: "#50B4EA",
   },
   mysteryStripReward: {
     fontSize: 8.5,
     fontWeight: "900",
-    color: palette.gold,
+    color: "#9C5F00",
     letterSpacing: 0.4,
   },
   mysteryStripDef: {
     fontSize: 11.5,
     fontStyle: "italic",
     fontWeight: "700",
-    color: palette.text,
+    color: "#1F2F3D",
     lineHeight: 16,
     marginTop: 2,
   },
@@ -1170,9 +1259,9 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+    backgroundColor: "#CFE4FA",
+    borderWidth: 1.5,
+    borderColor: "#A3CAF2",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 8,
@@ -1180,7 +1269,7 @@ const styles = StyleSheet.create({
   },
   mysteryStripInfoIcon: {
     fontSize: 12,
-    color: "#2a8fbc",
+    color: "#156F9F",
     fontWeight: "900",
   },
 

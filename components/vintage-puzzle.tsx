@@ -22,6 +22,7 @@ import { generatePuzzle, PuzzleResult, PlacedWord } from "@/shared/puzzle-genera
 import { MAX_LIVES } from "@/shared/progression";
 import { ModernAlertModal } from "./modern-alert-modal";
 import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
+import { isEqualTr, normalizeTrUpper } from "@/shared/tr-utils";
 
 const TR_ALPHABET = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
 const VINTAGE_STORAGE_KEY = "@kelime_patlat:vintage_puzzle_progress";
@@ -91,6 +92,8 @@ const GridCellItem = React.memo(
       );
     }
 
+    const isCenterCellCompleted = isCenterArea && isCellCompleted;
+
     return (
       <Pressable
         onPress={() => onPress(row, col)}
@@ -99,9 +102,9 @@ const GridCellItem = React.memo(
           { width: cellSize, height: cellSize },
           isTargetWordCell && styles.gridCellTargetWord,
           isCenterArea && !char && styles.gridCellCenterArea,
-          isCenterWordPlaced && isCellCompleted && styles.gridCellCenterWord,
-          isCellCompleted && !isCenterWordPlaced && styles.gridCellCompleted,
           char && !isCellCompleted && styles.gridCellDraft,
+          isCellCompleted && styles.gridCellCompleted,
+          isCenterCellCompleted && styles.gridCellCenterWord,
           isSelected && styles.gridCellSelected,
           isErrorCell && styles.gridCellError,
           pressed && { opacity: 0.8 },
@@ -237,6 +240,7 @@ export function VintagePuzzle({
 
   const gridContainerRef = useRef<View>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const solvedPulseAnim = useRef(new Animated.Value(1)).current;
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isClearingErrorRef = useRef(false);
@@ -456,7 +460,8 @@ export function VintagePuzzle({
         for (let i = 0; i < w.length; i++) {
           const r = w.direction === "horizontal" ? w.row : w.row + i;
           const c = w.direction === "horizontal" ? w.col + i : w.col;
-          if (currentBoard[r]?.[c] !== w.answer[i]) {
+          const cellChar = currentBoard[r]?.[c];
+          if (!cellChar || !isEqualTr(cellChar, w.answer[i])) {
             isFullMatch = false;
             break;
           }
@@ -468,42 +473,57 @@ export function VintagePuzzle({
         }
       });
 
-      if (newlySolvedCount > 0) {
-        triggerHapticSuccess();
-        playSuccessSound();
-        setSolvedWordIds(newSolvedIds);
-        const scoreGain = newlySolvedCount * 100;
-        const nextScore = score + scoreGain;
-        setScore(nextScore);
+        if (newlySolvedCount > 0) {
+          triggerHapticSuccess();
+          playSuccessSound();
+          setSolvedWordIds(newSolvedIds);
+          const scoreGain = newlySolvedCount * 100;
+          const nextScore = score + scoreGain;
+          setScore(nextScore);
 
-        if (newSolvedIds.size >= puzzle.words.length) {
-          triggerHapticLongWord();
-          setIsLevelComplete(true);
-          const isFirstTime = !completedLevels.has(levelIndex);
-          const baseXP = levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100;
-          const xpEarned = isFirstTime ? baseXP : Math.max(3, Math.floor(baseXP / 10));
-          onRewardXp?.(xpEarned, levelIndex, puzzle.words.length, puzzle.words.map((w) => w.answer));
+          // Tahtaya şık yeşil patlama/darbe (pulse) animasyonu uygula
+          Animated.sequence([
+            Animated.timing(solvedPulseAnim, { toValue: 1.05, duration: 180, useNativeDriver: true }),
+            Animated.timing(solvedPulseAnim, { toValue: 0.98, duration: 120, useNativeDriver: true }),
+            Animated.timing(solvedPulseAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+          ]).start();
 
-          const nextCompleted = new Set([...completedLevels, levelIndex]);
-          const nextMax = Math.min(20, Math.max(maxUnlockedLevel, levelIndex + 1));
-          setCompletedLevels(nextCompleted);
-          setMaxUnlockedLevel(nextMax);
+          // Kelime tamamlandığında yeşil bildirim toast'ı göster
+          const justSolvedWord = puzzle.words.find((w) => newSolvedIds.has(w.id) && !solvedWordIds.has(w.id));
+          if (justSolvedWord) {
+            setErrorMessage(`✓ TEBRİKLER! "${justSolvedWord.answer}" KELİMESİ ÇÖZÜLDÜ! 🎉`);
+            if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+            errorTimeoutRef.current = setTimeout(() => setErrorMessage(null), 1800);
+          }
 
-          persistProgress(nextMax, nextCompleted, nextScore);
-          return;
-        } else {
-          // Çözülen kelimeden sonra çözülmemiş sıradaki kelimeye otomatik geç
-          const nextUnsolved = puzzle.words.find((w) => !newSolvedIds.has(w.id));
-          if (nextUnsolved) {
-            setSelectedWordId(nextUnsolved.id);
-            setPlacementDirection(nextUnsolved.direction);
-            const nextEmpty = nextUnsolved.cells.find(([r, c]) => currentBoard[r]?.[c] === null);
-            if (nextEmpty) {
-              setSelectedCell(nextEmpty);
+          if (newSolvedIds.size >= puzzle.words.length) {
+            triggerHapticLongWord();
+            setIsLevelComplete(true);
+            const isFirstTime = !completedLevels.has(levelIndex);
+            const baseXP = levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100;
+            const xpEarned = isFirstTime ? baseXP : Math.max(3, Math.floor(baseXP / 10));
+            onRewardXp?.(xpEarned, levelIndex, puzzle.words.length, puzzle.words.map((w) => w.answer));
+
+            const nextCompleted = new Set([...completedLevels, levelIndex]);
+            const nextMax = Math.min(20, Math.max(maxUnlockedLevel, levelIndex + 1));
+            setCompletedLevels(nextCompleted);
+            setMaxUnlockedLevel(nextMax);
+
+            persistProgress(nextMax, nextCompleted, nextScore);
+            return;
+          } else {
+            // Çözülen kelimeden sonra çözülmemiş sıradaki kelimeye otomatik yumuşak geçiş yap
+            const nextUnsolved = puzzle.words.find((w) => !newSolvedIds.has(w.id));
+            if (nextUnsolved) {
+              setSelectedWordId(nextUnsolved.id);
+              setPlacementDirection(nextUnsolved.direction);
+              const nextEmpty = nextUnsolved.cells.find(([r, c]) => currentBoard[r]?.[c] === null);
+              if (nextEmpty) {
+                setSelectedCell(nextEmpty);
+              }
             }
           }
         }
-      }
 
       // Kelime boyutu tamamlandığında doğru değilse: Kırmızı yanıp sönme & otomatik geri alma
       const wrongFullWords = puzzle.words.filter((w) => {
@@ -1043,17 +1063,24 @@ export function VintagePuzzle({
           <View style={styles.paperTextureOverlay} />
 
           {errorMessage && (
-            <Animated.View style={[styles.errorBanner, { transform: [{ translateX: shakeAnim }] }]}>
-              <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+            <Animated.View style={[
+              styles.errorBanner,
+              errorMessage.startsWith("✓") && styles.successBanner,
+              { transform: [{ translateX: errorMessage.startsWith("✓") ? 0 : shakeAnim }] }
+            ]}>
+              <Text style={[
+                styles.errorText,
+                errorMessage.startsWith("✓") && styles.successText
+              ]}>{errorMessage}</Text>
             </Animated.View>
           )}
 
           {/* Aktif Seçili İpucu Kartı (Sabit Yükseklikte Temiz Görünüm) */}
           {activeWordItem ? (
-            <View style={styles.activeClueBannerCard}>
+            <View style={[styles.activeClueBannerCard, solvedWordIds.has(activeWordItem.id) && styles.activeClueBannerCardSolved]}>
               <View style={styles.activeClueBadgeRow}>
-                <Text style={styles.activeClueBadgeTag}>
-                  {activeWordItem.isCenter ? "⭐ ANKOR: MERKEZ KELİME" : `İPUCU (${completedCount}/${totalCount})`}
+                <Text style={[styles.activeClueBadgeTag, solvedWordIds.has(activeWordItem.id) && styles.activeClueBadgeTagSolved]}>
+                  {solvedWordIds.has(activeWordItem.id) ? `✓ ÇÖZÜLDÜ: ${activeWordItem.answer}` : (activeWordItem.isCenter ? "⭐ ANKOR: MERKEZ KELİME" : `İPUCU (${completedCount}/${totalCount})`)}
                 </Text>
                 <Text style={styles.activeClueLengthText}>{activeWordItem.length} HARF</Text>
                 <View style={styles.dirRowCompactInline}>
@@ -1111,7 +1138,7 @@ export function VintagePuzzle({
           </ScrollView>
 
           {/* 10×10 OYUN TAHTASI */}
-          <Animated.View ref={gridContainerRef} style={[styles.gridContainer, { transform: [{ translateX: shakeAnim }] }]}>
+          <Animated.View ref={gridContainerRef} style={[styles.gridContainer, { transform: [{ translateX: shakeAnim }, { scale: solvedPulseAnim }] }]}>
             {playerBoard.map((row, rIdx) => (
               <View key={rIdx} style={styles.gridRow}>
                 {row.map((char, cIdx) => {
@@ -1432,16 +1459,23 @@ const styles = StyleSheet.create({
   errorBanner: {
     backgroundColor: "#fff3f3",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderColor: "#fca5a5",
     padding: 6,
     borderRadius: 10,
     marginBottom: 6,
+  },
+  successBanner: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#86efac",
   },
   errorText: {
     color: "#991b1b",
     fontSize: 11,
     fontWeight: "800",
     textAlign: "center",
+  },
+  successText: {
+    color: "#166534",
   },
   centerWordBannerCard: {
     backgroundColor: "#fffae7",
@@ -1496,6 +1530,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  activeClueBannerCardSolved: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#10b981",
+  },
   activeClueBannerCardEmpty: {
     backgroundColor: "#f5f1e8",
     borderWidth: 1,
@@ -1527,6 +1565,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
+  },
+  activeClueBadgeTagSolved: {
+    backgroundColor: "#10b981",
+    color: "#ffffff",
   },
   activeClueLengthText: {
     color: "#b45309",
@@ -1665,25 +1707,30 @@ const styles = StyleSheet.create({
     borderColor: "#DCE1D7",
   },
   gridCellCenterWord: {
-    backgroundColor: "#feedb4",
-    borderColor: "#DCE1D7",
-    shadowColor: "#293541",
-    shadowOpacity: 0.08,
+    backgroundColor: "#fef08a",
+    borderColor: "#eab308",
+    borderWidth: 2,
+    shadowColor: "#ca8a04",
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   gridCellPlaced: {
     backgroundColor: "#c2f5e1",
-    borderColor: "#DCE1D7",
+    borderColor: "#10b981",
   },
   gridCellDraft: {
     backgroundColor: "#ffffff",
-    borderColor: "#DCE1D7",
+    borderColor: "#64748b",
   },
   gridCellCompleted: {
-    backgroundColor: "#dafaeb",
-    borderColor: "#DCE1D7",
+    backgroundColor: "#d1fae5",
+    borderColor: "#10b981",
     borderWidth: 2,
+    shadowColor: "#059669",
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
   },
   gridCellTargetWord: {
     backgroundColor: "#fffdf7",

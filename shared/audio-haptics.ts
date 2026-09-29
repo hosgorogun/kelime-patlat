@@ -1,10 +1,10 @@
 import { Platform } from "react-native";
 import * as Haptics from "expo-haptics";
-import { gameSfx, setSfxEnabled } from "../lib/game-sfx";
-export { gameSfx, setSfxEnabled };
+import { gameSfx, setSfxEnabled, getSfxEnabled } from "../lib/game-sfx";
+export { gameSfx, setSfxEnabled, getSfxEnabled };
 
 export async function initAudio() {
-  // Audio uses bundled local audio assets via gameSfx
+  // Audio uses bundled local audio assets and Web Audio synth via gameSfx
 }
 
 import { getHapticsEnabled, setHapticsEnabled } from "../lib/haptics";
@@ -31,15 +31,23 @@ export function triggerHapticLongWord() {
   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined);
 }
 
-// Sound effects using local bundled assets for 100% offline stability & zero latency
-export function playSelectionNote(_index?: number) {
-  gameSfx.select();
+// Sound effects: Musical progression & tiered feedback
+export function playSelectionNote(index: number = 0) {
+  gameSfx.select(index);
 }
 
-export function playSuccessSound() {
-  gameSfx.accepted();
+export function playSuccessSound(wordLength: number = 4) {
+  gameSfx.accepted(wordLength);
 }
 
 export function playErrorSound() {
   gameSfx.rejected();
+}
+
+export function playComboSound(streak: number = 2) {
+  gameSfx.combo(streak);
+}
+
+export function playTimerTick(urgent: boolean = false) {
+  gameSfx.tick(urgent);
 }

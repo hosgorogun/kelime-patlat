@@ -8,7 +8,6 @@ export type ChipEquipmentItem = {
   rewardType: "radar" | "shield" | "xp" | "lives";
 };
 
-export { STORE_ASSETS } from "../components/store-assets";
 
 export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
   {
