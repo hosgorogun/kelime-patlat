@@ -23,6 +23,7 @@ import { triggerHapticSelection, triggerHapticSuccess } from "../shared/audio-ha
 import { haptics } from "../lib/haptics";
 import { gameSfx } from "../lib/game-sfx";
 import { socialManager } from "../shared/social";
+import { FloatingCombo } from "./game-boosters";
 import type { BoardSize, RoomSnapshot } from "../shared/game";
 import type { PlayerProgress } from "../shared/progression";
 import type { ToastData } from "./global-game-toast";
@@ -118,6 +119,7 @@ export interface PvpMatchScreenProps {
   celebrationModalElement?: React.ReactNode;
   onLiveGameExitPress: () => void;
   gameScrollRef: React.RefObject<ScrollView | null>;
+  pvpCombo?: number;
 }
 
 export function PvpMatchScreen({
@@ -131,6 +133,7 @@ export function PvpMatchScreen({
   isFinalPush,
   myMultiplier,
   myWordCount,
+  pvpCombo = 0,
   opponentWordCount,
   myScore,
   opponentScore,
@@ -250,6 +253,7 @@ export function PvpMatchScreen({
   return (
     <ScreenContainer style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20 }}>
       <StatusBar style="dark" />
+      <FloatingCombo comboCount={pvpCombo} />
       <ScrollView
         ref={gameScrollRef}
         contentContainerStyle={styles.gameScroll}

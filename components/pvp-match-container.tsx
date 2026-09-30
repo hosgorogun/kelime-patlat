@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { ScrollView } from "react-native";
 import { PvpMatchScreen } from "./pvp-match-screen";
 import {
@@ -116,6 +116,23 @@ export function PvpMatchContainer({
   const myScore = room.scores[playerId] ?? 0;
   const opponentScore = opponent ? room.scores[opponent.id] ?? 0 : 0;
   const myWordCount = room.foundWords.filter((entry) => entry.playerId === playerId).length ?? 0;
+  const [pvpCombo, setPvpCombo] = useState(0);
+  const lastFoundTimeRef = useRef<number>(0);
+  const prevWordCountRef = useRef(myWordCount);
+
+  useEffect(() => {
+    if (myWordCount > prevWordCountRef.current) {
+      const now = Date.now();
+      const diff = now - lastFoundTimeRef.current;
+      lastFoundTimeRef.current = now;
+      if (diff < 8000 && lastFoundTimeRef.current > 0) {
+        setPvpCombo((c) => Math.min(5, c + 1));
+      } else {
+        setPvpCombo(1);
+      }
+    }
+    prevWordCountRef.current = myWordCount;
+  }, [myWordCount]);
   const opponentWordCount = opponent ? room.foundWords.filter((entry) => entry.playerId !== playerId).length ?? 0 : 0;
   const myLastFoundWord = room.foundWords.filter((entry) => entry.playerId === playerId).at(-1)?.word ?? "";
   const myMultiplier = wordScoreMultiplier(myLastFoundWord.length);
@@ -162,6 +179,7 @@ export function PvpMatchContainer({
       isFinalPush={isFinalPush}
       myMultiplier={myMultiplier}
       myWordCount={myWordCount}
+      pvpCombo={pvpCombo}
       opponentWordCount={opponentWordCount}
       myScore={myScore}
       opponentScore={opponentScore}

@@ -22,6 +22,7 @@ import { useProgressionStats } from "../hooks/use-progression-stats";
 import { useEngagementLifecycle } from "../hooks/use-engagement-lifecycle";
 import { useMatchConfirmation } from "../hooks/use-match-confirmation";
 import { usePvpGameCoordinator } from "../hooks/use-pvp-game-coordinator";
+import { useLuckyWheel } from "../hooks/use-lucky-wheel";
 
 export type Screen =
   | "home"
@@ -155,6 +156,7 @@ export function AppRoot() {
     screen,
     setProgress,
     setGlobalToast,
+    syncProgressToCloud,
   });
 
   const { inspectedUser, setInspectedUser, openUserProfile } = useUserProfileInspector();
@@ -187,6 +189,26 @@ export function AppRoot() {
     startBotDuel: pvp.startBotDuel,
     startMatchmaking: pvp.startMatchmaking,
     setGlobalAlert,
+  });
+
+  const {
+    showLuckyWheel,
+    setShowLuckyWheel,
+    luckyWheelModalElement,
+  } = useLuckyWheel({
+    progress,
+    setProgress,
+    syncProgressToCloud,
+    watchAd,
+    onShowToast: (title, subtitle, icon, accentColor) => {
+      setGlobalToast({
+        id: Date.now().toString(),
+        title,
+        subtitle,
+        icon: icon || "🎡",
+        accentColor: accentColor || "#38BDF8",
+      });
+    },
   });
 
   useDeepLinkHandler({
@@ -339,6 +361,8 @@ export function AppRoot() {
       livesModalElement={livesModalElement}
       setShowLivesModal={setShowLivesModal}
       celebrationModalElement={celebrationModalElement}
+      luckyWheelModalElement={luckyWheelModalElement}
+      onOpenLuckyWheel={() => setShowLuckyWheel(true)}
       inspectedUser={inspectedUser}
       setInspectedUser={setInspectedUser}
       openUserProfile={openUserProfile}

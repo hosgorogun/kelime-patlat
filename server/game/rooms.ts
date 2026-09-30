@@ -418,7 +418,7 @@ function finishRound(io: Server, room: Room) {
 }
 
 function claimWord(io: Server, room: Room, playerId: string, word: string, path: number[]) {
-  if (room.status !== "playing" || room.foundWords.some((entry) => entry.word === word && entry.playerId === playerId)) return false;
+  if (room.status !== "playing" || room.foundWords.some((entry) => isEqualTr(entry.word, word) && entry.playerId === playerId)) return false;
   room.botSelection = undefined;
   
   if (!room.lastWordFoundTime) room.lastWordFoundTime = {};
@@ -448,8 +448,9 @@ function claimWord(io: Server, room: Room, playerId: string, word: string, path:
   const player = roomForPlayer(room, playerId);
   room.message = `${player?.name ?? "OYUNCU"} “${word}” buldu! +${earnedPoints}${multiplier > 1 ? ` · ×${multiplier} çarpan` : ""}${combo >= 2 ? ` · 🔥 COMBO x${combo} (+${comboBonus})` : ""}`;
   
-  const playerWords = room.foundWords.filter((entry) => entry.playerId === playerId).map((entry) => entry.word);
-  const hasFoundAll = room.words.every((w) => playerWords.includes(w));
+  const hasFoundAll = room.words.every((w) =>
+    room.foundWords.some((entry) => entry.playerId === playerId && isEqualTr(entry.word, w))
+  );
   if (hasFoundAll) {
     finishRound(io, room);
   } else {
@@ -461,7 +462,7 @@ function claimWord(io: Server, room: Room, playerId: string, word: string, path:
 function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = false) {
   const bot = room.guest;
   if (!bot?.isBot) return;
-  const word = room.words.find((candidate) => !room.foundWords.some((entry) => entry.word === candidate && entry.playerId === bot.id));
+  const word = room.words.find((candidate) => !room.foundWords.some((entry) => isEqualTr(entry.word, candidate) && entry.playerId === bot.id));
   if (!word) return;
 
   const delay = botThinkDelayMs(room.size, word.length) + (isFirstTurn ? 2500 : 0);
@@ -707,7 +708,8 @@ export function registerGameRooms(io: Server) {
       }
       socket.data.userId = session.openId;
       next();
-    } catch {
+    } catch (err) {
+      console.warn("[Socket Auth] Session verify error:", err);
       socket.data.userId = null;
       next();
     }
@@ -732,11 +734,15 @@ export function registerGameRooms(io: Server) {
     socket.emit("leaderboard:update", leaderboardSnapshot());
     void loadLeaderboard().then((persisted) => {
       if (persisted) socket.emit("leaderboard:update", persisted);
+    }).catch((err) => {
+      console.error("[Leaderboard] Error loading persisted leaderboard:", err);
     });
     socket.on("leaderboard:request", () => {
       socket.emit("leaderboard:update", leaderboardSnapshot());
       void loadLeaderboard().then((persisted) => {
         if (persisted) socket.emit("leaderboard:update", persisted);
+      }).catch((err) => {
+        console.error("[Leaderboard] Error loading persisted leaderboard:", err);
       });
     });
     socket.on("matchmaking:join", (payload: { playerId: string; playerName: string; size: BoardSize }) => {
@@ -1120,13 +1126,13 @@ export function registerGameRooms(io: Server) {
         selection.every((index, indexInSelection) => indexInSelection === 0 || isAdjacent(selection[indexInSelection - 1]!, index, room.size));
       if (!validIndices) return socket.emit("word:rejected", { word: "" });
       const word = wordFromSelection(room.board, selection);
-      const isTargetWord = room.words.includes(word);
+      const targetWord = room.words.find((w) => isEqualTr(w, word));
 
-      if (room.foundWords.some((entry) => entry.word === word && entry.playerId === player.id)) {
+      if (room.foundWords.some((entry) => isEqualTr(entry.word, word) && entry.playerId === player.id)) {
         return socket.emit("word:rejected", { word, reason: "already_found" });
       }
-      if (isTargetWord) {
-        claimWord(io, room, player.id, word, selection);
+      if (targetWord) {
+        claimWord(io, room, player.id, targetWord, selection);
       } else {
         return socket.emit("word:rejected", { word, reason: "invalid" });
       }
@@ -1628,14 +1634,16 @@ export function registerGameRooms(io: Server) {
           room.disconnectTimer = setTimeout(() => {
             const currentRoom = rooms.get(room.code);
             if (!currentRoom || currentRoom.status !== "playing") return;
-            if (!player.connected) {
+            const currentPlayer = currentRoom.host.id === player.id ? currentRoom.host : currentRoom.guest;
+            if (currentPlayer && !currentPlayer.connected) {
+              const currentOpponent = currentRoom.host.id === player.id ? currentRoom.guest : currentRoom.host;
               // Award forfeit victory to opponent if available
-              if (opponent) {
-                currentRoom.winnerId = opponent.id;
-                currentRoom.message = `${player.name} maçı terk etti. ${opponent.name} hükmen kazandı!`;
+              if (currentOpponent) {
+                currentRoom.winnerId = currentOpponent.id;
+                currentRoom.message = `${currentPlayer.name} maçı terk etti. ${currentOpponent.name} hükmen kazandı!`;
               } else {
                 currentRoom.winnerId = null;
-                currentRoom.message = `${player.name} maçı terk etti.`;
+                currentRoom.message = `${currentPlayer.name} maçı terk etti.`;
               }
               currentRoom.status = "finished";
               recordRoundForLeaderboard(io, currentRoom);

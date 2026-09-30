@@ -3,10 +3,11 @@ import { StatusBar } from "expo-status-bar";
 import { ScreenContainer } from "./screen-container";
 import { VintagePuzzle } from "./vintage-puzzle";
 import { GlobalGameToast, type ToastData } from "./global-game-toast";
-import { applyVintageProgress, type PlayerProgress } from "../shared/progression";
+import { applyVintageProgress, getCalculatedLives, type PlayerProgress } from "../shared/progression";
 
 export interface VintageScreenContainerProps {
   progress: PlayerProgress;
+  progressRef?: React.MutableRefObject<PlayerProgress>;
   lives: number;
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   syncProgressToCloud: (updated: PlayerProgress) => Promise<void>;
@@ -21,6 +22,7 @@ export interface VintageScreenContainerProps {
 
 export function VintageScreenContainer({
   progress,
+  progressRef,
   lives,
   setProgress,
   syncProgressToCloud,
@@ -32,6 +34,11 @@ export function VintageScreenContainer({
   celebrationModalElement,
   onNavigate,
 }: VintageScreenContainerProps) {
+  const livesCalc = getCalculatedLives(progress);
+  const internalRef = React.useRef(progress);
+  internalRef.current = progress;
+  const activeRef = progressRef || internalRef;
+
   return (
     <ScreenContainer style={{ flex: 1 }}>
       <StatusBar style="dark" />
@@ -39,17 +46,21 @@ export function VintageScreenContainer({
         onBack={() => onNavigate("home")}
         selectedVictoryEffect={progress.selectedVictoryEffect}
         vintageProgress={progress.vintageProgress}
-        lives={lives}
+        lives={livesCalc.lives}
+        isInfiniteLives={livesCalc.isInfinite}
         coins={progress.coins ?? 0}
         onSpendCoins={(amount: number) => {
-          const currentCoins = progress.coins ?? 0;
+          const currentCoins = activeRef.current.coins ?? 0;
           if (currentCoins < amount) return false;
+          let spent = false;
           setProgress((current) => {
+            if ((current.coins ?? 0) < amount) return current;
+            spent = true;
             const updated = { ...current, coins: Math.max(0, (current.coins ?? 0) - amount) };
             void syncProgressToCloud(updated);
             return updated;
           });
-          return true;
+          return spent;
         }}
         onOpenLivesModal={onOpenLivesModal}
         onSaveProgress={(newProgress) => {

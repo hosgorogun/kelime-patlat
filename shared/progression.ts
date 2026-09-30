@@ -88,6 +88,13 @@ export type PlayerProgress = {
   hapticsEnabled?: boolean;
   lives?: number;
   lastLifeRegenTimestamp?: number;
+  infiniteLivesUntil?: number;
+  lastSpinTimestamp?: number;
+  boosters?: {
+    hint: number;
+    freeze: number;
+    shuffle: number;
+  };
   friends?: Array<{
     id: string;
     name: string;
@@ -227,6 +234,13 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   hapticsEnabled: true,
   lives: MAX_LIVES,
   lastLifeRegenTimestamp: Date.now(),
+  infiniteLivesUntil: 0,
+  lastSpinTimestamp: 0,
+  boosters: {
+    hint: 3,
+    freeze: 2,
+    shuffle: 2,
+  },
   friends: [],
   matchHistory: [],
 };
@@ -235,7 +249,21 @@ export function getCalculatedLives(progress: Partial<PlayerProgress>): {
   lives: number;
   lastLifeRegenTimestamp: number;
   nextLifeTimerSeconds: number;
+  isInfinite?: boolean;
+  infiniteRemainingSeconds?: number;
 } {
+  const now = Date.now();
+  if (progress.infiniteLivesUntil && progress.infiniteLivesUntil > now) {
+    const remainingSeconds = Math.ceil((progress.infiniteLivesUntil - now) / 1000);
+    return {
+      lives: MAX_LIVES,
+      lastLifeRegenTimestamp: now,
+      nextLifeTimerSeconds: 0,
+      isInfinite: true,
+      infiniteRemainingSeconds: remainingSeconds,
+    };
+  }
+
   const max = MAX_LIVES;
   const currentLives = typeof progress.lives === "number" && Number.isFinite(progress.lives) ? Math.max(0, Math.min(max, progress.lives)) : max;
   let lastRegen = typeof progress.lastLifeRegenTimestamp === "number" && Number.isFinite(progress.lastLifeRegenTimestamp) ? progress.lastLifeRegenTimestamp : Date.now();
@@ -244,7 +272,6 @@ export function getCalculatedLives(progress: Partial<PlayerProgress>): {
     return { lives: max, lastLifeRegenTimestamp: Date.now(), nextLifeTimerSeconds: 0 };
   }
 
-  const now = Date.now();
   if (lastRegen > now) {
     lastRegen = now;
   }
@@ -266,6 +293,9 @@ export function getCalculatedLives(progress: Partial<PlayerProgress>): {
 }
 
 export function deductLife(progress: PlayerProgress): PlayerProgress {
+  if (progress.infiniteLivesUntil && progress.infiniteLivesUntil > Date.now()) {
+    return progress; // Sonsuz can aktifken can düşmez
+  }
   const calc = getCalculatedLives(progress);
   if (calc.lives <= 0) return { ...progress, lives: 0, lastLifeRegenTimestamp: calc.lastLifeRegenTimestamp };
   const nextLives = calc.lives - 1;
@@ -280,6 +310,9 @@ export function deductLife(progress: PlayerProgress): PlayerProgress {
 
 export function buyLives(progress: PlayerProgress, option: "one" | "all" | "ad"): { success: boolean; message: string; updatedProgress: PlayerProgress } {
   const calc = getCalculatedLives(progress);
+  if (calc.isInfinite) {
+    return { success: false, message: "Sonsuz can süreniz devam ediyor!", updatedProgress: progress };
+  }
   if (calc.lives >= MAX_LIVES) {
     return { success: false, message: "Canlarınız zaten dolu!", updatedProgress: progress };
   }
@@ -310,6 +343,187 @@ export function buyLives(progress: PlayerProgress, option: "one" | "all" | "ad")
 
   const msg = option === "one" ? "+1 Can satın alındı!" : "Tüm canlarınız (5/5) dolduruldu!";
   return { success: true, message: msg, updatedProgress: updated };
+}
+
+export function grantInfiniteLives(progress: PlayerProgress, minutes: number): PlayerProgress {
+  const now = Date.now();
+  const currentExpiry = progress.infiniteLivesUntil && progress.infiniteLivesUntil > now ? progress.infiniteLivesUntil : now;
+  return {
+    ...progress,
+    lives: MAX_LIVES,
+    infiniteLivesUntil: currentExpiry + minutes * 60 * 1000,
+  };
+}
+
+export type BoosterType = "hint" | "freeze" | "shuffle";
+
+export const BOOSTER_CONFIG: Record<BoosterType, { name: string; icon: string; cost: number; description: string }> = {
+  hint: {
+    name: "Radar / İpucu",
+    icon: "🎯",
+    cost: 25,
+    description: "Tahtadaki gizli bir kelimenin ilk 2 harfini parlatır.",
+  },
+  freeze: {
+    name: "Zaman Dondurucu",
+    icon: "❄️",
+    cost: 30,
+    description: "Süreyi 5 saniyeliğine tamamen dondurur.",
+  },
+  shuffle: {
+    name: "Tahtayı Karıştır",
+    icon: "🔀",
+    cost: 20,
+    description: "Harfleri karıştırarak yeni görüş açısı kazandırır.",
+  },
+};
+
+export function useBooster(
+  progress: PlayerProgress,
+  type: BoosterType
+): { success: boolean; message: string; updatedProgress: PlayerProgress } {
+  const currentCount = progress.boosters?.[type] ?? 0;
+  if (currentCount > 0) {
+    const nextBoosters = {
+      hint: progress.boosters?.hint ?? 0,
+      freeze: progress.boosters?.freeze ?? 0,
+      shuffle: progress.boosters?.shuffle ?? 0,
+      [type]: currentCount - 1,
+    };
+    return {
+      success: true,
+      message: `${BOOSTER_CONFIG[type].name} kullanıldı!`,
+      updatedProgress: {
+        ...progress,
+        boosters: nextBoosters,
+      },
+    };
+  }
+
+  const cost = BOOSTER_CONFIG[type].cost;
+  const currentCoins = progress.coins ?? 0;
+  if (currentCoins < cost) {
+    return {
+      success: false,
+      message: `Yetersiz çip! ${cost} Çip gerekiyor.`,
+      updatedProgress: progress,
+    };
+  }
+
+  return {
+    success: true,
+    message: `${BOOSTER_CONFIG[type].name} satın alındı ve kullanıldı!`,
+    updatedProgress: {
+      ...progress,
+      coins: currentCoins - cost,
+    },
+  };
+}
+
+export function buyBooster(
+  progress: PlayerProgress,
+  type: BoosterType,
+  count = 1
+): { success: boolean; message: string; updatedProgress: PlayerProgress } {
+  const totalCost = BOOSTER_CONFIG[type].cost * count;
+  const currentCoins = progress.coins ?? 0;
+  if (currentCoins < totalCost) {
+    return {
+      success: false,
+      message: `Yetersiz çip! ${totalCost} Çip gerekiyor.`,
+      updatedProgress: progress,
+    };
+  }
+
+  const nextBoosters = {
+    hint: progress.boosters?.hint ?? 0,
+    freeze: progress.boosters?.freeze ?? 0,
+    shuffle: progress.boosters?.shuffle ?? 0,
+    [type]: (progress.boosters?.[type] ?? 0) + count,
+  };
+
+  return {
+    success: true,
+    message: `+${count} ${BOOSTER_CONFIG[type].name} envanterinize eklendi!`,
+    updatedProgress: {
+      ...progress,
+      coins: currentCoins - totalCost,
+      boosters: nextBoosters,
+    },
+  };
+}
+
+export type LuckyWheelSector = {
+  id: number;
+  label: string;
+  icon: string;
+  type: "coins" | "life" | "infinite_lives" | "booster";
+  value: number;
+  boosterType?: BoosterType;
+  color: string;
+};
+
+export const LUCKY_WHEEL_SECTORS: readonly LuckyWheelSector[] = [
+  { id: 0, label: "25 Çip", icon: "🪙", type: "coins", value: 25, color: "#F59E0B" },
+  { id: 1, label: "+1 Can", icon: "💚", type: "life", value: 1, color: "#10B981" },
+  { id: 2, label: "1x Radar", icon: "🎯", type: "booster", value: 1, boosterType: "hint", color: "#3B82F6" },
+  { id: 3, label: "50 Çip", icon: "💰", type: "coins", value: 50, color: "#EC4899" },
+  { id: 4, label: "15 Dk Sonsuz Can", icon: "♾️", type: "infinite_lives", value: 15, color: "#8B5CF6" },
+  { id: 5, label: "1x Dondurucu", icon: "❄️", type: "booster", value: 1, boosterType: "freeze", color: "#06B6D4" },
+  { id: 6, label: "100 Çip", icon: "💎", type: "coins", value: 100, color: "#EAB308" },
+  { id: 7, label: "1x Karıştır", icon: "🔀", type: "booster", value: 1, boosterType: "shuffle", color: "#14B8A6" },
+];
+
+export const LUCKY_WHEEL_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+export function canSpinLuckyWheel(progress: PlayerProgress): { canSpin: boolean; remainingSeconds: number } {
+  const lastSpin = progress.lastSpinTimestamp ?? 0;
+  const now = Date.now();
+  const elapsed = now - lastSpin;
+  if (elapsed >= LUCKY_WHEEL_COOLDOWN_MS) {
+    return { canSpin: true, remainingSeconds: 0 };
+  }
+  return { canSpin: false, remainingSeconds: Math.ceil((LUCKY_WHEEL_COOLDOWN_MS - elapsed) / 1000) };
+}
+
+export function claimLuckyWheelReward(
+  progress: PlayerProgress,
+  sectorIndex: number,
+  isAdSpin = false
+): {
+  reward: LuckyWheelSector;
+  updatedProgress: PlayerProgress;
+  message: string;
+} {
+  const sector = LUCKY_WHEEL_SECTORS[sectorIndex] ?? LUCKY_WHEEL_SECTORS[0]!;
+  let updated = { ...progress };
+  if (!isAdSpin) {
+    updated.lastSpinTimestamp = Date.now();
+  }
+
+  let message = "";
+  if (sector.type === "coins") {
+    updated.coins = (updated.coins ?? 0) + sector.value;
+    message = `+${sector.value} Çip Kazandın! 🪙`;
+  } else if (sector.type === "life") {
+    const calc = getCalculatedLives(updated);
+    updated.lives = Math.min(MAX_LIVES, calc.lives + sector.value);
+    message = `+${sector.value} Can Eklendi! 💚`;
+  } else if (sector.type === "infinite_lives") {
+    updated = grantInfiniteLives(updated, sector.value);
+    message = `${sector.value} Dakika Sonsuz Can Başladı! ♾️`;
+  } else if (sector.type === "booster" && sector.boosterType) {
+    const bType = sector.boosterType;
+    updated.boosters = {
+      hint: updated.boosters?.hint ?? 0,
+      freeze: updated.boosters?.freeze ?? 0,
+      shuffle: updated.boosters?.shuffle ?? 0,
+      [bType]: (updated.boosters?.[bType] ?? 0) + sector.value,
+    };
+    message = `+${sector.value} ${BOOSTER_CONFIG[bType].name} Kazandın! ${sector.icon}`;
+  }
+
+  return { reward: sector, updatedProgress: updated, message };
 }
 
 export function badgesFor(progress: PlayerProgress): Badge[] {
@@ -1035,6 +1249,13 @@ export function mergePlayerProgress(
       ? safeNum(cleanRemote.lives, local.lives ?? MAX_LIVES, MAX_LIVES)
       : safeNum(typeof cleanRemote.lives === "number" && typeof local.lives === "number" ? Math.min(local.lives, cleanRemote.lives) : (cleanRemote.lives ?? local.lives ?? MAX_LIVES), MAX_LIVES, MAX_LIVES),
     lastLifeRegenTimestamp: typeof cleanRemote.lastLifeRegenTimestamp === "number" ? cleanRemote.lastLifeRegenTimestamp : (typeof local.lastLifeRegenTimestamp === "number" ? local.lastLifeRegenTimestamp : Date.now()),
+    infiniteLivesUntil: Math.max(local.infiniteLivesUntil ?? 0, cleanRemote.infiniteLivesUntil ?? 0),
+    lastSpinTimestamp: Math.max(local.lastSpinTimestamp ?? 0, cleanRemote.lastSpinTimestamp ?? 0),
+    boosters: {
+      hint: Math.max(local.boosters?.hint ?? 0, cleanRemote.boosters?.hint ?? 0),
+      freeze: Math.max(local.boosters?.freeze ?? 0, cleanRemote.boosters?.freeze ?? 0),
+      shuffle: Math.max(local.boosters?.shuffle ?? 0, cleanRemote.boosters?.shuffle ?? 0),
+    },
     streak: safeNum(Math.max(local.streak, cleanRemote.streak ?? 0), local.streak, 3650),
     pvpWinStreak: safeNum(cleanRemote.pvpWinStreak !== undefined ? cleanRemote.pvpWinStreak : (local.pvpWinStreak ?? 0), local.pvpWinStreak ?? 0, 1000),
     wins: addGuest

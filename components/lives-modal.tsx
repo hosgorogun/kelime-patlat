@@ -57,7 +57,9 @@ export function LivesModal({
 
             <Text style={styles.title}>CAN MERKEZİ</Text>
             <Text style={styles.subTitle}>
-              {isFull
+              {calc.isInfinite
+                ? `⚡ Sonsuz Can Aktif! Kalan: ${formatTimer(calc.infiniteRemainingSeconds || 0)}`
+                : isFull
                 ? "Canlarınız tam kapasite dolu!"
                 : `Canlarınız yenileniyor (${calc.lives}/${MAX_LIVES})`}
             </Text>
@@ -66,7 +68,7 @@ export function LivesModal({
           {/* Hearts Display */}
           <View style={styles.heartsRow}>
             {Array.from({ length: MAX_LIVES }).map((_, index) => {
-              const active = index < calc.lives;
+              const active = calc.isInfinite || index < calc.lives;
               return (
                 <View key={index} style={[styles.heartBadge, active && styles.heartBadgeActive]}>
                   <Text style={styles.heartText}>{active ? "💚" : "🖤"}</Text>
@@ -75,8 +77,15 @@ export function LivesModal({
             })}
           </View>
 
-          {/* Timer Display */}
-          {!isFull && calc.nextLifeTimerSeconds > 0 && (
+          {/* Timer Display / Infinite Lives */}
+          {calc.isInfinite ? (
+            <View style={[styles.timerBadge, { backgroundColor: "#FEF3C7", borderColor: "#F59E0B" }]}>
+              <Text style={styles.timerIcon}>⚡</Text>
+              <Text style={[styles.timerText, { color: "#92400E" }]}>
+                Sonsuz Can Süresi: <Text style={[styles.timerValue, { color: "#B45309" }]}>{formatTimer(calc.infiniteRemainingSeconds || 0)}</Text>
+              </Text>
+            </View>
+          ) : !isFull && calc.nextLifeTimerSeconds > 0 && (
             <View style={styles.timerBadge}>
               <Text style={styles.timerIcon}>⏱️</Text>
               <Text style={styles.timerText}>
@@ -99,12 +108,12 @@ export function LivesModal({
                 haptics.light();
                 onWatchAd();
               }}
-              disabled={isFull}
+              disabled={isFull || calc.isInfinite}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnAd,
-                isFull && styles.btnDisabled,
-                pressed && !isFull && styles.pressed,
+                (isFull || calc.isInfinite) && styles.btnDisabled,
+                pressed && !(isFull || calc.isInfinite) && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>📺</Text>
@@ -125,12 +134,12 @@ export function LivesModal({
                 }
                 onBuyOne();
               }}
-              disabled={isFull}
+              disabled={isFull || calc.isInfinite}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnOne,
-                (isFull || currentCoins < COST_PER_LIFE) && styles.btnDisabled,
-                pressed && !isFull && styles.pressed,
+                (isFull || calc.isInfinite || currentCoins < COST_PER_LIFE) && styles.btnDisabled,
+                pressed && !(isFull || calc.isInfinite) && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>💚</Text>
@@ -154,12 +163,12 @@ export function LivesModal({
                 }
                 onRefillAll();
               }}
-              disabled={isFull}
+              disabled={isFull || calc.isInfinite}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnRefill,
-                (isFull || currentCoins < COST_REFILL_ALL) && styles.btnDisabled,
-                pressed && !isFull && styles.pressed,
+                (isFull || calc.isInfinite || currentCoins < COST_REFILL_ALL) && styles.btnDisabled,
+                pressed && !(isFull || calc.isInfinite) && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>👑</Text>

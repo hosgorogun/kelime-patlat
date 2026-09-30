@@ -139,7 +139,7 @@ export const FriendsLobbyScreen: React.FC<FriendsLobbyScreenProps> = ({
           <TextInput
             value={roomCodeInput}
             onChangeText={(val) =>
-              onRoomCodeChange(val.toLocaleUpperCase("tr-TR").replace(/[^A-Z0-9]/g, ""))
+              onRoomCodeChange(val.replace(/[iıİ]/g, "I").toUpperCase().replace(/[^A-Z0-9]/g, ""))
             }
             maxLength={5}
             autoCapitalize="characters"
@@ -149,7 +149,11 @@ export const FriendsLobbyScreen: React.FC<FriendsLobbyScreenProps> = ({
           />
           <Pressable
             onPress={onJoinRoom}
-            style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.joinButton,
+              roomCodeInput.length < 5 && styles.joinButtonDisabled,
+              pressed && styles.pressed,
+            ]}
           >
             <Text style={styles.joinButtonText}>ODAYA GİR</Text>
           </Pressable>
@@ -417,6 +421,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: "center",
     alignItems: "center",
+  },
+  joinButtonDisabled: {
+    opacity: 0.45,
   },
   joinButtonText: {
     color: "#293541",

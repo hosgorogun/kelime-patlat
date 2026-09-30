@@ -213,7 +213,7 @@ export function MatchHistoryModal({
                   : isDraw
                   ? "#F59E0B"
                   : isWon
-                  ? "#F0F5ED"
+                  ? "#10B981"
                   : "#EF4444";
 
                 const resultLabel = isSoloMode

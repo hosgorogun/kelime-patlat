@@ -3,7 +3,7 @@ import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "rea
 import { LinearGradient } from "expo-linear-gradient";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, canSpinLuckyWheel, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { palette } from "@/shared/palette";
@@ -32,6 +32,7 @@ type CommandCenterProps = {
   onOpenModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo") => void;
   onOpenLivesModal?: () => void;
   onOpenHistory?: () => void;
+  onOpenLuckyWheel?: () => void;
 };
 
 function InfoMini({ color, onPress }: { color: string; onPress: () => void }) {
@@ -75,6 +76,7 @@ export function CommandCenter({
   onOpenModeInfo,
   onOpenLivesModal,
   onOpenHistory,
+  onOpenLuckyWheel,
 }: CommandCenterProps) {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
@@ -107,6 +109,7 @@ export function CommandCenter({
   const currentCount = progress.loginDaysCount || 0;
   const activeDayIndex = isClaimedToday ? (((currentCount || 1) - 1) % 7) : (currentCount % 7);
   const displayDayNumber = activeDayIndex + 1;
+  const { canSpin: canSpinWheel } = canSpinLuckyWheel(progress);
 
   useEffect(() => {
     if (!isClaimedToday && !hasAutoOpenedDailyRewardRef.current && progress.welcomeRewardClaimed) {
@@ -159,7 +162,7 @@ export function CommandCenter({
                 {infoModal === "rotani" ? "MEVCUT LİG KADEMEN:" : infoModal === "mystery" ? "GÖREV ÖDÜLÜ:" : "MEVCUT MİKTAR:"}
               </Text>
               <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: palette.gemBlue } : infoModal === "radar" ? { color: palette.emerald } : infoModal === "lives" ? { color: palette.gemGreen } : infoModal === "mystery" ? { color: "#2a8fbc" } : { color: league.color }]}>
-                {infoModal === "shield" ? (progress.streakShields || 0) : infoModal === "radar" ? (3 + (progress.radarChargesBonus || 0)) : infoModal === "lives" ? `${livesCalc.lives}/5` : infoModal === "mystery" ? `+${mystery.rewardXp} XP` : `${league.name} (${league.currentTierPoints} LP)`}
+                {infoModal === "shield" ? (progress.streakShields || 0) : infoModal === "radar" ? (3 + (progress.radarChargesBonus || 0)) : infoModal === "lives" ? (livesCalc.isInfinite ? `SONSUZ CAN (${Math.ceil((livesCalc.infiniteRemainingSeconds || 0) / 60)} dk)` : `${livesCalc.lives}/5`) : infoModal === "mystery" ? `+${mystery.rewardXp} XP` : `${league.name} (${league.currentTierPoints} LP)`}
               </Text>
             </View>
 
@@ -248,12 +251,22 @@ export function CommandCenter({
             <Pressable
               onPress={() => {
                 triggerHapticSelection();
-                setInfoModal("lives");
+                if (onOpenLivesModal) {
+                  onOpenLivesModal();
+                } else {
+                  setInfoModal("lives");
+                }
               }}
-              style={({ pressed }) => [styles.livesHeaderPill, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.livesHeaderPill,
+                livesCalc.isInfinite && styles.livesHeaderPillInfinite,
+                pressed && styles.pressed,
+              ]}
             >
               <GameGlyph source={ICONS.heart} size={22} />
-              <Text style={styles.livesHeaderValue}>{livesCalc.lives}/5</Text>
+              <Text style={[styles.livesHeaderValue, livesCalc.isInfinite && styles.livesHeaderValueInfinite]}>
+                {livesCalc.isInfinite ? "∞" : `${livesCalc.lives}/5`}
+              </Text>
             </Pressable>
             <Pressable
               onPress={onShowGuide}
@@ -332,6 +345,21 @@ export function CommandCenter({
           <Text style={styles.dailyMiniAction}>TOPLA ➔</Text>
         </Pressable>
       )}
+
+      {/* Siber Şans Çarkı Banner */}
+      <Pressable
+        onPress={() => {
+          triggerHapticSelection();
+          onOpenLuckyWheel?.();
+        }}
+        style={({ pressed }) => [styles.luckyWheelBanner, pressed && styles.pressed]}
+      >
+        <Text style={styles.luckyWheelIcon}>🎡</Text>
+        <Text style={styles.luckyWheelText}>
+          {canSpinWheel ? "SİBER ŞANS ÇARKI · ÜCRETSİZ ÇEVİRME HAZIR!" : "SİBER ŞANS ÇARKI · GÜNLÜK HEDİYE ÇARKI"}
+        </Text>
+        <Text style={styles.luckyWheelAction}>{canSpinWheel ? "ÇEVİR ➔" : "AÇ ➔"}</Text>
+      </Pressable>
 
       {unclaimedMissionsCount > 0 && (
         <Pressable
@@ -728,6 +756,28 @@ const styles = StyleSheet.create({
   dailyMiniIcon: { fontSize: 15 },
   dailyMiniText: { flex: 1, color: "#7A5910", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
   dailyMiniAction: { color: "#925D00", fontSize: 11, fontWeight: "900" },
+  luckyWheelBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: "#93C5FD",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 6,
+    marginBottom: 4,
+    gap: 8,
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  luckyWheelIcon: { fontSize: 16 },
+  luckyWheelText: { flex: 1, color: "#1E40AF", fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
+  luckyWheelAction: { color: "#2563EB", fontSize: 11, fontWeight: "900" },
   missionsMiniPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -764,6 +814,16 @@ const styles = StyleSheet.create({
   },
   livesHeaderIcon: { width: 16, height: 16 },
   livesHeaderValue: { color: palette.heart, fontSize: 11, fontWeight: "900" },
+  livesHeaderPillInfinite: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#F59E0B",
+    borderBottomColor: "#D97706",
+  },
+  livesHeaderValueInfinite: {
+    color: "#B45309",
+    fontSize: 13,
+    fontWeight: "900",
+  },
 
   resourceRow: { flexDirection: "row", gap: 7, alignItems: "center", marginTop: 2 },
 

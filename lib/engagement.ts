@@ -34,6 +34,7 @@ const REVIEW_POSTPONED_KEY = "kelime-patlat:review-prompt-postponed";
 
 export const reviewManager = {
   async recordVictoryAndCheckPrompt(winsCount: number) {
+    if (Platform.OS === "web") return;
     try {
       const alreadyPrompted = await AsyncStorage.getItem(REVIEW_PROMPT_KEY);
       if (alreadyPrompted === "true") return;

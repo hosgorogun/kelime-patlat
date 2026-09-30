@@ -18,6 +18,7 @@ export interface SoloPlayContainerProps {
   setScreen: (screen: any) => void;
   livesModalElement: React.ReactNode;
   celebrationModalElement: React.ReactNode;
+  syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
 }
 
 export function SoloPlayContainer({
@@ -27,6 +28,7 @@ export function SoloPlayContainer({
   recentSoloWords,
   progress,
   setProgress,
+  syncProgressToCloud,
   activeBoardSkinColor,
   onOpenLivesModal,
   watchAd,
@@ -46,6 +48,7 @@ export function SoloPlayContainer({
       recentSoloWords={recentSoloWords}
       progress={progress}
       setProgress={setProgress}
+      syncProgressToCloud={syncProgressToCloud}
       activeBoardSkinColor={activeBoardSkinColor}
       calculatedLives={calculatedLives}
       onOpenLivesModal={onOpenLivesModal}

@@ -239,4 +239,17 @@ export const gameSfx = {
     }
     play("select", urgent ? 1.4 : 0.9);
   },
+  powerup: () => {
+    if (!sfxEnabled) return;
+    const ctx = getWebAudioContext();
+    if (ctx) {
+      // Ascending energetic laser chime
+      playSynthTone(440, 0.08, "sine", 0.2, 0);
+      playSynthTone(554.37, 0.09, "sine", 0.2, 0.05);
+      playSynthTone(659.25, 0.12, "triangle", 0.22, 0.1);
+      playSynthTone(880, 0.2, "sine", 0.25, 0.15);
+      return;
+    }
+    play("select", 1.5);
+  },
 };

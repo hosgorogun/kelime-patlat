@@ -25,12 +25,14 @@ export interface ArcadeScreenContainerProps {
   awardProgressOnServer: (award: any, updater: (curr: PlayerProgress) => PlayerProgress) => void;
   livesModalElement: React.ReactNode;
   celebrationModalElement: React.ReactNode;
+  syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
   onNavigate: (destination: any) => void;
 }
 
 export function ArcadeScreenContainer({
   progress,
   setProgress,
+  syncProgressToCloud,
   activeBoardSkinColor,
   unclaimedMissions,
   hasClaimableDailyReward,
@@ -93,6 +95,9 @@ export function ArcadeScreenContainer({
       <ArcadeChallenge
         boardSkinColor={activeBoardSkinColor}
         selectedVictoryEffect={progress.selectedVictoryEffect}
+        progress={progress}
+        setProgress={setProgress}
+        syncProgressToCloud={syncProgressToCloud}
         watchAd={watchAd}
         onExit={() => setArcadeStarted(false)}
         onComplete={(score, wordsCount, isDoubled, comboCount, foundWords) => {

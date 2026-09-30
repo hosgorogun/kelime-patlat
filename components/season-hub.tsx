@@ -12,6 +12,7 @@ import {
 import { type LeaderboardEntry, BOARD_SIZES, type BoardSize } from "@/shared/game";
 import { socialManager, type FriendUser, type FriendRequest } from "@/shared/social";
 import { triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { isEqualTr } from "@/shared/tr-utils";
 import { getApiBaseUrl } from "@/constants/oauth";
 import { LeagueHub } from "@/components/league-hub";
 
@@ -217,8 +218,8 @@ export function SeasonHub({
           friendsList.some(
             (f) =>
               f.id === entry.id ||
-              f.name.toLocaleLowerCase("tr-TR") === entry.name.toLocaleLowerCase("tr-TR") ||
-              f.username.toLocaleLowerCase("tr-TR") === entry.name.toLocaleLowerCase("tr-TR")
+              isEqualTr(f.name, entry.name) ||
+              isEqualTr(f.username, entry.name)
           )
         ) {
           poolMap.set(entry.id, entry);
@@ -269,7 +270,7 @@ export function SeasonHub({
 
     // Self-addition check
     if (
-      cleanInput.toLocaleLowerCase("tr-TR") === (playerName || "").toLocaleLowerCase("tr-TR") ||
+      isEqualTr(cleanInput, playerName || "") ||
       cleanInput === playerId
     ) {
       triggerHapticError();
@@ -282,8 +283,8 @@ export function SeasonHub({
     // Check if already in friends
     const exists = friendsList.some(
       (f) =>
-        f.username.toLocaleLowerCase("tr-TR") === cleanInput.toLocaleLowerCase("tr-TR") ||
-        f.name.toLocaleLowerCase("tr-TR") === cleanInput.toLocaleLowerCase("tr-TR") ||
+        isEqualTr(f.username, cleanInput) ||
+        isEqualTr(f.name, cleanInput) ||
         f.id === cleanInput
     );
     if (exists) {

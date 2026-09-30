@@ -1163,6 +1163,9 @@ async function startServer() {
       let next = { ...current, coins: currentCoins - item.cost };
       if (item.rewardType === "lives") {
         const calc = getCalculatedLives(current);
+        if (calc.isInfinite) {
+          return res.status(400).json({ error: "Sonsuz can süreniz devam ediyor!" });
+        }
         if (calc.lives >= MAX_LIVES) {
           return res.status(400).json({ error: "Canlarınız zaten tam kapasite dolu (5/5)!" });
         }

@@ -91,6 +91,8 @@ export interface AppScreenRouterProps {
   livesModalElement: React.ReactNode;
   setShowLivesModal: (show: boolean) => void;
   celebrationModalElement: React.ReactNode;
+  luckyWheelModalElement?: React.ReactNode;
+  onOpenLuckyWheel?: () => void;
   inspectedUser: InspectableUser | null;
   setInspectedUser: (user: InspectableUser | null) => void;
   openUserProfile: (target: Partial<InspectableUser> & { id: string; name: string }) => Promise<void>;
@@ -213,6 +215,8 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
     livesModalElement,
     setShowLivesModal,
     celebrationModalElement,
+    luckyWheelModalElement,
+    onOpenLuckyWheel,
     inspectedUser,
     setInspectedUser,
     openUserProfile,
@@ -364,6 +368,8 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
         isClaimingWelcomeReward={isClaimingWelcomeReward}
         onClaimWelcomeReward={handleClaimWelcomeReward}
         onCloseWelcomeModal={() => setShowWelcomeModal(false)}
+        onOpenLuckyWheel={onOpenLuckyWheel}
+        luckyWheelModalElement={luckyWheelModalElement}
       />
     );
   }
@@ -461,6 +467,7 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
         recentSoloWords={recentSoloWords}
         progress={progress}
         setProgress={setProgress}
+        syncProgressToCloud={syncProgressToCloud}
         activeBoardSkinColor={activeBoardSkinColor}
         onOpenLivesModal={() => setShowLivesModal(true)}
         watchAd={watchAd}
@@ -501,6 +508,7 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
       <ArcadeScreenContainer
         progress={progress}
         setProgress={setProgress}
+        syncProgressToCloud={syncProgressToCloud}
         activeBoardSkinColor={activeBoardSkinColor}
         awardProgressOnServer={awardProgressOnServer}
         unclaimedMissions={unclaimedMissions}
@@ -581,6 +589,7 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
     return (
       <VintageScreenContainer
         progress={progress}
+        progressRef={progressRef}
         lives={livesCalc.lives}
         setProgress={setProgress}
         syncProgressToCloud={syncProgressToCloud}

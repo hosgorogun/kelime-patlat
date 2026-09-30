@@ -781,6 +781,14 @@ export function useRoomSocket({
     socket.emit("friend:requests:get", { playerId, username: safeName });
 
     return () => {
+      if (matchmakingIntervalRef.current) {
+        clearInterval(matchmakingIntervalRef.current);
+        matchmakingIntervalRef.current = null;
+      }
+      if (emoteTimeoutRef.current) {
+        clearTimeout(emoteTimeoutRef.current);
+        emoteTimeoutRef.current = null;
+      }
       socket.off("room:update", onRoomUpdate);
       socket.off("room:error", onRoomError);
       socket.off("word:rejected", onRejected);

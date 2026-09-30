@@ -96,6 +96,16 @@ export function CyberStoreScreenContainer({
           }
           if (item.rewardType === "lives") {
             const calc = getCalculatedLives(progressRef.current);
+            if (calc.isInfinite) {
+              setGlobalToast({
+                id: `lives-infinite-${Date.now()}`,
+                title: "SONSUZ CAN AKTİF! ⚡",
+                subtitle: "Şu an zaten sınırsız can süreniz devam ediyor. Çipleriniz korunuyor.",
+                icon: "⚡",
+                accentColor: "#F59E0B",
+              });
+              return false;
+            }
             if (calc.lives >= MAX_LIVES) {
               setGlobalToast({
                 id: `lives-full-${Date.now()}`,

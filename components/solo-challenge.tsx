@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, AppState, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
@@ -25,6 +26,8 @@ import { ModernAlertModal } from "./modern-alert-modal";
 import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
 import { ConnectLine, BoardCountdownShield } from "./game-ui";
 import { GameCountdownOverlay } from "./game-countdown-overlay";
+import { GameBoosters, FloatingCombo } from "./game-boosters";
+import type { PlayerProgress } from "../shared/progression";
 
 function FloatingTimeBonus({ text }: { text: string | null }) {
   const animVal = useRef(new Animated.Value(0)).current;
@@ -212,6 +215,9 @@ export function SoloChallenge({
   onNext,
   onAdvanceLevel,
   onBonusReward,
+  progress,
+  setProgress,
+  syncProgressToCloud,
 }: {
   level: number;
   theme?: WordTheme;
@@ -229,6 +235,9 @@ export function SoloChallenge({
   onNext: () => void;
   onAdvanceLevel?: () => void;
   onBonusReward?: (xp: number, radarBonus: number) => void;
+  progress?: PlayerProgress;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
 }) {
   const { width } = useWindowDimensions();
   const safeWatchAd = useMemo(() => watchAd ?? ((onReward: () => void) => onReward()), [watchAd]);
@@ -445,6 +454,13 @@ export function SoloChallenge({
   const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
 
   useEffect(() => {
+    if (typeof progress?.sfxEnabled === "boolean") {
+      setSoundOn(progress.sfxEnabled);
+      setSfxEnabled(progress.sfxEnabled);
+    }
+  }, [progress?.sfxEnabled]);
+
+  useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       if (nextState !== "active" && status === "playing") {
         setIsPaused(true);
@@ -634,6 +650,57 @@ export function SoloChallenge({
       }, 2500);
       particleTimers.current.push(t2);
     }
+  };
+
+  const handleUseHintBooster = () => {
+    const remaining = challenge.words.filter((w) => !found.includes(w));
+    if (!remaining.length) return;
+    const targetWord = remaining[0]!;
+    const path = challenge.routes[targetWord];
+    if (path && path.length > 0) {
+      setRadarHighlights(new Set());
+      setTimeBonusText(`💡 ${targetWord.slice(0, 2).toUpperCase()}...`);
+      const t1 = setTimeout(() => setTimeBonusText(null), 1800);
+      particleTimers.current.push(t1);
+      const hintCells = new Set(path.slice(0, Math.min(3, path.length)));
+      setRadarHighlights(hintCells);
+      triggerHapticSuccess();
+      playSelectionNote(2);
+      const t2 = setTimeout(() => {
+        setRadarHighlights(new Set());
+      }, 3500);
+      particleTimers.current.push(t2);
+    }
+  };
+
+  const handleUseFreezeBooster = () => {
+    setSeconds((s) => Math.min(challenge.timeLimit + 30, s + 15));
+    setTimeBonusText("⏱️ +15 SN & DONDURUCU!");
+    const t = setTimeout(() => setTimeBonusText(null), 2000);
+    particleTimers.current.push(t);
+    triggerHapticSuccess();
+    gameSfx.powerup();
+  };
+
+  const handleUseShuffleBooster = () => {
+    const remaining = challenge.words.filter((w) => !found.includes(w));
+    if (!remaining.length) return;
+    const startCells = new Set<number>();
+    remaining.forEach((w) => {
+      const p = challenge.routes[w];
+      if (p && p.length > 0) startCells.add(p[0]!);
+    });
+    setRadarHighlights(startCells);
+    setTimeBonusText("🎲 GİZLİ BAŞLANGIÇLAR AÇILDI!");
+    const t1 = setTimeout(() => setTimeBonusText(null), 2000);
+    particleTimers.current.push(t1);
+    triggerShake();
+    triggerHapticLongWord();
+    gameSfx.powerup();
+    const t2 = setTimeout(() => {
+      setRadarHighlights(new Set());
+    }, 4000);
+    particleTimers.current.push(t2);
   };
   const submit = () => {
     if (submitted.current || status !== "playing") return;
@@ -876,6 +943,10 @@ export function SoloChallenge({
           ]}
         />
       )}
+
+      {/* Dopamine Floating Combo Banner */}
+      <FloatingCombo comboCount={comboStreak} />
+
       <ScrollView contentContainerStyle={[styles.content, { backgroundColor: activeTheme.background }]} scrollEnabled={!isSelecting} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
       <Pressable onPress={handleExitPress} style={[styles.exit, { backgroundColor: activeTheme.surface }]}><Text style={styles.exitText}>‹</Text></Pressable>
@@ -1206,6 +1277,20 @@ export function SoloChallenge({
       </Text>
     </View>
 
+    {progress && (
+      <View style={{ marginVertical: 8, alignItems: "center" }}>
+        <GameBoosters
+          progress={progress}
+          setProgress={setProgress}
+          syncProgressToCloud={syncProgressToCloud}
+          onUseHint={handleUseHintBooster}
+          onUseFreeze={handleUseFreezeBooster}
+          onUseShuffle={handleUseShuffleBooster}
+          disabled={status !== "playing"}
+        />
+      </View>
+    )}
+
     {/* Aktif Kelime Rotası ve Harf Yön Akışı Kartı */}
     {selectedWordInfo && inspectedPath && (
       <View style={[styles.activeRouteCard, { borderColor: inspectedColor || activeTheme.accentColor }]}>
@@ -1510,6 +1595,8 @@ export function SoloChallenge({
                   const nextState = !getSfxEnabled();
                   setSfxEnabled(nextState);
                   setSoundOn(nextState);
+                  setProgress?.((curr) => ({ ...curr, sfxEnabled: nextState }));
+                  AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(nextState)).catch(() => undefined);
                   triggerHapticSelection();
                 }}
                 style={styles.pauseSoundBtn}

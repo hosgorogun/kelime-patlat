@@ -4,6 +4,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -12,6 +13,7 @@ import { PlayerProgress } from "../shared/progression";
 import { MatchInsight } from "./match-insight";
 import { MatchRewardsCard } from "./match-rewards";
 import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
+import { isEqualTr } from "@/shared/tr-utils";
 
 export interface MatchResultModalProps {
   visible: boolean;
@@ -102,6 +104,25 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
   onClose,
 }) => {
   if (!visible) return null;
+
+  const handleShareResult = async () => {
+    try {
+      const outcome = iWon ? "🏆 Maçı Kazandım!" : isDraw ? "🤝 Berabere Kaldık!" : "⚡ Kıran kırana maç!";
+      const shareMessage =
+        `Kelime Patlat ⚔️ ${meName} vs ${opponentName}\n` +
+        `${outcome}\n\n` +
+        `📊 Benim Skorum: ${myScore} Puan (${myWordCount} Kelime)\n` +
+        `🎯 Rakip Skor: ${opponentScore} Puan (${opponentWordCount} Kelime)\n\n` +
+        `Sen kaç kelime bulabilirsin? Hemen oyna 👉 https://kelimepatlat.com`;
+
+      await Share.share({
+        message: shareMessage,
+        title: "Kelime Patlat Maç Sonucu",
+      });
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -220,8 +241,8 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
 
                 <View style={styles.wordsWrap}>
                   {allFinishedWords.map((item, idx) => {
-                    const isMine = myFoundWords.some((m) => m.word === item.word);
-                    const isSelected = selectedWordInfo?.word === item.word;
+                    const isMine = myFoundWords.some((m) => isEqualTr(m.word, item.word));
+                    const isSelected = selectedWordInfo ? isEqualTr(selectedWordInfo.word, item.word) : false;
                     return (
                       <Pressable
                         key={`modal-w-${idx}`}
@@ -296,10 +317,24 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
             )}
 
             <Pressable
+              onPress={handleShareResult}
+              style={({ pressed }) => [
+                styles.shareBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Text style={styles.shareBtnText}>
+                📤 SKORU PAYLAŞ & MEYDAN OKU
+              </Text>
+            </Pressable>
+
+            <Pressable
               onPress={onRequestRematch}
+              disabled={rematchPending}
               style={({ pressed }) => [
                 styles.rematchBtn,
-                pressed && { opacity: 0.8 },
+                rematchPending && { opacity: 0.6 },
+                pressed && !rematchPending && { opacity: 0.8 },
               ]}
             >
               <Text style={styles.rematchBtnText}>
@@ -586,6 +621,26 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
     textAlign: "center",
+  },
+  shareBtn: {
+    width: "100%",
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#38bdf8",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+    shadowColor: "#0284c7",
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  shareBtnText: {
+    color: "#041527",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   rematchBtn: {
     width: "100%",

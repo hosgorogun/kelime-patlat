@@ -47,6 +47,7 @@ export type VintagePuzzleProps = {
     score: number;
   }) => void;
   lives?: number;
+  isInfiniteLives?: boolean;
   onOpenLivesModal?: () => void;
   coins?: number;
   onSpendCoins?: (amount: number) => boolean;
@@ -159,6 +160,7 @@ export function VintagePuzzle({
   vintageProgress,
   onSaveProgress,
   lives = MAX_LIVES,
+  isInfiniteLives = false,
   onOpenLivesModal,
   coins,
   onSpendCoins,
@@ -803,7 +805,8 @@ export function VintagePuzzle({
       const r = targetWord.direction === "horizontal" ? targetWord.row : targetWord.row + i;
       const c = targetWord.direction === "horizontal" ? targetWord.col + i : targetWord.col;
       const expected = targetWord.answer[i]!;
-      if (playerBoard[r]?.[c] !== expected) {
+      const currentCellChar = playerBoard[r]?.[c];
+      if (!currentCellChar || !isEqualTr(currentCellChar, expected)) {
         targetCell = [r, c];
         targetChar = expected;
         break;
@@ -831,12 +834,13 @@ export function VintagePuzzle({
     newBoard[tr]![tc] = targetChar;
 
     // Eğer hedef harf havuzda mevcut değilse, oyuncunun tahtada yanlış yerleştirdiği kilitlenmemiş bir hücreden temizle
-    const tileInPool = letterPool.some((t) => t.letter === targetChar);
+    const tileInPool = letterPool.some((t) => isEqualTr(t.letter, targetChar!));
     if (!tileInPool) {
       for (let r = 0; r < 10; r++) {
         let cleared = false;
         for (let c = 0; c < 10; c++) {
-          if ((r !== tr || c !== tc) && newBoard[r]![c] === targetChar && !isCellLockedByCompletedWord(r, c)) {
+          const boardChar = newBoard[r]![c];
+          if ((r !== tr || c !== tc) && boardChar && isEqualTr(boardChar, targetChar!) && !isCellLockedByCompletedWord(r, c)) {
             newBoard[r]![c] = null;
             cleared = true;
             break;
@@ -850,13 +854,13 @@ export function VintagePuzzle({
     // 4. Havuzdan doğru harf taşını çıkar ve varsa eski yanlış harfi havuza geri ver
     setLetterPool((prev) => {
       let nextPool = [...prev];
-      if (oldChar !== null && oldChar !== targetChar) {
+      if (oldChar !== null && !isEqualTr(oldChar, targetChar!)) {
         nextPool.push({
           id: `p-ret-hint-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           letter: oldChar,
         });
       }
-      const tileIndex = nextPool.findIndex((t) => t.letter === targetChar);
+      const tileIndex = nextPool.findIndex((t) => isEqualTr(t.letter, targetChar!));
       if (tileIndex !== -1) {
         nextPool.splice(tileIndex, 1);
       }
@@ -906,10 +910,17 @@ export function VintagePuzzle({
                 triggerHapticSelection();
                 onOpenLivesModal?.();
               }}
-              style={({ pressed }) => [styles.statusPill, styles.livesPill, pressed && styles.pressedPill]}
+              style={({ pressed }) => [
+                styles.statusPill,
+                styles.livesPill,
+                isInfiniteLives && styles.infiniteLivesPill,
+                pressed && styles.pressedPill,
+              ]}
             >
               <Text style={styles.statusPillIcon}>💚</Text>
-              <Text style={[styles.statusPillText, styles.livesPillText]}>{lives}/{MAX_LIVES}</Text>
+              <Text style={[styles.statusPillText, styles.livesPillText, isInfiniteLives && styles.infiniteLivesPillText]}>
+                {isInfiniteLives ? "∞" : `${lives}/${MAX_LIVES}`}
+              </Text>
             </Pressable>
             <View style={[styles.statusPill, styles.scorePill]}>
               <Text style={styles.statusPillIcon}>🪙</Text>
@@ -954,7 +965,7 @@ export function VintagePuzzle({
                   key={lvl}
                   disabled={!isUnlocked}
                   onPress={() => {
-                    if (lives <= 0) {
+                    if (!isInfiniteLives && lives <= 0) {
                       triggerHapticError();
                       playErrorSound();
                       onOpenLivesModal?.();
@@ -1027,10 +1038,17 @@ export function VintagePuzzle({
               triggerHapticSelection();
               onOpenLivesModal?.();
             }}
-            style={({ pressed }) => [styles.statusPill, styles.livesPill, pressed && styles.pressedPill]}
+            style={({ pressed }) => [
+              styles.statusPill,
+              styles.livesPill,
+              isInfiniteLives && styles.infiniteLivesPill,
+              pressed && styles.pressedPill,
+            ]}
           >
             <Text style={styles.statusPillIcon}>💚</Text>
-            <Text style={[styles.statusPillText, styles.livesPillText]}>{lives}/{MAX_LIVES}</Text>
+            <Text style={[styles.statusPillText, styles.livesPillText, isInfiniteLives && styles.infiniteLivesPillText]}>
+              {isInfiniteLives ? "∞" : `${lives}/${MAX_LIVES}`}
+            </Text>
           </Pressable>
           <Pressable
             onPress={handleUseHint}
@@ -1209,7 +1227,7 @@ export function VintagePuzzle({
             {levelIndex < 20 ? (
               <Pressable
                 onPress={() => {
-                  if (typeof lives === "number" && lives <= 0) {
+                  if (!isInfiniteLives && typeof lives === "number" && lives <= 0) {
                     triggerHapticError();
                     playErrorSound();
                     onOpenLivesModal?.();
@@ -1406,6 +1424,15 @@ const styles = StyleSheet.create({
   },
   livesPillText: {
     color: "#16a34a",
+  },
+  infiniteLivesPill: {
+    backgroundColor: "#fef3c7",
+    borderColor: "#f59e0b",
+  },
+  infiniteLivesPillText: {
+    color: "#b45309",
+    fontWeight: "900",
+    fontSize: 14,
   },
   hintPill: {
     backgroundColor: "#fefce8",

@@ -420,8 +420,9 @@ export function CyberStore({
           const isXp = item.rewardType === "xp";
           const isLives = item.rewardType === "lives";
 
-          const currentLives = progress ? getCalculatedLives(progress).lives : 5;
-          const isLivesFull = isLives && currentLives >= MAX_LIVES;
+          const livesCalc = progress ? getCalculatedLives(progress) : null;
+          const currentLives = livesCalc ? livesCalc.lives : 5;
+          const isLivesFull = isLives && Boolean(livesCalc?.isInfinite || currentLives >= MAX_LIVES);
           const canAfford = coins >= item.cost;
           const isDisabled = !canAfford && !isLivesFull;
 
@@ -448,7 +449,9 @@ export function CyberStore({
                   <Text style={styles.productName}>{item.name}</Text>
                   {isLives && (
                     <View style={[styles.inventoryCountBadge, { borderColor: "#DCE1D7" }]}>
-                      <Text style={[styles.inventoryCountText, { color: "#1daa51" }]}>Can: {currentLives}/5</Text>
+                      <Text style={[styles.inventoryCountText, { color: "#1daa51" }]}>
+                        Can: {livesCalc?.isInfinite ? "∞ (Sonsuz)" : `${currentLives}/5`}
+                      </Text>
                     </View>
                   )}
                   {isShield && (
@@ -483,8 +486,8 @@ export function CyberStore({
               >
                 {isLivesFull ? (
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3 }}>
-                    <Text style={{ color: "#349d5a", fontSize: 12, fontWeight: "900" }}>✓</Text>
-                    <Text style={styles.chipBuyButtonFullText}>DOLU</Text>
+                    <Text style={{ color: "#349d5a", fontSize: 12, fontWeight: "900" }}>{livesCalc?.isInfinite ? "⚡" : "✓"}</Text>
+                    <Text style={styles.chipBuyButtonFullText}>{livesCalc?.isInfinite ? "SONSUZ" : "DOLU"}</Text>
                   </View>
                 ) : (
                   <Text style={[styles.chipBuyButtonText, !canAfford && { color: "#293541" }]}>

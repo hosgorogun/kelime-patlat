@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import {
@@ -31,6 +32,8 @@ import { ModernAlertModal } from "./modern-alert-modal";
 import { VictoryBanner, VictoryEffectOverlay } from "./victory-effect-overlay";
 import { ConnectLine, BoardCountdownShield } from "./game-ui";
 import { GameCountdownOverlay } from "./game-countdown-overlay";
+import { GameBoosters, FloatingCombo } from "./game-boosters";
+import type { PlayerProgress } from "../shared/progression";
 
 function FloatingTimeBonus({ text }: { text: string | null }) {
   const animVal = useRef(new Animated.Value(0)).current;
@@ -203,12 +206,18 @@ export function ArcadeChallenge({
   boardSkinColor,
   selectedVictoryEffect,
   watchAd,
+  progress,
+  setProgress,
+  syncProgressToCloud,
 }: {
   onExit: () => void;
   onComplete: (score: number, wordsCount?: number, isDoubled?: boolean, comboCount?: number, foundWords?: string[]) => void;
   boardSkinColor?: string;
   selectedVictoryEffect?: string;
   watchAd?: (onReward: () => void) => void;
+  progress?: PlayerProgress;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
 }) {
   const { width } = useWindowDimensions();
   const [levelSeed, setLevelSeed] = useState(() => Math.floor(Math.random() * 15) + 1);
@@ -236,6 +245,7 @@ export function ArcadeChallenge({
   const [isSelecting, setIsSelecting] = useState(false);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [scoreBurstText, setScoreBurstText] = useState<string | null>(null);
+  const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
   const [selectedWordInfo, setSelectedWordInfo] = useState<{
     word: string;
     definition: string;
@@ -362,6 +372,13 @@ export function ArcadeChallenge({
 
   const [isPaused, setIsPaused] = useState(false);
   const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
+
+  useEffect(() => {
+    if (typeof progress?.sfxEnabled === "boolean") {
+      setSoundOn(progress.sfxEnabled);
+      setSfxEnabled(progress.sfxEnabled);
+    }
+  }, [progress?.sfxEnabled]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -551,6 +568,57 @@ export function ArcadeChallenge({
     selectionRef.current = next; setSelected(next);
     triggerHapticSelection();
     if (next.length >= previous.length) playSelectionNote(next.length - 1);
+  };
+
+  const handleUseHintBooster = () => {
+    const remaining = challenge.words.filter((w) => !found.includes(w));
+    if (!remaining.length) return;
+    const targetWord = remaining[0]!;
+    const path = challenge.routes[targetWord];
+    if (path && path.length > 0) {
+      setRadarHighlights(new Set());
+      setTimeBonusText(`💡 ${targetWord.slice(0, 2).toUpperCase()}...`);
+      const t1 = setTimeout(() => setTimeBonusText(null), 1800);
+      particleTimers.current.push(t1);
+      const hintCells = new Set(path.slice(0, Math.min(3, path.length)));
+      setRadarHighlights(hintCells);
+      triggerHapticSuccess();
+      playSelectionNote(2);
+      const t2 = setTimeout(() => {
+        setRadarHighlights(new Set());
+      }, 3500);
+      particleTimers.current.push(t2);
+    }
+  };
+
+  const handleUseFreezeBooster = () => {
+    setSeconds((s) => Math.min(MAX_ARCADE_TIME, s + 15));
+    setTimeBonusText("⏱️ +15 SN & DONDURUCU!");
+    const t = setTimeout(() => setTimeBonusText(null), 2000);
+    particleTimers.current.push(t);
+    triggerHapticSuccess();
+    gameSfx.powerup();
+  };
+
+  const handleUseShuffleBooster = () => {
+    const remaining = challenge.words.filter((w) => !found.includes(w));
+    if (!remaining.length) return;
+    const startCells = new Set<number>();
+    remaining.forEach((w) => {
+      const p = challenge.routes[w];
+      if (p && p.length > 0) startCells.add(p[0]!);
+    });
+    setRadarHighlights(startCells);
+    setTimeBonusText("🎲 GİZLİ BAŞLANGIÇLAR AÇILDI!");
+    const t1 = setTimeout(() => setTimeBonusText(null), 2000);
+    particleTimers.current.push(t1);
+    triggerShake();
+    triggerHapticLongWord();
+    gameSfx.powerup();
+    const t2 = setTimeout(() => {
+      setRadarHighlights(new Set());
+    }, 4000);
+    particleTimers.current.push(t2);
   };
 
   const submit = () => {
@@ -839,6 +907,10 @@ export function ArcadeChallenge({
           ]}
         />
       )}
+
+      {/* Dopamine Floating Combo Banner */}
+      <FloatingCombo comboCount={combo} />
+
       <ScrollView ref={scrollViewRef} contentContainerStyle={styles.content} scrollEnabled={status !== "playing" || !isSelecting} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
       <Pressable onPress={handleExitPress} style={({ pressed }) => [styles.exit, pressed && { opacity: 0.7 }]}>
@@ -990,6 +1062,7 @@ export function ArcadeChallenge({
         const inspectedOrder = (status !== "playing" && inspectedPath) ? inspectedPath.indexOf(index) : -1;
         const isInspectedStart = status !== "playing" && inspectedOrder === 0;
         const isInspectedEnd = (status !== "playing" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
+        const isRadar = radarHighlights.has(index);
         
         return (
           <View
@@ -1045,7 +1118,8 @@ export function ArcadeChallenge({
               isTail && styles.cellTail,
               isTail && { transform: [{ scale: 1.20 }] },
               feedback === "invalid" && isSelected && styles.cellInvalid,
-              feedback === "accepted" && isSelected && styles.cellAccepted
+              feedback === "accepted" && isSelected && styles.cellAccepted,
+              isRadar && styles.cellRadar,
             ]}>
               <Text selectable={false} style={[
                 styles.letter,
@@ -1056,6 +1130,7 @@ export function ArcadeChallenge({
                 feedback === "accepted" && isSelected && { color: "#065F46" },
                 feedback === "invalid" && isSelected && { color: "#991B1B" },
                 foundColor && { color: foundColor.text },
+                isRadar && styles.letterRadar,
                 missedColor && { color: missedColor.text },
                 countdown !== null && countdown > 0 && { opacity: 0 },
               ]}>{letter}</Text>
@@ -1138,6 +1213,20 @@ export function ArcadeChallenge({
         {selected.length > 0 ? `[ ${activeWord.split("").join(" - ")} ]` : "—"}
       </Text>
     </View>
+
+    {progress && (
+      <View style={{ marginVertical: 8, alignItems: "center" }}>
+        <GameBoosters
+          progress={progress}
+          setProgress={setProgress}
+          syncProgressToCloud={syncProgressToCloud}
+          onUseHint={handleUseHintBooster}
+          onUseFreeze={handleUseFreezeBooster}
+          onUseShuffle={handleUseShuffleBooster}
+          disabled={status !== "playing"}
+        />
+      </View>
+    )}
 
     {/* Aktif Kelime Rotası ve Harf Yön Akışı Kartı */}
     {selectedWordInfo && inspectedPath && (
@@ -1487,6 +1576,8 @@ export function ArcadeChallenge({
                   const nextState = !getSfxEnabled();
                   setSfxEnabled(nextState);
                   setSoundOn(nextState);
+                  setProgress?.((curr) => ({ ...curr, sfxEnabled: nextState }));
+                  AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(nextState)).catch(() => undefined);
                   triggerHapticSelection();
                 }}
                 style={styles.pauseSoundBtn}
@@ -1570,11 +1661,13 @@ const styles = StyleSheet.create({
   cellInvalid: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", borderBottomColor: "#DC2626", borderWidth: 2, shadowColor: "#EF4444", shadowOpacity: 0.4, shadowRadius: 5, elevation: 4 },
   cellAccepted: { backgroundColor: "#D1FAE5", borderColor: "#10B981", borderBottomColor: "#059669", borderWidth: 2, shadowColor: "#10B981", shadowOpacity: 0.5, shadowRadius: 6, elevation: 5 },
   cellFound: { backgroundColor: "#F1F5F9", borderColor: "#CBD5E1", borderBottomColor: "#94A3B8" },
+  cellRadar: { backgroundColor: "#FEF3C7", borderColor: "#F59E0B", borderWidth: 2 },
   check: { position: "absolute", left: 4, bottom: 2, color: "#293541", fontSize: 9, fontWeight: "900" },
   letter: { color: "#1E293B", fontSize: 25, fontWeight: "900" },
   letterMedium: { fontSize: 21 },
   letterSmall: { fontSize: 17 },
   letterExtraSmall: { fontSize: 13 },
+  letterRadar: { color: "#B45309" },
   comboPill: { marginTop: 4, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, backgroundColor: "#FEF3C7", borderWidth: 1.5, borderColor: "#F59E0B", shadowColor: "#F59E0B", shadowOpacity: 0.25, shadowRadius: 4, elevation: 3 },
   comboPillText: { color: "#B45309", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
   order: { position: "absolute", top: 3, right: 4, color: "#B45309", fontSize: 8, fontWeight: "900" },

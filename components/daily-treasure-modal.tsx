@@ -100,10 +100,14 @@ export function DailyTreasureModal({
                   return (
                     <Pressable
                       key={item.day}
-                      disabled={!isTodayClaimable}
+                      disabled={!isTodayClaimable || isClaiming}
                       onPress={() => {
+                        if (isClaiming || isClaimedToday) return;
+                        setIsClaiming(true);
                         triggerHapticSelection();
                         onClaim();
+                        if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+                        claimTimerRef.current = setTimeout(() => setIsClaiming(false), 2000);
                       }}
                       style={[
                         styles.dayCard,
@@ -190,10 +194,14 @@ export function DailyTreasureModal({
                   return (
                     <Pressable
                       key={item.day}
-                      disabled={!isTodayClaimable}
+                      disabled={!isTodayClaimable || isClaiming}
                       onPress={() => {
+                        if (isClaiming || isClaimedToday) return;
+                        setIsClaiming(true);
                         triggerHapticSelection();
                         onClaim();
+                        if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+                        claimTimerRef.current = setTimeout(() => setIsClaiming(false), 2000);
                       }}
                       style={[
                         styles.dayCard,

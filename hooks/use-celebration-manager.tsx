@@ -20,6 +20,7 @@ export interface UseCelebrationManagerParams {
   screen: string;
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   setGlobalToast: (toast: ToastData | null) => void;
+  syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
 }
 
 export function useCelebrationManager({
@@ -28,6 +29,7 @@ export function useCelebrationManager({
   screen,
   setProgress,
   setGlobalToast,
+  syncProgressToCloud,
 }: UseCelebrationManagerParams) {
   const [celebrationQueue, setCelebrationQueue] = useState<CelebrationModalData[]>([]);
   const prevLevelRef = useRef<number | null>(null);
@@ -74,11 +76,16 @@ export function useCelebrationManager({
         if (lastAwardedLevelRef.current !== currentLevel) {
           lastAwardedLevelRef.current = currentLevel;
           if (levelDetails.coins > 0) {
-            setProgress((curr) => ({
-              ...curr,
-              coins: (curr.coins ?? 0) + levelDetails.coins,
-              lives: MAX_LIVES,
-            }));
+            setProgress((curr) => {
+              const updated = {
+                ...curr,
+                coins: (curr.coins ?? 0) + levelDetails.coins,
+                lives: MAX_LIVES,
+                lastLifeRegenTimestamp: Date.now(),
+              };
+              void syncProgressToCloud?.(updated);
+              return updated;
+            });
           }
         }
 

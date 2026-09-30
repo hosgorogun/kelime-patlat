@@ -31,6 +31,7 @@ import {
   triggerHapticSelection,
   triggerHapticSuccess,
 } from "@/shared/audio-haptics";
+import { isEqualTr } from "@/shared/tr-utils";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 
 const FRAME_IMAGES: Record<string, any> = {
@@ -972,16 +973,16 @@ export function ProfileScreen({
                 <Text style={styles.deleteModalCancelText}>VAZGEÇ</Text>
               </Pressable>
               <Pressable
-                disabled={deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL"}
+                disabled={!isEqualTr(deleteConfirmInput.trim(), "SİL") && deleteConfirmInput.trim().toUpperCase() !== "SIL"}
                 onPress={() => {
-                  if (deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") === "SİL") {
+                  if (isEqualTr(deleteConfirmInput.trim(), "SİL") || deleteConfirmInput.trim().toUpperCase() === "SIL") {
                     setShowDeleteModal(false);
                     onDeleteAccount?.();
                   }
                 }}
                 style={[
                   styles.deleteModalConfirmBtn,
-                  deleteConfirmInput.trim().toLocaleUpperCase("tr-TR") !== "SİL" && styles.deleteModalConfirmDisabled
+                  !isEqualTr(deleteConfirmInput.trim(), "SİL") && deleteConfirmInput.trim().toUpperCase() !== "SIL" && styles.deleteModalConfirmDisabled
                 ]}
               >
                 <Text style={styles.deleteModalConfirmText}>EVET, SİL</Text>

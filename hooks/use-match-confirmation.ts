@@ -37,7 +37,7 @@ export function useMatchConfirmation({
         : "10×10 Usta Bot Karşılaşması";
     const durationText =
       size === 4 ? "55 Saniye" : size === 6 ? "75 Saniye" : size === 8 ? "95 Saniye" : "125 Saniye";
-    const routesText = size === 4 ? "4 Rota" : size === 6 ? "6 Rota" : size === 8 ? "8 Rota" : "12 Rota";
+    const routesText = size === 4 ? "3 Rota" : size === 6 ? "6 Rota" : size === 8 ? "8 Rota" : "12 Rota";
 
     setPendingMatchConfirm({
       size,

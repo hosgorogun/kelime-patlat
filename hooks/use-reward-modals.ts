@@ -26,6 +26,9 @@ export function useRewardModals({
   const [isClaimingWelcomeReward, setIsClaimingWelcomeReward] = useState(false);
   const isClaimingDailyRewardRef = useRef(false);
 
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+
   const handleClaimWelcomeReward = async () => {
     if (isClaimingWelcomeReward) return;
     setIsClaimingWelcomeReward(true);
@@ -67,8 +70,9 @@ export function useRewardModals({
 
   const handleClaimDailyReward = async () => {
     if (isClaimingDailyRewardRef.current) return;
+    const currentProgress = progressRef.current;
     const todayId = getDayId();
-    if (progress.lastLoginDay === todayId) return;
+    if (currentProgress.lastLoginDay === todayId) return;
     isClaimingDailyRewardRef.current = true;
 
     try {
@@ -110,7 +114,7 @@ export function useRewardModals({
         }
       }
 
-      const res = checkDailyLoginReward(progress, todayId);
+      const res = checkDailyLoginReward(progressRef.current, todayId);
       if (!res) return;
       setProgress(res.updatedProgress);
       AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(res.updatedProgress)).catch(() => undefined);

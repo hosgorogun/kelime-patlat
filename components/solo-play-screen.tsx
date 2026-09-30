@@ -22,6 +22,7 @@ export interface SoloPlayScreenProps {
   onNavigate: (destination: any) => void;
   livesModalElement: React.ReactNode;
   celebrationModalElement: React.ReactNode;
+  syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
 }
 
 export function SoloPlayScreen({
@@ -30,6 +31,7 @@ export function SoloPlayScreen({
   recentSoloWords,
   progress,
   setProgress,
+  syncProgressToCloud,
   activeBoardSkinColor,
   calculatedLives,
   onOpenLivesModal,
@@ -57,6 +59,9 @@ export function SoloPlayScreen({
         onOpenLivesModal={onOpenLivesModal}
         boardSkinColor={activeBoardSkinColor}
         selectedVictoryEffect={progress.selectedVictoryEffect}
+        progress={progress}
+        setProgress={setProgress}
+        syncProgressToCloud={syncProgressToCloud}
         watchAd={watchAd}
         onExit={onExit}
         onComplete={onComplete}

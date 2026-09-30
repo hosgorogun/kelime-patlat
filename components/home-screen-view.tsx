@@ -53,6 +53,8 @@ export interface HomeScreenViewProps {
   isClaimingWelcomeReward: boolean;
   onClaimWelcomeReward: () => void;
   onCloseWelcomeModal: () => void;
+  onOpenLuckyWheel?: () => void;
+  luckyWheelModalElement?: React.ReactNode;
 }
 
 export function HomeScreenView({
@@ -98,6 +100,8 @@ export function HomeScreenView({
   isClaimingWelcomeReward,
   onClaimWelcomeReward,
   onCloseWelcomeModal,
+  onOpenLuckyWheel,
+  luckyWheelModalElement,
 }: HomeScreenViewProps) {
   return (
     <MainShell
@@ -138,6 +142,7 @@ export function HomeScreenView({
         unclaimedMilestonesCount={unclaimedMilestones}
         onClaimDailyReward={onClaimDailyReward}
         onShowToast={onShowToast}
+        onOpenLuckyWheel={onOpenLuckyWheel}
       />
 
       {/* Game Mode Info Modal */}
@@ -167,6 +172,9 @@ export function HomeScreenView({
         onClaim={onClaimWelcomeReward}
         onClose={onCloseWelcomeModal}
       />
+
+      {/* Siber Şans Çarkı Modalı */}
+      {luckyWheelModalElement}
     </MainShell>
   );
 }
