@@ -51,3 +51,12 @@ export function playComboSound(streak: number = 2) {
 export function playTimerTick(urgent: boolean = false) {
   gameSfx.tick(urgent);
 }
+
+export function startAmbientBgm() {
+  gameSfx.startAmbientBgm();
+}
+
+export function stopAmbientBgm() {
+  gameSfx.stopAmbientBgm();
+}
+

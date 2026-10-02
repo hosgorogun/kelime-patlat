@@ -6,6 +6,6 @@ const Root =
   __DEV__ &&
   typeof location !== "undefined" &&
   new URLSearchParams(location.search).get("preview") === "design"
-    ? require("./components/design-preview").default
+    ? require("./components/common/design-preview").default
     : App;
 registerRootComponent(Root);

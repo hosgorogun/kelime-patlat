@@ -79,7 +79,7 @@ export function useAuthSession({
               setPlayerName(cachedName || "OYUNCU");
             }
           } catch (err) {
-            console.warn("[Auth] Failed to verify token on startup (offline fallback active):", err);
+            console.log("[Auth] Failed to verify token on startup (offline fallback active):", err);
             const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
             const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
             setAuthToken(token);
@@ -87,8 +87,18 @@ export function useAuthSession({
             setPlayerName(cachedName || "OYUNCU");
           }
         } else {
-          setAuthToken(null);
-          setScreen("auth");
+          // Sıfır Sürtünmeli Giriş (Instant Zero-Friction Onboarding)
+          // Yeni oyuncu doğrudan misafir olarak oyuna başlar, kayıt duvarı olmadan anında oynar.
+          const guestNumber = Math.floor(1000 + Math.random() * 9000);
+          const guestName = `Oyuncu #${guestNumber}`;
+          const guestId = `guest_${Math.random().toString(36).slice(2, 10)}`;
+          setAuthToken("guest");
+          setPlayerId(guestId);
+          setPlayerName(guestName);
+          await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
+          await AsyncStorage.setItem("kelime-patlat:player-id", guestId);
+          await AsyncStorage.setItem("kelime-patlat:player-name", guestName);
+          setScreen("home");
         }
         setAuthLoading(false);
       })

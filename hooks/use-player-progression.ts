@@ -11,7 +11,7 @@ import type { LeaderboardEntry } from "../shared/game";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "../constants/oauth";
 import { socialManager } from "../shared/social";
 import { getGameSocket } from "../lib/game-socket";
-import type { ModernAlertData } from "../components/modern-alert-modal";
+import type { ModernAlertData } from "../components/modals/modern-alert-modal";
 
 export const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 export const PROGRESS_KEY = "kelime-patlat:season-progress-v1";

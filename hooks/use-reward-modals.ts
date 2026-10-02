@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { PlayerProgress } from "../shared/progression";
 import { getDayId, checkDailyLoginReward } from "../shared/progression";
-import type { ToastData } from "../components/global-game-toast";
+import type { ToastData } from "../components/common/global-game-toast";
 import { getApiBaseUrl, SESSION_TOKEN_KEY } from "../constants/oauth";
 import { PROGRESS_KEY } from "./use-player-progression";
 import { haptics } from "../lib/haptics";

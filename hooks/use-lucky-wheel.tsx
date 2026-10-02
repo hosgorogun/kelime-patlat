@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { canSpinLuckyWheel, type PlayerProgress } from "../shared/progression";
-import { LuckyWheelModal } from "../components/lucky-wheel-modal";
+import { LuckyWheelModal } from "../components/modals/lucky-wheel-modal";
 
 export interface UseLuckyWheelParams {
   progress: PlayerProgress;

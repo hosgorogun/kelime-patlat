@@ -1,0 +1,17 @@
+export type Screen =
+  | "home"
+  | "online"
+  | "friends"
+  | "profile"
+  | "levels"
+  | "solo"
+  | "room"
+  | "game"
+  | "season"
+  | "league"
+  | "arcade"
+  | "daily-lobby"
+  | "missions"
+  | "auth"
+  | "store"
+  | "vintage";

@@ -1,0 +1,85 @@
+import React from "react";
+import { StatusBar } from "expo-status-bar";
+import { ScreenContainer } from "../common/screen-container";
+import { VintagePuzzle } from "./vintage-puzzle";
+import { applyVintageProgress, getCalculatedLives, type PlayerProgress } from "../../shared/progression";
+import type { ToastData } from "../common/global-game-toast";
+
+export interface VintageScreenContainerProps {
+  progress: PlayerProgress;
+  progressRef?: React.MutableRefObject<PlayerProgress>;
+  lives: number;
+  setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud: (updated: PlayerProgress) => Promise<void>;
+  awardProgressOnServer: (award: any, updater: (curr: PlayerProgress) => PlayerProgress) => Promise<void> | void;
+  setGlobalToast: (toast: ToastData | null) => void;
+  onOpenLivesModal: () => void;
+  onNavigate: (destination: any) => void;
+}
+
+export function VintageScreenContainer({
+  progress,
+  progressRef,
+  lives,
+  setProgress,
+  syncProgressToCloud,
+  awardProgressOnServer,
+  setGlobalToast,
+  onOpenLivesModal,
+  onNavigate,
+}: VintageScreenContainerProps) {
+  const livesCalc = getCalculatedLives(progress);
+  const internalRef = React.useRef(progress);
+  internalRef.current = progress;
+  const activeRef = progressRef || internalRef;
+
+  return (
+    <ScreenContainer style={{ flex: 1 }}>
+      <StatusBar style="dark" />
+      <VintagePuzzle
+        onBack={() => onNavigate("home")}
+        selectedVictoryEffect={progress.selectedVictoryEffect}
+        vintageProgress={progress.vintageProgress}
+        lives={livesCalc.lives}
+        isInfiniteLives={livesCalc.isInfinite}
+        coins={progress.coins ?? 0}
+        onSpendCoins={(amount: number) => {
+          const currentCoins = activeRef.current.coins ?? 0;
+          if (currentCoins < amount) return false;
+          activeRef.current = {
+            ...activeRef.current,
+            coins: Math.max(0, currentCoins - amount),
+          };
+          setProgress((current) => {
+            if ((current.coins ?? 0) < amount) return current;
+            const updated = { ...current, coins: Math.max(0, (current.coins ?? 0) - amount) };
+            void syncProgressToCloud(updated);
+            return updated;
+          });
+          return true;
+        }}
+        onOpenLivesModal={onOpenLivesModal}
+        onSaveProgress={(newProgress) => {
+          setProgress((current) => ({ ...current, vintageProgress: newProgress }));
+        }}
+        onRewardXp={(amount: number, level: number, wordsCount: number = 5, foundWords?: string[]) => {
+          setProgress((current) => {
+            const updated = applyVintageProgress(current, level, amount, wordsCount, foundWords);
+            return updated;
+          });
+          void awardProgressOnServer(
+            { kind: "vintage", score: amount, level, wordsCount, foundWords },
+            (current) => applyVintageProgress(current, level, amount, wordsCount, foundWords)
+          );
+          setGlobalToast({
+            id: `vintage-${Date.now()}`,
+            title: "🗞️ SEVİYE TAMAMLANDI!",
+            subtitle: `Nostaljik gazeteyi başarıyla tamamladın. +${amount} XP kazanıldı!`,
+            icon: "🗞️",
+            accentColor: "#FFC24A",
+          });
+        }}
+      />
+    </ScreenContainer>
+  );
+}

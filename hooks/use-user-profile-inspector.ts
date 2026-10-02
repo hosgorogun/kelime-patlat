@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { InspectableUser } from "../components/user-profile-modal";
+import type { InspectableUser } from "../components/profile/user-profile-modal";
 import { getApiBaseUrl } from "../constants/oauth";
 
 export function useUserProfileInspector() {
@@ -35,7 +35,7 @@ export function useUserProfileInspector() {
         const res = await fetch(`${getApiBaseUrl()}/api/user/profile/${encodeURIComponent(target.id || target.name)}`);
         if (res.ok) {
           const fresh = await res.json();
-          setInspectedUser((current) => (current && current.id === target.id ? { ...current, ...fresh } : current));
+          setInspectedUser((current: InspectableUser | null) => (current && current.id === target.id ? { ...current, ...fresh } : current));
         }
       } catch {
         // Çevrimdışı veya hata durumunda base bilgiler görünmeye devam eder

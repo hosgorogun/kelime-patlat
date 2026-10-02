@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setHapticsEnabled } from "../lib/haptics";
 import { setSfxEnabled } from "../lib/game-sfx";
-import { setHapticsEnabled as setSoloHapticsEnabled } from "../shared/audio-haptics";
+import { setHapticsEnabled as setSoloHapticsEnabled, startAmbientBgm, stopAmbientBgm } from "../shared/audio-haptics";
 import type { PlayerProgress } from "../shared/progression";
 
 export interface UseAudioHapticsSettingsParams {
@@ -47,6 +47,17 @@ export function useAudioHapticsSettings({
       setSoloHapticsEnabled(progress.hapticsEnabled);
     }
   }, [progress.sfxEnabled, progress.hapticsEnabled, progressReady]);
+
+  useEffect(() => {
+    if (sfxOn) {
+      startAmbientBgm();
+    } else {
+      stopAmbientBgm();
+    }
+    return () => {
+      stopAmbientBgm();
+    };
+  }, [sfxOn]);
 
   const toggleSfx = (val: boolean) => {
     setSfxOn(val);

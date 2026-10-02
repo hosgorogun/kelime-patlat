@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, type View } from "react-native";
 import { getGameSocket } from "../lib/game-socket";
 import { haptics } from "../lib/haptics";
@@ -279,6 +279,13 @@ export function useBoardSelection({
     lastGestureStartTimeRef.current = 0;
     submitSelection(true);
   };
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+      if (pendingWordTimeoutRef.current) clearTimeout(pendingWordTimeoutRef.current);
+    };
+  }, []);
 
   return {
     boardRef,

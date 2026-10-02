@@ -3,7 +3,7 @@ import {
   CelebrationModal,
   type CelebrationModalData,
   getLevelUpDetails,
-} from "../components/celebration-modal";
+} from "../components/modals/celebration-modal";
 import {
   getCalculatedLives,
   getLeagueTier,
@@ -12,7 +12,7 @@ import {
   type PlayerProgress,
 } from "../shared/progression";
 import { notificationManager } from "../lib/engagement";
-import type { ToastData } from "../components/global-game-toast";
+import type { ToastData } from "../components/common/global-game-toast";
 
 export interface UseCelebrationManagerParams {
   progress: PlayerProgress;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BoardSize } from "../shared/game";
-import type { ModernAlertData } from "../components/modern-alert-modal";
+import type { ModernAlertData } from "../components/modals/modern-alert-modal";
 
 export interface PendingMatchConfirm {
   size: BoardSize;
@@ -29,9 +29,9 @@ export function useMatchConfirmation({
   const promptBotDuel = (size: BoardSize) => {
     const modeTitle =
       size === 4
-        ? "4×4 Siber Bot Alıştırması"
+        ? "4×4 Bot Alıştırması"
         : size === 6
-        ? "6×6 Siber Bot Düellosu"
+        ? "6×6 Bot Düellosu"
         : size === 8
         ? "8×8 İleri Düzey Bot Maçı"
         : "10×10 Usta Bot Karşılaşması";

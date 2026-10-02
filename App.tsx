@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ErrorBoundary } from "./components/error-boundary";
+import { ErrorBoundary } from "./components/common/error-boundary";
 import { initManusRuntime } from "./lib/_core/manus-runtime";
-import { AppRoot, type Screen } from "./components/app-root";
+import { AppRoot } from "./components/shell/app-root";
+import type { Screen } from "./components/shell/types";
 
 export type { Screen };
 

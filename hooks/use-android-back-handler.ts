@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { BackHandler } from "react-native";
 import type { RoomSnapshot } from "../shared/game";
-import type { ModernAlertData } from "../components/modern-alert-modal";
-import type { Screen } from "../App";
+import type { ModernAlertData } from "../components/modals/modern-alert-modal";
+import type { Screen } from "@/components/shell/types";
 
 interface UseAndroidBackHandlerParams {
   screen: Screen;
@@ -198,6 +198,7 @@ export function useAndroidBackHandler({
     showResultModal,
     showLeaveDuelModal,
     seasonResetModal,
+    globalAlert,
     dailySession,
     soloLevel,
     room,

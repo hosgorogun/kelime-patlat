@@ -252,4 +252,54 @@ export const gameSfx = {
     }
     play("select", 1.5);
   },
+  startAmbientBgm: () => {
+    startAmbientBgm();
+  },
+  stopAmbientBgm: () => {
+    stopAmbientBgm();
+  },
 };
+
+let ambientBgmTimer: any = null;
+let bgmStep = 0;
+
+// Relaxing, warm acoustic Lo-Fi jazz chords (Cmaj7 -> Am7 -> Dm7 -> G7)
+const BGM_CHORDS = [
+  [261.63, 329.63, 392.00, 493.88], // Cmaj7 (C4, E4, G4, B4)
+  [220.00, 261.63, 329.63, 392.00], // Am7 (A3, C4, E4, G4)
+  [293.66, 349.23, 440.00, 523.25], // Dm7 (D4, F4, A4, C5)
+  [196.00, 246.94, 293.66, 349.23], // G7 (G3, B3, D4, F4)
+];
+
+function playAmbientChord() {
+  if (!sfxEnabled) return;
+  const ctx = getWebAudioContext();
+  if (!ctx) return;
+  try {
+    const chord = BGM_CHORDS[bgmStep % BGM_CHORDS.length]!;
+    bgmStep++;
+    chord.forEach((freq, idx) => {
+      playSynthTone(freq, 2.8, "sine", 0.022, idx * 0.09);
+    });
+  } catch {
+    // ignore
+  }
+}
+
+export function startAmbientBgm() {
+  if (ambientBgmTimer) return;
+  playAmbientChord();
+  ambientBgmTimer = setInterval(() => {
+    if (sfxEnabled) {
+      playAmbientChord();
+    }
+  }, 4500);
+}
+
+export function stopAmbientBgm() {
+  if (ambientBgmTimer) {
+    clearInterval(ambientBgmTimer);
+    ambientBgmTimer = null;
+  }
+}
+

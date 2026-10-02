@@ -12,7 +12,7 @@ import {
 } from "../shared/progression";
 import { MAX_SOLO_LEVEL } from "../shared/solo";
 import { monetizationManager } from "../shared/monetization";
-import type { ToastData } from "../components/global-game-toast";
+import type { ToastData } from "../components/common/global-game-toast";
 import { SOLO_UNLOCK_KEY } from "./use-player-progression";
 
 export interface UseSoloGameParams {
@@ -126,6 +126,7 @@ export function useSoloGame({
           ...localProgress,
           soloUnlockedLevel: next,
         };
+        void syncProgressToCloud(updated);
         return updated;
       });
       void awardProgressOnServer(
@@ -165,6 +166,7 @@ export function useSoloGame({
             ...updated,
             history: Array.from(new Set([...(updated.history || []), ...(foundWords || [])])).slice(-150),
           };
+          void syncProgressToCloud(withWords);
           return withWords;
         });
         void awardProgressOnServer({

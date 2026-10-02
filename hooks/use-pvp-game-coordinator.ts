@@ -7,9 +7,9 @@ import { haptics } from "../lib/haptics";
 import { gameSfx } from "../lib/game-sfx";
 import type { RoomSnapshot } from "../shared/game";
 import type { PlayerProgress } from "../shared/progression";
-import type { ToastData } from "../components/global-game-toast";
+import type { ToastData } from "../components/common/global-game-toast";
 import type { FriendRequest } from "../shared/social";
-import type { Screen } from "../App";
+import type { Screen } from "@/components/shell/types";
 
 export interface UsePvpGameCoordinatorParams {
   width: number;
@@ -56,6 +56,31 @@ export function usePvpGameCoordinator({
   const setShowLeaveDuelModalRef = useRef<(s: boolean) => void>(() => {});
   const setGameCountdownRef = useRef<(c: number | null) => void>(() => {});
 
+  const handleWordAccepted = React.useCallback((words: RoomSnapshot["foundWords"]) => {
+    onWordAcceptedRef.current(words);
+  }, []);
+  const handleWordRejected = React.useCallback((payload?: { word?: string; reason?: string }) => {
+    onWordRejectedRef.current(payload);
+  }, []);
+  const handleClearSelection = React.useCallback(() => {
+    clearSelectionRef.current();
+  }, []);
+  const handleSetInspectedPath = React.useCallback((p: number[] | null) => {
+    setInspectedPathRef.current(p);
+  }, []);
+  const handleSetSelectedWordInfo = React.useCallback((info: any) => {
+    setSelectedWordInfoRef.current(info);
+  }, []);
+  const handleSetShowResultModal = React.useCallback((s: boolean) => {
+    setShowResultModalRef.current(s);
+  }, []);
+  const handleSetShowLeaveDuelModal = React.useCallback((s: boolean) => {
+    setShowLeaveDuelModalRef.current(s);
+  }, []);
+  const handleSetGameCountdown = React.useCallback((c: number | null) => {
+    setGameCountdownRef.current(c);
+  }, []);
+
   const roomSocket = useRoomSocket({
     playerId,
     safeName,
@@ -67,14 +92,14 @@ export function usePvpGameCoordinator({
     screenRef,
     setNotice,
     setGlobalToast,
-    onWordAccepted: (words) => onWordAcceptedRef.current(words),
-    onWordRejected: (payload) => onWordRejectedRef.current(payload),
-    clearSelection: () => clearSelectionRef.current(),
-    setInspectedPath: (p) => setInspectedPathRef.current(p),
-    setSelectedWordInfo: (info) => setSelectedWordInfoRef.current(info),
-    setShowResultModal: (s) => setShowResultModalRef.current(s),
-    setShowLeaveDuelModal: (s) => setShowLeaveDuelModalRef.current(s),
-    setGameCountdown: (c) => setGameCountdownRef.current(c),
+    onWordAccepted: handleWordAccepted,
+    onWordRejected: handleWordRejected,
+    clearSelection: handleClearSelection,
+    setInspectedPath: handleSetInspectedPath,
+    setSelectedWordInfo: handleSetSelectedWordInfo,
+    setShowResultModal: handleSetShowResultModal,
+    setShowLeaveDuelModal: handleSetShowLeaveDuelModal,
+    setGameCountdown: handleSetGameCountdown,
     setLeaderboard,
     setPendingRequests,
     prevStartedAtRef,

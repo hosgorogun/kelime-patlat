@@ -3,25 +3,25 @@ import type { GamePlayer } from "./game";
 import { PROFILE_FRAMES } from "./store-items";
 
 export const BOT_USERNAMES = [
-  "SiberKaptan",
+  "KelimeKaptanı",
   "Zeynep_99",
-  "CyberBerk",
+  "BerkBulmaca",
   "KelimeAvcısı",
   "MelisWord",
-  "NeonGamer34",
-  "EfeTeknoloji",
+  "UstaBulmacacı",
+  "Efe_Harf",
   "HarfUstası",
   "Selin_Pro",
-  "Mert_Cyber",
-  "VipGamer06",
+  "MertBulmaca",
+  "KelimeSever06",
   "GeceKuşu",
-  "KuantumKelime",
-  "Buse_Cyber",
-  "MatrixOyuncu",
+  "ZihinUstası",
+  "Buse_99",
+  "HızlıKelime",
   "DerinKelime",
-  "Kaan_Vip",
+  "Kaan_34",
   "AlfaBulmaca",
-  "PixelKraliçe",
+  "BulmacaKraliçesi",
   "TaktikMaster",
 ] as const;
 
@@ -31,7 +31,7 @@ export const BOT_AVATARS = [
 
 export function getRandomBotPersona(hostPlayer?: Partial<GamePlayer>): GamePlayer {
   const nameIndex = Math.floor(Math.random() * BOT_USERNAMES.length);
-  const name = BOT_USERNAMES[nameIndex] || "SiberKaptan";
+  const name = BOT_USERNAMES[nameIndex] || "KelimeKaptanı";
   
   const hostLp = hostPlayer?.lp ?? 100;
   // Match player LP with a +/- 120 range, minimum 0

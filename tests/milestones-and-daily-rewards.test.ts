@@ -7,9 +7,77 @@ import {
   checkDailyLoginReward,
   getDayId,
   getPlayerLevel,
+  getLevelProgress,
+  getXpForLevel,
+  getXpRequiredForNextLevel,
+  badgesFor,
 } from "../shared/progression";
 
 describe("Milestone Sandıkları, Günlük Ödül & Vintage Modu Testleri", () => {
+  it("Kademeli Seviye ve EXP Eğrisini doğru hesaplamalıdır", () => {
+    // 0 XP -> Seviye 1, sonraki seviye için 200 XP gerekir
+    const p1 = getLevelProgress(0);
+    expect(p1.level).toBe(1);
+    expect(p1.currentLevelXp).toBe(0);
+    expect(p1.nextLevelXp).toBe(200);
+
+    // 200 XP -> Seviye 2
+    expect(getPlayerLevel(200)).toBe(2);
+
+    // 2800 XP -> Tam Seviye 15 (Onboarding sınırı, 200 XP/seviye)
+    expect(getPlayerLevel(2800)).toBe(15);
+    const p15 = getLevelProgress(2800);
+    expect(p15.level).toBe(15);
+    expect(p15.currentLevelXp).toBe(0);
+    expect(p15.nextLevelXp).toBe(350); // Seviye 16'ya geçiş için 350 XP gerekir
+
+    // 3150 XP -> Seviye 16 (2800 + 350)
+    expect(getPlayerLevel(3150)).toBe(16);
+
+    // 8050 XP -> Seviye 30 (Gümüş Sandık eşiği)
+    expect(getPlayerLevel(8050)).toBe(30);
+
+    // 18050 XP -> Seviye 50
+    expect(getPlayerLevel(18050)).toBe(50);
+
+    // 36800 XP -> Seviye 75
+    expect(getPlayerLevel(36800)).toBe(75);
+
+    // 61800 XP -> Seviye 100 (Kozmik İmparator Zirvesi)
+    expect(getPlayerLevel(61800)).toBe(100);
+
+    // Seviye eşik fonksiyonu tutarlı olmalıdır
+    expect(getXpForLevel(1)).toBe(0);
+    expect(getXpForLevel(15)).toBe(2800);
+    expect(getXpForLevel(30)).toBe(8050);
+    expect(getXpForLevel(50)).toBe(18050);
+    expect(getXpForLevel(75)).toBe(36800);
+    expect(getXpForLevel(100)).toBe(61800);
+
+    // Gereken XP aralıkları
+    expect(getXpRequiredForNextLevel(1)).toBe(200);
+    expect(getXpRequiredForNextLevel(15)).toBe(350);
+    expect(getXpRequiredForNextLevel(30)).toBe(500);
+    expect(getXpRequiredForNextLevel(50)).toBe(750);
+    expect(getXpRequiredForNextLevel(75)).toBe(1000);
+    expect(getXpRequiredForNextLevel(100)).toBe(1200);
+  });
+
+  it("Rozetler Seviye veya Claimed Milestone ile açılmalıdır", () => {
+    const unearned = badgesFor({ ...DEFAULT_PROGRESS, xp: 0 });
+    const b15 = unearned.find((b) => b.id === "badge-lvl-15");
+    expect(b15?.unlocked).toBe(false);
+
+    // Seviye 15'e ulaşınca rozet açılır
+    const earnedByLevel = badgesFor({ ...DEFAULT_PROGRESS, xp: 2800 });
+    const b15Earned = earnedByLevel.find((b) => b.id === "badge-lvl-15");
+    expect(b15Earned?.unlocked).toBe(true);
+
+    // Veya claimedMilestones işaretlenince açılır
+    const earnedByClaim = badgesFor({ ...DEFAULT_PROGRESS, xp: 0, claimedMilestones: { 15: true } });
+    const b15Claimed = earnedByClaim.find((b) => b.id === "badge-lvl-15");
+    expect(b15Claimed?.unlocked).toBe(true);
+  });
   it("Seviye milestoneları doğru seviye eşiklerini tanımlamalıdır", () => {
     const levels = MILESTONE_REWARDS.map((m) => m.level);
     expect(levels).toEqual([15, 30, 45, 60, 75, 100]);

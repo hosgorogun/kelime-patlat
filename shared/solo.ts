@@ -520,34 +520,38 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
   };
 }
 
-export const ARCADE_INITIAL_TIME = 40;
-export const MAX_ARCADE_TIME = 65;
+export const ARCADE_INITIAL_TIME = 45;
+export const MAX_ARCADE_TIME = 85;
 
 export function getNextArcadeSeed(currentScore: number, currentSeed: number): number {
-  if (currentScore < 320) {
+  // 0 - 999: Hızlı ve akıcı 4x4 blitz tahtaları (İlk ~5-6 tahta boyunca harf boyutu boğmaz)
+  if (currentScore < 1000) {
     return (currentSeed % 15) + 1;
   }
-  if (currentScore < 900) {
+  // 1000 - 2499: Taktiksel ve ısınmış oyuncu için 6x6 tahtalar
+  if (currentScore < 2500) {
     return 16 + ((currentSeed + 1) % 30);
   }
-  if (currentScore < 1800) {
+  // 2500 - 4499: Yüksek refleksli ustalar için 8x8 tahtalar
+  if (currentScore < 4500) {
     return 46 + ((currentSeed + 1) % 30);
   }
+  // 4500+: Kozmik liderlik maratonu 10x10 tahtalar
   return 76 + ((currentSeed + 1) % 25);
 }
 
 export function getArcadeBoardClearBonus(currentSize: BoardSize, nextSize: BoardSize): number {
   const isGraduating = nextSize > currentSize;
   if (currentSize === 4) {
-    return isGraduating ? 18 : 10;
+    return isGraduating ? 22 : 12;
   }
   if (currentSize === 6) {
-    return isGraduating ? 22 : 14;
+    return isGraduating ? 26 : 16;
   }
   if (currentSize === 8) {
-    return isGraduating ? 26 : 18;
+    return isGraduating ? 30 : 20;
   }
-  return 22;
+  return 24;
 }
 
 export function calculateArcadeCombo(comboStreak: number): {
@@ -555,25 +559,32 @@ export function calculateArcadeCombo(comboStreak: number): {
   bonusScore: number;
   label: string;
 } {
-  if (comboStreak >= 4) {
+  if (comboStreak >= 5) {
+    return {
+      bonusSeconds: 4,
+      bonusScore: 65,
+      label: `🔥 SÜPER ALEV x${comboStreak}! +4s`,
+    };
+  }
+  if (comboStreak === 4) {
     return {
       bonusSeconds: 3,
-      bonusScore: 40,
-      label: `💥 SÜPER KOMBO x${comboStreak}! +3s`,
+      bonusScore: 45,
+      label: "💥 KOMBO x4! +3s",
     };
   }
   if (comboStreak === 3) {
     return {
       bonusSeconds: 2,
-      bonusScore: 25,
+      bonusScore: 30,
       label: "⚡ KOMBO x3! +2s",
     };
   }
   if (comboStreak === 2) {
     return {
       bonusSeconds: 1,
-      bonusScore: 10,
-      label: "🔥 KOMBO x2! +1s",
+      bonusScore: 15,
+      label: "⭐ KOMBO x2! +1s",
     };
   }
   return {

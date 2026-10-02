@@ -13,10 +13,10 @@ describe("CANLI OYUN OYNAMA & PLAYTEST SİMÜLASYONU", () => {
   });
 
   it("⚡ Arcade Kombat modunda hamle yapar ve skor/zaman reaksiyonlarını tetikler", () => {
-    expect(ARCADE_INITIAL_TIME).toBe(40);
+    expect(ARCADE_INITIAL_TIME).toBe(45);
     const comboRes = calculateArcadeCombo(3);
     expect(comboRes.bonusSeconds).toBe(2);
-    expect(comboRes.bonusScore).toBe(25);
+    expect(comboRes.bonusScore).toBe(30);
   });
 
   it("🎁 Loot Box Reveal ve Sosyal Etkileşimleri canlı test eder", async () => {

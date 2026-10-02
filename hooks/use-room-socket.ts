@@ -8,11 +8,11 @@ import { triggerHapticSelection, triggerHapticSuccess } from "../shared/audio-ha
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
 import { isEqualTr } from "../shared/tr-utils";
 import { monetizationManager } from "../shared/monetization";
-import { getPlayerLevel, getLeagueTier, type PlayerProgress } from "../shared/progression";
+import { applyMatchProgress, getPlayerLevel, getLeagueTier, type PlayerProgress } from "../shared/progression";
 import { socialManager, type FriendRequest, type FriendUser } from "../shared/social";
 import type { BoardSize, LeaderboardEntry, RoomSnapshot } from "../shared/game";
-import type { ToastData } from "../components/global-game-toast";
-import type { InspectableUser } from "../components/user-profile-modal";
+import type { ToastData } from "../components/common/global-game-toast";
+import type { InspectableUser } from "../components/profile/user-profile-modal";
 
 export interface UseRoomSocketParams {
   playerId: string;
@@ -288,7 +288,39 @@ export function useRoomSocket({
 
   const leaveRoom = () => {
     if (room) {
-      if (room.status === "finished") {
+      if (room.status === "playing") {
+        const roundId = `${room.code}:${room.startedAt ?? 0}`;
+        recordedRoundRef.current = roundId;
+        const isBotMatch = room.players.some((p) => p.isBot);
+        const opponent = room.players.find((p) => p.id !== playerId);
+        const isFriend = Boolean((room as any).isFriendGame || room.isCustom || !room.isRanked);
+        const myScore = room.scores[playerId] ?? 0;
+        const opponentScore = opponent ? (room.scores[opponent.id] ?? 0) : 0;
+        const myWords = room.foundWords
+          .filter((entry) => entry.playerId === playerId && !entry.hidden)
+          .map((entry) => entry.word);
+        setProgress((current) => {
+          const updated = applyMatchProgress(
+            current,
+            {
+              score: myScore,
+              tempo: 0,
+              won: false,
+              isDraw: false,
+              longWord: false,
+              foundWords: myWords,
+              size: room.size,
+              opponentName: opponent?.name || (isBotMatch ? "Siber Bot" : "Rakip"),
+              opponentAvatar: opponent?.avatar,
+              opponentScore: opponentScore,
+              isFriendGame: isFriend,
+            },
+            isBotMatch ? "bot" : "pvp"
+          );
+          void syncProgressToCloud(updated);
+          return updated;
+        });
+      } else if (room.status === "finished") {
         const won = room.winnerId === playerId;
         const { shouldShowInterstitial } = monetizationManager.recordMatchFinished(won);
         if (shouldShowInterstitial) {
@@ -506,7 +538,7 @@ export function useRoomSocket({
         username: target.username || target.name,
         avatar: target.avatar || "🤖",
         avatarPhoto: target.avatarPhoto,
-        selectedTitle: target.selectedTitle || "[SİBER BOT]",
+        selectedTitle: target.selectedTitle || "[BOT RAKİP]",
         isOnline: true,
         xp: target.xp ?? 2500,
         level: target.level ?? 10,
@@ -589,6 +621,29 @@ export function useRoomSocket({
     }
   };
 
+  const callbacksRef = useRef({
+    flushPendingAwards,
+    onWordRejected,
+    setGlobalToast,
+    setLeaderboard,
+    setNotice,
+    setPendingRequests,
+    setProgress,
+    setRoomFromServer,
+    setScreen,
+  });
+  callbacksRef.current = {
+    flushPendingAwards,
+    onWordRejected,
+    setGlobalToast,
+    setLeaderboard,
+    setNotice,
+    setPendingRequests,
+    setProgress,
+    setRoomFromServer,
+    setScreen,
+  };
+
   // Socket event subscriptions
   useEffect(() => {
     const socket = getGameSocket();
@@ -598,7 +653,7 @@ export function useRoomSocket({
         matchmakingIntervalRef.current = null;
       }
       setMatchmakingState(null);
-      setRoomFromServer(next);
+      callbacksRef.current.setRoomFromServer(next);
 
       if (pendingDuelInviteRef.current && next.status === "waiting") {
         const { targetId, targetUsername, size, botProfile } = pendingDuelInviteRef.current;
@@ -618,8 +673,8 @@ export function useRoomSocket({
     const onRoomError = (payload: { message?: string }) => {
       haptics.error();
       const msg = payload.message ?? "Odayla ilgili bir sorun oluştu.";
-      setNotice(msg);
-      setGlobalToast({
+      callbacksRef.current.setNotice(msg);
+      callbacksRef.current.setGlobalToast({
         id: `room-err-${Date.now()}`,
         title: "ODA HATASI",
         subtitle: msg,
@@ -636,23 +691,23 @@ export function useRoomSocket({
         activeRoomCodeRef.current = null;
         setRoom(null);
         if (screenRef.current === "room" || screenRef.current === "game") {
-          setScreen("home");
+          callbacksRef.current.setScreen("home");
         }
       }
     };
 
     const onRejected = (payload?: { word?: string; reason?: string }) => {
-      onWordRejected(payload);
+      callbacksRef.current.onWordRejected(payload);
     };
 
-    const onLeaderboardUpdate = (next: LeaderboardEntry[]) => setLeaderboard(next);
+    const onLeaderboardUpdate = (next: LeaderboardEntry[]) => callbacksRef.current.setLeaderboard(next);
 
     const onFriendRequestReceived = (req: FriendRequest) => {
       socialManager.addPendingRequest(req);
-      setPendingRequests([...socialManager.getPendingRequests()]);
+      callbacksRef.current.setPendingRequests([...socialManager.getPendingRequests()]);
       gameSfx.tap();
       haptics.success();
-      setGlobalToast({
+      callbacksRef.current.setGlobalToast({
         id: `freq-${Date.now()}`,
         title: "ARKADAŞLIK İSTEĞİ",
         subtitle: `${req.fromName} sana arkadaşlık isteği gönderdi!`,
@@ -664,14 +719,14 @@ export function useRoomSocket({
     const onFriendRequestAccepted = (payload: { requestId?: string; newFriend: FriendUser; message?: string }) => {
       if (payload.requestId) {
         socialManager.removePendingRequest(payload.requestId);
-        setPendingRequests([...socialManager.getPendingRequests()]);
+        callbacksRef.current.setPendingRequests([...socialManager.getPendingRequests()]);
       }
       socialManager.addFriend(payload.newFriend);
       const updated = [...socialManager.getFriends()];
-      setProgress((curr) => ({ ...curr, friends: updated }));
+      callbacksRef.current.setProgress((curr) => ({ ...curr, friends: updated }));
       gameSfx.victory();
       haptics.success();
-      setGlobalToast({
+      callbacksRef.current.setGlobalToast({
         id: `freq-acc-${Date.now()}`,
         title: "İSTEK KABUL EDİLDİ",
         subtitle: payload.message || `${payload.newFriend.name} arkadaşlık isteğini kabul etti!`,
@@ -683,14 +738,14 @@ export function useRoomSocket({
     const onFriendRequestsList = (list: FriendRequest[]) => {
       if (Array.isArray(list)) {
         socialManager.setPendingRequests(list);
-        setPendingRequests([...socialManager.getPendingRequests()]);
+        callbacksRef.current.setPendingRequests([...socialManager.getPendingRequests()]);
       }
     };
 
     const onFriendRemoved = (payload: { friendId: string }) => {
       socialManager.removeFriend(payload.friendId);
       const updated = [...socialManager.getFriends()];
-      setProgress((curr) => ({ ...curr, friends: updated }));
+      callbacksRef.current.setProgress((curr) => ({ ...curr, friends: updated }));
     };
 
     const onDuelIncoming = (payload: { fromPlayerId: string; fromPlayerName: string; roomCode: string; size: BoardSize }) => {
@@ -702,7 +757,7 @@ export function useRoomSocket({
     const onDuelAccepted = (payload: { fromPlayerName: string; roomCode: string }) => {
       gameSfx.victory();
       haptics.success();
-      setGlobalToast({
+      callbacksRef.current.setGlobalToast({
         id: `duel-acc-${Date.now()}`,
         title: "DÜELLO KABUL EDİLDİ! ⚔️",
         subtitle: `${payload.fromPlayerName} davetini kabul etti, odaya katılıyor!`,
@@ -712,7 +767,7 @@ export function useRoomSocket({
     };
 
     const onDuelRejected = (payload: { fromPlayerName: string }) => {
-      setGlobalToast({
+      callbacksRef.current.setGlobalToast({
         id: `duel-rej-${Date.now()}`,
         title: "DÜELLO REDDEDİLDİ",
         subtitle: `${payload.fromPlayerName} düello davetini reddetti.`,
@@ -722,7 +777,7 @@ export function useRoomSocket({
     };
 
     const onDuelFailed = (payload: { message: string }) => {
-      setGlobalToast({
+      callbacksRef.current.setGlobalToast({
         id: `duel-fail-${Date.now()}`,
         title: "DAVET İLETİLEMEDİ",
         subtitle: payload.message || "Rakibe ulaşılamadı.",
@@ -753,7 +808,7 @@ export function useRoomSocket({
       }
       socket.emit("player:identify", { playerId, username: safeName });
       socket.emit("friend:requests:get", { playerId, username: safeName });
-      void flushPendingAwards();
+      void callbacksRef.current.flushPendingAwards();
     };
 
     const onDisconnect = () => {
@@ -805,20 +860,7 @@ export function useRoomSocket({
       socket.off("friend:duel:failed", onDuelFailed);
       socket.off("room:emote:received", onEmoteReceived);
     };
-  }, [
-    flushPendingAwards,
-    onWordRejected,
-    playerId,
-    safeName,
-    screenRef,
-    setGlobalToast,
-    setLeaderboard,
-    setNotice,
-    setPendingRequests,
-    setProgress,
-    setRoomFromServer,
-    setScreen,
-  ]);
+  }, [playerId, safeName, screenRef]);
 
   return {
     room,

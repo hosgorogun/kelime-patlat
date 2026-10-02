@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LivesModal } from "../components/lives-modal";
+import { LivesModal } from "../components/modals/lives-modal";
 import { triggerHapticSuccess } from "../shared/audio-haptics";
 import { buyLives, MAX_LIVES, type PlayerProgress } from "../shared/progression";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "../constants/oauth";
-import type { ToastData } from "../components/global-game-toast";
+import type { ToastData } from "../components/common/global-game-toast";
 
 export interface UseLivesManagerParams {
   progress: PlayerProgress;

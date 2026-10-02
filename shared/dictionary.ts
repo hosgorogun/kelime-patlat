@@ -252,6 +252,17 @@ export async function fetchWordDefinition(word: string, apiBaseUrl?: string): Pr
   return detail.definition;
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promise<WordDetail> {
   const clean = word.trim();
   if (!clean) {
@@ -267,17 +278,6 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
   if (DETAIL_CACHE.has(trUpper)) {
     return DETAIL_CACHE.get(trUpper)!;
   }
-
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    return res;
-  } finally {
-    clearTimeout(id);
-  }
-}
 
   // 1. Sunucu API proxy üzerinden sorgula (Hızlı, sunucu önbellekli ve CORS problemsiz)
   if (apiBaseUrl) {
