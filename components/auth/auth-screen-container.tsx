@@ -3,32 +3,35 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthScreen } from "./auth-screen";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "@/constants/oauth";
 import { mergePlayerProgress, type PlayerProgress } from "@/shared/progression";
+import { useAuth, useProgression } from "@/context";
 
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
 
 export interface AuthScreenContainerProps {
-  authToken: string | null;
-  progress: PlayerProgress;
-  setAuthToken: (token: string | null) => void;
-  setPlayerId: (id: string) => void;
-  setPlayerName: (name: string) => void;
-  setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
-  syncProgressToCloud: (p: PlayerProgress) => Promise<void>;
-  reconnectGameSocket: () => void;
+  authToken?: string | null;
+  progress?: PlayerProgress;
+  setAuthToken?: (token: string | null) => void;
+  setPlayerId?: (id: string) => void;
+  setPlayerName?: (name: string) => void;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud?: (p: PlayerProgress) => Promise<void>;
+  reconnectGameSocket?: () => void;
   onFinishAuth: (options: { showWelcomeModal: boolean }) => void;
 }
 
-export function AuthScreenContainer({
-  authToken,
-  progress,
-  setAuthToken,
-  setPlayerId,
-  setPlayerName,
-  setProgress,
-  syncProgressToCloud,
-  reconnectGameSocket,
-  onFinishAuth,
-}: AuthScreenContainerProps) {
+export function AuthScreenContainer(props: AuthScreenContainerProps) {
+  const auth = useAuth();
+  const progression = useProgression();
+
+  const authToken = props.authToken !== undefined ? props.authToken : auth.authToken;
+  const progress = props.progress ?? progression.progress;
+  const setAuthToken = props.setAuthToken ?? auth.setAuthToken;
+  const setPlayerId = props.setPlayerId ?? auth.setPlayerId;
+  const setPlayerName = props.setPlayerName ?? auth.setPlayerName;
+  const setProgress = props.setProgress ?? progression.setProgress;
+  const syncProgressToCloud = props.syncProgressToCloud ?? progression.syncProgressToCloud;
+  const reconnectGameSocket = props.reconnectGameSocket ?? progression.reconnectGameSocket;
+  const onFinishAuth = props.onFinishAuth;
   return (
     <AuthScreen
       onCancel={async () => {

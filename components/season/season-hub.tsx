@@ -14,7 +14,6 @@ import { isEqualTr } from "@/shared/tr-utils";
 import { LeagueHub } from "./league-hub";
 import { styles } from "./season-hub.styles";
 import {
-  type SeasonTab,
   type RankingType,
   MOCK_LP_LEADERBOARD,
   MOCK_LEVEL_LEADERBOARD,
@@ -23,7 +22,7 @@ import { BoardSizePickerModal } from "./board-size-picker-modal";
 import { SeasonLeaderboardTab } from "./season-leaderboard-tab";
 import { SeasonFriendsTab } from "./season-friends-tab";
 
-export type { SeasonTab };
+export type SeasonTab = "leagues" | "leaderboard" | "friends";
 
 export function SeasonHub({
   playerId,

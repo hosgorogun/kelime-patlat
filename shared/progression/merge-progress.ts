@@ -5,6 +5,7 @@ import {
   MatchHistoryEntry,
   PlayerProgress,
 } from "./progression.types";
+import { normalizeTr } from "../tr-utils";
 
 export function backfillMatchHistoryIfEmpty(progress: PlayerProgress): MatchHistoryEntry[] {
   if (Array.isArray(progress.matchHistory) && progress.matchHistory.length > 0) {
@@ -279,8 +280,8 @@ export function mergePlayerProgress(
     lastSeasonResetId: local.lastSeasonResetId || cleanRemote?.lastSeasonResetId,
     friends: (() => {
       const map = new Map<string, any>();
-      (local.friends ?? []).forEach((f) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
-      (cleanRemote?.friends ?? []).forEach((f: any) => map.set(f.username.toLocaleLowerCase("tr-TR"), f));
+      (local.friends ?? []).forEach((f) => map.set(normalizeTr(f.username), f));
+      (cleanRemote?.friends ?? []).forEach((f: any) => map.set(normalizeTr(f.username), f));
       return Array.from(map.values());
     })(),
   };

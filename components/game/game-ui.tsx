@@ -26,18 +26,6 @@ export const ICONS = {
   profile: require("../../assets/ui/icon-profile.png"),
 } as const;
 
-const glyphs = new Map<ImageSourcePropType, string>([
-  [ICONS.coin, "●"],
-  [ICONS.heart, "♥"],
-  [ICONS.radar, "⌕"],
-  [ICONS.shield, "◆"],
-  [ICONS.play, "▶"],
-  [ICONS.trophy, "★"],
-  [ICONS.store, "▣"],
-  [ICONS.missions, "✓"],
-  [ICONS.profile, "☺"],
-]);
-
 export function GameGlyph({
   source,
   size = 24,

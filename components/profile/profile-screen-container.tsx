@@ -10,62 +10,69 @@ import { haptics } from "@/lib/haptics";
 import { socialManager } from "@/shared/social";
 import { DEFAULT_PROGRESS, type PlayerProgress } from "@/shared/progression";
 import type { ToastData } from "../common/global-game-toast";
+import { useProgression, useNavigation, useAuth, useUIFeedback, usePvP } from "@/context";
 
 const SOLO_UNLOCK_KEY = "kelime-patlat:solo-unlocked-level";
 const PROGRESS_KEY = "kelime-patlat:season-progress-v1";
 const PENDING_AWARDS_KEY = "kelime-patlat:pending-awards-v1";
 
 export interface ProfileScreenContainerProps {
-  safeName: string;
-  playerId: string;
-  authToken: string | null;
-  progress: PlayerProgress;
-  setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
-  setPlayerName: (name: string) => void;
-  setAuthToken: (token: string | null) => void;
-  setPlayerId: (id: string) => void;
-  setSoloUnlockedLevel: (level: number) => void;
-  setShowGuide: (show: boolean) => void;
-  setShowWelcomeModal: (show: boolean) => void;
-  setNotice: (notice: string) => void;
-  syncProgressToCloud: (progress: PlayerProgress, customName?: string) => Promise<void>;
-  sfxOn: boolean;
-  toggleSfx: (val: boolean) => void;
-  hapticsOn: boolean;
-  toggleHaptics: (val: boolean) => void;
-  globalAlert: ModernAlertData | null;
-  setGlobalAlert: (alert: ModernAlertData | null) => void;
-  setGlobalToast: (toast: ToastData | null) => void;
-  unclaimedMissions: number;
-  hasClaimableDailyReward: boolean;
-  onNavigate: (destination: any) => void;
+  safeName?: string;
+  playerId?: string;
+  authToken?: string | null;
+  progress?: PlayerProgress;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  setPlayerName?: (name: string) => void;
+  setAuthToken?: (token: string | null) => void;
+  setPlayerId?: (id: string) => void;
+  setSoloUnlockedLevel?: (level: number) => void;
+  setShowGuide?: (show: boolean) => void;
+  setShowWelcomeModal?: (show: boolean) => void;
+  setNotice?: (notice: string) => void;
+  syncProgressToCloud?: (progress: PlayerProgress, customName?: string) => Promise<void>;
+  sfxOn?: boolean;
+  toggleSfx?: (val: boolean) => void;
+  hapticsOn?: boolean;
+  toggleHaptics?: (val: boolean) => void;
+  globalAlert?: ModernAlertData | null;
+  setGlobalAlert?: (alert: ModernAlertData | null) => void;
+  setGlobalToast?: (toast: ToastData | null) => void;
+  unclaimedMissions?: number;
+  hasClaimableDailyReward?: boolean;
+  onNavigate?: (destination: any) => void;
 }
 
-export function ProfileScreenContainer({
-  safeName,
-  playerId,
-  authToken,
-  progress,
-  setProgress,
-  setPlayerName,
-  setAuthToken,
-  setPlayerId,
-  setSoloUnlockedLevel,
-  setShowGuide,
-  setShowWelcomeModal,
-  setNotice,
-  syncProgressToCloud,
-  sfxOn,
-  toggleSfx,
-  hapticsOn,
-  toggleHaptics,
-  globalAlert,
-  setGlobalAlert,
-  setGlobalToast,
-  unclaimedMissions,
-  hasClaimableDailyReward,
-  onNavigate,
-}: ProfileScreenContainerProps) {
+export function ProfileScreenContainer(props: ProfileScreenContainerProps) {
+  const auth = useAuth();
+  const progression = useProgression();
+  const navigation = useNavigation();
+  const uiFeedback = useUIFeedback();
+  const pvp = usePvP();
+
+  const safeName = props.safeName ?? auth.safeName;
+  const playerId = props.playerId ?? auth.playerId;
+  const authToken = props.authToken ?? auth.authToken;
+  const progress = props.progress ?? progression.progress;
+  const setProgress = props.setProgress ?? progression.setProgress;
+  const setPlayerName = props.setPlayerName ?? auth.setPlayerName;
+  const setAuthToken = props.setAuthToken ?? auth.setAuthToken;
+  const setPlayerId = props.setPlayerId ?? auth.setPlayerId;
+  const setSoloUnlockedLevel = props.setSoloUnlockedLevel ?? progression.setSoloUnlockedLevel;
+  const setShowGuide = props.setShowGuide ?? uiFeedback.setShowGuide;
+  const setShowWelcomeModal = props.setShowWelcomeModal ?? uiFeedback.setShowWelcomeModal;
+  const setNotice = props.setNotice ?? pvp.setNotice ?? (() => {});
+  const syncProgressToCloud = props.syncProgressToCloud ?? progression.syncProgressToCloud;
+  const sfxOn = props.sfxOn ?? uiFeedback.sfxOn;
+  const toggleSfx = props.toggleSfx ?? uiFeedback.toggleSfx;
+  const hapticsOn = props.hapticsOn ?? uiFeedback.hapticsOn;
+  const toggleHaptics = props.toggleHaptics ?? uiFeedback.toggleHaptics;
+  const globalAlert = props.globalAlert ?? uiFeedback.globalAlert;
+  const setGlobalAlert = props.setGlobalAlert ?? uiFeedback.setGlobalAlert;
+  const setGlobalToast = props.setGlobalToast ?? uiFeedback.setGlobalToast;
+  const unclaimedMissions = props.unclaimedMissions ?? progression.unclaimedMissions;
+  const hasClaimableDailyReward = props.hasClaimableDailyReward ?? progression.hasClaimableDailyReward;
+  const onNavigate = props.onNavigate ?? navigation.setScreen;
+
   return (
     <MainShell
       active="profile"

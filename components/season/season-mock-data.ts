@@ -1,6 +1,5 @@
 import { type LeaderboardEntry } from "@/shared/game";
 
-export type SeasonTab = "leagues" | "leaderboard" | "friends";
 export type RankingType = "lp" | "level";
 
 // Lig Kademesi (LP) Sıralaması için Özel Yarışmacılar

@@ -13,89 +13,96 @@ import type { ToastData } from "../common/global-game-toast";
 import type { InspectableUser } from "../profile/user-profile-modal";
 import type { useBoardSelection } from "@/hooks/use-board-selection";
 
+import { useAuth, useProgression, useUIFeedback, usePvP } from "@/context";
+
 export interface PvpMatchContainerProps {
-  room: RoomSnapshot;
-  playerId: string;
-  safeName: string;
-  sfxOn: boolean;
-  toggleSfx: (val: boolean) => void;
-  isSocketConnected: boolean;
-  activeEmote: { id?: string; playerId: string; playerName: string; emote: string } | null;
-  sendEmote: (emote: string) => void;
-  progress: PlayerProgress;
-  activeBoardSkinColor: string;
-  activeVictoryEffect: string;
-  gameCountdown: number | null;
-  boardSelection: ReturnType<typeof useBoardSelection>;
-  allFinishedWords: { word: string; path: number[]; color: string; isMissed: boolean }[];
-  inspectedPath: number[] | null;
-  setInspectedPath: (path: number[] | null) => void;
-  inspectedColor: string;
-  inspectWord: (word: string, path: number[] | null, color: string) => void;
-  selectedWordInfo: any;
-  setSelectedWordInfo: (info: any) => void;
-  notice: string;
-  showResultModal: boolean;
-  setShowResultModal: (show: boolean) => void;
-  showLeaveDuelModal: boolean;
-  setShowLeaveDuelModal: (show: boolean) => void;
-  selectedModeInfo: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null;
-  setSelectedModeInfo: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null) => void;
-  requestRematch: () => void;
-  leaveRoom: () => void;
-  openUserProfile: (user: any) => void;
-  watchAd: (onReward: () => void) => void;
-  setGlobalToast: (toast: ToastData | null) => void;
-  inspectedUser: InspectableUser | null;
-  setInspectedUser: (user: InspectableUser | null) => void;
-  handleAddFriendTarget: (user: InspectableUser) => void;
-  handleChallengeTarget: (user: InspectableUser, size?: BoardSize) => void;
-  handleLiveGameExitPress: () => void;
-  gameScrollRef: React.RefObject<ScrollView | null>;
-  boardWidth: number;
+  room?: RoomSnapshot;
+  playerId?: string;
+  safeName?: string;
+  sfxOn?: boolean;
+  toggleSfx?: (val: boolean) => void;
+  isSocketConnected?: boolean;
+  activeEmote?: { id?: string; playerId: string; playerName: string; emote: string } | null;
+  sendEmote?: (emote: string) => void;
+  progress?: PlayerProgress;
+  activeBoardSkinColor?: string;
+  activeVictoryEffect?: string;
+  gameCountdown?: number | null;
+  boardSelection?: ReturnType<typeof useBoardSelection>;
+  allFinishedWords?: { word: string; path: number[]; color: string; isMissed: boolean }[];
+  inspectedPath?: number[] | null;
+  setInspectedPath?: (path: number[] | null) => void;
+  inspectedColor?: string;
+  inspectWord?: (word: string, path: number[] | null, color: string) => void;
+  selectedWordInfo?: any;
+  setSelectedWordInfo?: (info: any) => void;
+  notice?: string;
+  showResultModal?: boolean;
+  setShowResultModal?: (show: boolean) => void;
+  showLeaveDuelModal?: boolean;
+  setShowLeaveDuelModal?: (show: boolean) => void;
+  selectedModeInfo?: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null;
+  setSelectedModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null) => void;
+  requestRematch?: () => void;
+  leaveRoom?: () => void;
+  openUserProfile?: (user: any) => void;
+  watchAd?: (onReward: () => void) => void;
+  setGlobalToast?: (toast: ToastData | null) => void;
+  inspectedUser?: InspectableUser | null;
+  setInspectedUser?: (user: InspectableUser | null) => void;
+  handleAddFriendTarget?: (user: InspectableUser) => void;
+  handleChallengeTarget?: (user: InspectableUser, size?: BoardSize) => void;
+  handleLiveGameExitPress?: () => void;
+  gameScrollRef?: React.RefObject<ScrollView | null>;
+  boardWidth?: number;
 }
 
-export function PvpMatchContainer({
-  room,
-  playerId,
-  safeName,
-  sfxOn,
-  toggleSfx,
-  isSocketConnected,
-  activeEmote,
-  sendEmote,
-  progress,
-  activeBoardSkinColor,
-  activeVictoryEffect,
-  gameCountdown,
-  boardSelection,
-  allFinishedWords,
-  inspectedPath,
-  setInspectedPath,
-  inspectedColor,
-  inspectWord,
-  selectedWordInfo,
-  setSelectedWordInfo,
-  notice,
-  showResultModal,
-  setShowResultModal,
-  showLeaveDuelModal,
-  setShowLeaveDuelModal,
-  selectedModeInfo,
-  setSelectedModeInfo,
-  requestRematch,
-  leaveRoom,
-  openUserProfile,
-  watchAd,
-  setGlobalToast,
-  inspectedUser,
-  setInspectedUser,
-  handleAddFriendTarget,
-  handleChallengeTarget,
-  handleLiveGameExitPress,
-  gameScrollRef,
-  boardWidth,
-}: PvpMatchContainerProps) {
+export function PvpMatchContainer(props: PvpMatchContainerProps) {
+  const auth = useAuth();
+  const progression = useProgression();
+  const uiFeedback = useUIFeedback();
+  const pvp = usePvP();
+
+  const playerId = props.playerId ?? auth.playerId;
+  const safeName = props.safeName ?? auth.safeName;
+  const sfxOn = props.sfxOn ?? uiFeedback.sfxOn;
+  const toggleSfx = props.toggleSfx ?? uiFeedback.toggleSfx;
+  const progress = props.progress ?? progression.progress;
+  const activeBoardSkinColor = props.activeBoardSkinColor ?? progression.activeBoardSkinColor;
+  const activeVictoryEffect = props.activeVictoryEffect ?? progression.activeVictoryEffect;
+  const openUserProfile = props.openUserProfile ?? uiFeedback.openUserProfile;
+  const setGlobalToast = props.setGlobalToast ?? uiFeedback.setGlobalToast;
+  const inspectedUser = props.inspectedUser ?? uiFeedback.inspectedUser;
+  const setInspectedUser = props.setInspectedUser ?? uiFeedback.setInspectedUser;
+
+  const room = props.room ?? pvp.room!;
+  const isSocketConnected = props.isSocketConnected ?? pvp.isSocketConnected;
+  const activeEmote = props.activeEmote ?? pvp.activeEmote;
+  const sendEmote = props.sendEmote ?? pvp.sendEmote;
+  const gameCountdown = props.gameCountdown ?? pvp.gameCountdown;
+  const boardSelection = props.boardSelection ?? pvp.boardSelection;
+  const allFinishedWords = props.allFinishedWords ?? pvp.allFinishedWords;
+  const inspectedPath = props.inspectedPath ?? pvp.inspectedPath;
+  const setInspectedPath = props.setInspectedPath ?? pvp.setInspectedPath;
+  const inspectedColor = props.inspectedColor ?? pvp.inspectedColor;
+  const inspectWord = props.inspectWord ?? pvp.inspectWord;
+  const selectedWordInfo = props.selectedWordInfo ?? pvp.selectedWordInfo;
+  const setSelectedWordInfo = props.setSelectedWordInfo ?? pvp.setSelectedWordInfo;
+  const notice = props.notice ?? pvp.notice;
+  const showResultModal = props.showResultModal ?? pvp.showResultModal;
+  const setShowResultModal = props.setShowResultModal ?? pvp.setShowResultModal;
+  const showLeaveDuelModal = props.showLeaveDuelModal ?? pvp.showLeaveDuelModal;
+  const setShowLeaveDuelModal = props.setShowLeaveDuelModal ?? pvp.setShowLeaveDuelModal;
+  const selectedModeInfo = props.selectedModeInfo ?? pvp.selectedModeInfo;
+  const setSelectedModeInfo = props.setSelectedModeInfo ?? pvp.setSelectedModeInfo;
+  const requestRematch = props.requestRematch ?? pvp.requestRematch;
+  const leaveRoom = props.leaveRoom ?? pvp.leaveRoom;
+  const watchAd = props.watchAd ?? pvp.watchAd;
+  const handleAddFriendTarget = props.handleAddFriendTarget ?? pvp.handleAddFriendTarget;
+  const handleChallengeTarget = props.handleChallengeTarget ?? pvp.handleChallengeTarget;
+  const handleLiveGameExitPress = props.handleLiveGameExitPress ?? pvp.handleLiveGameExitPress;
+  const gameScrollRef = props.gameScrollRef ?? pvp.gameScrollRef;
+  const boardWidth = props.boardWidth ?? pvp.boardWidth;
   const [clockNow, setClockNow] = useState(() => Date.now());
 
   useEffect(() => {

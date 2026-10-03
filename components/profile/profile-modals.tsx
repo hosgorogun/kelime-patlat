@@ -67,7 +67,7 @@ export const ProfileDeleteModal = React.memo(({
   onDismiss,
   onConfirmDelete,
 }: ProfileDeleteModalProps) => {
-  const isSilValid = isEqualTr(deleteConfirmInput.trim(), "SİL") || deleteConfirmInput.trim().toUpperCase() === "SIL";
+  const isSilValid = isEqualTr(deleteConfirmInput.trim(), "SİL") || isEqualTr(deleteConfirmInput.trim(), "SIL");
 
   return (
     <Modal

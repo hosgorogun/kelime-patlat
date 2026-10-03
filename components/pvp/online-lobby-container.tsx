@@ -6,37 +6,45 @@ import { getPlayerLevel, type PlayerProgress } from "@/shared/progression";
 import type { BoardSize } from "@/shared/game";
 import type { ToastData } from "../common/global-game-toast";
 
+import { useProgression, useNavigation, useAuth, useUIFeedback, usePvP } from "@/context";
+
 export interface OnlineLobbyContainerProps {
-  playerName: string;
-  setPlayerName: (name: string) => void;
-  selectedSize: BoardSize;
-  setSelectedSize: (size: BoardSize) => void;
-  progress: PlayerProgress;
-  notice: string;
-  unclaimedMissions: number;
-  hasClaimableDailyReward: boolean;
-  setGlobalToast: (toast: ToastData | null) => void;
-  onStartMatchmaking: (size: BoardSize) => void;
-  onPromptBotDuel: (size: BoardSize) => void;
-  setSelectedModeInfo: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null) => void;
-  onNavigate: (destination: any) => void;
+  playerName?: string;
+  setPlayerName?: (name: string) => void;
+  selectedSize?: BoardSize;
+  setSelectedSize?: (size: BoardSize) => void;
+  progress?: PlayerProgress;
+  notice?: string;
+  unclaimedMissions?: number;
+  hasClaimableDailyReward?: boolean;
+  setGlobalToast?: (toast: ToastData | null) => void;
+  onStartMatchmaking?: (size: BoardSize) => void;
+  onPromptBotDuel?: (size: BoardSize) => void;
+  setSelectedModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null) => void;
+  onNavigate?: (destination: any) => void;
 }
 
-export function OnlineLobbyContainer({
-  playerName,
-  setPlayerName,
-  selectedSize,
-  setSelectedSize,
-  progress,
-  notice,
-  unclaimedMissions,
-  hasClaimableDailyReward,
-  setGlobalToast,
-  onStartMatchmaking,
-  onPromptBotDuel,
-  setSelectedModeInfo,
-  onNavigate,
-}: OnlineLobbyContainerProps) {
+export function OnlineLobbyContainer(props: OnlineLobbyContainerProps) {
+  const auth = useAuth();
+  const progression = useProgression();
+  const navigation = useNavigation();
+  const uiFeedback = useUIFeedback();
+  const pvp = usePvP();
+
+  const playerName = props.playerName ?? auth.playerName;
+  const setPlayerName = props.setPlayerName ?? auth.setPlayerName;
+  const progress = props.progress ?? progression.progress;
+  const unclaimedMissions = props.unclaimedMissions ?? progression.unclaimedMissions;
+  const hasClaimableDailyReward = props.hasClaimableDailyReward ?? progression.hasClaimableDailyReward;
+  const setGlobalToast = props.setGlobalToast ?? uiFeedback.setGlobalToast;
+  const onNavigate = props.onNavigate ?? navigation.setScreen;
+  const setSelectedModeInfo = props.setSelectedModeInfo ?? (() => {});
+
+  const selectedSize = props.selectedSize ?? pvp.selectedSize;
+  const setSelectedSize = props.setSelectedSize ?? pvp.setSelectedSize;
+  const notice = props.notice ?? pvp.notice;
+  const onStartMatchmaking = props.onStartMatchmaking ?? ((size) => void pvp.startMatchmaking(size));
+  const onPromptBotDuel = props.onPromptBotDuel ?? pvp.promptBotDuel;
   const currentLevel = getPlayerLevel(progress.xp);
 
   return (

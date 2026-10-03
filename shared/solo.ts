@@ -220,6 +220,14 @@ function shuffled<T>(items: readonly T[], random: () => number) {
   return copy;
 }
 
+// Ağırlıklı karıştırma (Efraimidis-Spirakis): ağırlığı yüksek zorluk sınıfı listenin başına daha sık düşer.
+function weightedShuffled<T>(items: readonly T[], random: () => number, weightOf: (item: T) => number) {
+  return items
+    .map((item) => ({ item, key: Math.pow(random(), 1 / Math.max(0.01, weightOf(item))) }))
+    .sort((a, b) => b.key - a.key)
+    .map((entry) => entry.item);
+}
+
 function neighbors(index: number, size: BoardSize) {
   const row = Math.floor(index / size);
   const column = index % size;
@@ -267,7 +275,7 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
     for (let attempt = 0; attempt < 600; attempt++) {
       const selected: WordEntry[] = [];
       let currentSum = 0;
-      const shuffledEntries = shuffled(pool, random);
+      const shuffledEntries = weightedShuffled(pool, random, (entry) => profile.mix[entry.difficulty] ?? 0.1);
       for (const entry of shuffledEntries) {
         if (selected.some((e) => e.word === entry.word)) continue;
         const len = entry.word.length;

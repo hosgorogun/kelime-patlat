@@ -8,33 +8,37 @@ import { ArcadeChallenge } from "./arcade-challenge";
 import { applyArcadeProgress, type PlayerProgress } from "@/shared/progression";
 import type { ToastData } from "../common/global-game-toast";
 
+import { useProgression, useNavigation, usePvP } from "@/context";
+
 export interface ArcadeScreenContainerProps {
-  progress: PlayerProgress;
-  setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
-  activeBoardSkinColor: string;
-  unclaimedMissions: number;
-  hasClaimableDailyReward: boolean;
-  setGlobalToast: (toast: ToastData | null) => void;
-  setSelectedModeInfo: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null) => void;
+  progress?: PlayerProgress;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  activeBoardSkinColor?: string;
+  unclaimedMissions?: number;
+  hasClaimableDailyReward?: boolean;
+  setGlobalToast?: (toast: ToastData | null) => void;
+  setSelectedModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null) => void;
   watchAd?: (onReward: () => void) => void;
-  awardProgressOnServer: (award: any, updater: (curr: PlayerProgress) => PlayerProgress) => void;
+  awardProgressOnServer?: (award: any, updater: (curr: PlayerProgress) => PlayerProgress) => void;
   syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
-  onNavigate: (destination: any) => void;
+  onNavigate?: (destination: any) => void;
 }
 
-export function ArcadeScreenContainer({
-  progress,
-  setProgress,
-  syncProgressToCloud,
-  activeBoardSkinColor,
-  unclaimedMissions,
-  hasClaimableDailyReward,
-  setGlobalToast,
-  setSelectedModeInfo,
-  watchAd,
-  awardProgressOnServer,
-  onNavigate,
-}: ArcadeScreenContainerProps) {
+export function ArcadeScreenContainer(props: ArcadeScreenContainerProps) {
+  const progression = useProgression();
+  const navigation = useNavigation();
+  const pvp = usePvP();
+
+  const progress = props.progress ?? progression.progress;
+  const setProgress = props.setProgress ?? progression.setProgress;
+  const syncProgressToCloud = props.syncProgressToCloud ?? progression.syncProgressToCloud;
+  const activeBoardSkinColor = props.activeBoardSkinColor ?? progression.activeBoardSkinColor;
+  const unclaimedMissions = props.unclaimedMissions ?? progression.unclaimedMissions;
+  const hasClaimableDailyReward = props.hasClaimableDailyReward ?? progression.hasClaimableDailyReward;
+  const setSelectedModeInfo = props.setSelectedModeInfo ?? ((mode) => pvp.setSelectedModeInfo(mode));
+  const watchAd = props.watchAd ?? pvp.watchAd;
+  const awardProgressOnServer = props.awardProgressOnServer ?? progression.awardProgressOnServer;
+  const onNavigate = props.onNavigate ?? navigation.setScreen;
   const [arcadeStarted, setArcadeStarted] = useState(false);
 
   useEffect(() => {

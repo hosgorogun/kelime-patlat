@@ -52,8 +52,8 @@ export interface MatchResultModalProps {
   isCustomRoom: boolean;
   myTempo: number;
   opponentTempo: number;
-  allFinishedWords: Array<{ word: string; path: number[]; color: string }>;
-  myFoundWords: Array<{ word: string; path: number[] }>;
+  allFinishedWords: { word: string; path: number[]; color: string }[];
+  myFoundWords: { word: string; path: number[] }[];
   selectedWordInfo?: {
     word: string;
     definition: string;

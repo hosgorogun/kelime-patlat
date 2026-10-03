@@ -1,4 +1,4 @@
-export * from "./cyber-store";
+export { CyberStore } from "./cyber-store";
 export * from "./cyber-store-screen-container";
 export * from "./store-assets";
 export * from "./store-purchase-modal";

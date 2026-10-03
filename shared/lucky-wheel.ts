@@ -113,24 +113,23 @@ export type LuckyWheelSector = {
   id: number;
   label: string;
   icon: string;
-  type: "coins" | "life" | "infinite_lives" | "booster";
+  type: "coins" | "life" | "infinite_lives";
   value: number;
-  boosterType?: BoosterType;
   color: string;
 };
 
 export const LUCKY_WHEEL_SECTORS: readonly LuckyWheelSector[] = [
   { id: 0, label: "25 Çip", icon: "🪙", type: "coins", value: 25, color: "#F59E0B" },
   { id: 1, label: "+1 Can", icon: "💚", type: "life", value: 1, color: "#10B981" },
-  { id: 2, label: "1x Radar", icon: "🎯", type: "booster", value: 1, boosterType: "hint", color: "#3B82F6" },
-  { id: 3, label: "50 Çip", icon: "💰", type: "coins", value: 50, color: "#EC4899" },
+  { id: 2, label: "50 Çip", icon: "💰", type: "coins", value: 50, color: "#3B82F6" },
+  { id: 3, label: "+2 Can", icon: "💖", type: "life", value: 2, color: "#EC4899" },
   { id: 4, label: "15 Dk Sonsuz Can", icon: "♾️", type: "infinite_lives", value: 15, color: "#8B5CF6" },
-  { id: 5, label: "1x Dondurucu", icon: "❄️", type: "booster", value: 1, boosterType: "freeze", color: "#06B6D4" },
-  { id: 6, label: "100 Çip", icon: "💎", type: "coins", value: 100, color: "#EAB308" },
-  { id: 7, label: "1x Karıştır", icon: "🔀", type: "booster", value: 1, boosterType: "shuffle", color: "#14B8A6" },
+  { id: 5, label: "75 Çip", icon: "🪙", type: "coins", value: 75, color: "#06B6D4" },
+  { id: 6, label: "150 Çip", icon: "💎", type: "coins", value: 150, color: "#EAB308" },
+  { id: 7, label: "30 Dk Sonsuz Can", icon: "🌟", type: "infinite_lives", value: 30, color: "#14B8A6" },
 ];
 
-export const LUCKY_WHEEL_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+export const LUCKY_WHEEL_COOLDOWN_MS = 8 * 60 * 60 * 1000; // Günde 3 kez (8 saatte bir) ücretsiz çark
 
 export function canSpinLuckyWheel(progress: { lastSpinTimestamp?: number }): { canSpin: boolean; remainingSeconds: number } {
   const lastSpin = progress.lastSpinTimestamp ?? 0;
@@ -142,7 +141,7 @@ export function canSpinLuckyWheel(progress: { lastSpinTimestamp?: number }): { c
   return { canSpin: false, remainingSeconds: Math.ceil((LUCKY_WHEEL_COOLDOWN_MS - elapsed) / 1000) };
 }
 
-export function claimLuckyWheelReward<T extends BoosterProgressState>(
+export function claimLuckyWheelReward<T extends { coins?: number; lives?: number; infiniteLivesUntil?: number; lastSpinTimestamp?: number; [key: string]: any }>(
   progress: T,
   sectorIndex: number,
   isAdSpin = false
@@ -169,16 +168,6 @@ export function claimLuckyWheelReward<T extends BoosterProgressState>(
     updated.infiniteLivesUntil = currentExpiry + sector.value * 60 * 1000;
     updated.lives = 5;
     message = `${sector.value} Dakika Sonsuz Can Kazandın! ♾️`;
-  } else if (sector.type === "booster" && sector.boosterType) {
-    const bType = sector.boosterType;
-    const currentCount = updated.boosters?.[bType] ?? 0;
-    updated.boosters = {
-      hint: updated.boosters?.hint ?? 0,
-      freeze: updated.boosters?.freeze ?? 0,
-      shuffle: updated.boosters?.shuffle ?? 0,
-      [bType]: currentCount + sector.value,
-    };
-    message = `+${sector.value} ${BOOSTER_CONFIG[bType].name} Kazandın! ${sector.icon}`;
   }
 
   return { reward: sector, updatedProgress: updated, message };

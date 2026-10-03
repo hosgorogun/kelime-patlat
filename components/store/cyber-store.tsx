@@ -5,7 +5,6 @@ import { monetizationManager } from "@/shared/monetization";
 import { gameSfx, triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { getCalculatedLives, MAX_LIVES, getDayId, type PlayerProgress } from "@/shared/progression";
 import { type ChipEquipmentItem, CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "@/shared/store-items";
-import { STORE_ASSETS } from "./store-assets";
 import { styles } from "./cyber-store.styles";
 import { StorePurchaseModal, type ConfirmPurchaseData } from "./store-purchase-modal";
 import { StoreEquipmentTab } from "./store-equipment-tab";
@@ -14,7 +13,7 @@ import { StoreCosmeticsTab } from "./store-cosmetics-tab";
 const DAILY_AD_LIMIT = 3;
 
 export type { ChipEquipmentItem };
-export { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS, STORE_ASSETS };
+export { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS };
 
 type StoreTab = "equipment" | "cosmetics";
 

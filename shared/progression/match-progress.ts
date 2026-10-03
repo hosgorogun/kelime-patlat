@@ -4,6 +4,7 @@ import { getDayId, getWeekId } from "./date-utils";
 import { getDailyMysteryWord } from "./season-streak";
 import { updateMissionAction } from "./progression-missions";
 import { DailyChallenge, MatchHistoryEntry, PlayerProgress } from "./progression.types";
+import { isEqualTr } from "../tr-utils";
 
 export function applyMatchProgress(
   progress: PlayerProgress,
@@ -147,7 +148,7 @@ export function applyMatchProgress(
 
     // Daily Mystery Word bonus (+150 XP)
     const mystery = getDailyMysteryWord();
-    if (foundWordsList.some((w) => w.toLocaleUpperCase("tr-TR") === mystery.word.toLocaleUpperCase("tr-TR"))) {
+    if (foundWordsList.some((w) => isEqualTr(w, mystery.word))) {
       xpGain += mystery.rewardXp;
     }
   }

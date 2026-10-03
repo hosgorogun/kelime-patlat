@@ -2,23 +2,27 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { MainShell } from "@/components/shell/main-shell";
 import { MissionsScreen } from "./missions-screen";
+import { useProgression, useNavigation } from "@/context";
 import type { PlayerProgress } from "@/shared/progression";
 
 export interface MissionsScreenContainerProps {
-  progress: PlayerProgress;
-  unclaimedMissions: number;
-  hasClaimableDailyReward: boolean;
-  onNavigate: (destination: any) => void;
-  claimMissionOnServer: (type: "daily" | "weekly", missionId: string, updater: (curr: PlayerProgress) => PlayerProgress) => void;
+  progress?: PlayerProgress;
+  unclaimedMissions?: number;
+  hasClaimableDailyReward?: boolean;
+  onNavigate?: (destination: any) => void;
+  claimMissionOnServer?: (type: "daily" | "weekly", missionId: string, updater: (curr: PlayerProgress) => PlayerProgress) => void;
 }
 
-export function MissionsScreenContainer({
-  progress,
-  unclaimedMissions,
-  hasClaimableDailyReward,
-  onNavigate,
-  claimMissionOnServer,
-}: MissionsScreenContainerProps) {
+export function MissionsScreenContainer(props: MissionsScreenContainerProps) {
+  const progression = useProgression();
+  const navigation = useNavigation();
+
+  const progress = props.progress ?? progression.progress;
+  const unclaimedMissions = props.unclaimedMissions ?? progression.unclaimedMissions;
+  const hasClaimableDailyReward = props.hasClaimableDailyReward ?? progression.hasClaimableDailyReward;
+  const onNavigate = props.onNavigate ?? navigation.setScreen;
+  const claimMissionOnServer = props.claimMissionOnServer ?? progression.claimMissionOnServer;
+
   return (
     <MainShell
       active="missions"

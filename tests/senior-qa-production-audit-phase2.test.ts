@@ -138,17 +138,17 @@ describe("Senior QA Audit Phase 2 - Advanced Resiliency & Edge Cases", () => {
   });
 
   describe("4. Lucky Wheel Cooldown & Cumulative Rewards", () => {
-    it("canSpinLuckyWheel respects 24h cooldown exactly", () => {
+    it("canSpinLuckyWheel respects cooldown period exactly", () => {
       const now = Date.now();
       const prog: PlayerProgress = {
         ...DEFAULT_PROGRESS,
-        lastSpinTimestamp: now - 12 * 3600 * 1000, // 12 hours ago
+        lastSpinTimestamp: now - 4 * 3600 * 1000, // 4 hours ago (cooldown is 8h)
       };
 
       const check = canSpinLuckyWheel(prog);
       expect(check.canSpin).toBe(false);
-      expect(check.remainingSeconds).toBeGreaterThan(11 * 3600);
-      expect(check.remainingSeconds).toBeLessThanOrEqual(12 * 3600);
+      expect(check.remainingSeconds).toBeGreaterThan(3 * 3600);
+      expect(check.remainingSeconds).toBeLessThanOrEqual(4 * 3600);
     });
 
     it("claimLuckyWheelReward with isAdSpin allows spinning during cooldown without resetting lastSpinTimestamp", () => {

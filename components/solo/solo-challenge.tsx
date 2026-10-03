@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, AppState, BackHandler, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, Animated, Share } from "react-native";
+import { AppState, BackHandler, ScrollView, StyleSheet, useWindowDimensions, View, Animated, Share } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
-import { createSoloBoard, MAX_SOLO_LEVEL, SOLUTION_ROUTE_COLORS, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
+import { createSoloBoard, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
 import { type WordTheme } from "@/shared/word-catalog";
 import { getWordDefinition, fetchWordDetail, getCachedWordDetail } from "@/shared/dictionary";
 import { getThemeForLevel } from "@/shared/themes";
@@ -23,13 +23,11 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { VictoryEffectOverlay } from "../game/victory-effect-overlay";
-import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { GameCountdownOverlay } from "../game/game-countdown-overlay";
-import { GameBoosters, FloatingCombo } from "../game/game-boosters";
+import { FloatingCombo } from "../game/game-boosters";
 import type { PlayerProgress } from "@/shared/progression";
-import { FloatingTimeBonus, FloatingScoreBurst } from "./solo-floating-effects";
 import { styles } from "./solo-challenge.styles";
-import { SoloWordRouteCard, type SelectedWordInfo } from "./solo-word-route-card";
+import { SoloWordRouteCard } from "./solo-word-route-card";
 import { SoloPauseModal } from "./solo-pause-modal";
 import { SoloWonView, SoloLostView } from "./solo-result-views";
 import { SoloHeader } from "./solo-header";
@@ -489,56 +487,6 @@ export function SoloChallenge({
     }
   };
 
-  const handleUseHintBooster = () => {
-    const remaining = challenge.words.filter((w) => !found.includes(w));
-    if (!remaining.length) return;
-    const targetWord = remaining[0]!;
-    const path = challenge.routes[targetWord];
-    if (path && path.length > 0) {
-      setRadarHighlights(new Set());
-      setTimeBonusText(`💡 ${targetWord.slice(0, 2).toUpperCase()}...`);
-      const t1 = setTimeout(() => setTimeBonusText(null), 1800);
-      particleTimers.current.push(t1);
-      const hintCells = new Set(path.slice(0, Math.min(3, path.length)));
-      setRadarHighlights(hintCells);
-      triggerHapticSuccess();
-      playSelectionNote(2);
-      const t2 = setTimeout(() => {
-        setRadarHighlights(new Set());
-      }, 3500);
-      particleTimers.current.push(t2);
-    }
-  };
-
-  const handleUseFreezeBooster = () => {
-    setSeconds((s) => Math.min(challenge.timeLimit + 30, s + 15));
-    setTimeBonusText("⏱️ +15 SN & DONDURUCU!");
-    const t = setTimeout(() => setTimeBonusText(null), 2000);
-    particleTimers.current.push(t);
-    triggerHapticSuccess();
-    gameSfx.powerup();
-  };
-
-  const handleUseShuffleBooster = () => {
-    const remaining = challenge.words.filter((w) => !found.includes(w));
-    if (!remaining.length) return;
-    const startCells = new Set<number>();
-    remaining.forEach((w) => {
-      const p = challenge.routes[w];
-      if (p && p.length > 0) startCells.add(p[0]!);
-    });
-    setRadarHighlights(startCells);
-    setTimeBonusText("🎲 GİZLİ BAŞLANGIÇLAR AÇILDI!");
-    const t1 = setTimeout(() => setTimeBonusText(null), 2000);
-    particleTimers.current.push(t1);
-    triggerShake();
-    triggerHapticLongWord();
-    gameSfx.powerup();
-    const t2 = setTimeout(() => {
-      setRadarHighlights(new Set());
-    }, 4000);
-    particleTimers.current.push(t2);
-  };
   const submit = () => {
     if (submitted.current || status !== "playing") return;
     submitted.current = true;
@@ -871,20 +819,6 @@ export function SoloChallenge({
       activeWord={activeWord}
       activeTheme={activeTheme}
     />
-
-    {progress && (
-      <View style={{ marginVertical: 8, alignItems: "center" }}>
-        <GameBoosters
-          progress={progress}
-          setProgress={setProgress}
-          syncProgressToCloud={syncProgressToCloud}
-          onUseHint={handleUseHintBooster}
-          onUseFreeze={handleUseFreezeBooster}
-          onUseShuffle={handleUseShuffleBooster}
-          disabled={status !== "playing"}
-        />
-      </View>
-    )}
 
     {/* Aktif Kelime Rotası ve Harf Yön Akışı Kartı */}
     <SoloWordRouteCard

@@ -7,39 +7,45 @@ import type { BoardSize } from "@/shared/game";
 import type { InspectableUser } from "@/components/profile/user-profile-modal";
 import type { SeasonTab } from "@/components/season/season-hub";
 
+import { useProgression, useNavigation, useUIFeedback, usePvP } from "@/context";
+
 export interface FriendsLobbyContainerProps {
-  selectedSize: BoardSize;
-  setSelectedSize: (size: BoardSize) => void;
-  roomCodeInput: string;
-  setRoomCodeInput: (code: string) => void;
-  friendsList: FriendUser[];
-  notice: string;
-  unclaimedMissions: number;
-  hasClaimableDailyReward: boolean;
-  onCreateRoom: (size: BoardSize) => void;
-  onJoinRoom: () => void;
-  onInspectUser: (user: InspectableUser) => void;
-  onChallengeFriend: (user: InspectableUser, size?: BoardSize) => void;
-  setSeasonInitialTab: (tab: SeasonTab) => void;
-  onNavigate: (destination: any) => void;
+  selectedSize?: BoardSize;
+  setSelectedSize?: (size: BoardSize) => void;
+  roomCodeInput?: string;
+  setRoomCodeInput?: (code: string) => void;
+  friendsList?: FriendUser[];
+  notice?: string;
+  unclaimedMissions?: number;
+  hasClaimableDailyReward?: boolean;
+  onCreateRoom?: (size: BoardSize) => void;
+  onJoinRoom?: () => void;
+  onInspectUser?: (user: InspectableUser) => void;
+  onChallengeFriend?: (user: InspectableUser, size?: BoardSize) => void;
+  setSeasonInitialTab?: (tab: SeasonTab) => void;
+  onNavigate?: (destination: any) => void;
 }
 
-export function FriendsLobbyContainer({
-  selectedSize,
-  setSelectedSize,
-  roomCodeInput,
-  setRoomCodeInput,
-  friendsList,
-  notice,
-  unclaimedMissions,
-  hasClaimableDailyReward,
-  onCreateRoom,
-  onJoinRoom,
-  onInspectUser,
-  onChallengeFriend,
-  setSeasonInitialTab,
-  onNavigate,
-}: FriendsLobbyContainerProps) {
+export function FriendsLobbyContainer(props: FriendsLobbyContainerProps) {
+  const progression = useProgression();
+  const navigation = useNavigation();
+  const uiFeedback = useUIFeedback();
+  const pvp = usePvP();
+
+  const selectedSize = props.selectedSize ?? pvp.selectedSize;
+  const setSelectedSize = props.setSelectedSize ?? pvp.setSelectedSize;
+  const roomCodeInput = props.roomCodeInput ?? pvp.roomCodeInput;
+  const setRoomCodeInput = props.setRoomCodeInput ?? pvp.setRoomCodeInput;
+  const friendsList = props.friendsList ?? pvp.friendsList;
+  const notice = props.notice ?? pvp.notice;
+  const unclaimedMissions = props.unclaimedMissions ?? progression.unclaimedMissions;
+  const hasClaimableDailyReward = props.hasClaimableDailyReward ?? progression.hasClaimableDailyReward;
+  const onCreateRoom = props.onCreateRoom ?? pvp.createRoom;
+  const onJoinRoom = props.onJoinRoom ?? pvp.joinRoom;
+  const onInspectUser = props.onInspectUser ?? uiFeedback.setInspectedUser;
+  const onChallengeFriend = props.onChallengeFriend ?? pvp.handleChallengeTarget;
+  const setSeasonInitialTab = props.setSeasonInitialTab ?? navigation.setSeasonInitialTab;
+  const onNavigate = props.onNavigate ?? navigation.setScreen;
   return (
     <MainShell
       active="home"

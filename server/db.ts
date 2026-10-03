@@ -300,7 +300,7 @@ export async function connectDb() {
   if (mongoose.connection.readyState === 1) {
     if (!hasSeededDemoUser) {
       hasSeededDemoUser = true;
-      seedDemoUser().catch(() => {});
+      seedDemoUser().catch((err) => console.error("[DB] seedDemoUser failed:", err));
     }
     return mongoose;
   }
@@ -309,7 +309,7 @@ export async function connectDb() {
       serverSelectionTimeoutMS: 4000
     }).then((m) => {
       hasSeededDemoUser = true;
-      seedDemoUser().catch(() => {});
+      seedDemoUser().catch((err) => console.error("[DB] seedDemoUser failed:", err));
       return m;
     }).catch((err) => {
       connectionPromise = null;

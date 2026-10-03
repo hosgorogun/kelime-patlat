@@ -184,15 +184,15 @@ describe("Boosters, Infinite Lives & Lucky Wheel Systems", () => {
       expect(calc.isInfinite).toBe(true);
     });
 
-    it("claimLuckyWheelReward awards boosters to inventory", () => {
+    it("claimLuckyWheelReward awards coins properly", () => {
       const prog: PlayerProgress = {
         ...DEFAULT_PROGRESS,
-        boosters: { hint: 0, freeze: 0, shuffle: 0 },
+        coins: 100,
       };
-      const sectorIndex = LUCKY_WHEEL_SECTORS.findIndex((s) => s.type === "booster" && s.boosterType === "freeze");
+      const sectorIndex = LUCKY_WHEEL_SECTORS.findIndex((s) => s.type === "coins");
       const sector = LUCKY_WHEEL_SECTORS[sectorIndex]!;
       const res = claimLuckyWheelReward(prog, sectorIndex);
-      expect(res.updatedProgress.boosters!.freeze).toBe(sector.value);
+      expect(res.updatedProgress.coins).toBe(100 + sector.value);
     });
 
     it("claimLuckyWheelReward awards life refill", () => {

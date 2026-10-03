@@ -7,29 +7,34 @@ import { SESSION_TOKEN_KEY, getApiBaseUrl } from "../../constants/oauth";
 import { getCalculatedLives, MAX_LIVES, type PlayerProgress } from "../../shared/progression";
 import type { ToastData } from "../common/global-game-toast";
 
+import { useProgression, useNavigation, useUIFeedback } from "@/context";
+
 export interface CyberStoreScreenContainerProps {
-  progress: PlayerProgress;
-  progressRef: React.RefObject<PlayerProgress>;
-  setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
-  syncProgressToCloud: (next: PlayerProgress) => Promise<void>;
-  unclaimedMissions: number;
-  hasClaimableDailyReward: boolean;
-  setGlobalToast: (toast: ToastData | null) => void;
-  onNavigate: (destination: any) => void;
-  onClaimDailyReward: () => void;
+  progress?: PlayerProgress;
+  progressRef?: React.RefObject<PlayerProgress>;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud?: (next: PlayerProgress) => Promise<void>;
+  unclaimedMissions?: number;
+  hasClaimableDailyReward?: boolean;
+  setGlobalToast?: (toast: ToastData | null) => void;
+  onNavigate?: (destination: any) => void;
+  onClaimDailyReward?: () => void;
 }
 
-export function CyberStoreScreenContainer({
-  progress,
-  progressRef,
-  setProgress,
-  syncProgressToCloud,
-  unclaimedMissions,
-  hasClaimableDailyReward,
-  setGlobalToast,
-  onNavigate,
-  onClaimDailyReward,
-}: CyberStoreScreenContainerProps) {
+export function CyberStoreScreenContainer(props: CyberStoreScreenContainerProps) {
+  const progression = useProgression();
+  const navigation = useNavigation();
+  const uiFeedback = useUIFeedback();
+
+  const progress = props.progress ?? progression.progress;
+  const progressRef = props.progressRef ?? progression.progressRef;
+  const setProgress = props.setProgress ?? progression.setProgress;
+  const syncProgressToCloud = props.syncProgressToCloud ?? progression.syncProgressToCloud;
+  const unclaimedMissions = props.unclaimedMissions ?? progression.unclaimedMissions;
+  const hasClaimableDailyReward = props.hasClaimableDailyReward ?? progression.hasClaimableDailyReward;
+  const setGlobalToast = props.setGlobalToast ?? uiFeedback.setGlobalToast;
+  const onNavigate = props.onNavigate ?? navigation.setScreen;
+  const onClaimDailyReward = props.onClaimDailyReward ?? uiFeedback.handleClaimDailyReward;
   return (
     <MainShell
       active="store"

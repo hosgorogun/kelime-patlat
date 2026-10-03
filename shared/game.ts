@@ -7,7 +7,7 @@ export const LIVE_FOUR_WORD_LENGTH_PATTERNS = [
   [4, 4, 4, 4],
   [3, 3, 5, 5],
   [3, 4, 4, 5],
-  [4, 4, 4, 4],
+  [3, 3, 4, 6],
 ] as const;
 
 export function pickLiveFourWordLengths(random = Math.random) {

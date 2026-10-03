@@ -42,7 +42,7 @@ export function LuckyWheelModal({
   const [wonPrize, setWonPrize] = useState<LuckyWheelSector | null>(null);
   const spinAnim = useRef(new Animated.Value(0)).current;
   const currentAngleRef = useRef(0);
-  const [ticker, setTicker] = useState(0);
+  const [, forceUpdate] = useState(0);
 
   const progressRef = useRef(progress);
   useEffect(() => {
@@ -59,7 +59,7 @@ export function LuckyWheelModal({
 
   useEffect(() => {
     if (!visible) return;
-    const timer = setInterval(() => setTicker((t) => t + 1), 1000);
+    const timer = setInterval(() => forceUpdate((t) => t + 1), 1000);
     return () => clearInterval(timer);
   }, [visible]);
 

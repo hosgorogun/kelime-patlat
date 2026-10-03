@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import {
   View,
   Text,
-  StyleSheet,
-  Pressable,
   ScrollView,
   Animated,
   BackHandler,
@@ -20,7 +18,7 @@ import {
 } from "@/shared/audio-haptics";
 import { generatePuzzle, PuzzleResult, PlacedWord } from "@/shared/puzzle-generator";
 import { MAX_LIVES } from "@/shared/progression";
-import { isEqualTr, normalizeTrUpper } from "@/shared/tr-utils";
+import { isEqualTr } from "@/shared/tr-utils";
 import { gameSfx } from "@/lib/game-sfx";
 import { vintageStyles as styles } from "./vintage.styles";
 import { VintageMapView } from "./vintage-map-view";
@@ -33,16 +31,11 @@ import {
   VintageExitModal,
   VintageResetModal,
 } from "./vintage-dialogs";
-
-export { PoolTile } from "./vintage-letter-tile";
-
 import {
   TR_ALPHABET,
   VINTAGE_STORAGE_KEY,
   VINTAGE_HINT_COST,
 } from "./vintage-constants";
-
-export { VINTAGE_HINT_COST } from "./vintage-constants";
 
 export type VintagePuzzleProps = {
   onBack: () => void;
@@ -525,7 +518,7 @@ export function VintagePuzzle({
         }, 650);
       }
     },
-    [puzzle, solvedWordIds, score, completedLevels, levelIndex, maxUnlockedLevel, onRewardXp, persistProgress, isCellLocked, shakeAnim, selectedWordId]
+    [puzzle, solvedWordIds, score, completedLevels, levelIndex, maxUnlockedLevel, onRewardXp, persistProgress, isCellLocked, shakeAnim, solvedPulseAnim, selectedWordId]
   );
 
   // Dokunulan Harf Taşını Doğrudan Tahtadaki Uygun Hücreye Koy

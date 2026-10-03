@@ -20,6 +20,7 @@ import { GameCountdownOverlay } from "../game/game-countdown-overlay";
 import { UserProfileModal, type InspectableUser } from "../profile/user-profile-modal";
 import { APP_WORD_PALETTE } from "@/shared/solo";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { isEqualTr } from "@/shared/tr-utils";
 import { haptics } from "@/lib/haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { socialManager } from "@/shared/social";
@@ -250,6 +251,20 @@ export function PvpMatchScreen({
     return { foundCellOwners: owners, foundCellColors: colors };
   }, [room.status, room.missedWords, myFoundWords]);
 
+  const opponentFlashAnim = React.useRef(new Animated.Value(0)).current;
+  const prevOpponentWordsCount = React.useRef(opponentWordCount);
+
+  React.useEffect(() => {
+    if (opponentWordCount > prevOpponentWordsCount.current && room.status === "playing") {
+      haptics.light();
+      Animated.sequence([
+        Animated.timing(opponentFlashAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.timing(opponentFlashAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    }
+    prevOpponentWordsCount.current = opponentWordCount;
+  }, [opponentWordCount, room.status, opponentFlashAnim]);
+
   return (
     <ScreenContainer style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20 }}>
       <StatusBar style="dark" />
@@ -345,27 +360,43 @@ export function PvpMatchScreen({
           <View style={styles.vsMark}>
             <Text style={styles.vsText}>VS</Text>
           </View>
-          <ScoreBadge
-            name={opponent?.name ?? "RAKİP"}
-            score={opponentScore}
-            words={opponentWordCount}
-            total={room.wordsTotal}
-            active={!room.winnerId || !iWon}
-            won={Boolean(room.winnerId && !iWon)}
-            accent="#FB7185"
-            combo={opponent ? room.combos?.[opponent.id] : undefined}
-            avatar={opponent?.avatar || (opponent?.isBot ? "🤖" : "👤")}
-            avatarPhoto={opponent?.avatarPhoto}
-            selectedFrame={opponent?.selectedFrame || "signal"}
-            onPress={
-              opponent
-                ? () => {
-                    triggerHapticSelection();
-                    onOpenUserProfile(opponent);
-                  }
-                : undefined
-            }
-          />
+          <Animated.View
+            style={[
+              { flex: 1 },
+              {
+                transform: [
+                  {
+                    scale: opponentFlashAnim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [1, 1.06, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <ScoreBadge
+              name={opponent?.name ?? "RAKİP"}
+              score={opponentScore}
+              words={opponentWordCount}
+              total={room.wordsTotal}
+              active={!room.winnerId || !iWon}
+              won={Boolean(room.winnerId && !iWon)}
+              accent="#FB7185"
+              combo={opponent ? room.combos?.[opponent.id] : undefined}
+              avatar={opponent?.avatar || (opponent?.isBot ? "🤖" : "👤")}
+              avatarPhoto={opponent?.avatarPhoto}
+              selectedFrame={opponent?.selectedFrame || "signal"}
+              onPress={
+                opponent
+                  ? () => {
+                      triggerHapticSelection();
+                      onOpenUserProfile(opponent);
+                    }
+                  : undefined
+              }
+            />
+          </Animated.View>
         </View>
 
         <View style={styles.statsRow}>
@@ -692,7 +723,7 @@ export function PvpMatchScreen({
                 .getFriends()
                 .some(
                   (f) =>
-                    f.username.toLocaleLowerCase("tr-TR") === opponent.name.toLocaleLowerCase("tr-TR")
+                    isEqualTr(f.username, opponent.name)
                 )
             : false
         }
@@ -775,8 +806,7 @@ export function PvpMatchScreen({
         isSelf={
           inspectedUser
             ? inspectedUser.id === playerId ||
-              (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR") ===
-                safeName.toLocaleLowerCase("tr-TR")
+              isEqualTr(inspectedUser.username || inspectedUser.name, safeName)
             : false
         }
         isFriend={
@@ -785,8 +815,7 @@ export function PvpMatchScreen({
                 .getFriends()
                 .some(
                   (f) =>
-                    f.username.toLocaleLowerCase("tr-TR") ===
-                    (inspectedUser.username || inspectedUser.name).toLocaleLowerCase("tr-TR")
+                    isEqualTr(f.username, inspectedUser.username || inspectedUser.name)
                 )
             : false
         }

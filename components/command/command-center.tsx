@@ -1,6 +1,6 @@
 import { styles } from './command-center.styles';
 import { useEffect, useRef, useState } from "react";
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { type LeaderboardEntry } from "@/shared/game";
@@ -12,7 +12,7 @@ import { GameButton, GameGlyph, GameIcon, GemChip, ICONS, JewelTitle, OrnatePane
 import { MatchHistoryModal } from "@/components/match-history/match-history-modal";
 import { DailyTreasureModal } from "@/components/modals/daily-treasure-modal";
 import { BotPracticeModal } from "./bot-practice-modal";
-import { CommandInfoModal, type InfoModalType } from "./command-info-modal";
+import { CommandInfoModal } from "./command-info-modal";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends" | "vintage";
 

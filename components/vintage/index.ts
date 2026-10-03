@@ -1,5 +1,5 @@
 export * from "./vintage-constants";
-export * from "./vintage-puzzle";
+export { VintagePuzzle, type VintagePuzzleProps } from "./vintage-puzzle";
 export * from "./vintage-screen-container";
 export * from "./vintage-map-view";
 export * from "./vintage-play-header";

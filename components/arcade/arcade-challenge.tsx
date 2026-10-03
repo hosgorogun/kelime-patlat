@@ -2,10 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AppState,
   BackHandler,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
   Animated,
@@ -39,11 +37,9 @@ import {
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { VictoryEffectOverlay } from "../game/victory-effect-overlay";
-import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { GameCountdownOverlay } from "../game/game-countdown-overlay";
-import { GameBoosters, FloatingCombo } from "../game/game-boosters";
+import { FloatingCombo } from "../game/game-boosters";
 import type { PlayerProgress } from "@/shared/progression";
-import { FloatingScoreBurst } from "../solo/solo-floating-effects";
 import { styles } from "./arcade.styles";
 import { ArcadeResultModal, ArcadePauseModal } from "./arcade-modals";
 import { ArcadeHeader } from "./arcade-header";
@@ -101,7 +97,7 @@ export function ArcadeChallenge({
   const [isSelecting, setIsSelecting] = useState(false);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [scoreBurstText, setScoreBurstText] = useState<string | null>(null);
-  const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
+  const radarHighlights = useRef(new Set<number>()).current;
   const [selectedWordInfo, setSelectedWordInfo] = useState<{
     word: string;
     definition: string;
@@ -445,57 +441,6 @@ export function ArcadeChallenge({
     setSelected(next);
     triggerHapticSelection();
     if (next.length >= previous.length) playSelectionNote(next.length - 1);
-  };
-
-  const handleUseHintBooster = () => {
-    const remaining = challenge.words.filter((w) => !found.includes(w));
-    if (!remaining.length) return;
-    const targetWord = remaining[0]!;
-    const path = challenge.routes[targetWord];
-    if (path && path.length > 0) {
-      setRadarHighlights(new Set());
-      setTimeBonusText(`💡 ${targetWord.slice(0, 2).toUpperCase()}...`);
-      const t1 = setTimeout(() => setTimeBonusText(null), 1800);
-      particleTimers.current.push(t1);
-      const hintCells = new Set(path.slice(0, Math.min(3, path.length)));
-      setRadarHighlights(hintCells);
-      triggerHapticSuccess();
-      playSelectionNote(2);
-      const t2 = setTimeout(() => {
-        setRadarHighlights(new Set());
-      }, 3500);
-      particleTimers.current.push(t2);
-    }
-  };
-
-  const handleUseFreezeBooster = () => {
-    setSeconds((s) => Math.min(MAX_ARCADE_TIME, s + 15));
-    setTimeBonusText("⏱️ +15 SN & DONDURUCU!");
-    const t = setTimeout(() => setTimeBonusText(null), 2000);
-    particleTimers.current.push(t);
-    triggerHapticSuccess();
-    gameSfx.powerup();
-  };
-
-  const handleUseShuffleBooster = () => {
-    const remaining = challenge.words.filter((w) => !found.includes(w));
-    if (!remaining.length) return;
-    const startCells = new Set<number>();
-    remaining.forEach((w) => {
-      const p = challenge.routes[w];
-      if (p && p.length > 0) startCells.add(p[0]!);
-    });
-    setRadarHighlights(startCells);
-    setTimeBonusText("🎲 GİZLİ BAŞLANGIÇLAR AÇILDI!");
-    const t1 = setTimeout(() => setTimeBonusText(null), 2000);
-    particleTimers.current.push(t1);
-    triggerShake();
-    triggerHapticLongWord();
-    gameSfx.powerup();
-    const t2 = setTimeout(() => {
-      setRadarHighlights(new Set());
-    }, 4000);
-    particleTimers.current.push(t2);
   };
 
   const submit = () => {
@@ -844,20 +789,6 @@ export function ArcadeChallenge({
           selectedLength={selected.length}
           activeWord={activeWord}
         />
-
-        {progress && (
-          <View style={{ marginVertical: 8, alignItems: "center" }}>
-            <GameBoosters
-              progress={progress}
-              setProgress={setProgress}
-              syncProgressToCloud={syncProgressToCloud}
-              onUseHint={handleUseHintBooster}
-              onUseFreeze={handleUseFreezeBooster}
-              onUseShuffle={handleUseShuffleBooster}
-              disabled={status !== "playing"}
-            />
-          </View>
-        )}
 
         {/* Aktif Kelime Rotası ve Harf Yön Akışı Kartı */}
         <ArcadeRouteInspector

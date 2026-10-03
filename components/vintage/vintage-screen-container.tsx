@@ -5,29 +5,33 @@ import { VintagePuzzle } from "./vintage-puzzle";
 import { applyVintageProgress, getCalculatedLives, type PlayerProgress } from "../../shared/progression";
 import type { ToastData } from "../common/global-game-toast";
 
+import { useProgression, useNavigation, useUIFeedback } from "@/context";
+
 export interface VintageScreenContainerProps {
-  progress: PlayerProgress;
+  progress?: PlayerProgress;
   progressRef?: React.MutableRefObject<PlayerProgress>;
-  lives: number;
-  setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
-  syncProgressToCloud: (updated: PlayerProgress) => Promise<void>;
-  awardProgressOnServer: (award: any, updater: (curr: PlayerProgress) => PlayerProgress) => Promise<void> | void;
-  setGlobalToast: (toast: ToastData | null) => void;
-  onOpenLivesModal: () => void;
-  onNavigate: (destination: any) => void;
+  lives?: number;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud?: (updated: PlayerProgress) => Promise<void>;
+  awardProgressOnServer?: (award: any, updater: (curr: PlayerProgress) => PlayerProgress) => Promise<void> | void;
+  setGlobalToast?: (toast: ToastData | null) => void;
+  onOpenLivesModal?: () => void;
+  onNavigate?: (destination: any) => void;
 }
 
-export function VintageScreenContainer({
-  progress,
-  progressRef,
-  lives,
-  setProgress,
-  syncProgressToCloud,
-  awardProgressOnServer,
-  setGlobalToast,
-  onOpenLivesModal,
-  onNavigate,
-}: VintageScreenContainerProps) {
+export function VintageScreenContainer(props: VintageScreenContainerProps) {
+  const progression = useProgression();
+  const navigation = useNavigation();
+  const uiFeedback = useUIFeedback();
+
+  const progress = props.progress ?? progression.progress;
+  const progressRef = props.progressRef ?? progression.progressRef;
+  const setProgress = props.setProgress ?? progression.setProgress;
+  const syncProgressToCloud = props.syncProgressToCloud ?? progression.syncProgressToCloud;
+  const awardProgressOnServer = props.awardProgressOnServer ?? progression.awardProgressOnServer;
+  const setGlobalToast = props.setGlobalToast ?? uiFeedback.setGlobalToast;
+  const onOpenLivesModal = props.onOpenLivesModal ?? (() => uiFeedback.setShowLivesModal(true));
+  const onNavigate = props.onNavigate ?? navigation.setScreen;
   const livesCalc = getCalculatedLives(progress);
   const internalRef = React.useRef(progress);
   internalRef.current = progress;

@@ -161,7 +161,9 @@ function scheduleBotTurn(io: Server, room: Room, token: number, isFirstTurn = fa
   );
   if (!word) return;
 
-  const delay = botThinkDelayMs(room.size, word.length) + (isFirstTurn ? 2500 : 0);
+  const isNoviceHost = (room.host?.matches ?? 0) < 3;
+  const novicePityMultiplier = isNoviceHost ? 1.35 : 1.0;
+  const delay = Math.floor((botThinkDelayMs(room.size, word.length) + (isFirstTurn ? 2500 : 0)) * novicePityMultiplier);
   const selectTriggerDelay = Math.max(800, delay - 1200);
 
   if (room.botTurnTimer) {

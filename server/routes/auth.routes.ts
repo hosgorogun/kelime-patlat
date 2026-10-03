@@ -17,6 +17,7 @@ import {
   type GenderType,
 } from "../../shared/progression";
 import { PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
+import { normalizeTr, normalizeTrUpper, isEqualTr } from "../../shared/tr-utils";
 
 export const authRouter = Router();
 
@@ -67,13 +68,13 @@ authRouter.post("/signup", async (req, res) => {
       return res.status(400).json({ error: parsed.error.issues[0]?.message || "Geçersiz kayıt bilgileri." });
     }
     const { username, password, email, fullName, gender } = parsed.data;
-    const lowerUsername = username.toLocaleLowerCase("tr-TR");
-    const lowerEmail = email.trim().toLocaleLowerCase("tr-TR");
+    const lowerUsername = normalizeTr(username);
+    const lowerEmail = normalizeTr(email);
     const existingUser = await UserModel.findOne({
       $or: [{ username: lowerUsername }, { email: lowerEmail }],
     });
     if (existingUser) {
-      if (existingUser.username === lowerUsername) {
+      if (isEqualTr(existingUser.username, lowerUsername)) {
         return res.status(400).json({ error: "Bu kullanıcı adı zaten alınmış." });
       }
       return res.status(400).json({ error: "Bu e-posta adresi ile zaten bir hesap var." });
@@ -153,7 +154,7 @@ authRouter.post("/login", async (req, res) => {
       return res.status(400).json({ error: parsed.error.issues[0]?.message || "Geçersiz giriş bilgileri." });
     }
     const { username, password } = parsed.data;
-    const lowerIdentifier = username.toLocaleLowerCase("tr-TR");
+    const lowerIdentifier = normalizeTr(username);
     const user = await UserModel.findOne({
       $or: [{ username: lowerIdentifier }, { email: lowerIdentifier }],
     });
@@ -164,7 +165,7 @@ authRouter.post("/login", async (req, res) => {
     user.lastSignedIn = new Date();
     await user.save();
 
-    const displayName = user.name || (user.username || lowerIdentifier).toLocaleUpperCase("tr-TR");
+    const displayName = user.name || normalizeTrUpper(user.username || lowerIdentifier);
     const token = await sdk.createSessionToken(user.openId, { name: displayName });
     res.json({ success: true, token, user: { openId: user.openId, name: displayName, username: user.username, progress: user.progress } });
   } catch (err: any) {
@@ -194,7 +195,7 @@ authRouter.get("/me", async (req, res) => {
       dbUser.updatedAt = new Date();
       await dbUser.save();
     }
-    const displayName = dbUser.name || (dbUser.username || "").toLocaleUpperCase("tr-TR") || "OYUNCU";
+    const displayName = dbUser.name || normalizeTrUpper(dbUser.username || "") || "OYUNCU";
     res.json({
       success: true,
       user: {

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { AVATARS } from "@/shared/progression";
 import { PROFILE_FRAMES } from "@/shared/store-items";
+import { normalizeTr } from "@/shared/tr-utils";
 
 export interface ScoreBadgeProps {
   name: string;
@@ -37,7 +38,7 @@ export function ScoreBadge({
     ? activeAvatarObj.icon
     : (avatar && avatar.length <= 3
         ? avatar
-        : (name.toLocaleLowerCase("tr-TR").includes("bot") ? "🤖" : "👤"));
+        : (normalizeTr(name).includes("bot") ? "🤖" : "👤"));
   const frameColor = PROFILE_FRAMES.find(([fId]) => fId === selectedFrame)?.[2];
   const avatarBorderColor = frameColor || (activeAvatarObj ? activeAvatarObj.color : accent);
   const avatarBgColor = activeAvatarObj ? activeAvatarObj.surface : `${accent}25`;

@@ -5,4 +5,4 @@ export * from "./season-reset-modal";
 export * from "./board-size-picker-modal";
 export * from "./season-leaderboard-tab";
 export * from "./season-friends-tab";
-export * from "./season-mock-data";
+export { type RankingType, MOCK_LP_LEADERBOARD, MOCK_LEVEL_LEADERBOARD } from "./season-mock-data";

@@ -30,6 +30,7 @@ export interface UsePlayerProgressionParams {
     newLp: number;
   } | null) => void;
   setShowWelcomeModal: (show: boolean) => void;
+  setGlobalToast?: (toast: any) => void;
 }
 
 export function usePlayerProgression({
@@ -39,6 +40,7 @@ export function usePlayerProgression({
   setGlobalAlert,
   setSeasonResetModal,
   setShowWelcomeModal,
+  setGlobalToast,
 }: UsePlayerProgressionParams) {
   const [progress, setProgress] = useState<PlayerProgress>(DEFAULT_PROGRESS);
   const progressRef = useRef<PlayerProgress>(DEFAULT_PROGRESS);
@@ -46,6 +48,7 @@ export function usePlayerProgression({
   const [soloUnlockedLevel, setSoloUnlockedLevel] = useState(1);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasOfflineRef = useRef(false);
 
   useEffect(() => {
     progressRef.current = progress;
@@ -56,7 +59,7 @@ export function usePlayerProgression({
       try {
         const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
         if (!token || token === "guest") return;
-        await fetch(`${getApiBaseUrl()}/api/auth/sync-progress`, {
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/sync-progress`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -67,11 +70,26 @@ export function usePlayerProgression({
             name: customName || safeName,
           }),
         });
+        if (res.ok) {
+          if (wasOfflineRef.current) {
+            wasOfflineRef.current = false;
+            setGlobalToast?.({
+              id: `sync-recovered-${Date.now()}`,
+              title: "BULUT EŞİTLENDİ",
+              subtitle: "Bağlantı kuruldu, ilerlemeniz güvenle eşitlendi.",
+              icon: "☁️",
+              accentColor: "#3EE8B5",
+            });
+          }
+        } else {
+          wasOfflineRef.current = true;
+        }
       } catch {
         // Çevrimdışı veya sunucuya ulaşılamayan durumlarda ilerleme yerel AsyncStorage içinde güvenle korunur.
+        wasOfflineRef.current = true;
       }
     },
-    [safeName]
+    [safeName, setGlobalToast]
   );
 
   const flushPendingAwards = useCallback(async () => {
@@ -426,7 +444,7 @@ export function usePlayerProgression({
     if (authToken && authToken !== "guest") {
       if (syncDebounceRef.current) clearTimeout(syncDebounceRef.current);
       syncDebounceRef.current = setTimeout(() => {
-        syncProgressToCloud(progress);
+        syncProgressToCloud(progressRef.current);
       }, 1500);
     }
     return () => {

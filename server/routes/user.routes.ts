@@ -15,7 +15,7 @@ userRouter.get("/profile/:idOrName", async (req, res) => {
     const idOrName = req.params.idOrName?.trim();
     if (!idOrName || idOrName.length > 64) return res.status(400).json({ error: "Geçersiz arama parametresi." });
 
-    if (idOrName.startsWith("bot:") || idOrName.toLowerCase().includes("bot")) {
+    if (idOrName.startsWith("bot:") || normalizeTr(idOrName).includes("bot")) {
       return res.json({
         id: idOrName,
         name: "KELİME BOT",

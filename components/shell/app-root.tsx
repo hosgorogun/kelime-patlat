@@ -10,6 +10,7 @@ import { useLivesManager } from "@/hooks/use-lives-manager";
 import type { ModernAlertData } from "../modals/modern-alert-modal";
 import { useCelebrationManager } from "@/hooks/use-celebration-manager";
 import { AppScreenRouter } from "./app-screen-router";
+import { AppProviders } from "@/context";
 import { usePlayerProgression } from "@/hooks/use-player-progression";
 import { useSoloGame } from "@/hooks/use-solo-game";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -24,8 +25,6 @@ import { useMatchConfirmation } from "@/hooks/use-match-confirmation";
 import { usePvpGameCoordinator } from "@/hooks/use-pvp-game-coordinator";
 import { useLuckyWheel } from "@/hooks/use-lucky-wheel";
 import type { Screen } from "./types";
-
-export type { Screen };
 
 export function AppRoot() {
   const { width } = useWindowDimensions();
@@ -93,6 +92,7 @@ export function AppRoot() {
     setGlobalAlert,
     setSeasonResetModal,
     setShowWelcomeModal: (show) => setShowWelcomeModalRef.current(show),
+    setGlobalToast,
   });
 
   setProgressRef.current = setProgress;
@@ -283,128 +283,126 @@ export function AppRoot() {
 
   const { showConsentModal, setShowConsentModal } = useEngagementLifecycle();
 
+  const navigationValue = {
+    screen,
+    setScreen,
+    seasonInitialTab,
+    setSeasonInitialTab,
+  };
+
+  const authValue = {
+    authToken,
+    setAuthToken,
+    playerId,
+    setPlayerId,
+    playerName,
+    setPlayerName,
+    safeName,
+    authLoading,
+  };
+
+  const progressionValue = {
+    progress,
+    progressRef,
+    setProgress,
+    progressReady,
+    syncProgressToCloud,
+    awardProgressOnServer,
+    claimMilestoneOnServer,
+    claimMissionOnServer,
+    leaderboard,
+    setLeaderboard,
+    soloUnlockedLevel,
+    setSoloUnlockedLevel,
+    daily,
+    livesCalc,
+    unclaimedMissions,
+    unclaimedMilestones,
+    hasClaimableDailyReward,
+    activeBoardSkinColor,
+    activeVictoryEffect,
+    reconnectGameSocket,
+  };
+
+  const uiFeedbackValue = {
+    globalToast,
+    setGlobalToast,
+    showToast: (title: string, subtitle: string, icon?: string, accentColor?: string) => {
+      setGlobalToast({
+        id: Date.now().toString(),
+        title,
+        subtitle,
+        icon: icon || "💬",
+        accentColor: accentColor || "#38BDF8",
+      });
+    },
+    globalAlert,
+    setGlobalAlert,
+    seasonResetModal,
+    setSeasonResetModal,
+    showGuide,
+    setShowGuide,
+    handleCloseGuide,
+    showWelcomeModal,
+    setShowWelcomeModal,
+    isClaimingWelcomeReward,
+    handleClaimWelcomeReward,
+    handleClaimDailyReward,
+    showConsentModal,
+    setShowConsentModal,
+    showLivesModal,
+    setShowLivesModal,
+    showLuckyWheel,
+    setShowLuckyWheel,
+    inspectedUser,
+    setInspectedUser,
+    openUserProfile,
+    sfxOn,
+    toggleSfx,
+    hapticsOn,
+    toggleHaptics,
+  };
+
+  const pvpContextValue = {
+    ...pvp,
+    friendsList,
+    pendingRequests,
+    notice,
+    setNotice,
+    promptBotDuel,
+    handleConfirmMatch,
+    pendingMatchConfirm,
+    setPendingMatchConfirm,
+    selectedModeInfo,
+    setSelectedModeInfo,
+    watchAd,
+  };
+
   return (
-    <AppScreenRouter
-      splashFinished={splashFinished}
-      setSplashFinished={setSplashFinished}
-      authLoading={authLoading}
-      screen={screen}
-      setScreen={setScreen}
-      authToken={authToken}
-      setAuthToken={setAuthToken}
-      playerId={playerId}
-      setPlayerId={setPlayerId}
-      playerName={playerName}
-      setPlayerName={setPlayerName}
-      safeName={safeName}
-      progress={progress}
-      progressRef={progressRef}
-      setProgress={setProgress}
-      syncProgressToCloud={syncProgressToCloud}
-      awardProgressOnServer={awardProgressOnServer}
-      reconnectGameSocket={reconnectGameSocket}
-      daily={daily}
-      dailySession={dailySession}
-      setDailySession={setDailySession}
-      recentSoloWords={recentSoloWords}
-      soloLevel={soloLevel}
-      setSoloLevel={setSoloLevel}
-      openSoloLevel={openSoloLevel}
-      completeSoloLevel={completeSoloLevel}
-      completeDailyChallenge={completeDailyChallenge}
-      soloUnlockedLevel={soloUnlockedLevel}
-      setSoloUnlockedLevel={setSoloUnlockedLevel}
-      claimMilestoneOnServer={claimMilestoneOnServer}
-      claimMissionOnServer={claimMissionOnServer}
-      leaderboard={leaderboard}
-      friendsList={friendsList}
-      pendingRequests={pendingRequests}
-      notice={notice}
-      setNotice={setNotice}
-      seasonInitialTab={seasonInitialTab}
-      setSeasonInitialTab={setSeasonInitialTab}
-      seasonResetModal={seasonResetModal}
-      setSeasonResetModal={setSeasonResetModal}
-      unclaimedMissions={unclaimedMissions}
-      unclaimedMilestones={unclaimedMilestones}
-      hasClaimableDailyReward={hasClaimableDailyReward}
-      livesCalc={livesCalc}
-      globalToast={globalToast}
-      setGlobalToast={setGlobalToast}
-      globalAlert={globalAlert}
-      setGlobalAlert={setGlobalAlert}
-      showGuide={showGuide}
-      setShowGuide={setShowGuide}
-      handleCloseGuide={handleCloseGuide}
-      showWelcomeModal={showWelcomeModal}
-      setShowWelcomeModal={setShowWelcomeModal}
-      isClaimingWelcomeReward={isClaimingWelcomeReward}
-      handleClaimWelcomeReward={handleClaimWelcomeReward}
-      handleClaimDailyReward={handleClaimDailyReward}
-      showConsentModal={showConsentModal}
-      setShowConsentModal={setShowConsentModal}
-      livesModalElement={livesModalElement}
-      setShowLivesModal={setShowLivesModal}
-      celebrationModalElement={celebrationModalElement}
-      luckyWheelModalElement={luckyWheelModalElement}
-      onOpenLuckyWheel={() => setShowLuckyWheel(true)}
-      inspectedUser={inspectedUser}
-      setInspectedUser={setInspectedUser}
-      openUserProfile={openUserProfile}
-      incomingDuelInvite={pvp.incomingDuelInvite}
-      handleAcceptDuelInvite={pvp.handleAcceptDuelInvite}
-      handleRejectDuelInvite={pvp.handleRejectDuelInvite}
-      matchmakingState={pvp.matchmakingState}
-      startMatchmaking={pvp.startMatchmaking}
-      cancelMatchmaking={pvp.cancelMatchmaking}
-      promptBotDuel={promptBotDuel}
-      handleConfirmMatch={handleConfirmMatch}
-      pendingMatchConfirm={pendingMatchConfirm}
-      setPendingMatchConfirm={setPendingMatchConfirm}
-      selectedModeInfo={selectedModeInfo}
-      setSelectedModeInfo={setSelectedModeInfo}
-      handleAcceptFriendRequest={pvp.handleAcceptFriendRequest}
-      handleRejectFriendRequest={pvp.handleRejectFriendRequest}
-      handleSendFriendRequest={pvp.handleSendFriendRequest}
-      handleAddFriendTarget={pvp.handleAddFriendTarget}
-      handleChallengeTarget={pvp.handleChallengeTarget}
-      activeBoardSkinColor={activeBoardSkinColor}
-      activeVictoryEffect={activeVictoryEffect}
-      watchAd={watchAd}
-      selectedSize={pvp.selectedSize}
-      setSelectedSize={pvp.setSelectedSize}
-      roomCodeInput={pvp.roomCodeInput}
-      setRoomCodeInput={pvp.setRoomCodeInput}
-      createRoom={pvp.createRoom}
-      joinRoom={pvp.joinRoom}
-      leaveRoom={pvp.leaveRoom}
-      shareRoomInvite={pvp.shareRoomInvite}
-      markReady={pvp.markReady}
-      requestRematch={pvp.requestRematch}
-      sendEmote={pvp.sendEmote}
-      activeEmote={pvp.activeEmote}
-      room={pvp.room}
-      isSocketConnected={pvp.isSocketConnected}
-      sfxOn={sfxOn}
-      toggleSfx={toggleSfx}
-      hapticsOn={hapticsOn}
-      toggleHaptics={toggleHaptics}
-      gameCountdown={pvp.gameCountdown}
-      boardSelection={pvp.boardSelection}
-      boardWidth={pvp.boardWidth}
-      gameScrollRef={pvp.gameScrollRef}
-      handleLiveGameExitPress={pvp.handleLiveGameExitPress}
-      allFinishedWords={pvp.allFinishedWords}
-      inspectedPath={pvp.inspectedPath}
-      setInspectedPath={pvp.setInspectedPath}
-      inspectedColor={pvp.inspectedColor}
-      inspectWord={pvp.inspectWord}
-      selectedWordInfo={pvp.selectedWordInfo}
-      setSelectedWordInfo={pvp.setSelectedWordInfo}
-      showResultModal={pvp.showResultModal}
-      setShowResultModal={pvp.setShowResultModal}
-      showLeaveDuelModal={pvp.showLeaveDuelModal}
-      setShowLeaveDuelModal={pvp.setShowLeaveDuelModal}
-    />
+    <AppProviders
+      navigation={navigationValue}
+      auth={authValue}
+      progression={progressionValue}
+      uiFeedback={uiFeedbackValue}
+      pvp={pvpContextValue}
+    >
+      <AppScreenRouter
+        splashFinished={splashFinished}
+        setSplashFinished={setSplashFinished}
+        dailySession={dailySession}
+        setDailySession={setDailySession}
+        recentSoloWords={recentSoloWords}
+        soloLevel={soloLevel}
+        setSoloLevel={setSoloLevel}
+        openSoloLevel={openSoloLevel}
+        completeSoloLevel={completeSoloLevel}
+        completeDailyChallenge={completeDailyChallenge}
+        livesModalElement={livesModalElement}
+        celebrationModalElement={celebrationModalElement}
+        luckyWheelModalElement={luckyWheelModalElement}
+        onOpenLuckyWheel={() => setShowLuckyWheel(true)}
+        watchAd={watchAd}
+      />
+    </AppProviders>
   );
 }

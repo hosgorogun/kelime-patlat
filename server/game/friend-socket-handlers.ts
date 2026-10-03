@@ -354,6 +354,14 @@ export function registerFriendSocketHandlers(
         return;
       }
 
+      // Prune expired invites if memory grows
+      if (pendingDuelInvites.size > 200) {
+        const now = Date.now();
+        for (const [k, v] of pendingDuelInvites) {
+          if (v.expiresAt < now) pendingDuelInvites.delete(k);
+        }
+      }
+
       for (const sId of uniqueSockets) {
         pendingDuelInvites.set(sId, { fromPlayerId, roomCode, expiresAt: Date.now() + 60_000 });
         io.to(sId).emit("friend:duel:incoming", {
@@ -381,6 +389,10 @@ export function registerFriendSocketHandlers(
       if (!pendingInvite || pendingInvite.fromPlayerId !== toPlayerId || pendingInvite.roomCode !== roomCode) {
         return socket.emit("friend:duel:failed", { message: "Bu daveti yanıtlama yetkiniz yok." });
       }
+      if (pendingInvite.expiresAt < Date.now()) {
+        pendingDuelInvites.delete(socket.id);
+        return socket.emit("friend:duel:failed", { message: "Bu davetin süresi dolmuş." });
+      }
       pendingDuelInvites.delete(socket.id);
       const targetSockets = getSocketsForUser(toPlayerId);
       for (const sId of targetSockets) {
@@ -392,4 +404,8 @@ export function registerFriendSocketHandlers(
       }
     }
   );
+
+  socket.on("disconnect", () => {
+    pendingDuelInvites.delete(socket.id);
+  });
 }

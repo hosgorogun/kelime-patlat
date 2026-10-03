@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, Text, View, Modal, ScrollView, useWindowDimensions } from "react-native";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
-import { GuideTabKey, GuideSection, GuideBlock } from "./onboarding.types";
+import { GuideTabKey } from "./onboarding.types";
 import { GUIDE_SECTIONS } from "./onboarding.data";
 import { onboardingStyles as styles } from "./onboarding.styles";
 import {
@@ -11,8 +11,6 @@ import {
   RewardsVisual,
   MultipliersVisual,
 } from "./onboarding-visuals";
-
-export { GuideTabKey, GuideSection, GuideBlock, GUIDE_SECTIONS };
 
 export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { width } = useWindowDimensions();
