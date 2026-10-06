@@ -141,6 +141,16 @@ export const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
+  cellBonus: {
+    backgroundColor: "#FEF9C3",
+    borderColor: "#FACC15",
+    borderBottomColor: "#EAB308",
+    borderWidth: 2.5,
+    shadowColor: "#EAB308",
+    shadowOpacity: 0.65,
+    shadowRadius: 8,
+    elevation: 6,
+  },
   cellFound: {
     backgroundColor: "#F1F5F9",
     borderColor: "#CBD5E1",
@@ -202,6 +212,11 @@ export const styles = StyleSheet.create({
     backgroundColor: "#D1FAE5",
     borderColor: "#10B981",
     borderBottomColor: "#059669",
+  },
+  trayBonus: {
+    backgroundColor: "#FEF9C3",
+    borderColor: "#FACC15",
+    borderBottomColor: "#EAB308",
   },
   trayLabel: { color: "#64748B", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   word: { color: "#0F172A", fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginTop: 3 },

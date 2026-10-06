@@ -2,7 +2,7 @@ import { Router } from "express";
 import { UserModel, connectDb } from "../db";
 import { ProfileModel } from "../game/mongo-store";
 import { normalizeTr } from "../../shared/tr-utils";
-import { getLeagueTier, type PlayerProgress } from "../../shared/progression";
+import { getLeagueTier, getPlayerLevel, type PlayerProgress } from "../../shared/progression";
 
 export const userRouter = Router();
 
@@ -56,7 +56,7 @@ userRouter.get("/profile/:idOrName", async (req, res) => {
         avatarPhoto: prog.avatarPhoto,
         selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
         selectedFrame: prog.selectedFrame || "signal",
-        level: Math.floor((prog.xp || 0) / 200) + 1,
+        level: getPlayerLevel(prog.xp || 0),
         tier: tierInfo.tier,
         lp: prog.lp || 0,
         wins: prog.wins || 0,
@@ -88,7 +88,7 @@ userRouter.get("/profile/:idOrName", async (req, res) => {
         avatarPhoto: prog.avatarPhoto,
         selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
         selectedFrame: prog.selectedFrame || "signal",
-        level: Math.floor((prog.xp || 0) / 200) + 1,
+        level: getPlayerLevel(prog.xp || 0),
         tier: tierInfo.tier,
         lp: prog.lp || 0,
         wins: prog.wins || 0,

@@ -27,13 +27,10 @@ const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
-  // App branding - update these values directly (do not use env vars)
+  // App branding
   appName: "Kelime Patlat",
   appSlug: "kelime-patlat",
-  // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
-  // Leave empty to use the default icon from assets/images/icon.png
-  logoUrl: "/manus-storage/kelime-patlat-logo-v2_03d54247.png",
-  scheme: schemeFromBundleId,
+  scheme: "kelimepatlat",
   iosBundleId: bundleId,
   androidPackage: bundleId,
 };
@@ -49,6 +46,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
+    buildNumber: "1",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSCameraUsageDescription: "Profil fotoğrafı çekmek ve avatarınızı güncellemek için kamera erişimi gereklidir.",
@@ -64,7 +62,8 @@ const config: ExpoConfig = {
     },
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
+    versionCode: 1,
+    permissions: ["POST_NOTIFICATIONS"],
     intentFilters: [
       {
         action: "VIEW",
@@ -89,7 +88,8 @@ const config: ExpoConfig = {
     [
       "expo-audio",
       {
-        microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",
+        microphonePermission: false,
+        recordAudioAndroid: false,
       },
     ],
     [

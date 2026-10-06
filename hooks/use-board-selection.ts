@@ -32,7 +32,7 @@ export function useBoardSelection({
 
   const [selectedCells, setSelectedCells] = useState<number[]>([]);
   const [isSelecting, setIsSelecting] = useState(false);
-  const [selectionFeedback, setSelectionFeedback] = useState<"idle" | "invalid" | "accepted">("idle");
+  const [selectionFeedback, setSelectionFeedback] = useState<"idle" | "invalid" | "accepted" | "bonus">("idle");
   const [particles, setParticles] = useState<
     { id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]
   >([]);

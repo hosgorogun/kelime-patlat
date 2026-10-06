@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "../constants/oauth";
-import { mergePlayerProgress, type PlayerProgress } from "../shared/progression";
+import { DEFAULT_PROGRESS, mergePlayerProgress, type PlayerProgress } from "../shared/progression";
+import { PROGRESS_KEY } from "./use-player-progression";
 
 export interface UseAuthSessionParams {
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
@@ -71,6 +72,19 @@ export function useAuthSession({
                 setPlayerName(cachedName || "OYUNCU");
               }
               void flushPendingAwards();
+            } else if (response.status === 401 || response.status === 403 || response.status === 404) {
+              // Sunucu oturumu/hesabı tanımıyor (hesap silinmiş veya geçersiz token): yerel oturumu ve eski ilerlemeyi tamamen temizle ve giriş ekranına yönlendir
+              await AsyncStorage.multiRemove([
+                SESSION_TOKEN_KEY,
+                "kelime-patlat:player-id",
+                "kelime-patlat:player-name",
+                PROGRESS_KEY,
+              ]).catch(() => undefined);
+              setProgress({ ...DEFAULT_PROGRESS });
+              setAuthToken(null);
+              setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
+              setPlayerName("OYUNCU");
+              setScreen("auth");
             } else {
               const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
               const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
@@ -87,18 +101,11 @@ export function useAuthSession({
             setPlayerName(cachedName || "OYUNCU");
           }
         } else {
-          // Sıfır Sürtünmeli Giriş (Instant Zero-Friction Onboarding)
-          // Yeni oyuncu doğrudan misafir olarak oyuna başlar, kayıt duvarı olmadan anında oynar.
-          const guestNumber = Math.floor(1000 + Math.random() * 9000);
-          const guestName = `Oyuncu #${guestNumber}`;
-          const guestId = `guest_${Math.random().toString(36).slice(2, 10)}`;
-          setAuthToken("guest");
-          setPlayerId(guestId);
-          setPlayerName(guestName);
-          await AsyncStorage.setItem(SESSION_TOKEN_KEY, "guest");
-          await AsyncStorage.setItem("kelime-patlat:player-id", guestId);
-          await AsyncStorage.setItem("kelime-patlat:player-name", guestName);
-          setScreen("home");
+          // Token yoksa veya kullanıcı çıkış yapmışsa doğrudan Giriş Yap / Kayıt Ol ekranını göster
+          setAuthToken(null);
+          setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
+          setPlayerName("OYUNCU");
+          setScreen("auth");
         }
         setAuthLoading(false);
       })

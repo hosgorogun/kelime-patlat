@@ -123,7 +123,12 @@ export function SeasonHub({
   // Ensure current user is in full pool with their latest progress depending on rankingType
   const basePool = useMemo(() => {
     const defaultMock = rankingType === "level" ? MOCK_LEVEL_LEADERBOARD : MOCK_LP_LEADERBOARD;
-    const rawList = leaderboard.length > 0 ? [...leaderboard] : [...defaultMock];
+    let rawList = leaderboard.length > 0 ? [...leaderboard] : [...defaultMock];
+    if (rawList.length < 3) {
+      const existingIds = new Set(rawList.map((e) => e.id));
+      const extras = defaultMock.filter((m) => !existingIds.has(m.id));
+      rawList = [...rawList, ...extras];
+    }
     const userIndex = rawList.findIndex((e) => e.id === playerId);
     const userTier = getLeagueTier(progress);
     const userEntry: LeaderboardEntry = {
@@ -299,18 +304,23 @@ export function SeasonHub({
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={onBack} style={styles.back}>
+          <Pressable onPress={onBack} style={styles.back} hitSlop={8}>
             <Text style={styles.backText}>‹</Text>
           </Pressable>
-          <View style={{ flex: 1 }}>
+          <View style={styles.headerCenter}>
             <Text style={styles.overline}>SEZON ŞAMPİYONASI</Text>
-            <Text style={styles.title}>LİG & TOPLULUK MERKEZİ</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.title}>
+              LİG & TOPLULUK MERKEZİ
+            </Text>
           </View>
           <View style={styles.timerPill}>
-            <Text style={styles.timerLabel}>BİTİŞE KALAN</Text>
-            <Text style={styles.timerValue}>
-              {remaining.days}G {remaining.hours}S {remaining.minutes}D
-            </Text>
+            <Text style={styles.timerIcon}>⏳</Text>
+            <View>
+              <Text style={styles.timerLabel}>KALAN SÜRE</Text>
+              <Text style={styles.timerValue}>
+                {remaining.days}G {remaining.hours}S {remaining.minutes}D
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -397,6 +407,8 @@ export function SeasonHub({
             showAllLeaderboard={showAllLeaderboard}
             setShowAllLeaderboard={setShowAllLeaderboard}
             playerId={playerId}
+            avatarPhoto={progress.avatarPhoto}
+            userAvatarId={progress.selectedAvatar}
             onInspectUser={onInspectUser}
           />
         )}

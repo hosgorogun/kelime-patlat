@@ -1,10 +1,10 @@
 import { styles } from './command-center.styles';
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Dimensions, Image, PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, canSpinLuckyWheel, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, getActiveCyberTitle, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, canSpinLuckyWheel, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { palette } from "@/shared/palette";
@@ -84,8 +84,36 @@ export function CommandCenter({
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const hasAutoOpenedDailyRewardRef = useRef(false);
+  const [isMysteryExpanded, setIsMysteryExpanded] = useState(false);
   const [livesCalc, setLivesCalc] = useState(() => getCalculatedLives(progress));
   const [imgError, setImgError] = useState(false);
+  const [displayCoins, setDisplayCoins] = useState(() => progress.coins ?? 0);
+  const targetCoinsRef = useRef(progress.coins ?? 0);
+
+  useEffect(() => {
+    const target = progress.coins ?? 0;
+    targetCoinsRef.current = target;
+    const start = displayCoins;
+    if (start === target) return;
+
+    const diff = target - start;
+    const steps = Math.min(20, Math.max(5, Math.abs(diff)));
+    const stepDuration = Math.min(40, Math.max(16, 500 / steps));
+    let stepCount = 0;
+
+    const timer = setInterval(() => {
+      stepCount++;
+      if (stepCount >= steps) {
+        setDisplayCoins(targetCoinsRef.current);
+        clearInterval(timer);
+      } else {
+        const nextVal = Math.round(start + (diff * (stepCount / steps)));
+        setDisplayCoins(nextVal);
+      }
+    }, stepDuration);
+
+    return () => clearInterval(timer);
+  }, [progress.coins]);
 
   useEffect(() => {
     setImgError(false);
@@ -127,10 +155,51 @@ export function CommandCenter({
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
   const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
   const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || palette.emerald);
+  const activeTitle = getActiveCyberTitle(progress);
 
   const [infoModal, setInfoModal] = useState<"shield" | "radar" | "lives" | "rotani" | "mystery" | null>(null);
 
   const [showBotPracticeModal, setShowBotPracticeModal] = useState(false);
+
+  // Serbest sürüklenebilir Büyüteç Rozeti (Draggable Floating FAB)
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const panOffset = useRef({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        return Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4;
+      },
+      onPanResponderGrant: () => {
+        isDragging.current = false;
+        pan.setOffset({
+          x: panOffset.current.x,
+          y: panOffset.current.y,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: (_, gesture) => {
+        if (Math.abs(gesture.dx) > 6 || Math.abs(gesture.dy) > 6) {
+          isDragging.current = true;
+        }
+        pan.setValue({ x: gesture.dx, y: gesture.dy });
+      },
+      onPanResponderRelease: (_, gesture) => {
+        pan.flattenOffset();
+        panOffset.current = {
+          x: panOffset.current.x + gesture.dx,
+          y: panOffset.current.y + gesture.dy,
+        };
+        // Eğer sürükleme yapılmadıysa tıklama say ve modalı aç
+        if (!isDragging.current) {
+          triggerHapticSelection();
+          setInfoModal("mystery");
+        }
+      },
+    })
+  ).current;
 
   return <>
     <BotPracticeModal
@@ -167,8 +236,13 @@ export function CommandCenter({
               )}
             </View>
             <View style={styles.identityMeta}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Text numberOfLines={1} style={[styles.name, { flexShrink: 1 }]}>{playerName}</Text>
+                {activeTitle ? (
+                  <View style={styles.titlePill}>
+                    <Text numberOfLines={1} style={styles.cyberBadge}>{activeTitle}</Text>
+                  </View>
+                ) : null}
               </View>
               <Text numberOfLines={1} style={styles.rank}>Sv. {getPlayerLevel(progress.xp)} · {rank}</Text>
             </View>
@@ -202,17 +276,7 @@ export function CommandCenter({
             >
               <Text style={styles.topIconText}>❓</Text>
             </Pressable>
-            <Pressable
-              onPress={() => {
-                triggerHapticSelection();
-                setShowDailyRewardModal(true);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={({ pressed }) => [styles.topIconBtn, !isClaimedToday && styles.topIconBtnGlow, pressed && styles.pressed]}
-            >
-              <Text style={styles.topIconText}>🎁</Text>
-              {!isClaimedToday && <View style={styles.topNotificationDot} />}
-            </Pressable>
+
             <Pressable
               onPress={() => {
                 triggerHapticSelection();
@@ -242,14 +306,14 @@ export function CommandCenter({
         <GemChip
           iconSource={ICONS.radar}
           label="RADAR"
-          value={3 + (progress.radarChargesBonus || 0)}
+          value={progress.radarChargesBonus || 0}
           color={palette.emerald}
           onPress={() => { triggerHapticSelection(); setInfoModal("radar"); }}
         />
         <GemChip
           iconSource={ICONS.coin}
           label="ÇİP"
-          value={progress.coins ?? 0}
+          value={displayCoins}
           color={palette.gold}
           plus
           badge={!isClaimedToday}
@@ -257,52 +321,7 @@ export function CommandCenter({
         />
       </View>
 
-      {!isClaimedToday && (
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            setShowDailyRewardModal(true);
-          }}
-          style={({ pressed }) => [styles.dailyMiniPill, pressed && styles.pressed]}
-        >
-          <Text style={styles.dailyMiniIcon}>🎁</Text>
-          <Text style={styles.dailyMiniText}>
-            GÜNLÜK HAZİNEN HAZIR! · GÜN {displayDayNumber}/7
-          </Text>
-          <Text style={styles.dailyMiniAction}>TOPLA ➔</Text>
-        </Pressable>
-      )}
 
-      {/* Siber Şans Çarkı Banner */}
-      <Pressable
-        onPress={() => {
-          triggerHapticSelection();
-          onOpenLuckyWheel?.();
-        }}
-        style={({ pressed }) => [styles.luckyWheelBanner, pressed && styles.pressed]}
-      >
-        <Text style={styles.luckyWheelIcon}>🎡</Text>
-        <Text style={styles.luckyWheelText}>
-          {canSpinWheel ? "ŞANS ÇARKI · ÜCRETSİZ ÇEVİRME HAZIR!" : "ŞANS ÇARKI · GÜNLÜK HEDİYE ÇARKI"}
-        </Text>
-        <Text style={styles.luckyWheelAction}>{canSpinWheel ? "ÇEVİR ➔" : "AÇ ➔"}</Text>
-      </Pressable>
-
-      {unclaimedMissionsCount > 0 && (
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            onNavigate("missions");
-          }}
-          style={({ pressed }) => [styles.missionsMiniPill, pressed && styles.pressed]}
-        >
-          <Text style={styles.missionsMiniIcon}>📜</Text>
-          <Text style={styles.missionsMiniText}>
-            {unclaimedMissionsCount} GÖREVİN ÖDÜLÜ BEKLİYOR!
-          </Text>
-          <Text style={styles.missionsMiniAction}>TOPLA ➔</Text>
-        </Pressable>
-      )}
 
       {progress.streak > 0 && !dailyDone && (
         <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.streakWarningPill, pressed && styles.pressed]}>
@@ -313,6 +332,82 @@ export function CommandCenter({
           <Text style={styles.streakWarningArrow}>→</Text>
         </Pressable>
       )}
+
+      {/* Daima 2'li yan yana duran Hazine ve Çark kartları */}
+      <View style={styles.quickActionsRow}>
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            setShowDailyRewardModal(true);
+          }}
+          style={({ pressed }) => [
+            styles.quickActionCard,
+            { backgroundColor: isClaimedToday ? "#F3F5EE" : "#FFF5D6", borderColor: isClaimedToday ? "#DDE3D6" : "#F3D267" },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.quickActionIcon}>🎁</Text>
+          <View style={styles.quickActionContent}>
+            <Text numberOfLines={1} style={[styles.quickActionTitle, { color: isClaimedToday ? "#62737D" : "#7A5910" }]}>
+              GÜN {displayDayNumber}/7
+            </Text>
+            <Text numberOfLines={1} style={[styles.quickActionSub, { color: isClaimedToday ? "#85959F" : "#925D00" }]}>
+              {isClaimedToday ? "Toplandı ✓" : "Hazineyi Al"}
+            </Text>
+          </View>
+          <Text style={[styles.quickActionArrow, { color: isClaimedToday ? "#85959F" : "#925D00" }]}>
+            {isClaimedToday ? "✓" : "➔"}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            triggerHapticSelection();
+            onOpenLuckyWheel?.();
+          }}
+          style={({ pressed }) => [
+            styles.quickActionCard,
+            { backgroundColor: "#EFF6FF", borderColor: "#93C5FD" },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.quickActionIcon}>🎡</Text>
+          <View style={styles.quickActionContent}>
+            <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#1E40AF" }]}>
+              {canSpinWheel ? "ÇARK HAZIR" : "ŞANS ÇARKI"}
+            </Text>
+            <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#2563EB" }]}>
+              {canSpinWheel ? "Ücretsiz Çevir" : "Hediyeler"}
+            </Text>
+          </View>
+          <Text style={[styles.quickActionArrow, { color: "#2563EB" }]}>➔</Text>
+        </Pressable>
+
+        {unclaimedMissionsCount > 0 && (
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              onNavigate("missions");
+            }}
+            style={({ pressed }) => [
+              styles.quickActionCard,
+              { backgroundColor: "#DEF7EC", borderColor: "#88DFB3" },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.quickActionIcon}>📜</Text>
+            <View style={styles.quickActionContent}>
+              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#166544" }]}>
+                {unclaimedMissionsCount} GÖREV
+              </Text>
+              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#15803D" }]}>
+                Ödülü Al
+              </Text>
+            </View>
+            <Text style={[styles.quickActionArrow, { color: "#15803D" }]}>➔</Text>
+          </Pressable>
+        )}
+      </View>
 
       <OrnatePanel accent="sapphire" showJewels={false} style={{ marginTop: 12 }}>
         <View style={styles.heroHead}>
@@ -411,89 +506,43 @@ export function CommandCenter({
         </View>
       </OrnatePanel>
 
-      <SectionLabel title="ETKİNLİKLER" meta="GÜNLÜK KEŞİFLER" />
+      <SectionLabel title="OYUN MODLARI" meta="MACERA & REKOR" />
 
-      <Pressable
-        onPress={() => {
-          triggerHapticSelection();
-          setInfoModal("mystery");
-        }}
-        style={({ pressed }) => [styles.mysteryStripWrap, pressed && styles.pressed]}
-      >
-        <LinearGradient
-          colors={["#EAF3FD", "#D8EAFB"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.mysteryStrip}
-        >
-          <View style={styles.mysteryStripLeft}>
-            <View style={styles.mysteryIconBadge}>
-              <Text style={styles.mysteryIconText}>🔍</Text>
-            </View>
-            <View style={styles.mysteryStripTextCol}>
-              <View style={styles.mysteryStripEyebrowRow}>
-                <Text style={styles.mysteryStripEyebrow}>GİZEMLİ KELİME</Text>
-                <View style={styles.mysteryStripDot} />
-                <Text style={styles.mysteryStripReward}>+{mystery.rewardXp} XP</Text>
-              </View>
-              <Text style={styles.mysteryStripDef}>
-                &quot;{mystery.definition}&quot;
+      {/* 2. ANA MACERA: SEVİYE YOLCULUĞU (Öne Çıkan Geniş Prestij Kartı) */}
+      <Pressable onPress={onSolo} style={({ pressed }) => [{ width: "100%", marginBottom: 8 }, pressed && styles.pressed]}>
+        <OrnatePanel accent="emerald" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
+          <GameIcon source={ICONS.trophy} size={42} glow="#3EE8B5" />
+          <View style={styles.soloMetaCol}>
+            <View style={styles.soloEyebrowRow}>
+              <Text style={[styles.soloEyebrowText, { color: "#117753" }]}>
+                {unclaimedMilestonesCount > 0 ? `🎁 ${unclaimedMilestonesCount} SANDIK BEKLİYOR` : `SEVİYE ${progress.soloUnlockedLevel ?? 1}/100`}
               </Text>
             </View>
+            <Text numberOfLines={1} style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
+            <Text numberOfLines={1} style={styles.soloDescEmerald}>
+              100 kademeli sözcük macerası
+            </Text>
           </View>
-
-          <View style={styles.mysteryStripInfoBtn}>
-            <Text style={styles.mysteryStripInfoIcon}>ℹ️</Text>
-          </View>
-        </LinearGradient>
+          {onOpenModeInfo && (
+            <InfoMini color="#117753" onPress={() => onOpenModeInfo("solo")} />
+          )}
+          <GameButton label="BAŞLA ▶" size="sm" variant="emerald" onPress={onSolo} style={styles.soloActionBtn} />
+        </OrnatePanel>
       </Pressable>
 
+      {/* 3. DİĞER MODLAR: 2 SÜTUN YAN YANA EŞİT DENGELİ KARTLAR */}
       <View style={styles.cardsRow}>
-        <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
-          <LinearGradient
-            colors={dailyDone ? ["#F4F6F2", "#E5ECE2"] : ["#E7F7EE", "#D3F2E0"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={[styles.columnCard, { borderColor: dailyDone ? "#CBD6C6" : "#99DFC1" }]}
-          >
-            <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
-              <View style={styles.cardRibbonMint}>
-                <Text style={styles.cardRibbonText}>GÜNÜN BULMACASI</Text>
-              </View>
-              {onOpenModeInfo && (
-                <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
-                  <InfoMini color="#147A57" onPress={() => onOpenModeInfo("daily")} />
-                </View>
-              )}
-            </View>
-            <View style={{ alignItems: "center", marginVertical: 4 }}>
-              <View style={[styles.cardIconCircle, { borderColor: dailyDone ? "#CBD6C6" : "#7ED8AA", backgroundColor: dailyDone ? "#E6EDE3" : "#D0F4E1" }]}>
-                <Text style={[styles.cardIconText, { color: dailyDone ? palette.muted : "#127552" }]}>{activeTheme.icon}</Text>
-              </View>
-            </View>
-            <Text style={[styles.cardTitle, { textAlign: "center" }]}>{dailyDone ? "TAMAMLANDI" : (daily.title || "GÜNÜN ROTASI").toLocaleUpperCase("tr-TR")}</Text>
-            <Text style={[styles.cardBodyMint, { textAlign: "center" }]}>{dailyDone ? "Günün rotasını tekrar incele." : "Kelime paketini seç ve rotayı başlat!"}</Text>
-            <View style={{ marginTop: "auto", paddingTop: 6, width: "100%" }}>
-              <GameButton
-                label={dailyDone ? "İNCELE" : "OYNA ▶"}
-                size="sm"
-                variant="emerald"
-                onPress={onPlayDaily}
-              />
-            </View>
-          </LinearGradient>
-        </Pressable>
-
+        {/* SOL: SKOR HÜCUMU */}
         <Pressable onPress={() => onNavigate("arcade")} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
           <LinearGradient
-            colors={["#FFF4EA", "#FFE2CC"]}
+            colors={["#FFF6ED", "#FFE6D1"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={[styles.columnCard, { borderColor: "#F7BE93" }]}
           >
             <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
               <View style={styles.cardRibbonAmber}>
-                <Text style={styles.cardRibbonTextAmber}>REKOR YARIŞI</Text>
+                <Text style={styles.cardRibbonTextAmber}>ZAMANA KARŞI</Text>
               </View>
               {onOpenModeInfo && (
                 <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
@@ -501,14 +550,19 @@ export function CommandCenter({
                 </View>
               )}
             </View>
-            <View style={{ alignItems: "center", marginVertical: 4 }}>
+
+            <View style={{ alignItems: "center", marginVertical: 6 }}>
               <View style={[styles.cardIconCircle, { borderColor: "#F4AF79", backgroundColor: "#FFE0C0" }]}>
                 <Text style={[styles.cardIconText, { color: "#B25610" }]}>⚡</Text>
               </View>
             </View>
+
             <Text style={[styles.cardTitle, { textAlign: "center" }]}>SKOR HÜCUMU</Text>
-            <Text style={[styles.cardBodyAmber, { textAlign: "center" }]}>Süre dolmadan en çok kelimeyi bağla ve rekor kır!</Text>
-            <View style={{ marginTop: "auto", paddingTop: 6, width: "100%" }}>
+            <Text numberOfLines={2} style={[styles.cardBodyAmber, { textAlign: "center", fontSize: 10, lineHeight: 14 }]}>
+              {progress.bestArcadeScore ? `En İyi: ${progress.bestArcadeScore} Puan` : "Süre bitmeden rekor kır!"}
+            </Text>
+
+            <View style={{ marginTop: "auto", paddingTop: 8, width: "100%" }}>
               <GameButton
                 label="YARIŞ ▶"
                 size="sm"
@@ -518,50 +572,46 @@ export function CommandCenter({
             </View>
           </LinearGradient>
         </Pressable>
-      </View>
 
-      <SectionLabel title="TEK OYUNCU" meta="MACERA & BULMACA" />
-      <View style={{ gap: 8, width: "100%" }}>
-        <Pressable onPress={onSolo} style={({ pressed }) => [pressed && styles.pressed]}>
-          <OrnatePanel accent="emerald" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
-            <GameIcon source={ICONS.trophy} size={42} glow="#3EE8B5" />
-            <View style={styles.soloMetaCol}>
-              <View style={styles.soloEyebrowRow}>
-                <Text style={[styles.soloEyebrowText, { color: "#117753" }]}>
-                  {unclaimedMilestonesCount > 0 ? `🎁 ${unclaimedMilestonesCount} SANDIK BEKLİYOR` : "100 SEVİYE"}
-                </Text>
+        {/* SAĞ: GAZETE BULMACASI */}
+        <Pressable onPress={() => onNavigate("vintage")} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
+          <LinearGradient
+            colors={["#FFF1F3", "#FDE0E4"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={[styles.columnCard, { borderColor: "#FCA5A5" }]}
+          >
+            <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
+              <View style={[styles.cardRibbonAmber, { backgroundColor: "#FFE4E8", borderColor: "#F87171" }]}>
+                <Text style={[styles.cardRibbonTextAmber, { color: "#991B1B" }]}>10×10 MATRİS</Text>
               </View>
-              <Text numberOfLines={1} style={styles.soloHeading}>SEVİYE YOLCULUĞU</Text>
-              <Text numberOfLines={1} style={styles.soloDescEmerald}>
-                Her bölümde yeni kelimeler
-              </Text>
+              {onOpenModeInfo && (
+                <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
+                  <InfoMini color="#991B1B" onPress={() => onOpenModeInfo("vintage")} />
+                </View>
+              )}
             </View>
-            {onOpenModeInfo && (
-              <InfoMini color="#117753" onPress={() => onOpenModeInfo("solo")} />
-            )}
-            <GameButton label="BAŞLA ▶" size="sm" variant="emerald" onPress={onSolo} style={styles.soloActionBtn} />
-          </OrnatePanel>
-        </Pressable>
 
-        <Pressable onPress={() => onNavigate("vintage")} style={({ pressed }) => [pressed && styles.pressed]}>
-          <OrnatePanel accent="ruby" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
-            <GameIcon emoji="🗞️" size={42} glow="#FB7185" />
-            <View style={styles.soloMetaCol}>
-              <View style={styles.soloEyebrowRow}>
-                <Text style={[styles.soloEyebrowText, { color: "#B73F50" }]}>
-                  20 BÖLÜM
-                </Text>
+            <View style={{ alignItems: "center", marginVertical: 6 }}>
+              <View style={[styles.cardIconCircle, { borderColor: "#F87171", backgroundColor: "#FEE2E2" }]}>
+                <Text style={[styles.cardIconText, { color: "#991B1B" }]}>🗞️</Text>
               </View>
-              <Text numberOfLines={1} style={styles.soloHeading}>GAZETE BULMACASI</Text>
-              <Text numberOfLines={1} style={styles.soloDescRuby}>
-                Kare bulmaca ipuçlarını çöz
-              </Text>
             </View>
-            {onOpenModeInfo && (
-              <InfoMini color="#B73F50" onPress={() => onOpenModeInfo("vintage")} />
-            )}
-            <GameButton label="ÇÖZ ▶" size="sm" variant="ruby" onPress={() => onNavigate("vintage")} style={styles.soloActionBtn} />
-          </OrnatePanel>
+
+            <Text style={[styles.cardTitle, { textAlign: "center" }]}>GAZETE BULMACASI</Text>
+            <Text numberOfLines={2} style={[styles.cardBodyAmber, { textAlign: "center", color: "#7F1D1D", fontSize: 10, lineHeight: 14 }]}>
+              20 özel klasik kare bulmaca
+            </Text>
+
+            <View style={{ marginTop: "auto", paddingTop: 8, width: "100%" }}>
+              <GameButton
+                label="ÇÖZ ▶"
+                size="sm"
+                variant="ruby"
+                onPress={() => onNavigate("vintage")}
+              />
+            </View>
+          </LinearGradient>
         </Pressable>
       </View>
 
@@ -584,5 +634,18 @@ export function CommandCenter({
         }}
       />
     </ScrollView>
+
+    {/* Ekran Üzerinde İstenilen Yere Serbestçe Taşınabilen Büyüteç Rozeti (Draggable Floating FAB) */}
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={[
+        styles.mysteryFab,
+        {
+          transform: [{ translateX: pan.x }, { translateY: pan.y }],
+        },
+      ]}
+    >
+      <Text style={styles.mysteryFabIcon}>🔍</Text>
+    </Animated.View>
   </>;
 }

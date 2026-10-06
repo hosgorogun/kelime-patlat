@@ -86,6 +86,7 @@ export type RoomSnapshot = {
   board: string[];
   wordsTotal: number;
   foundWords: FoundWord[];
+  bonusWords?: Record<string, string[]>;
   missedWords?: { word: string; path: number[] }[];
   scores: Record<string, number>;
   players: GamePlayer[];

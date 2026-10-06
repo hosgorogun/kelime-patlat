@@ -209,6 +209,20 @@ export const ProfileSettingsTab = React.memo(({
             >
               <Text style={[styles.actionBtnSecondaryText, { color: "#293541" }]}>HESABINI BAĞLA / GİRİŞ YAP ➔</Text>
             </Pressable>
+            <Pressable
+              onPress={() => {
+                triggerHapticError();
+                onOpenLogoutModal();
+              }}
+              style={({ pressed }) => [
+                styles.actionButtonSecondary,
+                { width: "100%", marginTop: 8, borderColor: "#CBD5E1" },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.actionBtnIcon}>🚪</Text>
+              <Text style={styles.actionBtnSecondaryText}>ÇIKIŞ YAP / YENİDEN GİRİŞ YAP</Text>
+            </Pressable>
           </View>
         ) : (
           <Pressable

@@ -128,7 +128,17 @@ friendsRouter.post("/respond", async (req, res) => {
     const reqDoc = await findFriendRequestById(requestId);
     if (!reqDoc) return res.status(404).json({ error: "İstek bulunamadı." });
 
-    if (reqDoc.toUserId !== playerId) {
+    const userDoc = await UserModel.findOne({ openId: user.openId }).lean();
+    const isAuthorized =
+      reqDoc.toUserId === playerId ||
+      (userDoc?.username && isEqualTr(reqDoc.toUserId, userDoc.username)) ||
+      (userDoc?.name && isEqualTr(reqDoc.toUserId, userDoc.name)) ||
+      (userDoc?.username && isEqualTr(reqDoc.toUsername, userDoc.username)) ||
+      (userDoc?.name && isEqualTr(reqDoc.toUsername, userDoc.name)) ||
+      (playerName && isEqualTr(reqDoc.toUsername, playerName)) ||
+      (profile?.username && isEqualTr(reqDoc.toUsername, profile.username));
+
+    if (!isAuthorized) {
       return res.status(403).json({ error: "Bu isteği yanıtlama yetkiniz yok." });
     }
     if (reqDoc.status !== "pending") {
@@ -171,8 +181,17 @@ friendsRouter.post("/respond", async (req, res) => {
     };
 
     await UserModel.findOneAndUpdate(
-      { openId: reqDoc.toUserId },
+      { openId: playerId },
+      { $pull: { "progress.friends": { $or: [{ id: friendForAcceptor.id }, { username: friendForAcceptor.username }] } } }
+    );
+    await UserModel.findOneAndUpdate(
+      { openId: playerId },
       { $push: { "progress.friends": friendForAcceptor } }
+    );
+
+    await UserModel.findOneAndUpdate(
+      { openId: reqDoc.fromUserId },
+      { $pull: { "progress.friends": { $or: [{ id: friendForRequester.id }, { username: friendForRequester.username }] } } }
     );
     await UserModel.findOneAndUpdate(
       { openId: reqDoc.fromUserId },

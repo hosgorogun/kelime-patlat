@@ -172,7 +172,14 @@ export function registerFriendSocketHandlers(
         if (!req) {
           return socket.emit("friend:error", { message: "İstek bulunamadı." });
         }
-        if (req.toUserId !== playerId) {
+        const isAuthorized =
+          req.toUserId === playerId ||
+          (payload.playerName && isEqualTr(req.toUserId, payload.playerName)) ||
+          (payload.profile?.username && isEqualTr(req.toUserId, payload.profile.username)) ||
+          (payload.playerName && isEqualTr(req.toUsername, payload.playerName)) ||
+          (payload.profile?.username && isEqualTr(req.toUsername, payload.profile.username));
+
+        if (!isAuthorized) {
           return socket.emit("friend:error", { message: "Bu isteği yanıtlama yetkiniz yok." });
         }
         if (req.status !== "pending") {
@@ -218,8 +225,16 @@ export function registerFriendSocketHandlers(
 
           try {
             await UserModel.findOneAndUpdate(
-              { openId: req.toUserId },
+              { openId: playerId },
+              { $pull: { "progress.friends": { $or: [{ id: friendForAcceptor.id }, { username: friendForAcceptor.username }] } } }
+            );
+            await UserModel.findOneAndUpdate(
+              { openId: playerId },
               { $push: { "progress.friends": friendForAcceptor } }
+            );
+            await UserModel.findOneAndUpdate(
+              { openId: req.fromUserId },
+              { $pull: { "progress.friends": { $or: [{ id: friendForRequester.id }, { username: friendForRequester.username }] } } }
             );
             await UserModel.findOneAndUpdate(
               { openId: req.fromUserId },

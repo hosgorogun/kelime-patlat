@@ -282,6 +282,10 @@ class SDKServer {
 
     // If user not in DB, sync from OAuth server automatically
     if (!user) {
+      if (!ENV.oAuthServerUrl) {
+        // OAuth yapılandırılmamış (yerel kimlik doğrulama modu): hesap silinmiş veya token eskimiş
+        throw ForbiddenError("User not found");
+      }
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await db.upsertUser({

@@ -61,20 +61,20 @@ export function CommandInfoModal({
                 {infoModal === "rotani" ? "MEVCUT LİG KADEMEN:" : infoModal === "mystery" ? "GÖREV ÖDÜLÜ:" : "MEVCUT MİKTAR:"}
               </Text>
               <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: palette.gemBlue } : infoModal === "radar" ? { color: palette.emerald } : infoModal === "lives" ? { color: palette.gemGreen } : infoModal === "mystery" ? { color: "#2a8fbc" } : { color: league.color }]}>
-                {infoModal === "shield" ? (progress.streakShields || 0) : infoModal === "radar" ? (3 + (progress.radarChargesBonus || 0)) : infoModal === "lives" ? (livesCalc.isInfinite ? `SONSUZ CAN (${Math.ceil((livesCalc.infiniteRemainingSeconds || 0) / 60)} dk)` : `${livesCalc.lives}/5`) : infoModal === "mystery" ? `+${mystery.rewardXp} XP` : `${league.name} (${league.currentTierPoints} LP)`}
+                {infoModal === "shield" ? (progress.streakShields || 0) : infoModal === "radar" ? (progress.radarChargesBonus || 0) : infoModal === "lives" ? (livesCalc.isInfinite ? `SONSUZ CAN (${Math.ceil((livesCalc.infiniteRemainingSeconds || 0) / 60)} dk)` : `${livesCalc.lives}/5`) : infoModal === "mystery" ? `+${mystery.rewardXp} XP` : `${league.name} (${league.currentTierPoints} LP)`}
               </Text>
             </View>
 
             <Text style={styles.modalBody}>
               {infoModal === "shield"
-                ? "Oyuna giremediğin veya günlük rotayı tamamlayamadığın günlerde otomatik olarak 1 Seri Kalkanı tüketilir. Böylece günlük galibiyet serin sıfırlanmaz ve korunur."
+                ? "Oyuna giremediğin günlerde otomatik olarak 1 Seri Kalkanı tüketilir. Böylece günlük giriş ve galibiyet serin sıfırlanmaz ve korunur."
                 : infoModal === "radar"
-                ? "Tek oyunculu seviyelerde ve Günlük Rota bulmacalarında tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
+                ? "Tek oyunculu seviyelerde ve bulmacalarda tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
                 : infoModal === "lives"
                 ? "Tek oyunculu solo seviyelerde veya zamana karşı denemelerde başarısız olduğunda 1 Can kaybedersin. Canların bittiğinde 30 dakikada bir otomatik dolar veya Çip ile anında yenileyebilirsin."
                 : infoModal === "mystery"
-                ? `Günün İpucu: "${mystery.definition}"\n\nBu tanıma uyan kelimeyi herhangi bir oyun tahtasında (Düello, Seviye veya Günün Rotası) bulup bağladığında anında +${mystery.rewardXp} XP kazanırsın!`
-                : "Buradan istediğin oyunu seçebilirsin. Dereceli düelloya katılabilir, arkadaşınla eşleşebilir, Günün Rotası sabit tahtasını çözebilir veya Lig & Kademe merdiveninde LP biriktirebilirsin."}
+                ? `Günün İpucu: "${mystery.definition}"\n\nBu tanıma uyan kelimeyi herhangi bir oyun tahtasında (Düello, Seviye veya Gazete Bulmacası) bulup bağladığında anında +${mystery.rewardXp} XP kazanırsın!`
+                : "Buradan istediğin oyunu seçebilirsin. Dereceli düelloya katılabilir, arkadaşınla eşleşebilir, seviyeleri çözebilir veya Lig & Kademe merdiveninde LP biriktirebilirsin."}
             </Text>
 
             <View style={styles.modalTipBox}>
@@ -90,7 +90,7 @@ export function CommandInfoModal({
                   ? "• Her 30 dakikada 1 Can otomatik olarak ücretsiz doldurulur (Maks 5).\n• Beklemek istemiyorsan Mağaza'dan Çip ile veya reklam izleyerek anında doldurabilirsin.\n• Günlük giriş ve seviye ödüllerinden bedava Can kazanabilirsin."
                   : infoModal === "mystery"
                   ? "• Her gün gece yarısı yeni bir gizemli kelime belirlenir.\n• Kelimeyi herhangi bir oyun modunda bulduğun anda ödül XP hesabına eklenir.\n• İpucunu dikkatle incele ve tahtada harfleri birleştir!"
-                  : "• Galibiyet kazanarak lig puanı (LP) topla ve Demir'den Radian'a yüksel.\n• Günün rotasında sabit tahtayı tamamlayarak ekstra Sezon XP elde et.\n• En yüksek kelime temposu (K/DK) yakalayarak liderlik sıralamasına gir."}
+                  : "• Galibiyet kazanarak lig puanı (LP) topla ve Demir'den Radian'a yüksel.\n• Seviye ve bulmacaları tamamlayarak ekstra Sezon XP elde et.\n• En yüksek kelime temposu (K/DK) yakalayarak liderlik sıralamasına gir."}
               </Text>
             </View>
 

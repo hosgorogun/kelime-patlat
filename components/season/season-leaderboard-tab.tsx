@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, Pressable, Image } from "react-native";
 import type { LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
-import { getTierColor, getMinLpForTier } from "@/shared/progression";
+import { getTierColor, getMinLpForTier, getPlayerLevel, AVATARS, type AvatarId } from "@/shared/progression";
 import { styles } from "./season-hub.styles";
 import type { RankingType } from "./season-mock-data";
 
@@ -24,6 +24,8 @@ export type SeasonLeaderboardTabProps = {
   showAllLeaderboard: boolean;
   setShowAllLeaderboard: (show: boolean) => void;
   playerId: string;
+  avatarPhoto?: string;
+  userAvatarId?: AvatarId;
   onInspectUser?: (user: Partial<LeaderboardEntry> & { id: string; name: string }) => void;
 };
 
@@ -45,15 +47,23 @@ export const SeasonLeaderboardTab = React.memo(({
   showAllLeaderboard,
   setShowAllLeaderboard,
   playerId,
+  avatarPhoto,
+  userAvatarId,
   onInspectUser,
 }: SeasonLeaderboardTabProps) => {
+  const avatarIcon = AVATARS.find((a) => a.id === userAvatarId)?.icon || "👤";
+
   return (
     <View>
       {/* User Standing Highlight Card */}
       <View style={styles.userStatusCard}>
         <View style={styles.userStatusLeft}>
           <View style={styles.userStatusAvatarOrb}>
-            <Text style={styles.userStatusAvatarText}>{playerName.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+            {avatarPhoto ? (
+              <Image source={{ uri: avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 22 }} resizeMode="cover" />
+            ) : (
+              <Text style={styles.userStatusAvatarText}>{avatarIcon}</Text>
+            )}
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -129,117 +139,127 @@ export const SeasonLeaderboardTab = React.memo(({
         </View>
       </View>
 
-      {/* Podium (Top 3) */}
+      {/* Vitrin Podium Showcase (Top 3) */}
       {displayedLeaderboard.length >= 2 && (
         <View style={styles.podiumContainer}>
-          {/* 2nd Place */}
-          {top2 && (
-            <Pressable
-              style={({ pressed }) => [styles.podiumColumn, styles.podiumCol2, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
-              onPress={() => {
-                triggerHapticSelection();
-                onInspectUser?.(top2);
-              }}
-            >
-              <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap2]}>
-                {top2.avatarPhoto ? (
-                  <Image source={{ uri: top2.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.podiumAvatarText}>{top2.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
-                )}
-                <View style={[styles.podiumRankBadge, styles.podiumRankBadge2]}>
-                  <Text style={styles.podiumRankNum}>2</Text>
-                </View>
-              </View>
-              <Text numberOfLines={1} style={styles.podiumName}>{top2.name}</Text>
-              {top2.tier ? (
-                <View style={[styles.tierBadge, { borderColor: getTierColor(top2.tier) }]}>
-                  <Text style={[styles.tierBadgeText, { color: getTierColor(top2.tier) }]}>{top2.tier}</Text>
-                </View>
-              ) : null}
-              <Text style={styles.podiumScore}>
-                {rankingType === "level"
-                  ? `Lv.${top2.level ?? Math.floor(top2.score / 200) + 1} (${top2.score} XP)`
-                  : `${top2.lp ?? (top2.tier ? getMinLpForTier(top2.tier) : 0)} LP`}
-              </Text>
-              <View style={styles.podiumBar2}>
-                <Text style={styles.podiumBarLabel}>🥈 İKİNCİ</Text>
-              </View>
-            </Pressable>
-          )}
+          <View style={styles.podiumVitrinHeader}>
+            <View style={styles.podiumVitrinTag}>
+              <Text style={{ fontSize: 13 }}>👑</Text>
+              <Text style={styles.podiumVitrinTagText}>LİDERLER VİTRİNİ</Text>
+            </View>
+            <Text style={styles.podiumVitrinKicker}>EN İYİ 3 OYUNCU</Text>
+          </View>
 
-          {/* 1st Place (Center, Tallest) */}
-          {top1 && (
-            <Pressable
-              style={({ pressed }) => [styles.podiumColumn, styles.podiumCol1, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
-              onPress={() => {
-                triggerHapticSelection();
-                onInspectUser?.(top1);
-              }}
-            >
-              <Text style={styles.crownIcon}>👑</Text>
-              <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap1]}>
-                {top1.avatarPhoto ? (
-                  <Image source={{ uri: top1.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 28 }} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.podiumAvatarText}>{top1.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
-                )}
-                <View style={[styles.podiumRankBadge, styles.podiumRankBadge1]}>
-                  <Text style={styles.podiumRankNum}>1</Text>
+          <View style={styles.podiumRow}>
+            {/* 2nd Place */}
+            {top2 && (
+              <Pressable
+                style={({ pressed }) => [styles.podiumColumn, styles.podiumCol2, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
+                onPress={() => {
+                  triggerHapticSelection();
+                  onInspectUser?.(top2);
+                }}
+              >
+                <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap2]}>
+                  {top2.avatarPhoto ? (
+                    <Image source={{ uri: top2.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
+                  ) : (
+                    <Text style={styles.podiumAvatarText}>{top2.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                  )}
+                  <View style={[styles.podiumRankBadge, styles.podiumRankBadge2]}>
+                    <Text style={styles.podiumRankNum}>2</Text>
+                  </View>
                 </View>
-              </View>
-              <Text numberOfLines={1} style={styles.podiumName}>{top1.name}</Text>
-              {top1.tier ? (
-                <View style={[styles.tierBadge, { borderColor: getTierColor(top1.tier) }]}>
-                  <Text style={[styles.tierBadgeText, { color: getTierColor(top1.tier) }]}>{top1.tier}</Text>
+                <Text numberOfLines={1} style={styles.podiumName}>{top2.name}</Text>
+                {top2.tier ? (
+                  <View style={[styles.tierBadge, { borderColor: getTierColor(top2.tier) }]}>
+                    <Text style={[styles.tierBadgeText, { color: getTierColor(top2.tier) }]}>{top2.tier}</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.podiumScore}>
+                  {rankingType === "level"
+                    ? `Lv.${top2.level ?? getPlayerLevel(top2.score)} (${top2.score} XP)`
+                    : `${top2.lp ?? (top2.tier ? getMinLpForTier(top2.tier) : 0)} LP`}
+                </Text>
+                <View style={styles.podiumBar2}>
+                  <Text style={styles.podiumBarLabel}>🥈 İKİNCİ</Text>
                 </View>
-              ) : null}
-              <Text style={[styles.podiumScore, { color: "#987c00" }]}>
-                {rankingType === "level"
-                  ? `Lv.${top1.level ?? Math.floor(top1.score / 200) + 1} (${top1.score} XP)`
-                  : `${top1.lp ?? (top1.tier ? getMinLpForTier(top1.tier) : 0)} LP`}
-              </Text>
-              <View style={styles.podiumBar1}>
-                <Text style={styles.podiumBarLabel}>🥇 ŞAMPİYON</Text>
-              </View>
-            </Pressable>
-          )}
+              </Pressable>
+            )}
 
-          {/* 3rd Place */}
-          {top3 && (
-            <Pressable
-              style={({ pressed }) => [styles.podiumColumn, styles.podiumCol3, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
-              onPress={() => {
-                triggerHapticSelection();
-                onInspectUser?.(top3);
-              }}
-            >
-              <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap3]}>
-                {top3.avatarPhoto ? (
-                  <Image source={{ uri: top3.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.podiumAvatarText}>{top3.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
-                )}
-                <View style={[styles.podiumRankBadge, styles.podiumRankBadge3]}>
-                  <Text style={styles.podiumRankNum}>3</Text>
+            {/* 1st Place (Center, Tallest) */}
+            {top1 && (
+              <Pressable
+                style={({ pressed }) => [styles.podiumColumn, styles.podiumCol1, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
+                onPress={() => {
+                  triggerHapticSelection();
+                  onInspectUser?.(top1);
+                }}
+              >
+                <Text style={styles.crownIcon}>👑</Text>
+                <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap1]}>
+                  {top1.avatarPhoto ? (
+                    <Image source={{ uri: top1.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 28 }} resizeMode="cover" />
+                  ) : (
+                    <Text style={styles.podiumAvatarText}>{top1.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                  )}
+                  <View style={[styles.podiumRankBadge, styles.podiumRankBadge1]}>
+                    <Text style={styles.podiumRankNum}>1</Text>
+                  </View>
                 </View>
-              </View>
-              <Text numberOfLines={1} style={styles.podiumName}>{top3.name}</Text>
-              {top3.tier ? (
-                <View style={[styles.tierBadge, { borderColor: getTierColor(top3.tier) }]}>
-                  <Text style={[styles.tierBadgeText, { color: getTierColor(top3.tier) }]}>{top3.tier}</Text>
+                <Text numberOfLines={1} style={styles.podiumName}>{top1.name}</Text>
+                {top1.tier ? (
+                  <View style={[styles.tierBadge, { borderColor: getTierColor(top1.tier) }]}>
+                    <Text style={[styles.tierBadgeText, { color: getTierColor(top1.tier) }]}>{top1.tier}</Text>
+                  </View>
+                ) : null}
+                <Text style={[styles.podiumScore, { color: "#987c00" }]}>
+                  {rankingType === "level"
+                    ? `Lv.${top1.level ?? getPlayerLevel(top1.score)} (${top1.score} XP)`
+                    : `${top1.lp ?? (top1.tier ? getMinLpForTier(top1.tier) : 0)} LP`}
+                </Text>
+                <View style={styles.podiumBar1}>
+                  <Text style={styles.podiumBarLabel}>🥇 ŞAMPİYON</Text>
                 </View>
-              ) : null}
-              <Text style={styles.podiumScore}>
-                {rankingType === "level"
-                  ? `Lv.${top3.level ?? Math.floor(top3.score / 200) + 1} (${top3.score} XP)`
-                  : `${top3.lp ?? (top3.tier ? getMinLpForTier(top3.tier) : 0)} LP`}
-              </Text>
-              <View style={styles.podiumBar3}>
-                <Text style={styles.podiumBarLabel}>🥉 ÜÇÜNCÜ</Text>
-              </View>
-            </Pressable>
-          )}
+              </Pressable>
+            )}
+
+            {/* 3rd Place */}
+            {top3 && (
+              <Pressable
+                style={({ pressed }) => [styles.podiumColumn, styles.podiumCol3, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
+                onPress={() => {
+                  triggerHapticSelection();
+                  onInspectUser?.(top3);
+                }}
+              >
+                <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap3]}>
+                  {top3.avatarPhoto ? (
+                    <Image source={{ uri: top3.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
+                  ) : (
+                    <Text style={styles.podiumAvatarText}>{top3.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
+                  )}
+                  <View style={[styles.podiumRankBadge, styles.podiumRankBadge3]}>
+                    <Text style={styles.podiumRankNum}>3</Text>
+                  </View>
+                </View>
+                <Text numberOfLines={1} style={styles.podiumName}>{top3.name}</Text>
+                {top3.tier ? (
+                  <View style={[styles.tierBadge, { borderColor: getTierColor(top3.tier) }]}>
+                    <Text style={[styles.tierBadgeText, { color: getTierColor(top3.tier) }]}>{top3.tier}</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.podiumScore}>
+                  {rankingType === "level"
+                    ? `Lv.${top3.level ?? getPlayerLevel(top3.score)} (${top3.score} XP)`
+                    : `${top3.lp ?? (top3.tier ? getMinLpForTier(top3.tier) : 0)} LP`}
+                </Text>
+                <View style={styles.podiumBar3}>
+                  <Text style={styles.podiumBarLabel}>🥉 ÜÇÜNCÜ</Text>
+                </View>
+              </Pressable>
+            )}
+          </View>
         </View>
       )}
 
@@ -336,7 +356,7 @@ export const SeasonLeaderboardTab = React.memo(({
                       {rankingType === "level" ? (
                         <View style={{ alignItems: "flex-end" }}>
                           <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
-                            <Text style={{ color: "#2a8fbc", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? Math.floor(entry.score / 200) + 1}</Text>
+                            <Text style={{ color: "#2a8fbc", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? getPlayerLevel(entry.score)}</Text>
                           </View>
                           <Text style={{ color: "#293541", fontSize: 10, fontWeight: "700" }}>{entry.score} XP</Text>
                         </View>

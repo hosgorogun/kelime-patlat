@@ -1,10 +1,15 @@
 import type { BoardSize } from "../../shared/game";
 import { createSoloBoard } from "../../shared/solo";
 
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Okunması kolay, 0/O ve 1/I karışıklığı yaratmayan karakter kümesi
+
 export function makeUniqueCode(isCodeExisting: (code: string) => boolean): string {
   let code = "";
   do {
-    code = Math.random().toString(36).slice(2, 7).toUpperCase();
+    code = "";
+    for (let i = 0; i < 5; i++) {
+      code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+    }
   } while (isCodeExisting(code));
   return code;
 }

@@ -1,6 +1,6 @@
 import type { Server } from "socket.io";
 import type { LeaderboardEntry } from "../../shared/game";
-import { DEFAULT_PROGRESS, getLeagueTier, applyMatchProgress, type PlayerProgress } from "../../shared/progression";
+import { DEFAULT_PROGRESS, getLeagueTier, getPlayerLevel, applyMatchProgress, type PlayerProgress } from "../../shared/progression";
 import { UserModel } from "../db";
 import { loadLeaderboard, recordLeaderboardRounds } from "./mongo-store";
 import type { PlayerRecord, Room } from "./types";
@@ -42,7 +42,11 @@ export async function recordRoundForLeaderboard(io: Server, room: Room) {
     activeHumanPlayers.map(async (player) => {
       const roundScore = finalScores[player.id] ?? 0;
       const won = finalWinnerId === player.id;
-      const myWords = room.foundWords.filter((w) => w.playerId === player.id).map((w) => w.word);
+      const myBonus = (room.bonusWords && room.bonusWords[player.id]) || [];
+      const myWords = [
+        ...room.foundWords.filter((w) => w.playerId === player.id).map((w) => w.word),
+        ...myBonus,
+      ];
       const tempo = Math.round(((myWords.length * 60) / elapsedSeconds) * 10) / 10;
       const opponentPlayer = [room.host, room.guest].find((p) => p && p.id !== player.id);
       const opponentScore = opponentPlayer ? (finalScores[opponentPlayer.id] ?? 0) : 0;
@@ -120,7 +124,7 @@ export async function recordRoundForLeaderboard(io: Server, room: Room) {
           avatarPhoto: userAvatarPhoto,
           selectedTitle: userSelectedTitle,
           selectedFrame: userSelectedFrame,
-          level: Math.floor(nextScore / 200) + 1,
+          level: getPlayerLevel(nextScore),
         });
       }
 

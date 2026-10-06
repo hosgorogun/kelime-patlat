@@ -1,5 +1,6 @@
 export type MissionActionType =
   | 'daily_route'
+  | 'daily_mystery'
   | 'duel_play'
   | 'duel_win'
   | 'word_length'

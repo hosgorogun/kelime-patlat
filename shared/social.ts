@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { normalizeTr, isEqualTr } from "./tr-utils";
 
 // Social System: Friends & Local Notification Manager
 
@@ -129,11 +130,11 @@ class SocialManager {
     if (Array.isArray(cloudFriends) && cloudFriends.length > 0) {
       const map = new Map<string, FriendUser>();
       this.friends.forEach((f) => {
-        const key = (f.username || f.name || f.id).toLocaleLowerCase("tr-TR");
+        const key = normalizeTr(f.username || f.name || f.id);
         map.set(key, f);
       });
       cloudFriends.forEach((f) => {
-        const key = (f.username || f.name || f.id).toLocaleLowerCase("tr-TR");
+        const key = normalizeTr(f.username || f.name || f.id);
         map.set(key, f);
       });
       this.friends = Array.from(map.values());
@@ -163,9 +164,13 @@ class SocialManager {
     const rawUsername = typeof userOrUsername === "string" ? userOrUsername : userOrUsername.username || userOrUsername.name || "";
     const cleanName = rawUsername.trim();
     if (!cleanName) return { success: false, message: "Geçerli bir kullanıcı adı girin." };
-    const normalizeUser = (u?: string) => (u || "").toLocaleLowerCase("tr-TR").replace(/ı/g, "i");
-    const normalizedClean = normalizeUser(cleanName);
-    const exists = this.friends.some((f) => (f.username && normalizeUser(f.username) === normalizedClean) || (f.name && normalizeUser(f.name) === normalizedClean));
+    const cleanAscii = cleanName.toLowerCase().replace(/ı/g, "i");
+    const exists = this.friends.some((f) => {
+      if (isEqualTr(f.username, cleanName) || isEqualTr(f.name, cleanName)) return true;
+      const fUserAscii = (f.username || "").toLowerCase().replace(/ı/g, "i");
+      const fNameAscii = (f.name || "").toLowerCase().replace(/ı/g, "i");
+      return fUserAscii === cleanAscii || fNameAscii === cleanAscii;
+    });
     if (exists) return { success: false, message: "Bu kullanıcı zaten arkadaş listenizde." };
 
     const extra = typeof userOrUsername === "object" ? userOrUsername : {};

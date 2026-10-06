@@ -14,6 +14,7 @@ import {
   SEASON_MISSIONS,
   findMissionById,
   getLeagueTier,
+  getPlayerLevel,
   buyLives,
   getCalculatedLives,
   MAX_LIVES,
@@ -21,11 +22,41 @@ import {
   checkDailyLoginReward,
   getDayId,
   type PlayerProgress,
+  type AvatarId,
 } from "../../shared/progression";
 import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
 import type { LeaderboardEntry } from "../../shared/game";
 
 export const gameRouter = Router();
+
+// Aynı kullanıcının eşzamanlı POST istekleri (çift dokunma, ağ tekrarı) oku-değiştir-yaz
+// yarışına girip çift harcama/çift ödüle yol açmasın diye kullanıcı başına sıraya alınır.
+const userLocks = new Map<string, Promise<void>>();
+
+gameRouter.use(async (req, res, next) => {
+  if (req.method !== "POST") return next();
+  let openId: string;
+  try {
+    openId = (await sdk.authenticateRequest(req)).openId;
+  } catch {
+    return next(); // Kimlik doğrulama hatasını ilgili rota kendisi döner.
+  }
+  const previous = userLocks.get(openId) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  const chained = previous.then(() => current);
+  userLocks.set(openId, chained);
+  let released = false;
+  const done = () => {
+    if (released) return;
+    released = true;
+    release();
+    if (userLocks.get(openId) === chained) userLocks.delete(openId);
+  };
+  res.on("finish", done);
+  res.on("close", done);
+  previous.then(() => next()).catch(console.error);
+});
 
 gameRouter.post("/daily-login", async (req, res) => {
   try {
@@ -379,7 +410,7 @@ gameRouter.post("/cosmetic-buy", async (req, res) => {
       next.selectedBoardSkin = id;
       next.ownedBoardSkins = { ...(current.ownedBoardSkins ?? {}), [id]: true };
     } else if (kind === "avatar") {
-      next.selectedAvatar = id as any;
+      next.selectedAvatar = id as AvatarId;
       next.purchasedAvatars = { ...(current.purchasedAvatars ?? {}), [id]: true };
     }
     dbUser.progress = next;
@@ -414,16 +445,18 @@ gameRouter.get("/leaderboard", async (_req, res) => {
         avatar: prog.selectedAvatar || "spark",
         avatarPhoto: prog.avatarPhoto,
         selectedTitle: prog.selectedTitle || "[ÇAYLAK]",
-        level: Math.floor((prog.xp || 0) / 200) + 1,
+        level: getPlayerLevel(prog.xp || 0),
       };
     });
 
     res.json({ leaderboard });
-  } catch (_err: any) {
+  } catch (err: any) {
+    console.error("[Leaderboard] Failed to fetch top users from MongoDB:", err);
     try {
       const fallback = await loadLeaderboard();
       return res.json({ leaderboard: fallback });
-    } catch {
+    } catch (fallbackErr: any) {
+      console.error("[Leaderboard] Fallback leaderboard load also failed:", fallbackErr);
       res.status(500).json({ error: "Liderlik tablosu alınamadı." });
     }
   }

@@ -54,6 +54,7 @@ export interface MatchResultModalProps {
   opponentTempo: number;
   allFinishedWords: { word: string; path: number[]; color: string }[];
   myFoundWords: { word: string; path: number[] }[];
+  bonusWords?: string[];
   selectedWordInfo?: {
     word: string;
     definition: string;
@@ -94,6 +95,7 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
   opponentTempo,
   allFinishedWords,
   myFoundWords,
+  bonusWords,
   selectedWordInfo,
   rematchPending,
   isFriend,
@@ -278,6 +280,34 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
                   })}
                 </View>
 
+                {bonusWords && bonusWords.length > 0 && (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={{ color: "#d97706", fontSize: 9.5, fontWeight: "900", marginBottom: 4 }}>
+                      ✨ BULDUĞUN GİZLİ BONUS KELİMELER ({bonusWords.length}) · +{bonusWords.length * 10} PUAN
+                    </Text>
+                    <View style={styles.wordsWrap}>
+                      {bonusWords.map((bWord, idx) => (
+                        <Pressable
+                          key={`modal-bonus-${idx}`}
+                          onPress={() => onInspectWord(bWord, [], "#F59E0B")}
+                          style={({ pressed }) => [
+                            styles.wordPill,
+                            {
+                              backgroundColor: "#FEF3C7",
+                              borderColor: "#F59E0B",
+                            },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          <Text style={[styles.wordPillText, { color: "#92400E" }]}>
+                            ✨ {bWord} (+10)
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
                 {selectedWordInfo ? (
                   <View style={styles.wordDetailBox}>
                     <View style={styles.wordDetailHeader}>
@@ -311,69 +341,76 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
             )}
 
             {/* Action Buttons */}
-            {!iWon && !isDraw && onWatchAdStreakSave && (
-              <Pressable
-                onPress={onWatchAdStreakSave}
-                style={({ pressed }) => [
-                  styles.adStreakBtn,
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <Text style={styles.adStreakBtnText}>
-                  🎬 REKLAM İZLE: GÜNLÜK SERİNİ KORU 🔥
-                </Text>
-              </Pressable>
-            )}
+            {/* Action Buttons: 2x2 Kompakt Grid Düzeni (Hiçbir buton silinmeden dikey boyutu yarıya indirir) */}
+            <View style={styles.actionsContainer}>
+              {!iWon && !isDraw && onWatchAdStreakSave && (
+                <Pressable
+                  onPress={onWatchAdStreakSave}
+                  style={({ pressed }) => [
+                    styles.adStreakBtn,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={styles.adStreakBtnText}>
+                    🎬 REKLAM İZLE: GÜNLÜK SERİNİ KORU 🔥
+                  </Text>
+                </Pressable>
+              )}
 
-            <Pressable
-              onPress={handleShareResult}
-              style={({ pressed }) => [
-                styles.shareBtn,
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              <Text style={styles.shareBtnText}>
-                📤 SKORU PAYLAŞ & MEYDAN OKU
-              </Text>
-            </Pressable>
+              <View style={styles.actionBtnRow}>
+                <Pressable
+                  onPress={onRequestRematch}
+                  disabled={rematchPending}
+                  style={({ pressed }) => [
+                    styles.rematchBtn,
+                    rematchPending && { opacity: 0.6 },
+                    pressed && !rematchPending && { opacity: 0.8 },
+                  ]}
+                >
+                  <Text style={styles.rematchBtnText}>
+                    {rematchPending ? "BEKLENİYOR..." : "↻ RÖVANŞ İSTE"}
+                  </Text>
+                </Pressable>
 
-            <Pressable
-              onPress={onRequestRematch}
-              disabled={rematchPending}
-              style={({ pressed }) => [
-                styles.rematchBtn,
-                rematchPending && { opacity: 0.6 },
-                pressed && !rematchPending && { opacity: 0.8 },
-              ]}
-            >
-              <Text style={styles.rematchBtnText}>
-                {rematchPending ? "RAKİP BEKLENİYOR..." : "↻ RÖVANŞ İSTE"}
-              </Text>
-            </Pressable>
+                <Pressable
+                  onPress={handleShareResult}
+                  style={({ pressed }) => [
+                    styles.shareBtn,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Text style={styles.shareBtnText}>
+                    📤 PAYLAŞ
+                  </Text>
+                </Pressable>
+              </View>
 
-            <Pressable
-              onPress={onLeaveRoom}
-              style={({ pressed }) => [
-                styles.leaveBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Text style={styles.leaveBtnText}>
-                🏠 ANA MENÜYE DÖN
-              </Text>
-            </Pressable>
+              <View style={styles.actionBtnRow}>
+                <Pressable
+                  onPress={onLeaveRoom}
+                  style={({ pressed }) => [
+                    styles.leaveBtn,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={styles.leaveBtnText}>
+                    🏠 ANA MENÜ
+                  </Text>
+                </Pressable>
 
-            <Pressable
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.inspectBoardBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Text style={styles.inspectBoardBtnText}>
-                🔍 TAHTAYI VE KELİMELERİ İNCELE
-              </Text>
-            </Pressable>
+                <Pressable
+                  onPress={onClose}
+                  style={({ pressed }) => [
+                    styles.inspectBoardBtn,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={styles.inspectBoardBtnText}>
+                    🔍 TAHTAYI İNCELE
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -414,40 +451,40 @@ const styles = StyleSheet.create({
   scrollContent: {
     alignItems: "stretch",
     width: "100%",
-    paddingHorizontal: 14,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   resultModalHeader: {
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   resultModalIcon: {
-    fontSize: 30,
+    fontSize: 26,
     marginBottom: 2,
   },
   resultModalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
     letterSpacing: 0.4,
   },
   resultModalSub: {
     color: "#293541",
-    fontSize: 11,
+    fontSize: 10.5,
     textAlign: "center",
     marginTop: 2,
-    lineHeight: 15,
+    lineHeight: 14,
   },
   resultScoreRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-    marginVertical: 6,
+    marginVertical: 4,
     backgroundColor: "#EDF4FC",
-    borderRadius: 14,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    borderRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: "#DCE1D7",
   },
@@ -456,105 +493,105 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   resultScoreWinner: {
-    transform: [{ scale: 1.04 }],
+    transform: [{ scale: 1.02 }],
   },
   resultScorePlayerName: {
     color: "#293541",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   resultScoreNumber: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "900",
     marginVertical: 1,
   },
   resultScoreWords: {
     color: "#293541",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "800",
   },
   resultVsBox: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
   },
   resultVsText: {
     color: "#293541",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
   },
   opponentActionsRow: {
     flexDirection: "row",
-    gap: 6,
-    marginTop: 6,
+    gap: 4,
+    marginTop: 4,
     justifyContent: "center",
   },
   opponentActionBtn: {
     backgroundColor: "rgba(212, 180, 90, 0.2)",
     borderColor: "#DCE1D7",
     borderWidth: 1,
-    borderRadius: 6,
-    paddingVertical: 3,
-    paddingHorizontal: 6,
+    borderRadius: 5,
+    paddingVertical: 2,
+    paddingHorizontal: 5,
   },
   opponentActionText: {
     color: "#293541",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "900",
   },
   opponentActionAddBtn: {
     backgroundColor: "rgba(62, 232, 181, 0.2)",
     borderColor: "#DCE1D7",
     borderWidth: 1,
-    borderRadius: 6,
-    paddingVertical: 3,
-    paddingHorizontal: 6,
+    borderRadius: 5,
+    paddingVertical: 2,
+    paddingHorizontal: 5,
   },
   opponentActionAddText: {
     color: "#2a9c7a",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "900",
   },
   tdkCard: {
     width: "100%",
-    marginTop: 12,
-    backgroundColor: "#F0F5ED",
-    borderRadius: 16,
-    padding: 12,
+    marginTop: 6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 10,
     borderWidth: 1.5,
     borderColor: "#DCE1D7",
   },
   tdkHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
+    gap: 5,
+    marginBottom: 2,
   },
   tdkHeaderText: {
     color: "#8c7540",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   tdkSubText: {
     color: "#293541",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   wordsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 5,
   },
   wordPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
     borderColor: "#DCE1D7",
   },
   wordPillText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
   },
   wordDetailBox: {
@@ -611,95 +648,115 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: "italic",
   },
+  actionsContainer: {
+    width: "100%",
+    marginTop: 8,
+    gap: 6,
+  },
+  actionBtnRow: {
+    flexDirection: "row",
+    gap: 6,
+    width: "100%",
+  },
   adStreakBtn: {
     width: "100%",
-    minHeight: 46,
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 208, 0, 0.15)",
-    borderColor: "#DCE1D7",
+    minHeight: 38,
+    borderRadius: 12,
+    backgroundColor: "#FFF8E7",
+    borderColor: "#F59E0B",
     borderWidth: 1.5,
+    borderBottomWidth: 2.5,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    marginTop: 10,
+    paddingHorizontal: 10,
+    marginBottom: 2,
   },
   adStreakBtnText: {
-    color: "#987c00",
-    fontSize: 12,
+    color: "#92400E",
+    fontSize: 11.5,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     textAlign: "center",
   },
   shareBtn: {
-    width: "100%",
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#38bdf8",
+    flex: 1,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#E0F2FE",
+    borderWidth: 1.5,
+    borderBottomWidth: 2.5,
+    borderColor: "#38BDF8",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
-    shadowColor: "#0284c7",
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  shareBtnText: {
-    color: "#041527",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  rematchBtn: {
-    width: "100%",
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#aef5e0",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
     shadowColor: "#293541",
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 2,
+  },
+  shareBtnText: {
+    color: "#0369A1",
+    fontSize: 12.5,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  rematchBtn: {
+    flex: 1.3,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#FFD66E",
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: "#D49B25",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#293541",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   rematchBtnText: {
     color: "#293541",
     fontSize: 13,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   leaveBtn: {
-    width: "100%",
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    borderWidth: 1,
+    flex: 1,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: "#FAF7F0",
+    borderWidth: 1.5,
+    borderBottomWidth: 2,
     borderColor: "#DCE1D7",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
   },
   leaveBtnText: {
-    color: "#293541",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+    color: "#54646B",
+    fontSize: 11.5,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   inspectBoardBtn: {
-    width: "100%",
-    paddingVertical: 10,
+    flex: 1.3,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: "rgba(42, 156, 122, 0.1)",
+    borderWidth: 1.5,
+    borderBottomWidth: 2,
+    borderColor: "rgba(42, 156, 122, 0.3)",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 4,
   },
   inspectBoardBtnText: {
     color: "#2a9c7a",
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
 });

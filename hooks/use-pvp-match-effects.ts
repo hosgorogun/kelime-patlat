@@ -146,14 +146,18 @@ export function usePvpMatchEffects({
     const roundId = `${room.code}:${room.startedAt ?? 0}`;
     if (recordedRoundRef.current === roundId) return;
     recordedRoundRef.current = roundId;
-    const myFoundWords = room.foundWords
-      .filter((entry: RoomSnapshot["foundWords"][number]) => entry.playerId === playerId && !entry.hidden)
-      .map((entry: RoomSnapshot["foundWords"][number]) => entry.word);
+    const myBonusWords = (room.bonusWords && room.bonusWords[playerId]) || [];
+    const myFoundWords = [
+      ...room.foundWords
+        .filter((entry: RoomSnapshot["foundWords"][number]) => entry.playerId === playerId && !entry.hidden)
+        .map((entry: RoomSnapshot["foundWords"][number]) => entry.word),
+      ...myBonusWords,
+    ];
     const foundLongWord = myFoundWords.some((w: string) => w.length >= 7);
     const isBotMatch = room.players.some((p: RoomSnapshot["players"][number]) => p.isBot);
     // Compute result values directly from room to avoid stale derived-state deps
     const currentMyScore = room.scores[playerId] ?? 0;
-    const myWc = room.foundWords.filter((e: RoomSnapshot["foundWords"][number]) => e.playerId === playerId).length;
+    const myWc = myFoundWords.length;
     const elapsedSec = room.startedAt ? Math.max(5, Math.floor((Date.now() - room.startedAt) / 1000)) : 5;
     const currentTempo = Math.round(((myWc * 60) / elapsedSec) * 10) / 10;
     const currentIWon = room.winnerId === playerId;

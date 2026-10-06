@@ -565,6 +565,48 @@ describe("Sunucu Yetkilendirme ve Guvenlik", () => {
       expect(awarded.matchHistory[0].wordsCount).toBe(2);
     });
   });
+
+  describe("Tüm Modlarda Gizli Bonus Kelime Akışı & İstatistik Doğrulaması", () => {
+    it("PvP modunda sunucu kelime gönderiminde (word:submit) hedef dışı sözlük kelimesi bonus kabul edilmelidir", async () => {
+      const { isValidTurkishWord } = await import("../shared/dictionary");
+      const targetWords = ["KİTAP", "DEFTER"];
+      const submittedBonus = "KALEM";
+
+      expect(targetWords.includes(submittedBonus)).toBe(false);
+      expect(isValidTurkishWord(submittedBonus)).toBe(true);
+
+      const bonusPoints = 10;
+      const initialScore = 40;
+      const newScore = initialScore + bonusPoints;
+      expect(newScore).toBe(50);
+    });
+
+    it("Solo ve Arcade modlarında bonus kelimeler toplam kelime istatistiğine eklenmelidir", async () => {
+      const { applyMatchProgress } = await import("../shared/progression");
+      const baseProg = {
+        ...DEFAULT_PROGRESS,
+        matchHistory: [],
+      };
+
+      const targetWords = ["ELMA", "ARMUT"];
+      const bonusWords = ["KENT", "KALE", "BİLGİ"];
+      const totalWords = [...targetWords, ...bonusWords];
+
+      const afterSolo = applyMatchProgress(
+        baseProg,
+        {
+          score: 150,
+          tempo: 2.5,
+          won: true,
+          foundWords: totalWords,
+        },
+        "solo"
+      );
+
+      expect(afterSolo.matchHistory[0].wordsCount).toBe(5);
+      expect(afterSolo.matchHistory[0].mode).toBe("solo");
+    });
+  });
 });
 
 

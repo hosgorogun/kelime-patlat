@@ -5,7 +5,7 @@ import { FloatingScoreBurst } from "../solo/solo-floating-effects";
 import { APP_WORD_PALETTE } from "@/shared/solo";
 import { styles } from "./arcade.styles";
 
-export function ArcadeBoardGrid({
+export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
   boardRef,
   measureBoard,
   boardWidth,
@@ -58,7 +58,7 @@ export function ArcadeBoardGrid({
   foundCellColors: Map<number, { bg: string; border: string; text: string }>;
   missedCellColors: Map<number, { bg: string; border: string; text: string }>;
   radarHighlights: Set<number>;
-  feedback: "idle" | "invalid" | "accepted";
+  feedback: "idle" | "invalid" | "accepted" | "bonus";
   particles: { id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[];
   onGestureStart: (e: any) => void;
   onGestureMove: (e: any) => void;
@@ -172,18 +172,26 @@ export function ArcadeBoardGrid({
           });
         })}
 
-      {challenge.board.map((letter, index) => {
-        const order = selected.indexOf(index);
-        const isSelected = selectedSet.has(index);
-        const isTail = selected.at(-1) === index;
-        const isFound = foundCells.has(index);
-        const foundColor = foundCellColors.get(index);
-        const missedColor = missedCellColors.get(index);
-        const isInspected = Boolean(status !== "playing" && inspectedPath?.includes(index));
-        const inspectedOrder = status !== "playing" && inspectedPath ? inspectedPath.indexOf(index) : -1;
-        const isInspectedStart = status !== "playing" && inspectedOrder === 0;
-        const isInspectedEnd = status !== "playing" && inspectedPath ? inspectedOrder === inspectedPath.length - 1 : false;
-        const isRadar = radarHighlights.has(index);
+      {(() => {
+        const orderMap = new Map<number, number>();
+        selected.forEach((idx, i) => orderMap.set(idx, i));
+        const inspectedMap = new Map<number, number>();
+        if (status !== "playing" && inspectedPath) {
+          inspectedPath.forEach((idx, i) => inspectedMap.set(idx, i));
+        }
+
+        return challenge.board.map((letter, index) => {
+          const order = orderMap.get(index) ?? -1;
+          const isSelected = order !== -1;
+          const isTail = selected.length > 0 && selected[selected.length - 1] === index;
+          const isFound = foundCells.has(index);
+          const foundColor = foundCellColors.get(index);
+          const missedColor = missedCellColors.get(index);
+          const inspectedOrder = inspectedMap.get(index) ?? -1;
+          const isInspected = inspectedOrder !== -1;
+          const isInspectedStart = status !== "playing" && inspectedOrder === 0;
+          const isInspectedEnd = status !== "playing" && inspectedPath ? inspectedOrder === inspectedPath.length - 1 : false;
+          const isRadar = radarHighlights.has(index);
 
         return (
           <View
@@ -241,6 +249,7 @@ export function ArcadeBoardGrid({
                 isTail && { transform: [{ scale: 1.2 }] },
                 feedback === "invalid" && isSelected && styles.cellInvalid,
                 feedback === "accepted" && isSelected && styles.cellAccepted,
+                feedback === "bonus" && isSelected && styles.cellBonus,
                 isRadar && styles.cellRadar,
               ]}
             >
@@ -253,6 +262,7 @@ export function ArcadeBoardGrid({
                   challenge.size === 10 && styles.letterExtraSmall,
                   isSelected && { color: "#78350F" },
                   feedback === "accepted" && isSelected && { color: "#065F46" },
+                  feedback === "bonus" && isSelected && { color: "#854D0E" },
                   feedback === "invalid" && isSelected && { color: "#991B1B" },
                   foundColor && { color: foundColor.text },
                   isRadar && styles.letterRadar,
@@ -314,7 +324,8 @@ export function ArcadeBoardGrid({
             </View>
           </View>
         );
-      })}
+      });
+    })()}
 
       {particles.map((p) => (
         <Animated.View
@@ -348,4 +359,4 @@ export function ArcadeBoardGrid({
       />
     </Animated.View>
   );
-}
+});

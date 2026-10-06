@@ -11,11 +11,11 @@ export function GoogleLogo({ size = 24 }: { size?: number }) {
   );
 }
 
-export function AppleLogo({ size = 24 }: { size?: number }) {
+export function AppleLogo({ size = 24, color = "#000000" }: { size?: number; color?: string }) {
   return (
     <Image
       source={require("../../assets/apple-logo.png")}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, tintColor: color }}
       resizeMode="contain"
     />
   );

@@ -12,6 +12,7 @@ export type Room = {
   words: string[];
   routes: Record<string, number[]>;
   foundWords: FoundWord[];
+  bonusWords?: Record<string, string[]>;
   scores: Record<string, number>;
   host: PlayerRecord;
   guest: PlayerRecord | null;

@@ -247,6 +247,10 @@ export function mergePlayerProgress(
       ...(cleanRemote.dailyClaimed ?? {}),
       ...(local.dailyClaimed ?? {}),
     },
+    dailyRevivesDate: local.dailyRevivesDate || cleanRemote.dailyRevivesDate || undefined,
+    dailyRevivesCount: local.dailyRevivesDate === cleanRemote.dailyRevivesDate
+      ? Math.max(local.dailyRevivesCount ?? 0, cleanRemote.dailyRevivesCount ?? 0)
+      : (local.dailyRevivesCount ?? cleanRemote.dailyRevivesCount ?? 0),
     history: Array.from(new Set([...(local.history ?? []), ...(cleanRemote.history ?? [])])).slice(-150),
     matchHistory: mergedMatchHistory,
     selectedAvatar: local.selectedAvatar || cleanRemote.selectedAvatar || "spark",
@@ -280,8 +284,14 @@ export function mergePlayerProgress(
     lastSeasonResetId: local.lastSeasonResetId || cleanRemote?.lastSeasonResetId,
     friends: (() => {
       const map = new Map<string, any>();
-      (local.friends ?? []).forEach((f) => map.set(normalizeTr(f.username), f));
-      (cleanRemote?.friends ?? []).forEach((f: any) => map.set(normalizeTr(f.username), f));
+      (local.friends ?? []).forEach((f) => {
+        const key = f?.id || (f?.username ? normalizeTr(f.username) : "") || (f?.name ? normalizeTr(f.name) : "");
+        if (key) map.set(key, f);
+      });
+      (cleanRemote?.friends ?? []).forEach((f: any) => {
+        const key = f?.id || (f?.username ? normalizeTr(f.username) : "") || (f?.name ? normalizeTr(f.name) : "");
+        if (key) map.set(key, f);
+      });
       return Array.from(map.values());
     })(),
   };

@@ -26,6 +26,7 @@ export interface UseRoomSocketParams {
   setNotice: (msg: string) => void;
   setGlobalToast: (toast: ToastData | null) => void;
   onWordAccepted: (foundWords: RoomSnapshot["foundWords"]) => void;
+  onWordBonus?: (payload: { word: string; selection: number[]; bonusPoints: number; coins: number }) => void;
   onWordRejected: (payload?: { word?: string; reason?: string }) => void;
   clearSelection: () => void;
   setInspectedPath: (path: number[] | null) => void;
@@ -51,6 +52,7 @@ export function useRoomSocket({
   setNotice,
   setGlobalToast,
   onWordAccepted,
+  onWordBonus,
   onWordRejected,
   clearSelection,
   setInspectedPath,
@@ -623,6 +625,7 @@ export function useRoomSocket({
 
   const callbacksRef = useRef({
     flushPendingAwards,
+    onWordBonus,
     onWordRejected,
     setGlobalToast,
     setLeaderboard,
@@ -634,6 +637,7 @@ export function useRoomSocket({
   });
   callbacksRef.current = {
     flushPendingAwards,
+    onWordBonus,
     onWordRejected,
     setGlobalToast,
     setLeaderboard,
@@ -698,6 +702,10 @@ export function useRoomSocket({
 
     const onRejected = (payload?: { word?: string; reason?: string }) => {
       callbacksRef.current.onWordRejected(payload);
+    };
+
+    const onBonus = (payload: { word: string; selection: number[]; bonusPoints: number; coins: number }) => {
+      callbacksRef.current.onWordBonus?.(payload);
     };
 
     const onLeaderboardUpdate = (next: LeaderboardEntry[]) => callbacksRef.current.setLeaderboard(next);
@@ -818,6 +826,7 @@ export function useRoomSocket({
     socket.on("room:update", onRoomUpdate);
     socket.on("room:error", onRoomError);
     socket.on("word:rejected", onRejected);
+    socket.on("word:bonus", onBonus);
     socket.on("connect", onReconnect);
     socket.on("disconnect", onDisconnect);
     socket.on("leaderboard:update", onLeaderboardUpdate);
@@ -847,6 +856,7 @@ export function useRoomSocket({
       socket.off("room:update", onRoomUpdate);
       socket.off("room:error", onRoomError);
       socket.off("word:rejected", onRejected);
+      socket.off("word:bonus", onBonus);
       socket.off("connect", onReconnect);
       socket.off("disconnect", onDisconnect);
       socket.off("leaderboard:update", onLeaderboardUpdate);

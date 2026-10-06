@@ -3,7 +3,7 @@ import { View, Text } from "react-native";
 import { styles } from "./arcade.styles";
 
 export type ArcadeWordTrayProps = {
-  feedback: "idle" | "invalid" | "accepted";
+  feedback: "idle" | "invalid" | "accepted" | "bonus";
   selectedLength: number;
   activeWord: string;
 };
@@ -14,9 +14,16 @@ export const ArcadeWordTray = React.memo(({
   activeWord,
 }: ArcadeWordTrayProps) => {
   return (
-    <View style={[styles.wordTray, feedback === "invalid" && styles.trayInvalid, feedback === "accepted" && styles.trayAccepted]}>
+    <View style={[
+      styles.wordTray,
+      feedback === "invalid" && styles.trayInvalid,
+      feedback === "accepted" && styles.trayAccepted,
+      feedback === "bonus" && styles.trayBonus,
+    ]}>
       <Text style={styles.trayLabel}>
-        {feedback === "invalid"
+        {feedback === "bonus"
+          ? ">> ✨ GİZLİ BONUS KELİME BULUNDU!"
+          : feedback === "invalid"
           ? ">> BAĞLANTI HATASI"
           : feedback === "accepted"
           ? ">> ŞİFRE ÇÖZÜLDÜ"

@@ -7,7 +7,7 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import { AVATARS, getTierColor } from "@/shared/progression";
+import { AVATARS, getTierColor, getPlayerLevel } from "@/shared/progression";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { styles } from "./user-profile-modal.styles";
@@ -66,7 +66,7 @@ export function UserProfileModal({
 
   const displayName = (user.name || user.username || "").trim().slice(0, 16) || "OYUNCU";
   const displayTitle = user.selectedTitle || "[ÇAYLAK]";
-  const displayLevel = user.level ?? (user.xp ? Math.floor(user.xp / 200) + 1 : 1);
+  const displayLevel = user.level ?? (user.xp ? getPlayerLevel(user.xp) : 1);
   const displayTier = user.tier || "DEMİR";
   const tierColor = getTierColor(displayTier);
 

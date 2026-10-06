@@ -1,9 +1,18 @@
 import React, { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApiBaseUrl, SESSION_TOKEN_KEY, startOAuthLogin, isOAuthConfigured } from "@/constants/oauth";
 import { ScreenContainer } from "../common/screen-container";
-import { GameButton, JewelTitle, OrnatePanel } from "../game/game-ui";
 import { haptics } from "@/lib/haptics";
 import { type GenderType } from "@/shared/progression";
 import { GoogleLogo, AppleLogo } from "../common/brand-logos";
@@ -22,7 +31,6 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
   const [gender, setGender] = useState<GenderType>("unspecified");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async () => {
@@ -101,8 +109,8 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
   };
 
   const handleDemoLogin = async () => {
-    setUsername("siber_oyuncu");
-    setPassword("siber123");
+    setUsername("oyuncu");
+    setPassword("kelime123");
     setError("");
     setLoading(true);
     haptics.light();
@@ -111,7 +119,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
       const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: "siber_oyuncu", password: "siber123" }),
+        body: JSON.stringify({ username: "oyuncu", password: "kelime123" }),
       });
 
       const data = await response.json();
@@ -123,8 +131,6 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
       await AsyncStorage.setItem(SESSION_TOKEN_KEY, data.token);
       await AsyncStorage.setItem("kelime-patlat:player-id", data.user.openId);
       await AsyncStorage.setItem("kelime-patlat:player-name", data.user.name || data.user.username);
-      await AsyncStorage.setItem(`kelime-patlat:guide-seen:${data.user.openId}`, "true");
-      await AsyncStorage.setItem("kelime-patlat:guide-seen", "true");
       haptics.success();
       onSuccess(data.token, data.user.name || data.user.username, data.user.progress, data.user.openId, previousGuestToken);
     } catch (err: any) {
@@ -145,7 +151,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
     if (!isOAuthConfigured()) {
       Alert.alert(
         `🌐 ${provider} ile Hızlı Giriş`,
-        `${provider} ile doğrudan oturum açma seçeneği mağaza sürümünde (App Store / Play Store) entegre kimlik sağlayıcısı ile sunulmaktadır.\n\nŞu anda kullanıcı adı veya e-posta ile saniyeler içinde ücretsiz hesabınızı açabilir veya "Giriş Yapmadan Devam Et" seçeneğiyle hemen oynamaya başlayabilirsiniz!`,
+        `${provider} ile doğrudan oturum açma seçeneği mağaza sürümünde (App Store / Play Store) entegre kimlik sağlayıcısı ile sunulmaktadır.\n\nŞu anda kullanıcı adı veya e-posta ile saniyeler içinde ücretsiz hesabınızı açabilir veya "Misafir Olarak Oyna" seçeneğiyle hemen oynamaya başlayabilirsiniz!`,
         [{ text: "Anladım", style: "default" }]
       );
       return;
@@ -176,165 +182,260 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 
   return (
     <ScreenContainer style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {isSignUp && (
-          <Pressable
-            onPress={() => { haptics.light(); setIsSignUp(false); setError(""); }}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>‹</Text>
-          </Pressable>
-        )}
-        <OrnatePanel style={{ width: "100%", maxWidth: 360 }} contentStyle={{ paddingVertical: 22, paddingHorizontal: 18 }}>
-          <JewelTitle style={{ textAlign: "center", fontSize: 26, lineHeight: 30 }}>KELİME PATLAT</JewelTitle>
-          <Text style={styles.subtitle}>{isSignUp ? "YENİ HESAP" : "Bir kelimeyle başla"}</Text>
-
-          {isSignUp ? (
-            <>
-              {/* Ad Soyad + E-posta yan yana değil, compact */}
-              <Text style={styles.label}>AD SOYAD</Text>
-              <TextInput
-                value={fullName}
-                onChangeText={setFullName}
-                autoCapitalize="words"
-                autoCorrect={false}
-                style={styles.input}
-                placeholder="Adınızı ve soyadınızı girin"
-                placeholderTextColor="#293541"
-              />
-
-              <Text style={styles.label}>E-POSTA</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoCorrect={false}
-                style={styles.input}
-                placeholder="E-posta adresinizi girin"
-                placeholderTextColor="#293541"
-              />
-
-              <Text style={styles.label}>CİNSİYET</Text>
-              <View style={styles.genderRow}>
-                <Pressable
-                  onPress={() => { haptics.light(); setGender("male"); }}
-                  style={[styles.genderBtn, gender === "male" && styles.genderBtnActiveMale]}
-                >
-                  <Text style={styles.genderBtnIcon}>👨</Text>
-                  <Text style={[styles.genderBtnLabel, gender === "male" && { color: "#2a8fbc", fontWeight: "900" }]}>ERKEK</Text>
-                  {gender === "male" && <View style={[styles.genderDot, { backgroundColor: "#abe3fc" }]}><Text style={styles.genderDotText}>✓</Text></View>}
-                </Pressable>
-                <Pressable
-                  onPress={() => { haptics.light(); setGender("female"); }}
-                  style={[styles.genderBtn, gender === "female" && styles.genderBtnActiveFemale]}
-                >
-                  <Text style={styles.genderBtnIcon}>👩</Text>
-                  <Text style={[styles.genderBtnLabel, gender === "female" && { color: "#b35486", fontWeight: "900" }]}>KADIN</Text>
-                  {gender === "female" && <View style={[styles.genderDot, { backgroundColor: "#fac4e0" }]}><Text style={styles.genderDotText}>✓</Text></View>}
-                </Pressable>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1, width: "100%" }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Main Card Container */}
+          <View style={styles.card}>
+            {/* Header / Brand */}
+            <View style={styles.brandContainer}>
+              <View style={styles.logoBadge}>
+                <Text style={styles.logoBadgeEmoji}>✨</Text>
               </View>
-            </>
-          ) : null}
+              <Text style={styles.brandTitle}>KELİME PATLAT</Text>
+              <Text style={styles.brandSubtitle}>
+                {isSignUp ? "Kelime dünyasına katıl, rekorları kır!" : "Akıl dolu kelime mücadelesine hazır mısın?"}
+              </Text>
+            </View>
 
-          <Text style={styles.label}>{isSignUp ? "KULLANICI ADI" : "KULLANICI ADI VEYA E-POSTA"}</Text>
-          <TextInput
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-            placeholder={isSignUp ? "Kullanıcı adınızı seçin (min 3 harf)" : "Kullanıcı adı veya e-posta girin"}
-            placeholderTextColor="#293541"
-          />
+            {/* Segmented Tab Switcher */}
+            <View style={styles.tabContainer}>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setIsSignUp(false);
+                  setError("");
+                }}
+                style={[styles.tabButton, !isSignUp && styles.tabButtonActive]}
+              >
+                <Text style={[styles.tabButtonText, !isSignUp && styles.tabButtonTextActive]}>
+                  Giriş Yap
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  setIsSignUp(true);
+                  setError("");
+                }}
+                style={[styles.tabButton, isSignUp && styles.tabButtonActive]}
+              >
+                <Text style={[styles.tabButtonText, isSignUp && styles.tabButtonTextActive]}>
+                  Kayıt Ol
+                </Text>
+              </Pressable>
+            </View>
 
-          <Text style={styles.label}>ŞİFRE</Text>
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={[styles.input, styles.passwordInput]}
-              placeholder={isSignUp ? "Şifrenizi belirleyin" : "Şifrenizi girin"}
-              placeholderTextColor="#293541"
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
-            />
-            <Pressable
-              onPress={() => {
-                haptics.light();
-                setShowPassword(!showPassword);
-              }}
-              style={styles.eyeBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "🙈"}</Text>
-            </Pressable>
+            {/* Form Fields */}
+            <View style={styles.formContent}>
+              {isSignUp && (
+                <>
+                  {/* Full Name */}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>AD SOYAD</Text>
+                    <View style={styles.inputWrapper}>
+                      <Text style={styles.inputIcon}>👤</Text>
+                      <TextInput
+                        value={fullName}
+                        onChangeText={setFullName}
+                        autoCapitalize="words"
+                        autoCorrect={false}
+                        style={styles.fieldInput}
+                        placeholder="Örn: Ahmet Yılmaz"
+                        placeholderTextColor="#8F9CA3"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Email */}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>E-POSTA</Text>
+                    <View style={styles.inputWrapper}>
+                      <Text style={styles.inputIcon}>✉️</Text>
+                      <TextInput
+                        value={email}
+                        onChangeText={setEmail}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                        autoCorrect={false}
+                        style={styles.fieldInput}
+                        placeholder="adiniz@ornek.com"
+                        placeholderTextColor="#8F9CA3"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Gender Selector */}
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>CİNSİYET</Text>
+                    <View style={styles.genderRow}>
+                      <Pressable
+                        onPress={() => {
+                          haptics.light();
+                          setGender("male");
+                        }}
+                        style={[styles.genderCard, gender === "male" && styles.genderCardActiveMale]}
+                      >
+                        <Text style={styles.genderIcon}>👨</Text>
+                        <Text style={[styles.genderText, gender === "male" && styles.genderTextActiveMale]}>
+                          Erkek
+                        </Text>
+                        {gender === "male" && <View style={styles.genderCheckBadge}><Text style={styles.genderCheckMark}>✓</Text></View>}
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => {
+                          haptics.light();
+                          setGender("female");
+                        }}
+                        style={[styles.genderCard, gender === "female" && styles.genderCardActiveFemale]}
+                      >
+                        <Text style={styles.genderIcon}>👩</Text>
+                        <Text style={[styles.genderText, gender === "female" && styles.genderTextActiveFemale]}>
+                          Kadın
+                        </Text>
+                        {gender === "female" && <View style={styles.genderCheckBadge}><Text style={styles.genderCheckMark}>✓</Text></View>}
+                      </Pressable>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* Username */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>
+                  {isSignUp ? "KULLANICI ADI" : "KULLANICI ADI VEYA E-POSTA"}
+                </Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>🏷️</Text>
+                  <TextInput
+                    value={username}
+                    onChangeText={setUsername}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={styles.fieldInput}
+                    placeholder={isSignUp ? "En az 3 karakter" : "Kullanıcı adı veya e-posta"}
+                    placeholderTextColor="#8F9CA3"
+                  />
+                </View>
+              </View>
+
+              {/* Password */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>ŞİFRE</Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>🔒</Text>
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={[styles.fieldInput, { paddingRight: 48 }]}
+                    placeholder={isSignUp ? "En az 6 karakter" : "Şifreniz"}
+                    placeholderTextColor="#8F9CA3"
+                    returnKeyType="done"
+                    onSubmitEditing={handleSubmit}
+                  />
+                  <Pressable
+                    onPress={() => {
+                      haptics.light();
+                      setShowPassword(!showPassword);
+                    }}
+                    style={styles.eyeButton}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <Text style={styles.eyeIconText}>{showPassword ? "👁" : "🕶️"}</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Demo Login Quick Link for Login Mode */}
+              {!isSignUp && (
+                <Pressable
+                  onPress={handleDemoLogin}
+                  disabled={loading}
+                  style={({ pressed }) => [styles.demoPill, pressed && styles.pressedPill]}
+                >
+                  <Text style={styles.demoPillText}>⚡ Hızlı Test Hesabı ile Giriş Yap</Text>
+                </Pressable>
+              )}
+
+              {/* Error Alert */}
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              {/* Action Button */}
+              <Pressable
+                onPress={handleSubmit}
+                disabled={loading}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && styles.primaryButtonPressed,
+                  loading && styles.primaryButtonDisabled,
+                ]}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {loading ? "BAĞLANILIYOR..." : isSignUp ? "KAYIT OL VE BAŞLA" : "GİRİŞ YAP"}
+                </Text>
+                <Text style={styles.primaryButtonArrow}>→</Text>
+              </Pressable>
+
+              {/* Social Login Section */}
+              {!isSignUp && (
+                <>
+                  <View style={styles.dividerRow}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>VEYA</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  <View style={styles.socialRow}>
+                    <Pressable
+                      onPress={() => handleThirdPartyPress("Google")}
+                      style={({ pressed }) => [styles.socialCard, pressed && styles.pressedCard]}
+                    >
+                      <GoogleLogo size={20} />
+                      <Text style={styles.socialCardLabel}>Google</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleThirdPartyPress("Apple")}
+                      style={({ pressed }) => [styles.socialCard, pressed && styles.pressedCard]}
+                    >
+                      <AppleLogo size={20} />
+                      <Text style={styles.socialCardLabel}>Apple</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* Guest / Cancel Button Footer */}
+            {onCancel && (
+              <Pressable
+                onPress={() => {
+                  haptics.light();
+                  onCancel();
+                }}
+                style={({ pressed }) => [styles.guestFooter, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.guestFooterText}>Misafir Olarak Oynamaya Devam Et ➔</Text>
+              </Pressable>
+            )}
           </View>
-
-          {!isSignUp && (
-            <Pressable
-              onPress={handleDemoLogin}
-              disabled={loading}
-              style={({ pressed }) => [styles.demoFillBtn, pressed && styles.pressed]}
-            >
-              <Text style={styles.demoFillText}>⚡ Demo Hesabıyla Giriş Yap (Hızlı)</Text>
-            </Pressable>
-          )}
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          <GameButton
-            label={loading ? "BAĞLANILIYOR..." : isSignUp ? "KAYIT OL VE BAŞLA" : "GİRİŞ YAP VE BAŞLA"}
-            onPress={handleSubmit}
-            disabled={loading}
-            style={{ marginTop: 14 }}
-          />
-
-          <Pressable onPress={() => { haptics.light(); setIsSignUp(!isSignUp); setError(""); }} style={styles.switchButton}>
-            <Text style={styles.switchText}>
-              {isSignUp ? "Zaten bir hesabın var mı? Giriş Yap" : "Yeni misin? Hesap Oluştur"}
-            </Text>
-          </Pressable>
-
-          {/* Social login sadece giriş ekranında göster */}
-          {!isSignUp && (
-            <>
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>VEYA</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <View style={styles.socialContainer}>
-                {/* Google */}
-                <Pressable
-                  onPress={() => handleThirdPartyPress("Google")}
-                  style={({ pressed }) => [styles.socialIconButton, styles.googleButton, pressed && styles.pressed]}
-                >
-                  <GoogleLogo size={24} />
-                </Pressable>
-
-                {/* Apple */}
-                <Pressable
-                  onPress={() => handleThirdPartyPress("Apple")}
-                  style={({ pressed }) => [styles.socialIconButton, styles.appleButton, pressed && styles.pressed]}
-                >
-                  <AppleLogo size={24} />
-                </Pressable>
-              </View>
-            </>
-          )}
-
-          {onCancel && (
-            <Pressable onPress={() => { haptics.light(); onCancel(); }} style={styles.guestButton}>
-              <Text style={styles.guestText}>GİRİŞ YAPMADAN DEVAM ET →</Text>
-            </Pressable>
-          )}
-        </OrnatePanel>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 }
@@ -342,48 +443,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  topHeader: {
-    width: "100%",
-    maxWidth: 360,
-    marginBottom: 8,
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F0F5ED",
-    borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-start",
-    marginBottom: 10,
-  },
-  backButtonText: {
-    color: "#8c763b",
-    fontSize: 26,
-    lineHeight: 30,
-    fontWeight: "300",
-    marginTop: -2,
-  },
-  guestButton: {
-    marginTop: 18,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
-    backgroundColor: "rgba(62, 232, 181, 0.05)",
-  },
-  guestText: {
-    color: "#2a9c7a",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+    backgroundColor: "#F7F5EE",
   },
   scroll: {
     flexGrow: 1,
@@ -394,261 +454,331 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
-    maxWidth: 360,
+    maxWidth: 370,
     backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#DCE1D7",
     borderRadius: 24,
-    paddingVertical: 22,
+    paddingVertical: 24,
     paddingHorizontal: 20,
-    shadowColor: "#293541",
+    borderWidth: 1.5,
+    borderColor: "#E5ECE0",
+    shadowColor: "#1A2530",
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  brandContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  logoBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFF8E1",
+    borderWidth: 1,
+    borderColor: "#FFE082",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  logoBadgeEmoji: {
+    fontSize: 22,
+  },
+  brandTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#202E38",
+    letterSpacing: 0.8,
+  },
+  brandSubtitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7D89",
+    textAlign: "center",
+    marginTop: 4,
+    paddingHorizontal: 10,
+    lineHeight: 17,
+  },
+
+  /* Segmented Tab Switcher */
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F0F4EC",
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#E1E8DC",
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+  },
+  tabButtonActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
     elevation: 2,
   },
-  glowTitle: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: "#293541",
-    textAlign: "center",
-    textShadowColor: "transparent",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 0,
-    letterSpacing: 0.5,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: "#8b763f",
-    textAlign: "center",
-    letterSpacing: 0.5,
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  label: {
-    color: "#293541",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    marginBottom: 5,
-    marginTop: 10,
-  },
-  input: {
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "#F0F5ED",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
-    color: "#293541",
-    paddingHorizontal: 16,
+  tabButtonText: {
     fontSize: 13,
     fontWeight: "700",
+    color: "#6F808C",
   },
-  passwordWrapper: {
-    position: "relative",
-    justifyContent: "center",
-  },
-  passwordInput: {
-    paddingRight: 44,
-  },
-  eyeBtn: {
-    position: "absolute",
-    right: 12,
-    top: 10,
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  eyeIcon: {
-    fontSize: 15,
-  },
-  demoFillBtn: {
-    alignSelf: "center",
-    marginTop: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: "rgba(62, 232, 181, 0.08)",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
-  },
-  demoFillText: {
-    color: "#2a9c7a",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-  },
-  submitButton: {
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: "#aef5e0",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 14,
-    shadowColor: "#293541",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  submitText: {
-    color: "#293541",
-    fontSize: 12,
+  tabButtonTextActive: {
+    color: "#1B2A34",
     fontWeight: "900",
-    letterSpacing: 0.5,
   },
-  switchButton: {
-    marginTop: 12,
+
+  /* Form Fields */
+  formContent: {
+    width: "100%",
+  },
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#4A5A66",
+    letterSpacing: 0.6,
+    marginBottom: 6,
+    marginLeft: 2,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F7FAF5",
+    borderWidth: 1.5,
+    borderColor: "#DEE5D9",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  inputIcon: {
+    fontSize: 15,
+    marginRight: 8,
+  },
+  fieldInput: {
+    flex: 1,
+    color: "#1E2C36",
+    fontSize: 14,
+    fontWeight: "600",
+    paddingVertical: 0,
+    height: "100%",
+  },
+  eyeButton: {
+    padding: 6,
+    justifyContent: "center",
     alignItems: "center",
   },
-  switchText: {
-    color: "#8c763b",
+  eyeIconText: {
+    fontSize: 16,
+  },
+
+  /* Gender Options */
+  genderRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  genderCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F7FAF5",
+    borderWidth: 1.5,
+    borderColor: "#DEE5D9",
+    borderRadius: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  genderCardActiveMale: {
+    backgroundColor: "#E8F4FD",
+    borderColor: "#38BDF8",
+  },
+  genderCardActiveFemale: {
+    backgroundColor: "#FDF0F6",
+    borderColor: "#F472B6",
+  },
+  genderIcon: {
+    fontSize: 18,
+  },
+  genderText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#52636F",
+  },
+  genderTextActiveMale: {
+    color: "#0284C7",
+    fontWeight: "900",
+  },
+  genderTextActiveFemale: {
+    color: "#DB2777",
+    fontWeight: "900",
+  },
+  genderCheckBadge: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#167653",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 2,
+  },
+  genderCheckMark: {
+    color: "#FFFFFF",
     fontSize: 10,
+    fontWeight: "900",
+  },
+
+  /* Demo Pill */
+  demoPill: {
+    alignSelf: "center",
+    backgroundColor: "#FFF9E6",
+    borderWidth: 1,
+    borderColor: "#FFE082",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  pressedPill: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  demoPillText: {
+    fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    color: "#A26E05",
+  },
+
+  /* Error Box */
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FDF2F4",
+    borderWidth: 1,
+    borderColor: "#F9CBD3",
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginVertical: 8,
+    gap: 6,
+  },
+  errorIcon: {
+    fontSize: 14,
   },
   errorText: {
-    color: "#ce4c66",
-    fontSize: 10,
-    fontWeight: "800",
-    marginTop: 12,
-    textAlign: "center",
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#D83A56",
   },
+
+  /* Primary Button */
+  primaryButton: {
+    flexDirection: "row",
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: "#FFCA38",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#E5A91E",
+    marginTop: 10,
+    shadowColor: "#D3960E",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 3,
+    paddingHorizontal: 16,
+  },
+  primaryButtonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#463000",
+    letterSpacing: 0.5,
+  },
+  primaryButtonArrow: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#463000",
+    marginLeft: 8,
+  },
+
+  /* Divider */
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 12,
-    gap: 10,
+    marginVertical: 16,
+    gap: 12,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "rgba(181, 169, 205, 0.2)",
+    backgroundColor: "#E5ECE0",
   },
   dividerText: {
-    color: "#293541",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  socialContainer: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "center",
-  },
-  socialIconButton: {
-    width: 54,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  socialButton: {
-    height: 46,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    borderWidth: 1,
-  },
-  googleButton: {
-    backgroundColor: "#ffffff",
-    borderColor: "#DCE1D7",
-  },
-  appleButton: {
-    backgroundColor: "#F0F5ED",
-    borderColor: "#DCE1D7",
-  },
-  googleIconCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#b0ccfa",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  googleIconText: {
-    color: "#293541",
-    fontSize: 13,
-    fontWeight: "900",
-    lineHeight: 16,
-  },
-  googleText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#293541",
-    letterSpacing: 0.2,
-  },
-  appleIconText: {
-    fontSize: 18,
-    color: "#293541",
-    lineHeight: 22,
-    fontWeight: "400",
-  },
-  appleText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#293541",
-    letterSpacing: 0.2,
-  },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  disabled: {
-    opacity: 0.6,
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#8FA0AC",
+    letterSpacing: 1,
   },
 
-  /* Gender selection */
-  genderRow: {
+  /* Social Login Buttons */
+  socialRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 2,
   },
-  genderBtn: {
+  socialCard: {
     flex: 1,
-    backgroundColor: "#F0F5ED",
+    flexDirection: "row",
+    height: 44,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-    paddingVertical: 9,
+    borderColor: "#E0E7DC",
+    backgroundColor: "#FAFBF8",
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
+    gap: 8,
   },
-  genderBtnActiveMale: {
-    borderColor: "#DCE1D7",
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
+  socialCardLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#2C3E4C",
   },
-  genderBtnActiveFemale: {
-    borderColor: "#DCE1D7",
-    backgroundColor: "rgba(244, 114, 182, 0.12)",
+  pressedCard: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: "#EEF3E9",
   },
-  genderBtnIcon: {
-    fontSize: 22,
-    marginBottom: 4,
+
+  /* Guest Footer */
+  guestFooter: {
+    marginTop: 18,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  genderBtnLabel: {
-    color: "#293541",
-    fontSize: 11,
+  guestFooterText: {
+    fontSize: 12,
     fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  genderDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  genderDotText: {
-    color: "#293541",
-    fontSize: 10,
-    fontWeight: "900",
+    color: "#167653",
+    letterSpacing: 0.3,
   },
 });
+

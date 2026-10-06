@@ -625,9 +625,9 @@ export const DAILY_MEDIUM_POOL: CatalogMission[] = [
   },
   {
     "id": "d_med_26",
-    "title": "Günün Rotası",
-    "desc": "Günün Gizemli Kelimesini başarıyla çöz",
-    "actionType": "daily_route",
+    "title": "Günün Gizemi",
+    "desc": "Günün Gizemli Kelimesini herhangi bir oyunda çöz",
+    "actionType": "daily_mystery",
     "target": 1,
     "rewardXp": 58,
     "rewardCoins": 28,

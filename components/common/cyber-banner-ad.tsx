@@ -51,7 +51,7 @@ export function CyberBannerAd({ style, onPressAd }: CyberBannerAdProps) {
     return () => clearInterval(timer);
   }, []);
 
-  const campaign = SAMPLE_CAMPAIGNS[campaignIndex];
+  const campaign = SAMPLE_CAMPAIGNS[campaignIndex] ?? SAMPLE_CAMPAIGNS[0]!;
 
   const handlePress = () => {
     haptics.light();

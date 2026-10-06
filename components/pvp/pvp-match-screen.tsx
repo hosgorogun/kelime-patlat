@@ -309,154 +309,112 @@ export function PvpMatchScreen({
           </View>
         )}
 
-        <View style={[styles.statusRail, isFinalPush && styles.statusRailFinal]}>
-          <View>
-            <Text style={styles.railLabel}>{isFinalPush ? "SON HAMLE" : "TUR SÜRESİ"}</Text>
-            <Text style={[styles.timerValue, isFinalPush && styles.timerValueFinal]}>
-              {room.status === "playing" ? `00:${String(remainingSeconds).padStart(2, "0")}` : "00:00"}
-            </Text>
-          </View>
-          <View style={styles.battleBadges}>
-            {myMultiplier > 1 && (
-              <View style={styles.multiplierBadge}>
-                <Text style={styles.multiplierText}>×{myMultiplier} UZUN KELİME</Text>
-              </View>
-            )}
-            {myWordCount >= 2 && (
-              <View style={styles.streakBadge}>
-                <Text style={styles.streakText}>{myWordCount} SERİ</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View style={[styles.scoreRow, { position: "relative" }]}>
-          {activeEmote && (
-            <View
-              style={[
-                styles.floatingEmoteBadge,
-                activeEmote.playerId === playerId ? { left: 16 } : { right: 16 },
-              ]}
-            >
-              <Text style={styles.floatingEmoteText}>{activeEmote.emote}</Text>
-              <Text style={{ color: "#2a9c7a", fontSize: 10, fontWeight: "900" }}>
-                {activeEmote.playerName}
+        {/* Canlı Düello Arena Kartı (Modern, Dinamik ve Kompakt) */}
+        <View style={styles.duelBattleHeader}>
+          {/* Sol: Benim Oyuncu Kartım */}
+          <View style={[styles.duelPlayerBadge, styles.duelPlayerBadgeMe]}>
+            <View style={[styles.duelAvatarCircle, { borderColor: "#2DD4BF" }]}>
+              <Text style={styles.duelAvatarEmoji}>
+                {me?.avatar && me.avatar.length <= 3 ? me.avatar : "✨"}
               </Text>
             </View>
-          )}
-          <ScoreBadge
-            name={me?.name ?? safeName}
-            score={myScore}
-            words={myWordCount}
-            total={room.wordsTotal}
-            active={!room.winnerId || iWon}
-            won={iWon}
-            accent="#2DD4BF"
-            combo={room.combos?.[playerId]}
-            avatar={me?.avatar || (progress.selectedAvatar ? String(progress.selectedAvatar) : "🎮")}
-            avatarPhoto={me?.avatarPhoto || progress.avatarPhoto}
-            selectedFrame={me?.selectedFrame || progress.selectedFrame || "signal"}
-          />
-          <View style={styles.vsMark}>
-            <Text style={styles.vsText}>VS</Text>
+            <View style={styles.duelPlayerInfo}>
+              <Text numberOfLines={1} style={styles.duelPlayerName}>{me?.name ?? safeName}</Text>
+              <View style={styles.duelScoreRow}>
+                <Text style={[styles.duelScoreText, { color: "#0F766E" }]}>{myScore}</Text>
+                <Text style={styles.duelWordBadge}>
+                  {myWordCount}/{room.wordsTotal} kelime
+                  {room.bonusWords?.[playerId]?.length ? ` (+${room.bonusWords[playerId]!.length}✨)` : ""}
+                </Text>
+              </View>
+            </View>
           </View>
-          <Animated.View
-            style={[
-              { flex: 1 },
-              {
-                transform: [
-                  {
-                    scale: opponentFlashAnim.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange: [1, 1.06, 1],
-                    }),
-                  },
-                ],
-              },
+
+          {/* Orta: VS & Süre & Puan Durumu Rozeti */}
+          <View style={styles.duelCenterHub}>
+            <View style={[styles.duelTimerPill, isFinalPush && styles.duelTimerPillFinal]}>
+              <Text style={styles.duelTimerIcon}>{isFinalPush ? "⚡" : "⏱️"}</Text>
+              <Text style={[styles.duelTimerValue, isFinalPush && styles.duelTimerValueFinal]}>
+                {room.status === "playing" ? `00:${String(remainingSeconds).padStart(2, "0")}` : "00:00"}
+              </Text>
+            </View>
+            <View style={[
+              styles.duelLeadBadge,
+              scoreDifference > 0 && styles.duelLeadAhead,
+              scoreDifference < 0 && styles.duelLeadBehind,
+            ]}>
+              <Text style={[
+                styles.duelLeadText,
+                scoreDifference > 0 && { color: "#059669" },
+                scoreDifference < 0 && { color: "#DC2626" },
+              ]}>
+                {scoreLeadLabel}
+              </Text>
+            </View>
+          </View>
+
+          {/* Sağ: Rakip Oyuncu Kartı */}
+          <Pressable
+            disabled={!opponent}
+            onPress={opponent ? () => { triggerHapticSelection(); onOpenUserProfile(opponent); } : undefined}
+            style={({ pressed }) => [
+              styles.duelPlayerBadge,
+              styles.duelPlayerBadgeOpponent,
+              pressed && styles.pressed,
             ]}
           >
-            <ScoreBadge
-              name={opponent?.name ?? "RAKİP"}
-              score={opponentScore}
-              words={opponentWordCount}
-              total={room.wordsTotal}
-              active={!room.winnerId || !iWon}
-              won={Boolean(room.winnerId && !iWon)}
-              accent="#FB7185"
-              combo={opponent ? room.combos?.[opponent.id] : undefined}
-              avatar={opponent?.avatar || (opponent?.isBot ? "🤖" : "👤")}
-              avatarPhoto={opponent?.avatarPhoto}
-              selectedFrame={opponent?.selectedFrame || "signal"}
-              onPress={
-                opponent
-                  ? () => {
-                      triggerHapticSelection();
-                      onOpenUserProfile(opponent);
-                    }
-                  : undefined
-              }
-            />
-          </Animated.View>
+            <View style={styles.duelPlayerInfoRight}>
+              <Text numberOfLines={1} style={styles.duelPlayerName}>{opponent?.name ?? "RAKİP"}</Text>
+              <View style={styles.duelScoreRow}>
+                <Text style={styles.duelWordBadge}>{opponentWordCount}/{room.wordsTotal} kelime</Text>
+                <Text style={[styles.duelScoreText, { color: "#BE123C" }]}>{opponentScore}</Text>
+              </View>
+            </View>
+            <View style={[styles.duelAvatarCircle, { borderColor: "#FB7185" }]}>
+              <Text style={styles.duelAvatarEmoji}>
+                {opponent?.avatar && opponent.avatar.length <= 3 ? opponent.avatar : (opponent?.isBot ? "🤖" : "👤")}
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCell}>
-            <Text style={styles.statLabel}>PUAN FARKI</Text>
-            <Text
-              style={[
-                styles.statValue,
-                scoreDifference > 0 && styles.statValuePositive,
-                scoreDifference < 0 && styles.statValueNegative,
-              ]}
-            >
-              {scoreLeadLabel}
-            </Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statCell}>
-            <Text style={styles.statLabel}>TEMPO</Text>
-            <Text style={styles.statValue}>
-              {myTempo} · {opponentTempo} K/DK
-            </Text>
-          </View>
-        </View>
-
-        {room.status === "playing" && (
-          <View style={styles.emoteBar}>
-            {["🔥", "👏", "⚡", "😱", "🤝", "😎"].map((emoji) => (
-              <Pressable
-                key={emoji}
-                onPress={() => onSendEmote(emoji)}
-                style={({ pressed }) => [styles.emoteBtn, pressed && styles.pressed]}
-              >
-                <Text style={styles.emoteBtnText}>{emoji}</Text>
-              </Pressable>
-            ))}
+        {activeEmote && (
+          <View style={[styles.floatingEmoteBadge, activeEmote.playerId === playerId ? { left: 24 } : { right: 24 }]}>
+            <Text style={styles.floatingEmoteText}>{activeEmote.emote}</Text>
+            <Text style={{ color: "#2a9c7a", fontSize: 10, fontWeight: "900" }}>{activeEmote.playerName}</Text>
           </View>
         )}
 
-        <View style={styles.targetCard}>
-          <Text style={styles.targetLabel}>
-            {room.status === "finished" ? "TUR TAMAMLANDI" : "GİZLİ KELİMELERİ BUL"}
-          </Text>
-          <Text style={styles.targetWord}>{room.wordsTotal} KELİME</Text>
-          {disconnectRemainingSeconds > 0 ? (
-            <View style={styles.disconnectBox}>
-              <Text style={{ color: "#ed4343", fontSize: 11, fontWeight: "900" }}>
-                ⚠️ RAKİBİN BAĞLANTISI KOPTU ({disconnectRemainingSeconds}s)
-              </Text>
-              <Text style={{ color: "#9c6666", fontSize: 9, fontWeight: "800", marginTop: 2 }}>
-                Geri dönmezse hükmen galip sayılacaksın.
-              </Text>
+        {/* Canlı Hedef & Reaksiyon Şeridi */}
+        <View style={styles.duelSubBar}>
+          <View style={styles.duelTargetPill}>
+            <Text style={styles.duelTargetIcon}>🎯</Text>
+            <Text style={styles.duelTargetText}>HEDEF: <Text style={{ color: "#0F766E", fontWeight: "900" }}>{room.wordsTotal} KELİME</Text></Text>
+          </View>
+
+          {room.status === "playing" && (
+            <View style={styles.compactEmoteMiniBar}>
+              {["🔥", "👏", "⚡", "😎"].map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  onPress={() => onSendEmote(emoji)}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  style={({ pressed }) => [styles.miniEmoteBtn, pressed && styles.pressed]}
+                >
+                  <Text style={styles.miniEmoteText}>{emoji}</Text>
+                </Pressable>
+              ))}
             </View>
-          ) : (
-            <Text style={styles.targetTip}>
-              {room.status === "playing"
-                ? "Parmağını/mouse'u basılı tutarak yatay/dikey komşu harfleri bağla."
-                : room.message}
-            </Text>
           )}
         </View>
+
+        {disconnectRemainingSeconds > 0 && (
+          <View style={styles.disconnectBox}>
+            <Text style={{ color: "#ed4343", fontSize: 11, fontWeight: "900" }}>
+              ⚠️ RAKİBİN BAĞLANTISI KOPTU ({disconnectRemainingSeconds}s)
+            </Text>
+          </View>
+        )}
 
         <View
           ref={boardRef}
@@ -614,11 +572,14 @@ export function PvpMatchScreen({
               styles.wordTray,
               selectionFeedback === "invalid" && styles.wordTrayInvalid,
               selectionFeedback === "accepted" && styles.wordTrayAccepted,
+              selectionFeedback === "bonus" && styles.wordTrayBonus,
             ]}
           >
             <Text style={styles.wordLabel}>
               {selectionFeedback === "invalid"
                 ? "GEÇERSİZ KELİME"
+                : selectionFeedback === "bonus"
+                ? "✨ GİZLİ BONUS KELİME BULUNDU!"
                 : selectionFeedback === "accepted"
                 ? "KELİME KABUL EDİLDİ"
                 : selectedCells.length >= 2
@@ -631,6 +592,8 @@ export function PvpMatchScreen({
             <Text style={styles.routeHint}>
               {selectionFeedback === "invalid"
                 ? "Kırmızı rota birazdan temizlenecek."
+                : selectionFeedback === "bonus"
+                ? "+10 Bonus Puan & +2 Çip Kazanıldı!"
                 : selectedCells.length > 1
                 ? "Mavi önizleme · yeşil yalnız kabul edilince görünür."
                 : "Yalnız yatay ve dikey ilerle"}
@@ -671,6 +634,7 @@ export function PvpMatchScreen({
           status={room.status}
           wordsTotal={room.wordsTotal}
           myFoundWords={myFoundWords}
+          bonusWords={room.bonusWords?.[playerId]}
           missedWords={room.missedWords}
           inspectedPath={inspectedPath}
           onInspectWord={(word, path, color) => {
@@ -715,6 +679,7 @@ export function PvpMatchScreen({
         opponentTempo={opponentTempo}
         allFinishedWords={allFinishedWords}
         myFoundWords={myFoundWords}
+        bonusWords={room.bonusWords?.[playerId]}
         selectedWordInfo={selectedWordInfo}
         rematchPending={Boolean(me?.rematch)}
         isFriend={

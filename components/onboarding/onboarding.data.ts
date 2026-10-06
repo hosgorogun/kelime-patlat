@@ -76,13 +76,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         tag: "SEFER",
         tagColor: "#FFC24A",
       },
-      {
-        title: "Günün Sabit Rotası (Daily Challenge) 📅",
-        details: [
-          "Her gün tüm oyuncular için aynı tahta üretilir. Adil şartlarda en yüksek puanı topla.",
-          "Günlük rotayı tamamlayarak günlük serini (Streak) koru ve seri bonusları kazan!",
-        ],
-      },
+
       {
         title: "Arcade Modu (Zamana Karşı) ⚡",
         details: [

@@ -28,9 +28,10 @@ export function useLivesManager({
     if (buyingLivesLoading) return;
     setBuyingLivesLoading(true);
     try {
+      const activeProgress = progressRef.current ?? progress;
       const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
       if (!token || token === "guest") {
-        const res = buyLives(progressRef.current, "one");
+        const res = buyLives(activeProgress, "one");
         if (!res.success) {
           setGlobalToast({
             id: `no-chips-${Date.now()}`,
@@ -59,7 +60,7 @@ export function useLivesManager({
         });
         const data = await response.json();
         if (!response.ok) {
-          const res = buyLives(progressRef.current, "one");
+          const res = buyLives(activeProgress, "one");
           if (res.success) {
             setProgress(res.updatedProgress);
             void syncProgressToCloud(res.updatedProgress);
@@ -93,7 +94,8 @@ export function useLivesManager({
         }
       }
     } catch {
-      const res = buyLives(progressRef.current, "one");
+      const activeProgress = progressRef.current ?? progress;
+      const res = buyLives(activeProgress, "one");
       if (res.success) {
         setProgress(res.updatedProgress);
         void syncProgressToCloud(res.updatedProgress);
@@ -115,9 +117,10 @@ export function useLivesManager({
     if (buyingLivesLoading) return;
     setBuyingLivesLoading(true);
     try {
+      const activeProgress = progressRef.current ?? progress;
       const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
       if (!token || token === "guest") {
-        const res = buyLives(progressRef.current, "all");
+        const res = buyLives(activeProgress, "all");
         if (!res.success) {
           setGlobalToast({
             id: `no-chips-${Date.now()}`,
@@ -146,7 +149,8 @@ export function useLivesManager({
         });
         const data = await response.json();
         if (!response.ok) {
-          const res = buyLives(progressRef.current, "all");
+          const activeFallback = progressRef.current ?? progress;
+          const res = buyLives(activeFallback, "all");
           if (res.success) {
             setProgress(res.updatedProgress);
             void syncProgressToCloud(res.updatedProgress);
@@ -180,7 +184,8 @@ export function useLivesManager({
         }
       }
     } catch {
-      const res = buyLives(progressRef.current, "all");
+      const activeFallback = progressRef.current ?? progress;
+      const res = buyLives(activeFallback, "all");
       if (res.success) {
         setProgress(res.updatedProgress);
         void syncProgressToCloud(res.updatedProgress);
@@ -202,9 +207,10 @@ export function useLivesManager({
     if (buyingLivesLoading) return;
     setBuyingLivesLoading(true);
     try {
+      const activeProgress = progressRef.current ?? progress;
       const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
       if (!token || token === "guest") {
-        const res = buyLives(progressRef.current, "ad");
+        const res = buyLives(activeProgress, "ad");
         if (res.success) {
           setProgress(res.updatedProgress);
           void syncProgressToCloud(res.updatedProgress);
@@ -225,7 +231,7 @@ export function useLivesManager({
         });
         const data = await response.json();
         if (!response.ok) {
-          const res = buyLives(progressRef.current, "ad");
+          const res = buyLives(activeProgress, "ad");
           if (res.success) {
             setProgress(res.updatedProgress);
             void syncProgressToCloud(res.updatedProgress);
@@ -251,7 +257,8 @@ export function useLivesManager({
         }
       }
     } catch {
-      const res = buyLives(progressRef.current, "ad");
+      const activeProgress = progressRef.current ?? progress;
+      const res = buyLives(activeProgress, "ad");
       if (res.success) {
         setProgress(res.updatedProgress);
         void syncProgressToCloud(res.updatedProgress);

@@ -106,7 +106,9 @@ export function applyMatchProgress(
       lpGain = isHighTier ? -15 : -10;
     }
   } else if (type === "solo") {
-    baseXP = hasContributed || result.won ? 10 : 0;
+    // Solo modunda seviye ilerledikçe (1-100) taban XP seviyeye göre dengelenir (10 ila 35 XP)
+    const soloLevelFactor = Math.min(25, Math.floor((result.score || 0) / 40));
+    baseXP = hasContributed || result.won ? 10 + soloLevelFactor : 0;
     lpGain = 0;
   }
 
@@ -161,6 +163,10 @@ export function applyMatchProgress(
         coinsEarned = isCrushingWin ? 15 : 10;
       } else if (type === "bot") {
         coinsEarned = isCrushingWin ? 6 : 4;
+      } else if (type === "solo") {
+        // Solo modunda zorluk seviyesi ve skora göre çip ödülü (3 ila 8 çip)
+        const soloBonusChips = Math.min(5, Math.floor((result.score || 0) / 150));
+        coinsEarned = 3 + soloBonusChips;
       } else {
         coinsEarned = 3;
       }
@@ -340,12 +346,17 @@ export function applyArcadeProgress(
     date: Date.now(),
   };
 
+  const newHistory = foundWords && foundWords.length > 0
+    ? [...(progress.history || []), ...foundWords].slice(-150)
+    : (progress.history || []);
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
     coins: (progress.coins ?? 0) + coinsGain,
     bestArcadeScore: newBest,
     missions: nextMissions,
+    history: newHistory,
     matchHistory: [arcadeHistoryItem, ...(progress.matchHistory || [])].slice(0, 50),
   };
 }
@@ -388,11 +399,16 @@ export function applyVintageProgress(
     date: Date.now(),
   };
 
+  const newHistory = foundWords && foundWords.length > 0
+    ? [...(progress.history || []), ...foundWords].slice(-150)
+    : (progress.history || []);
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
     coins: (progress.coins ?? 0) + coinsGain,
     missions: nextMissions,
+    history: newHistory,
     vintageProgress: {
       maxUnlockedLevel: nextMaxUnlocked,
       completedLevels: nextCompleted,
@@ -440,6 +456,11 @@ export function completeDailyProgress(
     ? (progress.matchHistory || [])
     : [dailyHistoryItem, ...(progress.matchHistory || [])].slice(0, 50);
 
+  const wordsForDailyHistory = foundWords || daily.words || [];
+  const updatedHistory = wordsForDailyHistory.length > 0
+    ? [...(progress.history || []), ...wordsForDailyHistory].slice(-150)
+    : (progress.history || []);
+
   return {
     ...progress,
     xp: progress.xp + daily.rewardXp,
@@ -448,6 +469,7 @@ export function completeDailyProgress(
     lastStreakCheckDate: daily.id,
     streak: progress.streak + 1,
     missions: updatedMissions,
+    history: updatedHistory,
     matchHistory: nextHistory,
   };
 }

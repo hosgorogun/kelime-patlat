@@ -10,6 +10,7 @@ export type PvpFoundWordsPanelProps = {
   status: RoomStatus;
   wordsTotal: number;
   myFoundWords: { word: string; path: number[] }[];
+  bonusWords?: string[];
   missedWords?: { word: string; path: number[] }[];
   inspectedPath: number[] | null;
   onInspectWord: (word: string, path: number[], color: string) => void;
@@ -19,6 +20,7 @@ export const PvpFoundWordsPanel = React.memo(({
   status,
   wordsTotal,
   myFoundWords,
+  bonusWords,
   missedWords,
   inspectedPath,
   onInspectWord,
@@ -75,10 +77,45 @@ export const PvpFoundWordsPanel = React.memo(({
               );
             })
           ) : (
-            <Text style={styles.foundEmpty}>Henüz kelime bulunmadı.</Text>
+            <Text style={styles.foundEmpty}>Henüz ana kelime bulunmadı.</Text>
           )}
         </View>
       </View>
+
+      {bonusWords && bonusWords.length > 0 && (
+        <View style={{ marginTop: 8 }}>
+          <Text
+            style={{
+              color: "#d97706",
+              fontSize: 10,
+              fontWeight: "900",
+              letterSpacing: 0.5,
+              marginBottom: 4,
+            }}
+          >
+            ✨ GİZLİ BONUS KELİMELER ({bonusWords.length}) · +{bonusWords.length * 10} PUAN
+          </Text>
+          <View style={styles.foundTags}>
+            {bonusWords.map((bWord, index) => (
+              <View
+                key={`bonus-${index}`}
+                style={[
+                  styles.foundTag,
+                  {
+                    backgroundColor: "#FEF3C7",
+                    borderColor: "#F59E0B",
+                    borderWidth: 1.5,
+                  },
+                ]}
+              >
+                <Text style={[styles.foundTagText, { color: "#92400E" }]}>
+                  ✨ {bWord} (+10)
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {status === "finished" && missedWords && missedWords.length > 0 && (
         <View style={{ marginTop: 10 }}>

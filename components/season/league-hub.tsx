@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, FlatList } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -94,7 +94,13 @@ export function LeagueHub({
   const isSelectedUnlocked = selectedLeagueIndex <= currentIndex;
 
   const flatListRef = useRef<FlatList>(null);
-  const effectiveStandings = leaderboard && leaderboard.length > 0 ? leaderboard : MOCK_STANDINGS;
+  const effectiveStandings = useMemo(() => {
+    if (!leaderboard || leaderboard.length === 0) return MOCK_STANDINGS;
+    if (leaderboard.length >= 3) return leaderboard;
+    const existingIds = new Set(leaderboard.map((e) => e.id));
+    const mocks = MOCK_STANDINGS.filter((m) => !existingIds.has(m.id));
+    return [...leaderboard, ...mocks].slice(0, 3);
+  }, [leaderboard]);
 
   const content = (
     <View style={embedded ? styles.embeddedContainer : undefined}>
@@ -277,14 +283,14 @@ export function LeagueHub({
           style={({ pressed }) => [styles.playCtaButton, pressed && styles.pressed]}
         >
           <LinearGradient
-            colors={["#F0F5ED", "#F0F5ED", "#F0F5ED"]}
+            colors={["#0D9488", "#10B981", "#059669"]}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 1, y: 0 }}
             style={styles.playCtaGradient}
           >
             <View style={styles.playCtaLeft}>
               <View style={styles.playCtaIconOrb}>
-                <Text style={{ fontSize: 20 }}>⚔️</Text>
+                <Text style={{ fontSize: 22 }}>⚔️</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.playCtaTitle}>DERECELİ DÜELLO OYNA</Text>
@@ -352,7 +358,7 @@ const styles = StyleSheet.create({
   title: { color: "#293541", fontSize: 26, fontWeight: "900", letterSpacing: 0.5, marginTop: 1, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   timerPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
   timerIcon: { fontSize: 12 },
-  timerLabel: { color: "#9b7616", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.5 },
+  timerLabel: { color: "#9b7616", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   timerValue: { color: "#293541", fontSize: 11, fontWeight: "900" },
 
   carouselContainer: { marginVertical: 8 },
@@ -364,9 +370,9 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: 12 },
   cardIndexText: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
   cardPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  cardPillTextCurrent: { color: "#293541", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
-  cardPillTextUnlocked: { fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
-  cardPillTextLocked: { color: "#64748B", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  cardPillTextCurrent: { color: "#293541", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
+  cardPillTextUnlocked: { fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
+  cardPillTextLocked: { color: "#64748B", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
 
   artworkContainer: { width: 110, height: 110, borderRadius: 24, borderWidth: 2.5, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, position: "relative" },
   artworkImage: { width: 104, height: 104, borderRadius: 20 },
@@ -376,36 +382,36 @@ const styles = StyleSheet.create({
   cardLpRange: { color: "#293541", fontSize: 11, fontWeight: "700", marginBottom: 12 },
 
   cardLiveProgress: { width: "100%", marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#DCE1D7" },
-  cardLiveLabel: { color: "#293541", fontSize: 9.5, fontWeight: "700" },
+  cardLiveLabel: { color: "#293541", fontSize: 10, fontWeight: "700" },
   cardLiveValue: { fontSize: 10.5, fontWeight: "900" },
   cardTrack: { width: "100%", height: 6, borderRadius: 3, backgroundColor: "#E2E8F0", marginTop: 4, overflow: "hidden" },
   cardFill: { height: "100%", borderRadius: 3 },
 
   detailCard: { marginHorizontal: 18, marginTop: 6, padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   detailHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  detailKicker: { color: "#293541", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  detailKicker: { color: "#293541", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
   detailBadge: { fontSize: 10.5, fontWeight: "900", letterSpacing: 0.5 },
 
   detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F7F5EE", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 12, marginBottom: 8, gap: 2 },
   detailBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-  detailBoxLabel: { color: "#293541", fontSize: 7.5, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
+  detailBoxLabel: { color: "#54646B", fontSize: 9, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
   detailBoxValue: { color: "#293541", fontSize: 10.5, fontWeight: "900", marginTop: 2, textAlign: "center" },
   detailRule: { width: 1, height: 20, backgroundColor: "#DCE1D7" },
 
-  detailDesc: { color: "#293541", fontSize: 10.5, fontWeight: "600", lineHeight: 15, textAlign: "center" },
+  detailDesc: { color: "#54646B", fontSize: 11, fontWeight: "600", lineHeight: 16, textAlign: "center" },
 
   playCtaButton: {
     marginHorizontal: 18,
-    marginTop: 12,
+    marginTop: 14,
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-    shadowColor: "#293541",
+    borderColor: "#059669",
+    shadowColor: "#059669",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   playCtaGradient: {
     paddingVertical: 14,
@@ -422,24 +428,24 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   playCtaIconOrb: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 14,
-    backgroundColor: "rgba(62, 232, 181, 0.18)",
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
     borderWidth: 1,
-    borderColor: "#DCE1D7",
+    borderColor: "rgba(255, 255, 255, 0.4)",
     alignItems: "center",
     justifyContent: "center",
   },
   playCtaTitle: {
-    color: "#293541",
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   playCtaSubtitle: {
-    color: "#293541",
-    fontSize: 9.5,
+    color: "#D1FAE5",
+    fontSize: 10,
     fontWeight: "700",
     marginTop: 2,
   },
@@ -447,12 +453,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#aef5e0",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   playCtaArrow: {
-    color: "#293541",
+    color: "#059669",
     fontSize: 16,
     fontWeight: "900",
   },

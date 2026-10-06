@@ -3,9 +3,10 @@ import { AppState, BackHandler, ScrollView, StyleSheet, useWindowDimensions, Vie
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
+import { isEqualTr } from "@/shared/tr-utils";
 import { createSoloBoard, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
 import { type WordTheme } from "@/shared/word-catalog";
-import { getWordDefinition, fetchWordDetail, getCachedWordDetail } from "@/shared/dictionary";
+import { getWordDefinition, fetchWordDetail, getCachedWordDetail, isValidTurkishWord } from "@/shared/dictionary";
 import { getThemeForLevel } from "@/shared/themes";
 import {
   initAudio,
@@ -25,7 +26,7 @@ import { gameSfx } from "@/lib/game-sfx";
 import { VictoryEffectOverlay } from "../game/victory-effect-overlay";
 import { GameCountdownOverlay } from "../game/game-countdown-overlay";
 import { FloatingCombo } from "../game/game-boosters";
-import type { PlayerProgress } from "@/shared/progression";
+import { type PlayerProgress, getDayId, getCalculatedLives } from "@/shared/progression";
 import { styles } from "./solo-challenge.styles";
 import { SoloWordRouteCard } from "./solo-word-route-card";
 import { SoloPauseModal } from "./solo-pause-modal";
@@ -36,7 +37,7 @@ import { SoloFoundWords } from "./solo-found-words";
 import { SoloExitModal } from "./solo-exit-modal";
 import { SoloBoardGrid } from "./solo-board-grid";
 
-type Feedback = "idle" | "invalid" | "accepted";
+type Feedback = "idle" | "invalid" | "accepted" | "bonus";
 
 // Keep omitted exclusions stable so timer updates cannot regenerate the board.
 const EMPTY_EXCLUDED_WORDS: string[] = [];
@@ -94,6 +95,7 @@ export function SoloChallenge({
   const challenge = useMemo(() => createSoloBoard(level, variation, theme, excludedWordsRef.current), [level, variation, theme]);
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
+  const [bonusWords, setBonusWords] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
   const [inspectedPath, setInspectedPath] = useState<number[] | null>(null);
   const [inspectedColor, setInspectedColor] = useState<string | null>(null);
@@ -102,14 +104,14 @@ export function SoloChallenge({
   const [status, setStatus] = useState<"playing" | "won" | "lost">("playing");
   const [isSelecting, setIsSelecting] = useState(false);
   const [radarCooldown, setRadarCooldown] = useState(0);
-  const [radarCharges, setRadarCharges] = useState(3 + (radarChargesBonus || 0));
+  const [radarCharges, setRadarCharges] = useState(radarChargesBonus || 0);
   // Bonus şarj değişimini takip etmek için referans (reset effect'in sonsuz döngüye girmesini önler)
   const radarBonusRef = useRef(radarChargesBonus);
   radarBonusRef.current = radarChargesBonus;
 
   useEffect(() => {
     // Bonus şarj sayısı arttığında mevcut şarjlara ekle (azaldığında dokunma)
-    setRadarCharges((current) => Math.max(current, 3 + (radarChargesBonus || 0)));
+    setRadarCharges((current) => Math.max(current, radarChargesBonus || 0));
   }, [radarChargesBonus]);
 
   const [radarHighlights, setRadarHighlights] = useState<Set<number>>(new Set());
@@ -203,6 +205,42 @@ export function SoloChallenge({
   const [revived, setRevived] = useState(false);
   const [doubleXpEarned, setDoubleXpEarned] = useState(false);
 
+  // Günlük en fazla 3 kez reklamla kurtarma hakkı sınırı (Anti-abuse kotası)
+  const todayId = getDayId();
+  const currentDailyRevives = (progress?.dailyRevivesDate === todayId ? progress.dailyRevivesCount : 0) ?? 0;
+  const remainingDailyRevives = Math.max(0, 3 - currentDailyRevives);
+
+  const handleReviveWithAd = () => {
+    if (remainingDailyRevives <= 0) return;
+    safeWatchAd(() => {
+      setSeconds(20);
+      setStatus("playing");
+      setRevived(true);
+      hasFinishedRef.current = false;
+      setCountdown(1); // 1 saniyelik odaklanma payı verir
+      triggerHapticSuccess();
+      playSuccessSound();
+      if (setProgress) {
+        setProgress((curr) => {
+          const isSameDay = curr.dailyRevivesDate === todayId;
+          const nextCount = (isSameDay ? (curr.dailyRevivesCount ?? 0) : 0) + 1;
+          // Reklam izleyip süreyi kurtardığı için süre bitiminde düşülen 1 can geri iade edilir
+          const calc = getCalculatedLives(curr);
+          const restoredLives = Math.min(5, calc.lives + 1);
+          const updated = {
+            ...curr,
+            lives: restoredLives,
+            lastLifeRegenTimestamp: calc.lives >= 5 ? Date.now() : curr.lastLifeRegenTimestamp,
+            dailyRevivesDate: todayId,
+            dailyRevivesCount: nextCount,
+          };
+          void syncProgressToCloud?.(updated);
+          return updated;
+        });
+      }
+    });
+  };
+
   // Countdown timer logic
   useEffect(() => {
     if (countdown === null) return;
@@ -273,7 +311,7 @@ export function SoloChallenge({
 
   useEffect(() => {
     setSelected([]); setFound([]); setFoundPaths([]); setInspectedPath(null); setInspectedColor(null); setSeconds(challenge.timeLimit); setFeedback("idle"); setStatus("playing"); setIsSelecting(false); selectionRef.current = []; pointerActive.current = false;
-    setRadarCooldown(0); setRadarCharges(3 + (radarBonusRef.current || 0)); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
+    setRadarCooldown(0); setRadarCharges(radarBonusRef.current || 0); setRadarHighlights(new Set()); setTimeBonusText(null); setSelectedWordInfo(null); setCountdown(3); lastWordTimeRef.current = 0;
     setChestState("closed"); setDecryptProgress(0); setDecryptText(""); setRevived(false); setDoubleXpEarned(false);
     hasFinishedRef.current = false;
     isDecryptingRef.current = false;
@@ -293,15 +331,17 @@ export function SoloChallenge({
 
   const onCompleteRef = useRef(onComplete);
   const foundRef = useRef(found);
+  const bonusWordsRef = useRef(bonusWords);
   const levelRef = useRef(level);
   const dailyRef = useRef(daily);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
     foundRef.current = found;
+    bonusWordsRef.current = bonusWords;
     levelRef.current = level;
     dailyRef.current = daily;
-  }, [onComplete, found, level, daily]);
+  }, [onComplete, found, bonusWords, level, daily]);
 
   const [isPaused, setIsPaused] = useState(false);
   const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
@@ -351,7 +391,8 @@ export function SoloChallenge({
       setInspectedColor(null);
       triggerHapticError();
       playErrorSound();
-      onCompleteRef.current(levelRef.current, foundRef.current, false);
+      const allFound = [...foundRef.current, ...bonusWordsRef.current];
+      onCompleteRef.current(levelRef.current, allFound, false);
     }
   }, [seconds, status, countdown, isPaused, showExitModal]);
 
@@ -452,7 +493,7 @@ export function SoloChallenge({
   const showInvalid = (message: string) => {
     if (resetTimer.current) clearTimeout(resetTimer.current);
     setFeedback("invalid"); triggerHapticError(); playErrorSound(); triggerShake();
-    resetTimer.current = setTimeout(() => { clearSelection(); setFeedback("idle"); }, 620);
+    resetTimer.current = setTimeout(() => { clearSelection(); setFeedback("idle"); submitted.current = false; }, 620);
   };
   const include = (index: number) => {
     if (status !== "playing") return;
@@ -466,7 +507,7 @@ export function SoloChallenge({
 
   const revealRadar = () => {
     if (radarCooldown > 0 || radarCharges <= 0 || status !== "playing") return;
-    const remaining = challenge.words.filter((w) => !found.includes(w));
+    const remaining = challenge.words.filter((w) => !found.some((f) => isEqualTr(f, w)));
     if (!remaining.length) return;
     const targetWord = remaining[0]!;
     const path = challenge.routes[targetWord];
@@ -493,8 +534,57 @@ export function SoloChallenge({
     const path = [...selectionRef.current];
     if (path.length < 3) { showInvalid("En az üç harf bağla."); return; }
     const word = wordFromSelection(challenge.board, path);
-    if (!challenge.words.includes(word) || found.includes(word)) { showInvalid("Bu rota hedef kelimelerden biri değil."); return; }
-    const nextFound = [...found, word];
+    const matchingWord = challenge.words.find((w) => isEqualTr(w, word));
+    const alreadyFound = found.some((f) => isEqualTr(f, word));
+
+    // 1. Ekstra / Bonus Kelime Kontrolü (Hedef değilse ama geçerli bir Türkçe kelimeyse)
+    if (!matchingWord) {
+      const isAlreadyBonus = bonusWords.some((b) => isEqualTr(b, word));
+      if (!isAlreadyBonus && isValidTurkishWord(word)) {
+        // Bonus kelime bulundu!
+        setBonusWords((prev) => [...prev, word]);
+        setFeedback("bonus");
+        triggerHapticSuccess();
+        playSuccessSound(word.length);
+        explodeParticles(path);
+
+        // Ekstra çip ve süre ödülü ver
+        const bonusCoinGain = 2;
+        if (setProgress) {
+          setProgress((curr) => {
+            const updated = {
+              ...curr,
+              coins: (curr.coins ?? 0) + bonusCoinGain,
+            };
+            void syncProgressToCloud?.(updated);
+            return updated;
+          });
+        }
+        setSeconds((s) => Math.min(challenge.timeLimit, s + 3));
+        setTimeBonusText(`✨ GİZLİ KELİME: ${word}! +${bonusCoinGain} ÇİP 💰`);
+        const bonusTimer = setTimeout(() => setTimeBonusText(null), 1800);
+        particleTimers.current.push(bonusTimer);
+
+        setScoreBurstText(`+${word.length * 10} 🪙`);
+        const scoreTimer = setTimeout(() => setScoreBurstText(null), 1200);
+        particleTimers.current.push(scoreTimer);
+
+        // Satır/sütun renkleri kalıcı olmaz: Kısa altın parlamanın ardından hücreler anında eski haline döner!
+        const resetBonusTimer = setTimeout(() => {
+          clearSelection();
+          setFeedback("idle");
+          submitted.current = false;
+        }, 550);
+        particleTimers.current.push(resetBonusTimer);
+        return;
+      }
+
+      showInvalid(isAlreadyBonus ? "Bu bonus kelimeyi zaten buldun." : "Bu rota hedef kelimelerden biri değil.");
+      return;
+    }
+
+    if (alreadyFound) { showInvalid("Bu kelimeyi zaten buldun."); return; }
+    const nextFound = [...found, matchingWord];
     setFound(nextFound); setFoundPaths((current) => [...current, path]); setFeedback("accepted"); clearSelection();
     explodeParticles(path);
     
@@ -538,11 +628,15 @@ export function SoloChallenge({
         setSelectedWordInfo(null);
         setInspectedPath(null);
         setInspectedColor(null);
-        onCompleteRef.current(levelRef.current, nextFound, true);
+        const allFound = [...nextFound, ...bonusWordsRef.current];
+        onCompleteRef.current(levelRef.current, allFound, true);
       }, 700);
       particleTimers.current.push(winTimer);
     } else {
-      const feedbackTimer = setTimeout(() => setFeedback("idle"), 360);
+      const feedbackTimer = setTimeout(() => {
+        setFeedback("idle");
+        submitted.current = false;
+      }, 360);
       particleTimers.current.push(feedbackTimer);
     }
   };
@@ -551,7 +645,8 @@ export function SoloChallenge({
     if (status === "lost" && daily) {
       if (!hasFinishedRef.current) {
         hasFinishedRef.current = true;
-        onCompleteRef.current(levelRef.current, foundRef.current, false);
+        const allFound = [...foundRef.current, ...bonusWordsRef.current];
+        onCompleteRef.current(levelRef.current, allFound, false);
       }
       onExit();
       return;
@@ -570,7 +665,11 @@ export function SoloChallenge({
       const elapsed = Math.max(1, (challenge.timeLimit || 90) - seconds);
       const totalWords = challenge.words.length;
       const foundCount = found.length;
-      const emojiRows = challenge.words.map((w) => (found.includes(w) ? "🟩🟩🟩🟩" : "⬜⬜⬜⬜")).join("\n");
+      const emojiRows = challenge.words.map((w) => {
+        const isSolved = found.some((f) => isEqualTr(f, w));
+        const len = w.length || 4;
+        return isSolved ? "🟩".repeat(len) : "⬜".repeat(len);
+      }).join("\n");
       const shareMessage =
         `💥 Kelime Patlat · Günün Rotası\n` +
         `⏱️ ${elapsed} saniyede ${foundCount}/${totalWords} kelime tamamlandı!\n\n` +
@@ -611,7 +710,8 @@ export function SoloChallenge({
   }, [isPaused, showExitModal, status, countdown, daily, onExit, handleExitPress]);
 
   const handleRetry = () => {
-    if (typeof lives === "number" && lives <= 0) {
+    const currentActualLives = progress ? getCalculatedLives(progress).lives : (typeof lives === "number" ? lives : 5);
+    if (currentActualLives <= 0) {
       if (onOpenLivesModal) {
         onOpenLivesModal();
       } else {
@@ -631,6 +731,7 @@ export function SoloChallenge({
     setRevived(false);
     setSelected([]);
     setFound([]);
+    setBonusWords([]);
     setFoundPaths([]);
     setInspectedPath(null);
     setInspectedColor(null);
@@ -732,8 +833,9 @@ export function SoloChallenge({
     return { foundCells: cells, foundCellColors: colors };
   }, [foundPaths, found]);
 
-  const solutionColors =
-    status === "lost" ? solutionColorByCell(challenge) : new Map<number, number>();
+  const solutionColors = useMemo(() => {
+    return status === "lost" ? solutionColorByCell(challenge) : new Map<number, number>();
+  }, [status, challenge]);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const isUrgent = seconds <= 15 && status === "playing";
@@ -835,6 +937,7 @@ export function SoloChallenge({
 
     <SoloFoundWords
       found={found}
+      bonusWords={bonusWords}
       foundPaths={foundPaths}
       challengeRoutes={challenge.routes}
       activeTheme={activeTheme}
@@ -869,7 +972,8 @@ export function SoloChallenge({
         wordDifficulties={challenge.wordDifficulties}
         inspectWord={inspectWord}
         revived={revived}
-        onReviveWithAd={() => safeWatchAd(() => { setSeconds(20); setStatus("playing"); setRevived(true); })}
+        remainingRevives={remainingDailyRevives}
+        onReviveWithAd={handleReviveWithAd}
         daily={daily}
         accentColor={activeTheme.accentColor}
         onRetry={handleRetry}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as Linking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "../constants/oauth";
@@ -30,8 +30,15 @@ export function useDeepLinkHandler({
 }: UseDeepLinkHandlerParams) {
   const incomingUrl = Linking.useURL();
 
+  const handledUrlRef = useRef<string | null>(null);
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+
   useEffect(() => {
     if (!incomingUrl) return;
+    if (handledUrlRef.current === incomingUrl) return;
+    handledUrlRef.current = incomingUrl;
+
     let active = true;
     const parsedUrl = Linking.parse(incomingUrl);
     const oauthCode =
@@ -86,7 +93,7 @@ export function useDeepLinkHandler({
           }
 
           if (data.user.progress) {
-            const merged = mergePlayerProgress(progress, data.user.progress, {
+            const merged = mergePlayerProgress(progressRef.current, data.user.progress, {
               preferRemoteBalances: true,
             });
             setProgress(merged);
@@ -113,7 +120,6 @@ export function useDeepLinkHandler({
     };
   }, [
     incomingUrl,
-    progress,
     setProgress,
     syncProgressToCloud,
     setAuthToken,

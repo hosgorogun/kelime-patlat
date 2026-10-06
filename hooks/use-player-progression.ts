@@ -412,6 +412,7 @@ export function usePlayerProgression({
   ]);
 
   // App resuming from background: socket liveness recovery and day reconciliation
+  // App backgrounding: immediately flush pending debounced progress to cloud
   useEffect(() => {
     if (!progressReady) return;
     const subscription = AppState.addEventListener("change", (nextAppState) => {
@@ -431,10 +432,18 @@ export function usePlayerProgression({
           }
           return current;
         });
+      } else if (nextAppState === "background" || nextAppState === "inactive") {
+        if (syncDebounceRef.current) {
+          clearTimeout(syncDebounceRef.current);
+          syncDebounceRef.current = null;
+        }
+        if (authToken && authToken !== "guest") {
+          void syncProgressToCloud(progressRef.current);
+        }
       }
     });
     return () => subscription.remove();
-  }, [progressReady]);
+  }, [progressReady, authToken, syncProgressToCloud]);
 
   // Autosave to AsyncStorage and debounce sync to cloud
   useEffect(() => {

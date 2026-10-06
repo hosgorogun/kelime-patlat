@@ -144,7 +144,7 @@ export function useCelebrationManager({
   const celebrationModalElement = (
     <CelebrationModal
       data={
-        screen === "home" || screen === "levels" || screen === "season"
+        screen !== "solo" && screen !== "game" && screen !== "room"
           ? celebrationQueue[0] || null
           : null
       }

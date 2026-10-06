@@ -1,3 +1,6 @@
+import { normalizeTrUpper } from "./tr-utils";
+import { WORD_CATALOG_DATA } from "./word-catalog";
+
 export const WORD_DEFINITIONS: Record<string, string> = {
   // Doğa
   "AY": "Dünya'nın tek doğal uydusu olan gök cismi.",
@@ -224,7 +227,16 @@ export type WordDetail = {
   source: "TDK" | "Yerel";
 };
 
+const MAX_DETAIL_CACHE_ENTRIES = 500;
 const DETAIL_CACHE = new Map<string, WordDetail>();
+
+function setCachedDetail(key: string, detail: WordDetail) {
+  if (DETAIL_CACHE.size >= MAX_DETAIL_CACHE_ENTRIES) {
+    const firstKey = DETAIL_CACHE.keys().next().value;
+    if (firstKey !== undefined) DETAIL_CACHE.delete(firstKey);
+  }
+  DETAIL_CACHE.set(key, detail);
+}
 
 export function getCachedWordDetail(word: string): WordDetail | null {
   const clean = word.trim();
@@ -245,6 +257,53 @@ export function getWordDefinition(word: string): string {
   if (foundKey && WORD_DEFINITIONS[foundKey]) return WORD_DEFINITIONS[foundKey];
 
   return `${word} - Kelime Patlat ile kelime dağarcığını zenginleştir!`;
+}
+
+import catalog from "../data/word-catalog.json";
+import { WORD_DICTIONARY } from "./puzzle-generator";
+
+// Sık kullanılan temel Türkçe 3-4 harfli kök kelimeler (tahtada en çok kurulan yan kelimeler)
+const COMMON_ROOT_WORDS = [
+  "TAŞ", "KUM", "GÖL", "GÜL", "KOR", "MOR", "SON", "MAL", "KAN", "YAN", "BİZ", "HER", "KİM", "HAK", "AŞK",
+  "YOL", "GÜZ", "KIŞ", "BAŞ", "GÖZ", "KAŞ", "DİŞ", "SAÇ", "BEL", "AYA", "ÇAL", "KAL", "SAL", "DAL", "BAL",
+  "YAL", "ZAR", "NAR", "VAR", "YOK", "DAR", "ZOR", "KOL", "BOY", "SOY", "BOZ", "TOZ", "POZ", "KÖZ", "SÖZ",
+  "GÖZ", "ÇÖP", "DÜŞ", "DÜŞÜ", "YAŞ", "DÜN", "GÜN", "SON", "ÖN", "ARK", "TÜY", "YÜN", "BEN", "SEN", "BİZ",
+  "SİZ", "İLE", "İÇ", "ÖZ", "TEK", "ÇİFT", "TAY", "KÖY", "BEY", "SOY", "YAY", "ÇAY", "PAY", "BAY", "FAY",
+  "HAT", "KAT", "YAT", "BAT", "ÇAT", "SAT", "TAT", "MAT", "PAT", "ŞAT", "ZAT", "KAS", "PAS", "TAS", "BAS",
+  "YAS", "MAS", "HAL", "SAL", "FAL", "NAL", "ÇAL", "KAL", "DAL", "BAL", "MAL", "ŞAL", "TUL", "KUL", "ÇUL",
+  "PUL", "DUL", "BUL", "ÇAL", "YOL", "SOL", "BOL", "KOL", "GOL", "ROL", "TOL", "ŞOM", "BOM", "KOM", "YOM",
+  "TAM", "ÇAM", "GAM", "HAM", "ŞAM", "ZAM", "YEM", "DEM", "NEM", "CEM", "GEM", "KEM", "SEM", "YEN", "GEN",
+  "TEN", "ŞEN", "ÇEN", "BEN", "SEN", "DEN", "FEN", "MEN", "HAN", "CAN", "KAN", "SAN", "TAN", "VAN", "YAN",
+  "ÇAN", "ŞAN", "BİN", "DİN", "CİN", "KİN", "MİN", "PİN", "TİN", "ÇİN", "SİN", "GÜN", "DÜN", "YÜN", "DÜK",
+  "KÖK", "YÖK", "LÖK", "GÖK", "BÖK", "TÜK", "YÜK", "BÜK", "KÜK", "ÇÖK", "DÖK", "SÖK", "GÖR", "KÖR", "SÜR",
+  "PÜR", "KÜR", "TÜR", "HÜR", "GÜR", "SÜT", "BÜT", "GÜT", "GÜZ", "DÜZ", "YÜZ", "BÜZ", "GÜZ", "SÜZ", "TÜZ",
+  "GAZ", "SAZ", "YAZ", "BAZ", "NAZ", "FAZ", "HAZ", "LAZ", "PAZ", "TAZ", "BOZ", "DOZ", "KOZ", "POZ", "TOZ",
+  "KÖZ", "GÖZ", "SÖZ", "ÖZ", "BUZ", "MUZ", "KUZ", "TUZ", "RUZ", "BİZ", "DİZ", "GİZ", "SİZ", "TİZ", "PİZ",
+  "KUŞ", "DUŞ", "MUŞ", "TUŞ", "PUŞ", "BAŞ", "KAŞ", "TAŞ", "YAŞ", "MAŞ", "ŞAŞ", "LOŞ", "HOŞ", "BOŞ", "COŞ",
+  "TOŞ", "DÖŞ", "KÖŞ", "DİŞ", "FİŞ", "ÇİŞ", "PİŞ", "ŞİŞ", "ŞİŞE", "KALE", "LALE", "JALE", "HALE", "JÖLE",
+  "BİNA", "VİNA", "KİRA", "SIRA", "PARA", "KARA", "DARA", "YARA", "SARA", "ÇIRA", "ŞIRA", "KURA", "BURA",
+  "ŞURA", "BABA", "ANNE", "DEDE", "NİNE", "ABLA", "BACIO", "KIZ", "OĞUL", "DOST", "KURT", "YURT", "KART",
+  "MART", "DART", "TART", "ŞART", "BART", "SERİ", "GERİ", "İLERİ", "BERİ", "DERİ", "PERİ", "ÇERİ", "VERİ"
+];
+
+const rawCatalogWords: string[] = Array.isArray((catalog as any)?.words)
+  ? (catalog as any).words.map((w: any) => normalizeTrUpper(w.word || w))
+  : [];
+
+const CATALOG_WORDS_SET = new Set<string>([
+  ...rawCatalogWords,
+  ...WORD_CATALOG_DATA.words.map((w) => normalizeTrUpper(w.word)),
+  ...WORD_DICTIONARY.map((w) => normalizeTrUpper(w.answer)),
+  ...Object.keys(WORD_DEFINITIONS).map((w) => normalizeTrUpper(w)),
+  ...COMMON_ROOT_WORDS.map((w) => normalizeTrUpper(w)),
+]);
+
+export function isValidTurkishWord(word: string): boolean {
+  if (!word || word.trim().length < 3) return false;
+  const clean = normalizeTrUpper(word);
+  if (CATALOG_WORDS_SET.has(clean)) return true;
+  if (WORD_DEFINITIONS[clean]) return true;
+  return false;
 }
 
 export async function fetchWordDefinition(word: string, apiBaseUrl?: string): Promise<string> {
@@ -296,7 +355,7 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
             example: data.example,
             source: data.source || "TDK",
           };
-          DETAIL_CACHE.set(trUpper, detail);
+          setCachedDetail(trUpper, detail);
           return detail;
         }
       }
@@ -330,7 +389,7 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
           example: firstExample,
           source: "TDK",
         };
-        DETAIL_CACHE.set(trUpper, detail);
+        setCachedDetail(trUpper, detail);
         return detail;
       }
     }
@@ -346,6 +405,6 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
     definitions: [localDef],
     source: "Yerel",
   };
-  DETAIL_CACHE.set(trUpper, fallbackDetail);
+  setCachedDetail(trUpper, fallbackDetail);
   return fallbackDetail;
 }

@@ -1,5 +1,6 @@
 import type { Server } from "socket.io";
 import type { RoomSnapshot } from "../../shared/game";
+import { normalizeTr } from "../../shared/tr-utils";
 import type { Room } from "./types";
 
 export function snapshot(room: Room, viewerId: string): RoomSnapshot {
@@ -23,7 +24,9 @@ export function snapshot(room: Room, viewerId: string): RoomSnapshot {
     bestScore: player!.bestScore,
     bestTempo: player!.bestTempo,
   }));
-  const viewerFoundSet = new Set(room.foundWords.filter((e) => e.playerId === viewerId).map((e) => e.word));
+  const viewerFoundNormalized = new Set(
+    room.foundWords.filter((e) => e.playerId === viewerId).map((e) => normalizeTr(e.word))
+  );
   // Oyuncuya kendi kelimeleri açık, rakip/bot kelimeleri ise sadece skor/sayaç hesabı için gizli/boş gönderilir
   const foundWords = room.foundWords.map((entry) =>
     entry.playerId === viewerId
@@ -34,7 +37,7 @@ export function snapshot(room: Room, viewerId: string): RoomSnapshot {
   const missedWords =
     room.status === "finished"
       ? room.words
-          .filter((w) => !viewerFoundSet.has(w))
+          .filter((w) => !viewerFoundNormalized.has(normalizeTr(w)))
           .map((w) => ({ word: w, path: room.routes[w] ?? [] }))
       : undefined;
 
@@ -53,6 +56,7 @@ export function snapshot(room: Room, viewerId: string): RoomSnapshot {
     board: room.board,
     wordsTotal: room.words.length,
     foundWords,
+    bonusWords: room.bonusWords,
     missedWords,
     scores: room.scores,
     players,

@@ -153,9 +153,8 @@ export function AuthScreenContainer(props: AuthScreenContainerProps) {
         reconnectGameSocket();
 
         const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
-        const seen = await AsyncStorage.getItem(key);
         let showWelcome = false;
-        if (!seen && !mergedProgress.welcomeRewardClaimed) {
+        if (!mergedProgress.welcomeRewardClaimed) {
           showWelcome = true;
         } else {
           await AsyncStorage.setItem(key, "true").catch(() => undefined);

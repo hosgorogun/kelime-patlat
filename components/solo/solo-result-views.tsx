@@ -183,6 +183,7 @@ export interface SoloLostViewProps {
   wordDifficulties: Record<string, "easy" | "medium" | "hard">;
   inspectWord: (word: string, path: number[] | null, border: string) => void;
   revived: boolean;
+  remainingRevives?: number;
   onReviveWithAd: () => void;
   daily: boolean;
   accentColor: string;
@@ -196,6 +197,7 @@ export function SoloLostView({
   wordDifficulties,
   inspectWord,
   revived,
+  remainingRevives = 3,
   onReviveWithAd,
   daily,
   accentColor,
@@ -233,14 +235,24 @@ export function SoloLostView({
         })}
       </View>
 
-      {!revived && (
+      {!revived && remainingRevives > 0 && (
         <Pressable
           onPress={onReviveWithAd}
           style={[styles.action, { backgroundColor: "#aef5e0", marginTop: 12 }]}
         >
-          <Text style={[styles.actionText, { color: "#293541" }]}>💾 SÜREYİ KURTAR (+20sn REKLAM)</Text>
+          <Text style={[styles.actionText, { color: "#293541" }]}>
+            💾 SÜREYİ KURTAR (+20sn REKLAM) · KALAN: {remainingRevives}/3
+          </Text>
           <Text style={[styles.actionArrow, { color: "#293541" }]}>⚡</Text>
         </Pressable>
+      )}
+
+      {!revived && remainingRevives <= 0 && (
+        <View style={{ marginTop: 10, padding: 10, backgroundColor: "#F3F4F6", borderRadius: 12, alignItems: "center" }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: "#6B7280" }}>
+            🔒 Bugünlük reklamla kurtarma hakkın tükendi (3/3).
+          </Text>
+        </View>
       )}
 
       {daily ? (

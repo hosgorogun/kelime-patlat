@@ -6,7 +6,7 @@ import { SOLUTION_ROUTE_COLORS, APP_WORD_PALETTE } from "@/shared/solo";
 import type { VisualTheme } from "@/shared/themes";
 import { styles } from "./solo-challenge.styles";
 
-export function SoloBoardGrid({
+export const SoloBoardGrid = React.memo(function SoloBoardGrid({
   boardRef,
   measureBoard,
   boardWidth,
@@ -61,7 +61,7 @@ export function SoloBoardGrid({
   foundCellColors: Map<number, { bg: string; border: string; letterText: string }>;
   solutionColors: Map<number, number>;
   radarHighlights: Set<number>;
-  feedback: "idle" | "invalid" | "accepted";
+  feedback: "idle" | "invalid" | "accepted" | "bonus";
   particles: { id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[];
   onGestureStart: (e: any) => void;
   onGestureMove: (e: any) => void;
@@ -174,19 +174,27 @@ export function SoloBoardGrid({
         });
       })}
 
-      {challenge.board.map((letter, index) => {
-        const order = selected.indexOf(index);
-        const isSelected = selectedSet.has(index);
-        const isTail = selected.at(-1) === index;
-        const isFound = foundCells.has(index);
-        const foundColor = foundCellColors.get(index);
-        const solutionColor = solutionColors.get(index);
-        const isSolution = solutionColor !== undefined;
-        const isRadar = radarHighlights.has(index);
-        const isInspected = Boolean(status !== "playing" && inspectedPath?.includes(index));
-        const inspectedOrder = (status !== "playing" && inspectedPath) ? inspectedPath.indexOf(index) : -1;
-        const isInspectedStart = status !== "playing" && inspectedOrder === 0;
-        const isInspectedEnd = (status !== "playing" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
+      {(() => {
+        const orderMap = new Map<number, number>();
+        selected.forEach((idx, i) => orderMap.set(idx, i));
+        const inspectedMap = new Map<number, number>();
+        if (status !== "playing" && inspectedPath) {
+          inspectedPath.forEach((idx, i) => inspectedMap.set(idx, i));
+        }
+
+        return challenge.board.map((letter, index) => {
+          const order = orderMap.get(index) ?? -1;
+          const isSelected = order !== -1;
+          const isTail = selected.length > 0 && selected[selected.length - 1] === index;
+          const isFound = foundCells.has(index);
+          const foundColor = foundCellColors.get(index);
+          const solutionColor = solutionColors.get(index);
+          const isSolution = solutionColor !== undefined;
+          const isRadar = radarHighlights.has(index);
+          const inspectedOrder = inspectedMap.get(index) ?? -1;
+          const isInspected = inspectedOrder !== -1;
+          const isInspectedStart = status !== "playing" && inspectedOrder === 0;
+          const isInspectedEnd = (status !== "playing" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
         return (
           <View
             key={`${letter}-${index}`}
@@ -236,6 +244,7 @@ export function SoloBoardGrid({
                 isTail && styles.cellTail,
                 feedback === "invalid" && isSelected && styles.cellInvalid,
                 feedback === "accepted" && isSelected && styles.cellAccepted,
+                feedback === "bonus" && isSelected && styles.cellBonus,
                 isRadar && styles.cellRadar,
               ]}
             >
@@ -248,6 +257,7 @@ export function SoloBoardGrid({
                   challenge.size === 10 && styles.letterExtraSmall,
                   isSelected && { color: "#78350F" },
                   feedback === "accepted" && isSelected && { color: "#065F46" },
+                  feedback === "bonus" && isSelected && { color: "#854D0E" },
                   feedback === "invalid" && isSelected && { color: "#991B1B" },
                   foundColor && !isSolution && { color: foundColor.letterText },
                   isRadar && styles.letterRadar,
@@ -324,7 +334,8 @@ export function SoloBoardGrid({
             </View>
           </View>
         );
-      })}
+      });
+    })()}
       {particles.map(p => (
         <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
       ))}
@@ -343,4 +354,4 @@ export function SoloBoardGrid({
       />
     </Animated.View>
   );
-}
+});

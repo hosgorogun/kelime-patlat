@@ -228,9 +228,9 @@ export function VintagePuzzle({
 
   useEffect(() => {
     if (vintageProgress) {
-      setMaxUnlockedLevel(vintageProgress.maxUnlockedLevel ?? 1);
-      setCompletedLevels(new Set(vintageProgress.completedLevels ?? []));
-      setScore(vintageProgress.score ?? 0);
+      setMaxUnlockedLevel((prev) => Math.min(20, Math.max(prev, vintageProgress.maxUnlockedLevel ?? 1)));
+      setCompletedLevels((prev) => new Set([...Array.from(prev), ...(vintageProgress.completedLevels ?? [])]));
+      setScore((prev) => Math.max(prev, vintageProgress.score ?? 0));
     }
   }, [vintageProgress]);
 
@@ -573,8 +573,15 @@ export function VintagePuzzle({
         return;
       }
 
+      // Aktif kelimedeki yerleştirilen harf sırasına göre melodik nota artışı (Do-Re-Mi-Fa-Sol)
+      const currentWordObj = puzzle.words.find((w) => w.id === selectedWordId);
+      const letterIndexInWord = currentWordObj
+        ? currentWordObj.cells.findIndex(([cr, cc]) => cr === targetR && cc === targetC)
+        : 0;
+      const pitchIndex = letterIndexInWord >= 0 ? letterIndexInWord : tile.letter.charCodeAt(0) % 7;
+
       triggerHapticSelection();
-      playSelectionNote(tile.letter.charCodeAt(0) % 7);
+      playSelectionNote(pitchIndex);
 
       // Tahtaya harfi yerleştir
       const newBoard = playerBoard.map((rowArr) => [...rowArr]);

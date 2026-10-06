@@ -143,6 +143,8 @@ export type PlayerProgress = {
   loginDaysCount?: number;
   lastStreakCheckDate?: string;
   missionsDate?: string;
+  dailyRevivesDate?: string;
+  dailyRevivesCount?: number;
   dailyClaimed?: Record<string, boolean>;
   weeklyMissionsWeek?: string;
   weeklyClaimed?: Record<string, boolean>;
@@ -249,11 +251,11 @@ export type CyberTitle = {
 
 export const CYBER_TITLES: CyberTitle[] = [
   { id: "novice", name: "ÇAYLAK ROTA", badge: "[ÇAYLAK]", icon: "🌱", accent: "#50E3C2", unlockHint: "Oyuna başlarken açık.", unlocked: () => true },
-  { id: "scout", name: "SİBER İZCİ", badge: "[İZCİ]", icon: "🧭", accent: "#79C8FF", unlockHint: "3 maç tamamla.", unlocked: (p) => p.matches >= 3 },
+  { id: "scout", name: "SİBER İZCİ", badge: "[İZCİ]", icon: "🧭", accent: "#79C8FF", unlockHint: "3 maç tamamla.", unlocked: (p) => (p.matches >= 3 || (p.matchHistory?.length || 0) >= 3) },
   { id: "architect", name: "ROTA MİMARI", badge: "[MİMAR]", icon: "📐", accent: "#A78BFA", unlockHint: "Seviye 3'e ulaş.", unlocked: (p) => getPlayerLevel(p.xp) >= 3 },
   { id: "victor", name: "NEON HAKİMİ", badge: "[NEON HAKİMİ]", icon: "⚡", accent: "#00F5D4", unlockHint: "5 düello kazan.", unlocked: (p) => p.wins >= 5 },
   { id: "hunter", name: "DÜELLO AVCISI", badge: "[AVCI]", icon: "🎯", accent: "#F43F5E", unlockHint: "10 düello kazan.", unlocked: (p) => p.wins >= 10 },
-  { id: "gladiator", name: "ARENA KURDU", badge: "[GLADYATÖR]", icon: "⚔️", accent: "#FB923C", unlockHint: "20 maç tamamla.", unlocked: (p) => p.matches >= 20 },
+  { id: "gladiator", name: "ARENA KURDU", badge: "[GLADYATÖR]", icon: "⚔️", accent: "#FB923C", unlockHint: "20 maç tamamla.", unlocked: (p) => (p.matches >= 20 || (p.matchHistory?.length || 0) >= 20) },
   { id: "lexicon", name: "KELİME BÜKÜCÜ", badge: "[KELİME BÜKÜCÜ]", icon: "📚", accent: "#34D399", unlockHint: "En az 30 kelime çöz veya 7 harfli kelime bul.", unlocked: (p) => (p.history ? p.history.length >= 30 || p.history.some((w) => w.length >= 7) : false) || (p.missions?.wordsmith || 0) >= 1 },
   { id: "storm", name: "FIRTINA OPERATÖRÜ", badge: "[FIRTINA]", icon: "🌪️", accent: "#38BDF8", unlockHint: "En az 4 K/DK tempo hızına ulaş.", unlocked: (p) => (p.bestTempo || 0) >= 4 },
   { id: "firestreak", name: "ALEV HÜKÜMDARI", badge: "[ALEV MUHAFIZI]", icon: "🔥", accent: "#FF7849", unlockHint: "7 günlük galibiyet serisine ulaş.", unlocked: (p) => p.streak >= 7 },

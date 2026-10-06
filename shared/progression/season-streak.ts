@@ -12,9 +12,9 @@ import {
 } from "./progression.types";
 import { reconcileMissions } from "./progression-missions";
 
-import { getDayId, getWeekId } from "./date-utils";
+import { getDayId, getWeekId, getDiffDays, getPreviousDayId } from "./date-utils";
 
-export { getDayId, getWeekId };
+export { getDayId, getWeekId, getDiffDays, getPreviousDayId };
 
 function seededNumber(input: string) {
   return [...input].reduce((value, char) => ((value * 31) ^ char.charCodeAt(0)) >>> 0, 7_431);
@@ -121,9 +121,8 @@ export function reconcileDailyStreak(progress: PlayerProgress, todayId: string):
     };
   }
 
-  const lastDate = new Date(progress.dailyCompletedId + "T00:00:00Z");
-  const today = new Date(todayId + "T00:00:00Z");
-  if (isNaN(lastDate.getTime()) || isNaN(today.getTime())) {
+  const diffDays = getDiffDays(todayId, progress.dailyCompletedId);
+  if (isNaN(diffDays)) {
     return {
       updatedProgress: { ...progress, lastStreakCheckDate: todayId },
       shieldUsed: false,
@@ -132,8 +131,6 @@ export function reconcileDailyStreak(progress: PlayerProgress, todayId: string):
       previousStreak: progress.streak,
     };
   }
-  const diffTime = today.getTime() - lastDate.getTime();
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
   if (diffDays <= 1) {
     return {
@@ -149,8 +146,7 @@ export function reconcileDailyStreak(progress: PlayerProgress, todayId: string):
   const availableShields = progress.streakShields || 0;
 
   if (availableShields >= missedDays) {
-    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-    const yesterdayId = getDayId(yesterday);
+    const yesterdayId = getPreviousDayId(todayId, 1);
     return {
       updatedProgress: {
         ...progress,
@@ -182,6 +178,12 @@ export function reconcileDailyStreak(progress: PlayerProgress, todayId: string):
 export function getSeasonId(date = new Date()): string {
   const bimonthlySeason = Math.floor(date.getMonth() / 2) + 1;
   return `${date.getFullYear()}-S${String(bimonthlySeason).padStart(2, "0")}`;
+}
+
+export function getPreviousSeasonId(date = new Date()): string {
+  const currentMonth = date.getMonth();
+  const prevDate = new Date(date.getFullYear(), currentMonth - 2, 1);
+  return getSeasonId(prevDate);
 }
 
 export function getSeasonRemainingTime(date = new Date()): { days: number; hours: number; minutes: number; seconds: number; formatted: string } {
@@ -221,8 +223,9 @@ export function reconcileSeasonReset(progress: PlayerProgress, date = new Date()
     newLp = Math.floor(currentLp * 0.7);
   }
 
+  const previousSeason = lastReset || getPreviousSeasonId(date);
   const newHistoryEntry = {
-    seasonId: lastReset || "2026-S08",
+    seasonId: previousSeason,
     rank: oldRank,
     lp: currentLp,
     date: getDayId(date),
@@ -239,7 +242,7 @@ export function reconcileSeasonReset(progress: PlayerProgress, date = new Date()
     updatedProgress,
     resetResult: {
       seasonResetPerformed: true,
-      oldSeasonId: lastReset || "Önceki Sezon",
+      oldSeasonId: previousSeason,
       newSeasonId: currentSeasonId,
       previousRank: oldRank,
       previousLp: currentLp,
@@ -261,6 +264,15 @@ export function reconcilePlayerProgress(progress: PlayerProgress, date = new Dat
   // Sezonluk Lig Puanı Soft Reset Kontrolü
   const seasonRes = reconcileSeasonReset(currentProgress, date);
   currentProgress = seasonRes.updatedProgress;
+
+  // Günlük reklamla kurtarma (revive) hakkını yeni günde sıfırla
+  if (currentProgress.dailyRevivesDate !== todayId) {
+    currentProgress = {
+      ...currentProgress,
+      dailyRevivesDate: todayId,
+      dailyRevivesCount: 0,
+    };
+  }
 
   return {
     progress: currentProgress,

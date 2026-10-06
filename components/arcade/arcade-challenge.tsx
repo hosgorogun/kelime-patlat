@@ -11,6 +11,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
+import { isEqualTr } from "@/shared/tr-utils";
 import {
   createSoloBoard,
   APP_WORD_PALETTE,
@@ -20,7 +21,7 @@ import {
   getArcadeBoardClearBonus,
   calculateArcadeCombo,
 } from "@/shared/solo";
-import { getWordDefinition, fetchWordDetail, getCachedWordDetail } from "@/shared/dictionary";
+import { getWordDefinition, fetchWordDetail, getCachedWordDetail, isValidTurkishWord } from "@/shared/dictionary";
 import {
   initAudio,
   playSelectionNote,
@@ -50,7 +51,7 @@ import { ArcadeExitModal } from "./arcade-exit-modal";
 import { ArcadeRouteInspector } from "./arcade-route-inspector";
 import { ArcadeBoardGrid } from "./arcade-board-grid";
 
-type Feedback = "idle" | "invalid" | "accepted";
+type Feedback = "idle" | "invalid" | "accepted" | "bonus";
 
 export function ArcadeChallenge({
   onExit,
@@ -82,6 +83,7 @@ export function ArcadeChallenge({
 
   const [selected, setSelected] = useState<number[]>([]);
   const [found, setFound] = useState<string[]>([]);
+  const [bonusWords, setBonusWords] = useState<string[]>([]);
   const [foundPaths, setFoundPaths] = useState<number[][]>([]);
   const [inspectedPath, setInspectedPath] = useState<number[] | null>(null);
   const [inspectedColor, setInspectedColor] = useState<string | null>(null);
@@ -452,14 +454,53 @@ export function ArcadeChallenge({
       return;
     }
     const word = wordFromSelection(challenge.board, path);
-    if (!challenge.words.includes(word) || found.includes(word)) {
-      showInvalid("Bu rota hedef kelimelerden biri değil.");
+    const matchingWord = challenge.words.find((w) => isEqualTr(w, word));
+    const alreadyFound = found.some((f) => isEqualTr(f, word));
+
+    // 1. Ekstra / Bonus Kelime Kontrolü (Hedef değilse ama geçerli bir Türkçe kelimeyse)
+    if (!matchingWord) {
+      const isAlreadyBonus = bonusWords.some((b) => isEqualTr(b, word));
+      if (!isAlreadyBonus && isValidTurkishWord(word)) {
+        setBonusWords((prev) => [...prev, word]);
+        totalWordsFoundRef.current += 1;
+        allFoundWordsRef.current.push(word);
+        setFeedback("bonus");
+        triggerHapticSuccess();
+        playSuccessSound(word.length);
+        explodeParticles(path);
+
+        const bonusScore = word.length * 20;
+        setScore((s) => s + bonusScore);
+        setSeconds((s) => Math.min(MAX_ARCADE_TIME, s + 3));
+        setTimeBonusText(`✨ GİZLİ KELİME: ${word}! +3s ⏱️`);
+        const bonusTimer = setTimeout(() => setTimeBonusText(null), 1500);
+        particleTimers.current.push(bonusTimer);
+
+        setScoreBurstText(`+${bonusScore} 🪙`);
+        const scoreTimer = setTimeout(() => setScoreBurstText(null), 1200);
+        particleTimers.current.push(scoreTimer);
+
+        // Satır/sütun renkleri kalıcı olmaz: Kısa altın parlamanın ardından hücreler anında eski haline döner!
+        const resetBonusTimer = setTimeout(() => {
+          clearSelection();
+          setFeedback("idle");
+        }, 550);
+        particleTimers.current.push(resetBonusTimer);
+        return;
+      }
+
+      showInvalid(isAlreadyBonus ? "Bu bonus kelimeyi zaten buldun." : "Bu rota hedef kelimelerden biri değil.");
       return;
     }
 
-    const nextFound = [...found, word];
+    if (alreadyFound) {
+      showInvalid("Bu kelimeyi zaten buldun.");
+      return;
+    }
+
+    const nextFound = [...found, matchingWord];
     totalWordsFoundRef.current += 1;
-    allFoundWordsRef.current.push(word);
+    allFoundWordsRef.current.push(matchingWord);
 
     const now = Date.now();
     const elapsedSinceLastWord = lastWordTimeRef.current > 0 ? (now - lastWordTimeRef.current) / 1000 : 999;
@@ -525,6 +566,7 @@ export function ArcadeChallenge({
 
       const boardClearTimer = setTimeout(() => {
         setFound([]);
+        setBonusWords([]);
         setFoundPaths([]);
         setLevelSeed(nextSeed);
         setVariation((v) => v + 1);
@@ -549,6 +591,7 @@ export function ArcadeChallenge({
     setVariation((v) => v + 1);
     setSelected([]);
     setFound([]);
+    setBonusWords([]);
     setFoundPaths([]);
     setSeconds(ARCADE_INITIAL_TIME);
     setScore(0);
@@ -683,7 +726,7 @@ export function ArcadeChallenge({
 
   const { missedWords, missedCellColors } = useMemo(() => {
     if (status !== "lost") return { missedWords: [], missedCellColors: new Map<number, { bg: string; border: string; text: string }>() };
-    const missed = challenge.words.filter((w) => !found.includes(w));
+    const missed = challenge.words.filter((w) => !found.some((f) => isEqualTr(f, w)));
     const colors = new Map<number, { bg: string; border: string; text: string }>();
     missed.forEach((word, index) => {
       const colorIndex = (found.length + index) % APP_WORD_PALETTE.length;
@@ -699,11 +742,15 @@ export function ArcadeChallenge({
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const isUrgent = seconds <= 8;
 
+  const safeWatchAd = useMemo(() => watchAd ?? ((onReward: () => void) => onReward()), [watchAd]);
+
   const handleDoubleReward = () => {
-    triggerHapticSuccess();
-    gameSfx.victory();
-    setDoubled(true);
-    onCompleteRef.current(score, totalWordsFoundRef.current, true, totalCombosRef.current, allFoundWordsRef.current);
+    safeWatchAd(() => {
+      triggerHapticSuccess();
+      gameSfx.victory();
+      setDoubled(true);
+      onCompleteRef.current(score, totalWordsFoundRef.current, true, totalCombosRef.current, allFoundWordsRef.current);
+    });
   };
 
   const handleConfirmExit = () => {

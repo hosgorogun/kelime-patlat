@@ -130,6 +130,7 @@ export const BoardCell = React.memo(({
           isBotTail && styles.cellTailBot,
           selectionFeedback === "invalid" && selected && styles.cellInvalid,
           selectionFeedback === "accepted" && selected && styles.cellAccepted,
+          selectionFeedback === "bonus" && selected && styles.cellBonus,
           status === "finished" && selected && styles.cellFinished,
         ]}
       >
@@ -285,6 +286,15 @@ const styles = StyleSheet.create({
   cellAccepted: {
     backgroundColor: "#F0F5ED",
     borderColor: "#DCE1D7",
+  },
+  cellBonus: {
+    backgroundColor: "#FEF9C3",
+    borderColor: "#FACC15",
+    borderWidth: 2,
+    shadowColor: "#EAB308",
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   cellFound: {
     backgroundColor: "#F0F5ED",

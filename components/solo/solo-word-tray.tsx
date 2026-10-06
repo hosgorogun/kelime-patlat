@@ -4,7 +4,7 @@ import { styles } from "./solo-challenge.styles";
 
 export type SoloWordTrayProps = {
   status: "playing" | "won" | "lost";
-  feedback: "idle" | "invalid" | "accepted";
+  feedback: "idle" | "invalid" | "accepted" | "bonus";
   selectedLength: number;
   activeWord: string;
   activeTheme: {
@@ -27,6 +27,7 @@ export const SoloWordTray = React.memo(({
         { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder },
         feedback === "invalid" && styles.trayInvalid,
         (feedback === "accepted" || status === "won") && styles.trayAccepted,
+        feedback === "bonus" && styles.trayBonus,
         status === "lost" && styles.trayInvalid,
       ]}
     >
@@ -35,6 +36,8 @@ export const SoloWordTray = React.memo(({
           ? ">> SEVİYE TAMAMLANDI"
           : status === "lost"
           ? ">> SÜRE BİTTİ"
+          : feedback === "bonus"
+          ? ">> ✨ GİZLİ BONUS KELİME BULUNDU!"
           : feedback === "invalid"
           ? ">> BAĞLANTI HATASI"
           : feedback === "accepted"

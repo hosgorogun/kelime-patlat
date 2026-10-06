@@ -51,7 +51,7 @@ export const vintageStyles = StyleSheet.create({
   },
   newspaperKicker: {
     color: "#98732c",
-    fontSize: 8.5,
+    fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.6,
   },

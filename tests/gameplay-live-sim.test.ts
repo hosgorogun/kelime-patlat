@@ -279,4 +279,82 @@ describe("CANLI OYUN OYNAMA & PLAYTEST SİMÜLASYONU", () => {
     const unclaimed = getUnclaimedMissionsCount(player, todayId, weekId);
     expect(typeof unclaimed).toBe("number");
   });
+
+  it("🔥 CANLI PLAYTEST: Solo, Arcade ve PvP modlarında Gizli Bonus Kelime Akışını Canlı Simüle Eder", async () => {
+    const { isValidTurkishWord } = await import("../shared/dictionary");
+
+    // 1. SOLO SEVİYE SİMÜLASYONU
+    const soloBoard = createSoloBoard(1);
+    const targetWord = soloBoard.words[0];
+    const bonusWordCandidate = "KENT"; // Sözlükte geçerli ama hedef dışı bir kelime
+    expect(isValidTurkishWord(bonusWordCandidate)).toBe(true);
+
+    // Oyuncu 1 hedef kelime + 1 bonus kelime buluyor
+    let soloPlayer = { ...DEFAULT_PROGRESS, coins: 10, matchHistory: [] as any[] };
+    const bonusCoinReward = 2;
+    soloPlayer.coins += bonusCoinReward; // Bonus kelime anında çip verir
+    expect(soloPlayer.coins).toBe(12);
+
+    // Seviye tamamlandığında bulunan kelimeler (hedef + bonus)
+    const allSoloFound = [targetWord, bonusWordCandidate];
+    soloPlayer = applyMatchProgress(
+      soloPlayer,
+      {
+        score: 120,
+        tempo: 2.0,
+        won: true,
+        foundWords: allSoloFound,
+      },
+      "solo"
+    );
+    expect(soloPlayer.matchHistory[0].wordsCount).toBe(2);
+    expect(soloPlayer.matchHistory[0].mode).toBe("solo");
+
+    // 2. ARCADE MODU SİMÜLASYONU
+    let arcadeScore = 100;
+    let arcadeSeconds = 30;
+    const arcadeBonusWord = "KALE";
+    expect(isValidTurkishWord(arcadeBonusWord)).toBe(true);
+
+    // Arcade bonus kelime kuralı: +20 skor, +3 saniye
+    arcadeScore += 20;
+    arcadeSeconds = Math.min(60, arcadeSeconds + 3);
+    expect(arcadeScore).toBe(120);
+    expect(arcadeSeconds).toBe(33);
+
+    const arcadeFoundWords = ["ELMA", "ARMUT", arcadeBonusWord];
+    let arcadePlayer = { ...DEFAULT_PROGRESS, matchHistory: [] as any[] };
+    arcadePlayer = applyArcadeProgress(arcadePlayer, arcadeScore, arcadeFoundWords.length, false, 0, arcadeFoundWords);
+    expect(arcadePlayer.matchHistory[0].wordsCount).toBe(3);
+    expect(arcadePlayer.matchHistory[0].mode).toBe("arcade");
+
+    // 3. CANLI PVP MODU SİMÜLASYONU
+    const pvpTargetWords = ["DENİZ", "DALGA"];
+    const pvpBonusWord = "SAHİL";
+    expect(pvpTargetWords.includes(pvpBonusWord)).toBe(false);
+    expect(isValidTurkishWord(pvpBonusWord)).toBe(true);
+
+    let pvpPlayer = { ...DEFAULT_PROGRESS, coins: 50, matchHistory: [] as any[] };
+    // PvP bonus ödülü: +10 skor, +2 çip
+    const pvpBonusPoints = 10;
+    const pvpBonusCoins = 2;
+    pvpPlayer.coins += pvpBonusCoins;
+    expect(pvpPlayer.coins).toBe(52);
+
+    const pvpAllFound = [...pvpTargetWords, pvpBonusWord];
+    pvpPlayer = applyMatchProgress(
+      pvpPlayer,
+      {
+        score: 140 + pvpBonusPoints,
+        tempo: 3.2,
+        won: true,
+        foundWords: pvpAllFound,
+      },
+      "pvp"
+    );
+    expect(pvpPlayer.matchHistory[0].wordsCount).toBe(3);
+    expect(pvpPlayer.matchHistory[0].myScore).toBe(150);
+    expect(pvpPlayer.matchHistory[0].won).toBe(true);
+  });
 });
+

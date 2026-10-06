@@ -48,6 +48,7 @@ export function usePvpGameCoordinator({
 
   const clearSelectionRef = useRef<() => void>(() => {});
   const onWordAcceptedRef = useRef<(foundWords: RoomSnapshot["foundWords"]) => void>(() => {});
+  const onWordBonusRef = useRef<(payload: { word: string; selection: number[]; bonusPoints: number; coins: number }) => void>(() => {});
   const onWordRejectedRef = useRef<(payload?: { word?: string; reason?: string }) => void>(() => {});
 
   const setInspectedPathRef = useRef<(p: number[] | null) => void>(() => {});
@@ -58,6 +59,9 @@ export function usePvpGameCoordinator({
 
   const handleWordAccepted = React.useCallback((words: RoomSnapshot["foundWords"]) => {
     onWordAcceptedRef.current(words);
+  }, []);
+  const handleWordBonus = React.useCallback((payload: { word: string; selection: number[]; bonusPoints: number; coins: number }) => {
+    onWordBonusRef.current(payload);
   }, []);
   const handleWordRejected = React.useCallback((payload?: { word?: string; reason?: string }) => {
     onWordRejectedRef.current(payload);
@@ -93,6 +97,7 @@ export function usePvpGameCoordinator({
     setNotice,
     setGlobalToast,
     onWordAccepted: handleWordAccepted,
+    onWordBonus: handleWordBonus,
     onWordRejected: handleWordRejected,
     clearSelection: handleClearSelection,
     setInspectedPath: handleSetInspectedPath,
@@ -166,6 +171,33 @@ export function usePvpGameCoordinator({
       gameSfx.accepted();
       boardSelection.clearFeedbackLater(360);
     }
+  };
+
+  onWordBonusRef.current = (payload) => {
+    if (boardSelection.pendingWordTimeoutRef.current) {
+      clearTimeout(boardSelection.pendingWordTimeoutRef.current);
+    }
+    boardSelection.pendingWordRef.current = null;
+    boardSelection.setSelectionFeedback("bonus");
+    boardSelection.explodeParticles(payload.selection || boardSelection.selectionRef.current);
+    haptics.success();
+    gameSfx.victory();
+    setNotice(`✨ GİZLİ BONUS KELİME: “${payload.word}”! +${payload.bonusPoints} PUAN`);
+
+    // Oyuncuya anında 2 çip bonusu ver ve buluta eşitle
+    if (payload.coins && payload.coins > 0) {
+      setProgress((curr) => {
+        const updated = {
+          ...curr,
+          coins: (curr.coins ?? 0) + payload.coins,
+        };
+        void syncProgressToCloud(updated);
+        return updated;
+      });
+    }
+
+    // Hücreleri kısa altın parıltıdan sonra serbest bırak
+    boardSelection.clearFeedbackLater(550);
   };
 
   onWordRejectedRef.current = (payload) => {

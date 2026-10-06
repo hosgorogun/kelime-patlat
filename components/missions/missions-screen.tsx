@@ -97,7 +97,7 @@ export function MissionsScreen({
       const diffWeekly = Math.max(0, nextMonday.getTime() - now.getTime());
       const weeklyDays = Math.floor(diffWeekly / (1000 * 60 * 60 * 24));
       const weeklyHours = Math.floor((diffWeekly % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const weeklyMins = Math.floor((diffWeekly % (1000 * 60)) / 1000);
+      const weeklyMins = Math.floor((diffWeekly % (1000 * 60 * 60)) / (1000 * 60));
       const weeklySecs = Math.floor((diffWeekly % (1000 * 60)) / 1000);
       setTimeUntilWeeklyReset(
         weeklyDays > 0
@@ -237,12 +237,12 @@ export function MissionsScreen({
                     onPress={() => handleClaimMission(mission)}
                     style={styles.claimBtn}
                   />
-                ) : mission.actionType === "daily_route" ? (
+                ) : (mission.actionType === "daily_route" || (mission.actionType as any) === "daily_mystery") ? (
                   <GameButton
-                    label="GÜNLÜK ROTA"
+                    label="GİZEMİ ÇÖZ"
                     variant="emerald"
                     size="sm"
-                    onPress={onPlayDaily}
+                    onPress={() => onNavigate?.("home")}
                     style={styles.claimBtn}
                   />
                 ) : (mission.actionType === "duel_play" || mission.actionType === "duel_win") && onNavigate ? (

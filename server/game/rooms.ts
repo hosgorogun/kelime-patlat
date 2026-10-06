@@ -14,6 +14,7 @@ import {
 import { getRandomBotPersona } from "../../shared/botPersonas";
 import { loadLeaderboard } from "./mongo-store";
 import { isEqualTr } from "../../shared/tr-utils";
+import { isValidTurkishWord } from "../../shared/dictionary";
 
 export { cleanCode } from "./schemas";
 import {
@@ -230,6 +231,7 @@ function startRound(io: Server, room: Room) {
   room.words = words;
   room.routes = routes;
   room.foundWords = [];
+  room.bonusWords = {};
   room.scores = Object.fromEntries([room.host, room.guest].filter(Boolean).map((player) => [player!.id, 0]));
   room.status = "playing";
   room.startedAt = Date.now() + 3000;
@@ -292,8 +294,19 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
     room.rematchTimer = null;
   }
 
-  // Eğer maç oynanırken bir oyuncu odadan çıkarsa, kalan oyuncu hükmen kazanır
   if (room.status === "playing") {
+    if (room.roundEndTimer) {
+      clearTimeout(room.roundEndTimer);
+      room.roundEndTimer = undefined;
+    }
+    if (room.botTurnTimer) {
+      clearTimeout(room.botTurnTimer);
+      room.botTurnTimer = undefined;
+    }
+    if (room.disconnectTimer) {
+      clearTimeout(room.disconnectTimer);
+      room.disconnectTimer = undefined;
+    }
     const remaining = room.host.id === playerId ? room.guest : room.host;
     if (remaining) {
       room.winnerId = remaining.id;
@@ -844,7 +857,27 @@ export function registerGameRooms(io: Server) {
       if (targetWord) {
         claimWord(io, room, player.id, targetWord, selection);
       } else {
-        return socket.emit("word:rejected", { word, reason: "invalid" });
+        if (!room.bonusWords) room.bonusWords = {};
+        const playerBonusList = room.bonusWords[player.id] || [];
+        const isAlreadyBonus = playerBonusList.some((b) => isEqualTr(b, word));
+
+        if (!isAlreadyBonus && isValidTurkishWord(word)) {
+          // Oyuncu geçerli bir gizli bonus kelime buldu!
+          playerBonusList.push(word);
+          room.bonusWords[player.id] = playerBonusList;
+
+          // Bonus skor ve çip ödülü: +10 puan
+          const bonusPoints = 10;
+          room.scores[player.id] = (room.scores[player.id] ?? 0) + bonusPoints;
+          room.message = `${player.name} gizli bonus kelime buldu: “${word}”! +${bonusPoints} puan ✨`;
+
+          // Hem odaya anlık skor güncellemesini hem de oyuncuya özel bonus bilgisini ilet
+          emitRoom(io, room);
+          socket.emit("word:bonus", { word, selection, bonusPoints, coins: 2 });
+          return;
+        }
+
+        return socket.emit("word:rejected", { word, reason: isAlreadyBonus ? "already_found" : "invalid" });
       }
     });
 
@@ -982,6 +1015,18 @@ export function registerGameRooms(io: Server) {
                 currentRoom.message = `${currentPlayer.name} maçı terk etti.`;
               }
               currentRoom.status = "finished";
+              if (currentRoom.roundEndTimer) {
+                clearTimeout(currentRoom.roundEndTimer);
+                currentRoom.roundEndTimer = undefined;
+              }
+              if (currentRoom.botTurnTimer) {
+                clearTimeout(currentRoom.botTurnTimer);
+                currentRoom.botTurnTimer = undefined;
+              }
+              if (currentRoom.disconnectTimer) {
+                clearTimeout(currentRoom.disconnectTimer);
+                currentRoom.disconnectTimer = undefined;
+              }
               recordRoundForLeaderboard(io, currentRoom);
               emitRoom(io, currentRoom);
             }

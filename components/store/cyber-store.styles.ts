@@ -7,15 +7,15 @@ export const styles = StyleSheet.create({
   backButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", alignItems: "center", justifyContent: "center" },
   backText: { color: "#293541", fontSize: 26, lineHeight: 28 },
   headerTitleWrap: { flex: 1, marginLeft: 12, marginRight: 8 },
-  headerKicker: { color: "#8c763b", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  headerKicker: { color: "#8c763b", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
   headerTitle: { color: "#293541", fontSize: 26, fontWeight: "900", marginTop: 2, letterSpacing: 0.3, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
   coinBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "#F0F5ED", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 14, borderWidth: 1.5, borderColor: "#DCE1D7", gap: 4, shadowColor: "#293541", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   coinIcon: { fontSize: 14 },
   coinText: { color: "#98732c", fontSize: 14, fontWeight: "900" },
-  coinUnit: { color: "#293541", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  coinUnit: { color: "#293541", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
 
   msgBanner: { backgroundColor: "#F0F5ED", padding: 12, borderRadius: 14, borderWidth: 1, borderColor: "#DCE1D7", marginBottom: 12 },
-  msgBannerText: { color: "#2a9c7a", fontSize: 11, fontWeight: "800", textAlign: "center" },
+  msgBannerText: { color: "#2a9c7a", fontSize: 11.5, fontWeight: "800", textAlign: "center" },
 
   storeList: { gap: 10 },
   tabs: { flexDirection: "row", backgroundColor: "#FFFFFF", borderRadius: 14, padding: 4, marginBottom: 14, borderWidth: 1.5, borderColor: "#DCE1D7" },
@@ -25,28 +25,29 @@ export const styles = StyleSheet.create({
   tabTextActive: { color: "#293541" },
   tabIntro: { padding: 14, borderRadius: 16, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7" },
   tabIntroTitle: { color: "#293541", fontSize: 13, fontWeight: "900" },
-  tabIntroText: { color: "#293541", fontSize: 10, marginTop: 4 },
+  tabIntroText: { color: "#54646B", fontSize: 11, marginTop: 4, lineHeight: 15 },
   cosmeticGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, width: "100%" },
 
   /* Kompakt Grid Kartlar */
   cosmeticCard: {
     width: "31%",
-    minHeight: 120,
-    borderRadius: 16,
+    height: 142,
+    borderRadius: 18,
     borderWidth: 1.5,
-    padding: 10,
+    padding: 8,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#293541",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 2,
   },
   cosmeticCardSelected: {
     backgroundColor: "#EBFBFA",
     borderWidth: 2,
+    borderColor: "#10B981",
   },
   cosmeticRing: {
     width: 48,
@@ -84,14 +85,15 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cosmeticCardName: {
-    fontSize: 10.5,
+    fontSize: 9.5,
     fontWeight: "900",
     textAlign: "center",
     marginVertical: 4,
+    letterSpacing: 0.2,
   },
   cosmeticCardBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     borderRadius: 8,
     width: "100%",
     alignItems: "center",
@@ -102,14 +104,14 @@ export const styles = StyleSheet.create({
 
   /* Tahta Görünümleri */
   realisticBoardWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     borderWidth: 1.5,
-    padding: 4,
+    padding: 2,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 6,
+    overflow: "hidden",
   },
   miniBoardGrid: {
     flexDirection: "row",
@@ -159,9 +161,30 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, marginBottom: 2 },
-  sectionTitleHeader: { color: "#293541", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
-  sectionSubHeader: { color: "#293541", fontSize: 8, fontWeight: "900" },
+  sectionHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 18,
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  sectionTitleHeader: {
+    color: "#293541",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  sectionSubHeader: {
+    color: "#64748B",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    backgroundColor: "rgba(220, 225, 215, 0.4)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
   dailyRewardChestCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -190,7 +213,7 @@ export const styles = StyleSheet.create({
   },
   dailyChestKicker: {
     color: "#98732c",
-    fontSize: 8.5,
+    fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -204,7 +227,7 @@ export const styles = StyleSheet.create({
   },
   dailyChestBadgeText: {
     color: "#98732c",
-    fontSize: 7.5,
+    fontSize: 9,
     fontWeight: "900",
   },
   dailyChestTitle: {
@@ -217,10 +240,10 @@ export const styles = StyleSheet.create({
     textShadowRadius: 0,
   },
   dailyChestDesc: {
-    color: "#293541",
-    fontSize: 10,
+    color: "#54646B",
+    fontSize: 11,
     marginTop: 2,
-    lineHeight: 14,
+    lineHeight: 15,
   },
   dailyChestBtn: {
     backgroundColor: "#ffe5b3",
@@ -243,11 +266,11 @@ export const styles = StyleSheet.create({
 
   adBannerCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", padding: 14, borderRadius: 20, borderWidth: 1.5, borderColor: "#DCE1D7", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   adIconCircle: { width: 44, height: 44, borderRadius: 15, backgroundColor: "rgba(62, 232, 181, 0.12)", borderWidth: 1, borderColor: "#DCE1D7", alignItems: "center", justifyContent: "center", marginRight: 12 },
-  adBannerKicker: { color: "#2a9c7a", fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
+  adBannerKicker: { color: "#2a9c7a", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
   adFreeBadge: { backgroundColor: "rgba(62, 232, 181, 0.2)", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6 },
-  adFreeText: { color: "#2a9c7a", fontSize: 7, fontWeight: "900" },
+  adFreeText: { color: "#2a9c7a", fontSize: 9, fontWeight: "900" },
   adBannerTitle: { color: "#293541", fontSize: 13, fontWeight: "900", marginTop: 2, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
-  adBannerDesc: { color: "#293541", fontSize: 10, marginTop: 2 },
+  adBannerDesc: { color: "#54646B", fontSize: 11, marginTop: 2 },
   adButton: { backgroundColor: "#FFD66E", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 64 },
   adButtonText: { color: "#293541", fontSize: 12, fontWeight: "900" },
 
@@ -267,10 +290,10 @@ export const styles = StyleSheet.create({
   },
   inventoryCountText: {
     color: "#4a7ebf",
-    fontSize: 8.5,
+    fontSize: 9.5,
     fontWeight: "900",
   },
-  productDesc: { color: "#293541", fontSize: 10, marginTop: 2, lineHeight: 14 },
+  productDesc: { color: "#54646B", fontSize: 11, marginTop: 2, lineHeight: 15 },
 
   chipBuyButton: { backgroundColor: "#FFD66E", paddingHorizontal: 14, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center", minWidth: 76, shadowColor: "#293541", shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
   chipBuyButtonDisabled: { backgroundColor: "#F1F3EE", borderWidth: 1, borderColor: "#DCE1D7", shadowOpacity: 0, elevation: 0 },

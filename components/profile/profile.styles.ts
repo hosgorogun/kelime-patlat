@@ -27,7 +27,7 @@ export const styles = StyleSheet.create({
   },
   backText: { color: "#293541", fontSize: 26, lineHeight: 28 },
   headerTextWrap: { flex: 1, marginLeft: 10 },
-  overline: { color: "#8c7540", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  overline: { color: "#8c7540", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
   title: { color: "#293541", fontSize: 26, fontWeight: "900", marginTop: 2, letterSpacing: 0.3 },
   headerChipsBadge: {
     flexDirection: "row",
@@ -67,7 +67,7 @@ export const styles = StyleSheet.create({
   },
   tabBtnText: {
     color: "#64748B",
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.4,
   },
@@ -139,7 +139,7 @@ export const styles = StyleSheet.create({
   },
   levelBadgeText: {
     color: "#293541",
-    fontSize: 8,
+    fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
