@@ -7,7 +7,7 @@ import { CyberBannerAd } from "../common/cyber-banner-ad";
 import { PremiumDock } from "../common/premium-dock";
 import { GlobalGameToast, type ToastData } from "../common/global-game-toast";
 import { haptics } from "@/lib/haptics";
-import type { PlayerProgress } from "@/shared/progression";
+import type { MilestoneReward, PlayerProgress } from "@/shared/progression";
 
 export interface SoloLevelsScreenProps {
   soloUnlockedLevel: number;
@@ -47,7 +47,7 @@ export function SoloLevelsScreen({
         onOpenLivesModal={onOpenLivesModal}
         onBack={() => onNavigate("home")}
         onSelect={onSelectLevel}
-        onClaimMilestone={(milestone) => {
+        onClaimMilestone={(milestone: any) => {
           haptics.success();
           claimMilestoneOnServer(milestone.level, (curr) => ({
             ...curr,

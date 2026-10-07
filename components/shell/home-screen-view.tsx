@@ -8,7 +8,7 @@ import { TermsModal } from "../modals/terms-modal";
 import { WelcomeRewardModal } from "../modals/welcome-reward-modal";
 import { useProgression, useNavigation, useAuth, useUIFeedback, usePvP } from "@/context";
 import type { BoardSize, LeaderboardEntry } from "@/shared/game";
-import type { DailyChallenge, PlayerProgress, ThemePackId } from "@/shared/progression";
+import type { DailyChallenge, PlayerProgress } from "@/shared/progression";
 
 export interface HomeScreenViewProps {
   safeName?: string;
@@ -27,7 +27,6 @@ export interface HomeScreenViewProps {
   onSolo?: () => void;
   onLeaderboard?: () => void;
   onOpenLivesModal?: () => void;
-  onSelectTheme?: (theme: ThemePackId) => void;
   onClaimDailyReward?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
   selectedModeInfo?: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null;
@@ -69,9 +68,6 @@ export function HomeScreenView(props: HomeScreenViewProps) {
   const onSolo = props.onSolo ?? (() => navigation.setScreen("levels"));
   const onLeaderboard = props.onLeaderboard ?? (() => navigation.setScreen("season"));
   const onOpenLivesModal = props.onOpenLivesModal ?? (() => uiFeedback.setShowLivesModal(true));
-  const onSelectTheme =
-    props.onSelectTheme ??
-    ((selectedTheme) => progression.setProgress((curr) => ({ ...curr, selectedTheme })));
   const onClaimDailyReward = props.onClaimDailyReward ?? uiFeedback.handleClaimDailyReward;
   const onShowToast = props.onShowToast ?? uiFeedback.showToast;
   const selectedModeInfo = props.selectedModeInfo !== undefined ? props.selectedModeInfo : pvp.selectedModeInfo;
@@ -112,7 +108,6 @@ export function HomeScreenView(props: HomeScreenViewProps) {
         onShowGuide={onShowGuide}
         onOpenModeInfo={onOpenModeInfo}
         onOpenLivesModal={onOpenLivesModal}
-        onSelectTheme={onSelectTheme}
         unclaimedMissionsCount={unclaimedMissions}
         unclaimedMilestonesCount={unclaimedMilestones}
         onClaimDailyReward={onClaimDailyReward}

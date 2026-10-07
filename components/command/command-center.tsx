@@ -27,7 +27,6 @@ type CommandCenterProps = {
   onNavigate: (destination: NavKey) => void;
   onLeaderboard?: () => void;
   onShowGuide: () => void;
-  onSelectTheme?: (themeId: ThemePackId) => void;
   unclaimedMissionsCount?: number;
   unclaimedMilestonesCount?: number;
   onClaimDailyReward?: () => void;

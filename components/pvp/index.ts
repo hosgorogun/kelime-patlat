@@ -7,3 +7,4 @@ export * from "./room-waiting-container";
 export * from "./pvp-found-words-panel";
 export * from "./pvp-result-panel";
 export { PvpRouteInspectorCard } from "./pvp-route-inspector";
+export * from "./turn-matches-modal";

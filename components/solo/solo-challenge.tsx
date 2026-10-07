@@ -83,7 +83,7 @@ export function SoloChallenge({
   setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
 }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const safeWatchAd = useMemo(() => watchAd ?? ((onReward: () => void) => onReward()), [watchAd]);
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
@@ -303,9 +303,11 @@ export function SoloChallenge({
     }
     return { pageX: ne.pageX ?? 0, pageY: ne.pageY ?? 0 };
   };
+  const maxBoardFromHeight = height ? Math.floor(height * 0.46) : 410;
   const boardWidth = Math.min(
     width - (challenge.size === 10 ? 20 : challenge.size === 8 ? 32 : challenge.size === 6 ? 32 : 36),
-    challenge.size === 10 ? 410 : challenge.size === 8 ? 392 : challenge.size === 6 ? 374 : 356
+    challenge.size === 10 ? 410 : challenge.size === 8 ? 392 : challenge.size === 6 ? 374 : 356,
+    maxBoardFromHeight
   );
   const activeWord = wordFromSelection(challenge.board, selected);
 
@@ -755,9 +757,10 @@ export function SoloChallenge({
     if (status !== "playing") return;
     const BOARD_PAD = 4;
     const innerSize = boardWidth - BOARD_PAD * 2;
-    const ox = locationX - BOARD_PAD;
-    const oy = locationY - BOARD_PAD;
-    if (ox < 0 || ox > innerSize || oy < 0 || oy > innerSize) return;
+    // Harf kenarlarında hafif taşmalara (8px tolerans) izin ver
+    const ox = Math.max(0, Math.min(innerSize - 1, locationX - BOARD_PAD));
+    const oy = Math.max(0, Math.min(innerSize - 1, locationY - BOARD_PAD));
+    if (locationX < -8 || locationX > boardWidth + 8 || locationY < -8 || locationY > boardWidth + 8) return;
     const cellSize = innerSize / challenge.size;
     const col = Math.floor(ox / cellSize);
     const row = Math.floor(oy / cellSize);

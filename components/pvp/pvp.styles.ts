@@ -257,7 +257,8 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 4,
-    marginBottom: 6,
+    marginTop: 2,
+    marginBottom: 10,
     width: "100%",
   },
   duelTargetPill: {

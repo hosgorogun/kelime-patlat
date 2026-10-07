@@ -5,6 +5,7 @@ import { DailyLobbyScreen } from "./daily-lobby-screen";
 import { useProgression, useNavigation, useUIFeedback, usePvP } from "@/context";
 import type { DailyChallenge, PlayerProgress } from "@/shared/progression";
 import type { ToastData } from "../common/global-game-toast";
+import { haptics } from "@/lib/haptics";
 
 export interface DailyLobbyContainerProps {
   daily?: DailyChallenge;
@@ -34,6 +35,36 @@ export function DailyLobbyContainer(props: DailyLobbyContainerProps) {
   const setGlobalToast = props.setGlobalToast ?? uiFeedback.setGlobalToast;
   const setSelectedModeInfo = props.setSelectedModeInfo ?? ((mode) => pvp.setSelectedModeInfo(mode));
 
+  const handleBuyShield = () => {
+    const SHIELD_COST = 120;
+    const curCoins = progress.coins ?? 0;
+    if (curCoins < SHIELD_COST) {
+      haptics.error();
+      setGlobalToast({
+        id: `shield-fail-${Date.now()}`,
+        title: "YETERSİZ ÇİP",
+        subtitle: `Seri Kalkanı için ${SHIELD_COST} çip gerekli. Mevcut bakiyen: ${curCoins} çip.`,
+        icon: "🪙",
+        accentColor: "#EF4444",
+      });
+      return;
+    }
+
+    haptics.success();
+    setProgress((curr) => ({
+      ...curr,
+      coins: (curr.coins ?? 0) - SHIELD_COST,
+      streakShields: (curr.streakShields ?? 0) + 1,
+    }));
+    setGlobalToast({
+      id: `shield-success-${Date.now()}`,
+      title: "SERİ KALKANI ALINDI!",
+      subtitle: "1x Seri Kalkanı envanterine eklendi. Günlük serin güvende!",
+      icon: "🛡️",
+      accentColor: "#10B981",
+    });
+  };
+
   return (
     <MainShell
       active="home"
@@ -45,9 +76,20 @@ export function DailyLobbyContainer(props: DailyLobbyContainerProps) {
       <DailyLobbyScreen
         daily={daily}
         progress={progress}
+        setProgress={setProgress}
         onBack={() => setScreen("home")}
         onOpenInfo={() => setSelectedModeInfo("daily")}
         onSelectTheme={(themeId) => setProgress((curr) => ({ ...curr, selectedTheme: themeId }))}
+        onBuyShield={handleBuyShield}
+        onRewardClaimed={(reward) => {
+          setGlobalToast({
+            id: `weekend-claim-${Date.now()}`,
+            title: "HAFTA SONU ÖDÜLÜ ALINDI!",
+            subtitle: `+${reward.xp} XP, +${reward.coins} Çip${reward.shields ? ` ve +${reward.shields} 🛡️ Kalkan` : ""} hesabına eklendi!`,
+            icon: "🎁",
+            accentColor: "#8B5CF6",
+          });
+        }}
         onStartDaily={() => {
           props.setDailySession({
             ...daily,

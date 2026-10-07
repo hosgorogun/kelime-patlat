@@ -1,10 +1,8 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView, Switch } from "react-native";
 import {
-  THEME_PACKS,
   type PlayerProgress,
   type GenderType,
-  type ThemePackId,
 } from "@/shared/progression";
 import { triggerHapticError, triggerHapticSelection } from "@/shared/audio-haptics";
 import { styles } from "./profile.styles";
@@ -16,7 +14,6 @@ export type ProfileSettingsTabProps = {
   toggleHaptics: (val: boolean) => void;
   progress: PlayerProgress;
   onUpdateGender?: (gender: GenderType) => void;
-  onSelectTheme?: (theme: ThemePackId) => void;
   isGuest?: boolean;
   onOpenAuth?: () => void;
   onOpenLogoutModal: () => void;
@@ -33,7 +30,6 @@ export const ProfileSettingsTab = React.memo(({
   toggleHaptics,
   progress,
   onUpdateGender,
-  onSelectTheme,
   isGuest,
   onOpenAuth,
   onOpenLogoutModal,
@@ -131,37 +127,6 @@ export const ProfileSettingsTab = React.memo(({
             );
           })}
         </View>
-      </View>
-
-      {/* Hızlı Tema Tercihi */}
-      <View style={[styles.sectionHeader, { marginTop: 18 }]}>
-        <Text style={styles.sectionTitle}>🎨 OYUN TEMASI</Text>
-        <Text style={styles.sectionMeta}>GÖRSEL TEMA</Text>
-      </View>
-
-      <View style={styles.settingsCard}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {THEME_PACKS.map((theme) => {
-            const isSelected = (progress.selectedTheme || "classic") === theme.id;
-            return (
-              <Pressable
-                key={theme.id}
-                onPress={() => {
-                  triggerHapticSelection();
-                  onSelectTheme?.(theme.id as ThemePackId);
-                  if (onShowToast) {
-                    onShowToast("TEMA GÜNCELLENDİ", `"${theme.label}" teması kuşanıldı.`, "🎨", "#3EE8B5");
-                  }
-                }}
-                style={[styles.themePill, isSelected && styles.themePillSelected]}
-              >
-                <Text style={[styles.themePillText, isSelected && styles.themePillTextSelected]}>
-                  {theme.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
       </View>
 
       {/* Sistem Bilgisi */}

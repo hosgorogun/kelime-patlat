@@ -3,6 +3,7 @@ import { View, Text, Pressable, Image } from "react-native";
 import type { LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { getTierColor, getMinLpForTier, getPlayerLevel, AVATARS, type AvatarId } from "@/shared/progression";
+import type { WeeklyDivisionCohort } from "@/shared/leagues";
 import { styles } from "./season-hub.styles";
 import type { RankingType } from "./season-mock-data";
 
@@ -14,9 +15,10 @@ export type SeasonLeaderboardTabProps = {
   scoreDiffToLeader: number;
   rankingType: RankingType;
   setRankingType: (type: RankingType) => void;
-  leaderboardFilter: "global" | "friends";
-  setLeaderboardFilter: (filter: "global" | "friends") => void;
+  leaderboardFilter: "global" | "friends" | "division";
+  setLeaderboardFilter: (filter: "global" | "friends" | "division") => void;
   displayedLeaderboard: LeaderboardEntry[];
+  weeklyCohort?: WeeklyDivisionCohort;
   top1?: LeaderboardEntry;
   top2?: LeaderboardEntry;
   top3?: LeaderboardEntry;
@@ -40,6 +42,7 @@ export const SeasonLeaderboardTab = React.memo(({
   leaderboardFilter,
   setLeaderboardFilter,
   displayedLeaderboard,
+  weeklyCohort,
   top1,
   top2,
   top3,
@@ -136,22 +139,133 @@ export const SeasonLeaderboardTab = React.memo(({
               👥 ARKADAŞLAR
             </Text>
           </Pressable>
+          <Pressable
+            onPress={() => { triggerHapticSelection(); setLeaderboardFilter("division"); }}
+            style={[styles.toolbarPill, leaderboardFilter === "division" && styles.toolbarPillActiveScope]}
+          >
+            <Text style={[styles.toolbarPillText, leaderboardFilter === "division" && styles.toolbarPillTextActive]}>
+              🏆 20'Lİ LİG
+            </Text>
+          </Pressable>
         </View>
       </View>
 
-      {/* Vitrin Podium Showcase (Top 3) */}
-      {displayedLeaderboard.length >= 2 && (
-        <View style={styles.podiumContainer}>
-          <View style={styles.podiumVitrinHeader}>
-            <View style={styles.podiumVitrinTag}>
-              <Text style={{ fontSize: 13 }}>👑</Text>
-              <Text style={styles.podiumVitrinTagText}>LİDERLER VİTRİNİ</Text>
+      {leaderboardFilter === "division" ? (
+        <View style={{ marginTop: 12 }}>
+          {/* Division Header Card */}
+          <View style={{ backgroundColor: "#FAFDF7", borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: "#DCE1D7", marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: "900", color: "#718096", letterSpacing: 0.8 }}>
+                  20 KİŞİLİK HAFTALIK LİG
+                </Text>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: "#293541" }}>
+                  {weeklyCohort?.tier || rank} LİGİ · GRUP #{weeklyCohort?.divisionNumber || 1}
+                </Text>
+              </View>
+              <View style={{ backgroundColor: "#F0F5ED", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: "#DCE1D7" }}>
+                <Text style={{ fontSize: 11, fontWeight: "800", color: "#293541" }}>
+                  ⏱️ {Math.floor((weeklyCohort?.secondsUntilReset || 0) / 3600)}s {Math.floor(((weeklyCohort?.secondsUntilReset || 0) % 3600) / 60)}d
+                </Text>
+              </View>
             </View>
-            <Text style={styles.podiumVitrinKicker}>EN İYİ 3 OYUNCU</Text>
+
+            {/* Zone Rules Legend */}
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+              <View style={{ flex: 1, backgroundColor: "rgba(16, 185, 129, 0.12)", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#10B981" }}>
+                <Text style={{ fontSize: 9, fontWeight: "900", color: "#065F46" }}>🟢 İLK 3 (TERFİ)</Text>
+                <Text style={{ fontSize: 8, color: "#065F46", marginTop: 2 }}>+1 Üst Lig & +150 Çip</Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: "#F0F5ED", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#DCE1D7" }}>
+                <Text style={{ fontSize: 9, fontWeight: "900", color: "#4A5568" }}>⚪ 4-17 (GÜVENLİ)</Text>
+                <Text style={{ fontSize: 8, color: "#4A5568", marginTop: 2 }}>Ligde Kalır</Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: "rgba(239, 68, 68, 0.12)", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#EF4444" }}>
+                <Text style={{ fontSize: 9, fontWeight: "900", color: "#991B1B" }}>🔴 SON 3 (DÜŞME)</Text>
+                <Text style={{ fontSize: 8, color: "#991B1B", marginTop: 2 }}>-1 Alt Lig Tehlikesi</Text>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.podiumRow}>
-            {/* 2nd Place */}
+          {/* Members List */}
+          <View style={styles.board}>
+            {(weeklyCohort?.members || []).map((member, idx) => {
+              const isUser = member.isCurrentPlayer;
+              const isPromo = member.zone === "promotion";
+              const isReleg = member.zone === "relegation";
+              return (
+                <View
+                  key={member.id}
+                  style={[
+                    styles.row,
+                    isUser && styles.rowUser,
+                    isPromo && { borderLeftColor: "#10B981", borderLeftWidth: 3.5 },
+                    isReleg && { borderLeftColor: "#EF4444", borderLeftWidth: 3.5 },
+                  ]}
+                >
+                  <View style={styles.position}>
+                    <Text style={[styles.positionText, isPromo && { color: "#10B981", fontWeight: "900" }, isReleg && { color: "#EF4444" }]}>
+                      {idx + 1}
+                    </Text>
+                  </View>
+                  <View style={styles.playerMark}>
+                    <Text style={styles.playerMarkText}>{member.name.slice(0, 1).toUpperCase()}</Text>
+                  </View>
+                  <View style={styles.playerCopy}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#2a9c7a" }]}>
+                        {member.name}
+                      </Text>
+                      {isUser && (
+                        <View style={styles.userSelfTag}>
+                          <Text style={styles.userSelfTagText}>SEN</Text>
+                        </View>
+                      )}
+                      <View style={{
+                        backgroundColor: isPromo ? "rgba(16, 185, 129, 0.15)" : isReleg ? "rgba(239, 68, 68, 0.15)" : "rgba(148, 163, 184, 0.15)",
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 6,
+                      }}>
+                        <Text style={{
+                          fontSize: 8,
+                          fontWeight: "900",
+                          color: isPromo ? "#059669" : isReleg ? "#DC2626" : "#64748B",
+                        }}>
+                          {isPromo ? "TERFİ" : isReleg ? "DÜŞME" : "GÜVENLİ"}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.playerMeta, { marginTop: 2 }]}>
+                      {member.tier} · {member.lp} LP
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={{ fontSize: 13, fontWeight: "900", color: "#293541" }}>
+                      {member.weeklyPoints} P
+                    </Text>
+                    <Text style={{ fontSize: 9, color: "#64748B", fontWeight: "700" }}>HAFTALIK</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Vitrin Podium Showcase (Top 3) */}
+          {displayedLeaderboard.length >= 2 && (
+            <View style={styles.podiumContainer}>
+              <View style={styles.podiumVitrinHeader}>
+                <View style={styles.podiumVitrinTag}>
+                  <Text style={{ fontSize: 13 }}>👑</Text>
+                  <Text style={styles.podiumVitrinTagText}>LİDERLER VİTRİNİ</Text>
+                </View>
+                <Text style={styles.podiumVitrinKicker}>EN İYİ 3 OYUNCU</Text>
+              </View>
+
+              <View style={styles.podiumRow}>
+                {/* 2nd Place */}
             {top2 && (
               <Pressable
                 style={({ pressed }) => [styles.podiumColumn, styles.podiumCol2, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}
@@ -402,6 +516,8 @@ export const SeasonLeaderboardTab = React.memo(({
           );
         })()}
       </View>
+        </>
+      )}
     </View>
   );
 });

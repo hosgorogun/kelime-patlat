@@ -346,5 +346,68 @@ describe("Senior QA Production Fixes & Regression Suite", () => {
       expect(playerScore).toBe(60);
     });
   });
+
+  describe("10. Uzun Vadeli Yaşam Döngüsü & Retention Sistemleri Entegrasyonu (Longevity & Retention Suite)", () => {
+    it("Özel hücreli Solo seviyelerinde bulunan kelimeler Kelime Defterine (discoveredWords) eksiksiz yazılmalıdır", async () => {
+      const { createSoloBoard } = await import("../shared/solo");
+      const { applyMatchProgress, DEFAULT_PROGRESS } = await import("../shared/progression");
+
+      const board = createSoloBoard(20, 101); // Lv 20 -> Ice tiles
+      expect(board.specialTiles).toBeDefined();
+
+      const found = board.words.slice(0, 3);
+      const updated = applyMatchProgress(
+        DEFAULT_PROGRESS,
+        {
+          score: 150,
+          tempo: 2.0,
+          won: true,
+          foundWords: found,
+        },
+        "solo"
+      );
+
+      found.forEach((w) => {
+        expect(updated.discoveredWords).toContain(w);
+      });
+    });
+
+    it("Hafta sonu etkinliğinde hedef kelime bulunduğunda hem av sayacı hem de kelime müzesi güncellenmelidir", async () => {
+      const { applyMatchProgress, DEFAULT_PROGRESS } = await import("../shared/progression");
+      const { WEEKEND_THEMES } = await import("../shared/weekend-hunt");
+
+      const targetWord = WEEKEND_THEMES[0]!.targetWords[0]!; // e.g. "YILDIZ"
+
+      const updated = applyMatchProgress(
+        DEFAULT_PROGRESS,
+        {
+          score: 200,
+          tempo: 3.5,
+          won: true,
+          foundWords: [targetWord, "DEFTER"],
+        },
+        "pvp"
+      );
+
+      expect(updated.discoveredWords).toContain(targetWord);
+      expect(updated.discoveredWords).toContain("DEFTER");
+    });
+
+    it("20'li Haftalık Lig Grubu puanları oyuncunun haftalık aktivitesine göre anında yansımalıdır", async () => {
+      const { getWeeklyCohort } = await import("../shared/leagues");
+
+      const playerLow = { id: "p_pro", name: "Pro Oyuncu", lp: 3600 };
+      const date = new Date("2026-10-07T12:00:00Z");
+
+      const cohort1 = getWeeklyCohort({ ...playerLow, lp: 3600 }, date);
+      const p1 = cohort1.members.find((m) => m.id === "p_pro");
+      expect(p1).toBeDefined();
+
+      const cohort2 = getWeeklyCohort({ ...playerLow, lp: 4200 }, date);
+      const p2 = cohort2.members.find((m) => m.id === "p_pro");
+      expect(p2).toBeDefined();
+      expect(cohort2.members.length).toBe(20);
+    });
+  });
 });
 

@@ -12,7 +12,6 @@ import {
   type AvatarId,
   type GenderType,
   type PlayerProgress,
-  type ThemePackId,
 } from "@/shared/progression";
 import {
   triggerHapticError,
@@ -30,13 +29,14 @@ import {
   ProfileDeleteModal,
   ProfilePrivacyModal,
 } from "./profile-modals";
+import { WordBookModal } from "./word-book-modal";
 
 export function ProfileScreen({
   playerName,
   onUpdatePlayerName,
   progress,
+  setProgress,
   onSelectAvatar,
-  onSelectTheme,
   onSelectTitle,
   onSelectFrame,
   onUpdateGender,
@@ -55,8 +55,8 @@ export function ProfileScreen({
   playerName: string;
   onUpdatePlayerName: (name: string) => void;
   progress: PlayerProgress;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   onSelectAvatar?: (avatar: AvatarId) => void;
-  onSelectTheme?: (theme: ThemePackId) => void;
   onSelectTitle?: (titleBadge: string) => void;
   onSelectFrame?: (frameId: string) => void;
   onUpdateGender?: (gender: GenderType) => void;
@@ -79,6 +79,7 @@ export function ProfileScreen({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showWordBookModal, setShowWordBookModal] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [imgError, setImgError] = useState(false);
 
@@ -246,6 +247,43 @@ export function ProfileScreen({
 
       {activeTab === "overview" ? (
         <>
+          {/* Kelime Defteri / Lügat Müzesi Banner */}
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              setShowWordBookModal(true);
+            }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: "#FAFDF7",
+                borderRadius: 20,
+                padding: 14,
+                borderWidth: 1.5,
+                borderColor: "#DCE1D7",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              },
+              pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
+            ]}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#C8E6C9" }}>
+                <Text style={{ fontSize: 22 }}>📖</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "900", color: "#293541" }}>LÜGAT MÜZESİ & DEFTERİ</Text>
+                <Text style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>
+                  {progress.discoveredWords?.length || 0} Kelime Keşfedildi · TDK Tanımları & Hediyeler
+                </Text>
+              </View>
+            </View>
+            <View style={{ backgroundColor: "#293541", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12 }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "900" }}>AÇ ›</Text>
+            </View>
+          </Pressable>
+
           <ProfileStatsGrid
             progress={progress}
             totalMatches={totalMatches}
@@ -279,7 +317,6 @@ export function ProfileScreen({
           toggleHaptics={toggleHaptics}
           progress={progress}
           onUpdateGender={onUpdateGender}
-          onSelectTheme={onSelectTheme}
           isGuest={isGuest}
           onOpenAuth={onOpenAuth}
           onOpenLogoutModal={() => setShowLogoutModal(true)}
@@ -311,6 +348,16 @@ export function ProfileScreen({
       <ProfilePrivacyModal
         visible={showPrivacyModal}
         onDismiss={() => setShowPrivacyModal(false)}
+      />
+
+      <WordBookModal
+        visible={showWordBookModal}
+        onDismiss={() => setShowWordBookModal(false)}
+        progress={progress}
+        setProgress={setProgress || (() => {})}
+        onClaimMilestone={(m) => {
+          onShowToast?.("LÜGAT ÖDÜLÜ ALINDI", `${m.count} kelime başarısı: +${m.rewardCoins} Çip!`, "📖", "#10B981");
+        }}
       />
     </ScrollView>
   );

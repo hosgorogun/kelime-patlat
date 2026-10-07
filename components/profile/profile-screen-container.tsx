@@ -93,6 +93,7 @@ export function ProfileScreenContainer(props: ProfileScreenContainerProps) {
           }
         }}
         progress={progress}
+        setProgress={setProgress}
         onShowToast={(title, subtitle, icon, color) => {
           setGlobalToast({
             id: `toast-${Date.now()}`,
@@ -121,13 +122,6 @@ export function ProfileScreenContainer(props: ProfileScreenContainerProps) {
             subtitle: `"${selectedTitle}" unvanı profilinde ve maçlarda aktif edildi.`,
             icon: "🏷️",
             accentColor: "#3EE8B5",
-          });
-        }}
-        onSelectTheme={(selectedTheme) => {
-          setProgress((current) => {
-            const next = { ...current, selectedTheme };
-            void syncProgressToCloud(next);
-            return next;
           });
         }}
         onSelectFrame={(selectedFrame) => {

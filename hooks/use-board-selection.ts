@@ -189,9 +189,10 @@ export function useBoardSelection({
     if (!room || room.status !== "playing") return;
     const BOARD_PAD = 4;
     const innerSize = boardWidth - BOARD_PAD * 2;
-    const ox = locationX - BOARD_PAD;
-    const oy = locationY - BOARD_PAD;
-    if (ox < 0 || ox > innerSize || oy < 0 || oy > innerSize) return;
+    // Harf kenarlarında hafif taşmalara (8px tolerans) izin ver
+    const ox = Math.max(0, Math.min(innerSize - 1, locationX - BOARD_PAD));
+    const oy = Math.max(0, Math.min(innerSize - 1, locationY - BOARD_PAD));
+    if (locationX < -8 || locationX > boardWidth + 8 || locationY < -8 || locationY > boardWidth + 8) return;
     const cellSize = innerSize / room.size;
     const col = Math.floor(ox / cellSize);
     const row = Math.floor(oy / cellSize);

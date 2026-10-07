@@ -547,6 +547,9 @@ export function PvpMatchScreen({
           {/* Absolute touch/pointer overlay to intercept gestures relative to board cleanly */}
           <View
             pointerEvents={room.status === "playing" && gameCountdown === null ? "auto" : "none"}
+            onStartShouldSetResponder={() => room.status === "playing" && gameCountdown === null}
+            onMoveShouldSetResponder={() => room.status === "playing" && gameCountdown === null}
+            onResponderTerminationRequest={() => false}
             onPointerDown={(e: any) => {
               if (e.target?.setPointerCapture)
                 e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);

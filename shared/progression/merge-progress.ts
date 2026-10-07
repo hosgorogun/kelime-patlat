@@ -252,6 +252,26 @@ export function mergePlayerProgress(
       ? Math.max(local.dailyRevivesCount ?? 0, cleanRemote.dailyRevivesCount ?? 0)
       : (local.dailyRevivesCount ?? cleanRemote.dailyRevivesCount ?? 0),
     history: Array.from(new Set([...(local.history ?? []), ...(cleanRemote.history ?? [])])).slice(-150),
+    discoveredWords: Array.from(new Set([...(local.discoveredWords ?? []), ...(cleanRemote.discoveredWords ?? [])])).slice(-2000),
+    wordBookClaimedMilestones: {
+      ...(cleanRemote.wordBookClaimedMilestones ?? {}),
+      ...(local.wordBookClaimedMilestones ?? {}),
+    },
+    weekendHunt: (() => {
+      const lHunt = local.weekendHunt;
+      const rHunt = cleanRemote.weekendHunt;
+      if (!lHunt && !rHunt) return undefined;
+      if (!lHunt) return rHunt;
+      if (!rHunt) return lHunt;
+      if (lHunt.eventId !== rHunt.eventId) {
+        return (lHunt.foundWords?.length || 0) >= (rHunt.foundWords?.length || 0) ? lHunt : rHunt;
+      }
+      return {
+        eventId: lHunt.eventId,
+        foundWords: Array.from(new Set([...(lHunt.foundWords ?? []), ...(rHunt.foundWords ?? [])])),
+        claimedTiers: Array.from(new Set([...(lHunt.claimedTiers ?? []), ...(rHunt.claimedTiers ?? [])])),
+      };
+    })(),
     matchHistory: mergedMatchHistory,
     selectedAvatar: local.selectedAvatar || cleanRemote.selectedAvatar || "spark",
     selectedTheme: local.selectedTheme || cleanRemote.selectedTheme || "nature",

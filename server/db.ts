@@ -222,6 +222,131 @@ export function clearInMemoryFriendRequests(): void {
   inMemoryFriendRequests.clear();
 }
 
+export type TurnMatchDocument = {
+  id: string;
+  player1Id: string;
+  player1Name: string;
+  player1Avatar?: string;
+  player2Id: string;
+  player2Name: string;
+  player2Avatar?: string;
+  turnPlayerId: string;
+  board: string[];
+  size: number;
+  round: number;
+  maxRounds: number;
+  player1Score: number;
+  player2Score: number;
+  foundWords: Array<{ word: string; playerId: string; score: number; playedAt: number }>;
+  status: "active" | "completed" | "expired";
+  winnerId?: string | null;
+  deadline: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const TurnMatchSchema = new Schema<TurnMatchDocument>({
+  id: { type: String, required: true, unique: true },
+  player1Id: { type: String, required: true, index: true },
+  player1Name: { type: String, required: true },
+  player1Avatar: { type: String, default: "spark" },
+  player2Id: { type: String, required: true, index: true },
+  player2Name: { type: String, required: true },
+  player2Avatar: { type: String, default: "spark" },
+  turnPlayerId: { type: String, required: true, index: true },
+  board: { type: [String], required: true },
+  size: { type: Number, default: 4 },
+  round: { type: Number, default: 1 },
+  maxRounds: { type: Number, default: 5 },
+  player1Score: { type: Number, default: 0 },
+  player2Score: { type: Number, default: 0 },
+  foundWords: { type: Schema.Types.Mixed, default: [] },
+  status: { type: String, enum: ["active", "completed", "expired"], default: "active", index: true },
+  winnerId: { type: String, default: null },
+  deadline: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+TurnMatchSchema.index({ player1Id: 1, status: 1 });
+TurnMatchSchema.index({ player2Id: 1, status: 1 });
+
+export const TurnMatchModel = mongoose.models.TurnMatch || mongoose.model<TurnMatchDocument>("TurnMatch", TurnMatchSchema);
+
+const inMemoryTurnMatches = new Map<string, TurnMatchDocument>();
+
+export async function createTurnMatchRecord(matchData: Omit<TurnMatchDocument, "createdAt" | "updatedAt">): Promise<TurnMatchDocument> {
+  const record: TurnMatchDocument = {
+    ...matchData,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  inMemoryTurnMatches.set(record.id, record);
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const created = await TurnMatchModel.create(record);
+      return created.toObject();
+    }
+  } catch (err) {
+    console.warn("[Database] TurnMatch create fallback to in-memory:", err);
+  }
+  return record;
+}
+
+export async function getUserTurnMatchRecords(userId: string): Promise<TurnMatchDocument[]> {
+  const memList = Array.from(inMemoryTurnMatches.values()).filter(
+    (m) => m.player1Id === userId || m.player2Id === userId
+  );
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const docs = await TurnMatchModel.find({
+        $or: [{ player1Id: userId }, { player2Id: userId }]
+      }).sort({ updatedAt: -1 }).lean();
+      const map = new Map<string, TurnMatchDocument>();
+      docs.forEach((d: any) => map.set(d.id, d));
+      memList.forEach((m) => map.set(m.id, m));
+      return Array.from(map.values());
+    }
+  } catch (err) {
+    console.warn("[Database] TurnMatch find fallback to in-memory:", err);
+  }
+  return memList;
+}
+
+export async function findTurnMatchById(matchId: string): Promise<TurnMatchDocument | null> {
+  const mem = inMemoryTurnMatches.get(matchId);
+  if (mem) return mem;
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const doc = await TurnMatchModel.findOne({ id: matchId }).lean();
+      if (doc) return doc as TurnMatchDocument;
+    }
+  } catch (err) {
+    console.warn("[Database] TurnMatch findById fallback:", err);
+  }
+  return null;
+}
+
+export async function updateTurnMatchRecord(matchId: string, updates: Partial<TurnMatchDocument>): Promise<TurnMatchDocument | null> {
+  const mem = inMemoryTurnMatches.get(matchId);
+  if (mem) {
+    Object.assign(mem, updates, { updatedAt: new Date() });
+  }
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const updated = await TurnMatchModel.findOneAndUpdate(
+        { id: matchId },
+        { ...updates, updatedAt: new Date() },
+        { returnDocument: "after" }
+      ).lean();
+      if (updated) return updated as TurnMatchDocument;
+    }
+  } catch (err) {
+    console.warn("[Database] TurnMatch update fallback:", err);
+  }
+  return mem || null;
+}
+
 function databaseUri() {
   const uri = process.env.MONGODB_URI?.trim();
   return uri || "mongodb://127.0.0.1:27017/kelime_patlat";

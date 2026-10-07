@@ -82,3 +82,135 @@ export function getLeagueTier(progressOrPoints: LeagueProgressState | number): L
 export function getRank(progress: LeagueProgressState) {
   return getLeagueTier(progress).tier;
 }
+
+export type WeeklyCohortMember = {
+  id: string;
+  name: string;
+  avatar: string;
+  selectedTitle?: string;
+  selectedFrame?: string;
+  lp: number;
+  tier: LeagueTierName;
+  weeklyPoints: number;
+  isCurrentPlayer?: boolean;
+  zone: "promotion" | "safe" | "relegation";
+};
+
+export type WeeklyDivisionCohort = {
+  weekId: string;
+  tier: LeagueTierName;
+  divisionNumber: number;
+  members: WeeklyCohortMember[];
+  secondsUntilReset: number;
+};
+
+const COHORT_RIVAL_NAMES = [
+  "Caner_Patlat", "Deniz_Matrix", "Selin_Harf", "Kaan_Gladyator", "Merve_Neon",
+  "Burak_Usta", "Zeynep_Kelimelik", "Emre_Zaman", "Elif_Simyaci", "Baris_Ruzgar",
+  "Ayse_Pusula", "Kerem_Kivilcim", "Defne_Ayna", "Onur_Kripto", "Ezgi_Yildiz",
+  "Okan_Sonsuz", "Buse_Gunes", "Serkan_Firtina", "Derya_Kozmos", "Tolga_Kutub",
+];
+
+export function getWeeklyCohort(
+  player: {
+    id: string;
+    name: string;
+    avatar?: string;
+    avatarPhoto?: string;
+    lp?: number;
+    selectedTitle?: string;
+    selectedFrame?: string;
+  },
+  now = new Date()
+): WeeklyDivisionCohort {
+  const currentLp = Math.max(0, player.lp ?? 0);
+  const tierInfo = getLeagueTier(currentLp);
+
+  // ISO Hafta ID hesaplaması
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  const weekId = `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+
+  // Pazar 23:59:59 kalan saniye
+  const nextSunday = new Date(now);
+  const daysUntilSunday = (7 - now.getDay()) % 7;
+  nextSunday.setDate(now.getDate() + daysUntilSunday);
+  nextSunday.setHours(23, 59, 59, 999);
+  const secondsUntilReset = Math.max(0, Math.floor((nextSunday.getTime() - now.getTime()) / 1000));
+
+  // Seeded PRNG for consistent division
+  const strSeed = `${weekId}:${player.id}:${tierInfo.tier}`;
+  let seed = [...strSeed].reduce((acc, c) => ((acc * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
+  const rng = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  const divisionNumber = 1 + (seed % 42);
+
+  // Oyuncunun haftalık puanı (taban LP'nin modüler kısmı + aktif performans simülasyonu)
+  const playerWeeklyPoints = Math.max(80, (currentLp % 350) + 120);
+
+  const members: WeeklyCohortMember[] = [];
+
+  // Mevcut oyuncu
+  members.push({
+    id: player.id,
+    name: player.name || "SEN",
+    avatar: player.avatar || "spark",
+    selectedTitle: player.selectedTitle || "[OYUNCU]",
+    selectedFrame: player.selectedFrame || "signal",
+    lp: currentLp,
+    tier: tierInfo.tier,
+    weeklyPoints: playerWeeklyPoints,
+    isCurrentPlayer: true,
+    zone: "safe",
+  });
+
+  // 19 Gerçekçi Rakip
+  const baseScore = Math.max(100, playerWeeklyPoints);
+  for (let i = 0; i < 19; i++) {
+    const rName = COHORT_RIVAL_NAMES[i % COHORT_RIVAL_NAMES.length]!;
+    // Skoru oyuncu etrafında gerçekçi dağıt (+/- %40)
+    const factor = 0.6 + rng() * 0.8;
+    const weeklyPoints = Math.max(30, Math.round(baseScore * factor));
+    const rivalLp = Math.max(tierInfo.minPoints, Math.round(tierInfo.minPoints + rng() * (tierInfo.maxPoints === Infinity ? 2000 : (tierInfo.maxPoints - tierInfo.minPoints))));
+    members.push({
+      id: `cohort_rival_${i}_${divisionNumber}`,
+      name: rName,
+      avatar: ["spark", "orbit", "sage", "comet", "ember"][i % 5]!,
+      selectedTitle: ["[NEON HÂKİMİ]", "[ÇAYLAK]", "[KELİME AVCISI]", "[MİMAR]", "[GLADYATÖR]"][i % 5],
+      selectedFrame: ["signal", "neon", "chrome", "gold"][i % 4],
+      lp: rivalLp,
+      tier: tierInfo.tier,
+      weeklyPoints,
+      isCurrentPlayer: false,
+      zone: "safe",
+    });
+  }
+
+  // Puan sırasına göre sırala
+  members.sort((a, b) => b.weeklyPoints - a.weeklyPoints);
+
+  // Bölgeleri ata: 1-3: Yükselme, 4-17: Güvenli, 18-20: Düşme
+  members.forEach((m, idx) => {
+    if (idx < 3) {
+      m.zone = "promotion";
+    } else if (idx >= 17) {
+      m.zone = "relegation";
+    } else {
+      m.zone = "safe";
+    }
+  });
+
+  return {
+    weekId,
+    tier: tierInfo.tier,
+    divisionNumber,
+    members,
+    secondsUntilReset,
+  };
+}

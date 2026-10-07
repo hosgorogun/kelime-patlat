@@ -152,10 +152,14 @@ export function DailyTreasureModal({
                   return (
                     <Pressable
                       key={item.day}
-                      disabled={!isTodayClaimable}
+                      disabled={!isTodayClaimable || isClaiming}
                       onPress={() => {
+                        if (isClaiming || isClaimedToday) return;
+                        setIsClaiming(true);
                         triggerHapticSelection();
                         onClaim();
+                        if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+                        claimTimerRef.current = setTimeout(() => setIsClaiming(false), 2000);
                       }}
                       style={[
                         styles.dayCard,
@@ -355,8 +359,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: palette.mutedGold,
-    fontSize: 14,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 18,
     textAlign: "center",
     marginTop: 4,
     marginBottom: 12,

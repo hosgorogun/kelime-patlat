@@ -87,6 +87,21 @@ export const MILESTONE_REWARDS: MilestoneReward[] = [
   { level: 100, title: "KOZMİK ŞAMPİYON SANDIĞI", coins: 150, shields: 3, xp: 1000, desc: "Seviye 100 mutlak şampiyonluk ödülü!", chestType: "mythic_chest", icon: "👑", accent: "#FF1493", badge: "KOZMİK SANDIK", badgeId: "badge-lvl-100", badgeTitle: "KOZMİK İMPARATOR", badgeIcon: "👑" },
 ];
 
+export type WordBookMilestone = {
+  count: number;
+  rewardCoins: number;
+  title: string;
+  badgeIcon: string;
+};
+
+export const WORD_BOOK_MILESTONES: WordBookMilestone[] = [
+  { count: 25, rewardCoins: 50, title: "[KELİME ÇIRAĞI]", badgeIcon: "🌱" },
+  { count: 50, rewardCoins: 100, title: "[MERAKLI LÜGAT]", badgeIcon: "📖" },
+  { count: 100, rewardCoins: 200, title: "[SÖZCÜK AVCISI]", badgeIcon: "🎯" },
+  { count: 250, rewardCoins: 400, title: "[LÜGAT MİMARI]", badgeIcon: "🏛️" },
+  { count: 500, rewardCoins: 800, title: "[MUTLAK DİL BİLGİNİ]", badgeIcon: "👑" },
+];
+
 export type AvatarOption = { id: AvatarId; label: string; icon: string; color: string; surface: string; unlockHint: string };
 
 export const AVATARS: AvatarOption[] = [
@@ -188,6 +203,13 @@ export type PlayerProgress = {
     matches?: number;
   }>;
   matchHistory?: MatchHistoryEntry[];
+  discoveredWords?: string[];
+  wordBookClaimedMilestones?: Record<number, boolean>;
+  weekendHunt?: {
+    eventId: string;
+    foundWords: string[];
+    claimedTiers: number[];
+  };
 };
 
 export const DEFAULT_PROGRESS: PlayerProgress = {
@@ -205,6 +227,9 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   selectedTheme: "nature",
   selectedAvatar: "spark",
   history: [],
+  discoveredWords: [],
+  wordBookClaimedMilestones: {},
+  weekendHunt: undefined,
   streakShields: 0,
   coins: 0,
   radarChargesBonus: 0,

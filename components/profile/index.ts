@@ -7,3 +7,4 @@ export * from "./profile-customizer";
 export * from "./profile-settings-tab";
 export * from "./profile-modals";
 export * from "./profile-constants";
+export * from "./word-book-modal";

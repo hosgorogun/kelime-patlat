@@ -4,7 +4,9 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import {
   getRank,
   getLeagueTier,
+  getPlayerLevel,
   getSeasonRemainingTime,
+  getWeeklyCohort,
   type PlayerProgress,
 } from "@/shared/progression";
 import { type LeaderboardEntry, type BoardSize } from "@/shared/game";
@@ -59,7 +61,7 @@ export function SeasonHub({
 }) {
   const [activeTab, setActiveTab] = useState<SeasonTab>(() => initialTab || "leagues");
   const [friendsSubTab, setFriendsSubTab] = useState<"friends" | "requests">("friends");
-  const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
+  const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends" | "division">("global");
   const [rankingType, setRankingType] = useState<RankingType>("lp");
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
   const [friendInput, setFriendInput] = useState("");
@@ -67,6 +69,18 @@ export function SeasonHub({
   const [pendingRequestsList, setPendingRequestsList] = useState<FriendRequest[]>(() => pendingRequests || socialManager.getPendingRequests());
   const [socialMessage, setSocialMessage] = useState<string | null>(null);
   const socialMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const weeklyCohort = useMemo(() => {
+    return getWeeklyCohort({
+      id: playerId,
+      name: playerName || "SEN",
+      avatar: progress.selectedAvatar,
+      avatarPhoto: progress.avatarPhoto,
+      lp: progress.lp,
+      selectedTitle: progress.selectedTitle,
+      selectedFrame: progress.selectedFrame,
+    });
+  }, [playerId, playerName, progress.selectedAvatar, progress.avatarPhoto, progress.lp, progress.selectedTitle, progress.selectedFrame]);
 
   const showSocialMessage = (msg: string) => {
     setSocialMessage(msg);
@@ -142,7 +156,7 @@ export function SeasonHub({
       tier: userTier.tier,
       avatarPhoto: progress.avatarPhoto,
       selectedTitle: progress.selectedTitle,
-      level: Math.floor((progress.xp ?? 0) / 200) + 1,
+      level: getPlayerLevel(progress.xp ?? 0),
     };
     if (userIndex >= 0) {
       rawList[userIndex] = userEntry;
@@ -167,8 +181,8 @@ export function SeasonHub({
 
     if (rankingType === "level") {
       return list.sort((a, b) => {
-        const lvlA = a.level ?? Math.floor(a.score / 200) + 1;
-        const lvlB = b.level ?? Math.floor(b.score / 200) + 1;
+        const lvlA = a.level ?? getPlayerLevel(a.score);
+        const lvlB = b.level ?? getPlayerLevel(b.score);
         if (lvlB !== lvlA) return lvlB - lvlA;
         return b.score - a.score;
       });
@@ -400,6 +414,7 @@ export function SeasonHub({
             leaderboardFilter={leaderboardFilter}
             setLeaderboardFilter={setLeaderboardFilter}
             displayedLeaderboard={displayedLeaderboard}
+            weeklyCohort={weeklyCohort}
             top1={top1}
             top2={top2}
             top3={top3}

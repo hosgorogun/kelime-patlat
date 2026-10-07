@@ -604,6 +604,15 @@ export function VintagePuzzle({
               break;
             }
           }
+          if (!nextEmpty) {
+            for (let i = 0; i < currentIdx; i++) {
+              const [nr, nc] = targetWord.cells[i]!;
+              if (newBoard[nr]![nc] === null) {
+                nextEmpty = [nr, nc];
+                break;
+              }
+            }
+          }
         }
         if (nextEmpty) {
           setSelectedCell(nextEmpty);

@@ -21,6 +21,7 @@ interface OnlineLobbyScreenProps {
   onStartMatchmaking: (size: BoardSize) => void;
   onPromptBotDuel: (size: BoardSize) => void;
   onLockedSize: (size: number, requiredLevel: number) => void;
+  onOpenTurnMatches?: () => void;
 }
 
 const BOARD_SIZE_CONFIGS: Record<
@@ -45,6 +46,7 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   onStartMatchmaking,
   onPromptBotDuel,
   onLockedSize,
+  onOpenTurnMatches,
 }) => {
   return (
     <ScrollView
@@ -172,6 +174,22 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           <Text style={styles.botButtonText}>🤖 BOT İLE ALIŞTIRMA YAP</Text>
           <Text style={styles.botButtonArrow}>→</Text>
         </Pressable>
+
+        {onOpenTurnMatches && (
+          <Pressable
+            onPress={onOpenTurnMatches}
+            style={({ pressed }) => [
+              styles.botButton,
+              { backgroundColor: "#FFFBEB", borderColor: "#FDE68A" },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={[styles.botButtonText, { color: "#92400E" }]}>
+              ☕ KAHVE DÜELLOSU (24S SIRA TABANLI)
+            </Text>
+            <Text style={[styles.botButtonArrow, { color: "#92400E" }]}>→</Text>
+          </Pressable>
+        )}
       </View>
 
       {Boolean(notice) && <Text style={styles.notice}>{notice}</Text>}

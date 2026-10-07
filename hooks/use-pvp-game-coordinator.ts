@@ -10,9 +10,11 @@ import type { PlayerProgress } from "../shared/progression";
 import type { ToastData } from "../components/common/global-game-toast";
 import type { FriendRequest } from "../shared/social";
 import type { Screen } from "@/components/shell/types";
+import { isEqualTr } from "@/shared/tr-utils";
 
 export interface UsePvpGameCoordinatorParams {
   width: number;
+  height?: number;
   playerId: string;
   safeName: string;
   progress: PlayerProgress;
@@ -29,6 +31,7 @@ export interface UsePvpGameCoordinatorParams {
 
 export function usePvpGameCoordinator({
   width,
+  height,
   playerId,
   safeName,
   progress,
@@ -127,6 +130,16 @@ export function usePvpGameCoordinator({
   setShowLeaveDuelModalRef.current = pvpEffects.setShowLeaveDuelModal;
   setGameCountdownRef.current = pvpEffects.setGameCountdown;
 
+  const maxBoardFromHeight = height ? Math.floor(height * 0.46) : 410;
+  const maxBoardByDimension =
+    roomSocket.room?.size === 10
+      ? 410
+      : roomSocket.room?.size === 8
+      ? 392
+      : roomSocket.room?.size === 6
+      ? 374
+      : 356;
+
   const boardWidth = Math.min(
     width -
       (roomSocket.room?.size === 10
@@ -136,13 +149,8 @@ export function usePvpGameCoordinator({
         : roomSocket.room?.size === 6
         ? 34
         : 40),
-    roomSocket.room?.size === 10
-      ? 410
-      : roomSocket.room?.size === 8
-      ? 392
-      : roomSocket.room?.size === 6
-      ? 374
-      : 356
+    maxBoardByDimension,
+    maxBoardFromHeight
   );
 
   const boardSelection = useBoardSelection({
@@ -158,7 +166,7 @@ export function usePvpGameCoordinator({
     const pendingWord = boardSelection.pendingWordRef.current;
     const accepted = Boolean(
       pendingWord &&
-        foundWords.some((entry) => entry.word === pendingWord && entry.playerId === playerId)
+        foundWords.some((entry) => isEqualTr(entry.word, pendingWord) && entry.playerId === playerId)
     );
     if (accepted) {
       if (boardSelection.pendingWordTimeoutRef.current) {

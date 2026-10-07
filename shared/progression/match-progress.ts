@@ -4,7 +4,8 @@ import { getDayId, getWeekId } from "./date-utils";
 import { getDailyMysteryWord } from "./season-streak";
 import { updateMissionAction } from "./progression-missions";
 import { DailyChallenge, MatchHistoryEntry, PlayerProgress } from "./progression.types";
-import { isEqualTr } from "../tr-utils";
+import { isEqualTr, normalizeTrUpper } from "../tr-utils";
+import { isWeekendActive, recordWeekendHuntWords } from "../weekend-hunt";
 
 export function applyMatchProgress(
   progress: PlayerProgress,
@@ -28,6 +29,15 @@ export function applyMatchProgress(
   const foundWordsList = result.foundWords || [];
   const wordsCount = foundWordsList.length;
   const hasContributed = wordsCount > 0 || (result.score || 0) > 0;
+
+  // Sözlük Müzesi (Word Book) Keşfedilen Kelimeler Eklemesi
+  const existingDiscovered = new Set((progress.discoveredWords || []).map((w) => normalizeTrUpper(w)));
+  for (const w of foundWordsList) {
+    if (w && w.length >= 3) {
+      existingDiscovered.add(normalizeTrUpper(w));
+    }
+  }
+  const updatedDiscoveredWords = Array.from(existingDiscovered).slice(-2000);
 
   const previousDuels = progress.missions?.duels ?? 0;
   const previousWordsmith = progress.missions?.wordsmith ?? 0;
@@ -262,6 +272,10 @@ export function applyMatchProgress(
     bestArcadeScore: Math.max(progress.bestArcadeScore || 0, result.arcadeScore || 0),
     missions: nextMissions,
     history: newHistory,
+    discoveredWords: updatedDiscoveredWords,
+    weekendHunt: isWeekendActive() && foundWordsList.length > 0
+      ? recordWeekendHuntWords(progress, foundWordsList).weekendHunt
+      : progress.weekendHunt,
     matchHistory: updatedMatchHistory,
     lastMatchReward: {
       xp: xpGain,
@@ -461,6 +475,18 @@ export function completeDailyProgress(
     ? [...(progress.history || []), ...wordsForDailyHistory].slice(-150)
     : (progress.history || []);
 
+  const validWordsToDiscover = wordsForDailyHistory
+    .filter((w) => typeof w === "string" && w.trim().length >= 3)
+    .map((w) => normalizeTrUpper(w));
+  const updatedDiscoveredWords = Array.from(new Set([
+    ...(progress.discoveredWords || []),
+    ...validWordsToDiscover,
+  ])).slice(-2000);
+
+  const updatedHunt = isWeekendActive() && wordsForDailyHistory.length > 0
+    ? recordWeekendHuntWords(progress, wordsForDailyHistory).weekendHunt
+    : progress.weekendHunt;
+
   return {
     ...progress,
     xp: progress.xp + daily.rewardXp,
@@ -470,6 +496,8 @@ export function completeDailyProgress(
     streak: progress.streak + 1,
     missions: updatedMissions,
     history: updatedHistory,
+    discoveredWords: updatedDiscoveredWords,
+    weekendHunt: updatedHunt,
     matchHistory: nextHistory,
   };
 }

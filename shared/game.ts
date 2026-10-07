@@ -22,6 +22,15 @@ export function wordScoreMultiplier(length: number) {
   return length >= 7 ? 3 : length >= 5 ? 2 : 1;
 }
 
+export type SpecialTileType = "ice" | "bomb" | "gold";
+
+export type SpecialTile = {
+  type: SpecialTileType;
+  index: number;
+  counter?: number; // bomb counter (e.g. 3 turns)
+  bonusChips?: number; // gold tile extra chips (e.g. 15)
+};
+
 export function botThinkDelayMs(size: BoardSize, wordLength?: number, random = Math.random) {
   // Base delay per board size
   const baseMin = size === 4 ? 4_500 : size === 6 ? 5_500 : size === 8 ? 5_000 : 4_500;
@@ -147,6 +156,7 @@ export function advanceSelection(selection: number[], index: number, size: Board
     const bridge = Math.floor((last + index) / 2);
     if (!selection.includes(bridge)) return [...selection, bridge, index];
   }
+
   return selection;
 }
 

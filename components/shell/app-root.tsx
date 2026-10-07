@@ -27,7 +27,7 @@ import { useLuckyWheel } from "@/hooks/use-lucky-wheel";
 import type { Screen } from "./types";
 
 export function AppRoot() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [screen, setScreen] = useState<Screen>("home");
   const [seasonInitialTab, setSeasonInitialTab] = useState<SeasonTab>("leagues");
   const screenRef = useRef(screen);
@@ -148,6 +148,7 @@ export function AppRoot() {
 
   const pvp = usePvpGameCoordinator({
     width,
+    height,
     playerId,
     safeName,
     progress,

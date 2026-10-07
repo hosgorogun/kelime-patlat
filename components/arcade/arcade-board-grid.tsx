@@ -343,7 +343,10 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
         />
       ))}
       <View
-        pointerEvents={status === "playing" ? "auto" : "none"}
+        pointerEvents={status === "playing" && countdown === null ? "auto" : "none"}
+        onStartShouldSetResponder={() => status === "playing" && countdown === null}
+        onMoveShouldSetResponder={() => status === "playing" && countdown === null}
+        onResponderTerminationRequest={() => false}
         onPointerDown={(e: any) => {
           if (status !== "playing") return;
           if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);

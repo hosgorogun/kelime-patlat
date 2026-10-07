@@ -835,7 +835,8 @@ export function registerGameRooms(io: Server) {
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
       if (!room || !player || room.status !== "playing") return;
       if (room.startedAt) {
-        if (Date.now() < room.startedAt) return socket.emit("word:rejected", { word: "", reason: "starting" });
+        // İstemci ve sunucu saat farkı (clock skew) ve son an ağ gecikmesi için 400ms esneklik payı
+        if (Date.now() < room.startedAt - 400) return socket.emit("word:rejected", { word: "", reason: "starting" });
         const durationMs = getRoundDurationMs(room.size);
         if (Date.now() >= room.startedAt + durationMs + 1000) {
           return socket.emit("word:rejected", { word: "", reason: "time_up" });

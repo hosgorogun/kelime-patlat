@@ -15,6 +15,7 @@ export * from "./progression/progression-missions";
 export * from "./progression/match-progress";
 export * from "./progression/merge-progress";
 export * from "./progression/cosmetics";
+export * from "./weekend-hunt";
 
 export type { AvatarOption as AvatarDefinition } from "./progression/progression.types";
 export type { LeagueTierInfo as LeagueTier } from "./leagues";

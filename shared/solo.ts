@@ -1,6 +1,8 @@
-import { TURKISH_LETTERS, type BoardSize, type WordDifficulty, type WordEntry } from "./game";
+import { TURKISH_LETTERS, type BoardSize, type WordDifficulty, type WordEntry, type SpecialTile, type SpecialTileType } from "./game";
 import { catalogWordsForTheme, type WordTheme } from "./word-catalog";
 import { getDifficultyProfile } from "./difficulty";
+
+export type { SpecialTile, SpecialTileType };
 
 export type SoloLevel = {
   level: number;
@@ -17,6 +19,7 @@ export type SoloBoard = Pick<SoloLevel, "level" | "size" | "wordCount" | "timeLi
   words: string[];
   routes: Record<string, number[]>;
   wordDifficulties: Record<string, WordDifficulty>;
+  specialTiles?: Record<number, SpecialTile>;
 };
 
 export type WordPaletteColor = {
@@ -440,6 +443,43 @@ export function getSoloLevelWords(level: number, variation = 0, theme: WordTheme
   return words;
 }
 
+export function generateSpecialTiles(
+  level: number,
+  routes: Record<string, number[]>,
+  size: number,
+  random: () => number = Math.random
+): Record<number, SpecialTile> {
+  const result: Record<number, SpecialTile> = {};
+  if (level < 16) return result;
+
+  const allRouteCells = Array.from(new Set(Object.values(routes).flat()));
+  if (allRouteCells.length === 0) return result;
+
+  const shuffledCells = [...allRouteCells].sort(() => random() - 0.5);
+  let cellIdx = 0;
+
+  // Seviye 16+: Buzlu Harfler (1-2 adet)
+  const iceCount = level >= 40 ? 2 : 1;
+  for (let i = 0; i < iceCount && cellIdx < shuffledCells.length; i++) {
+    const idx = shuffledCells[cellIdx++]!;
+    result[idx] = { type: "ice", index: idx };
+  }
+
+  // Seviye 30+: Bomba Harf (1 adet, 3-4 hamle sayacı)
+  if (level >= 30 && cellIdx < shuffledCells.length) {
+    const idx = shuffledCells[cellIdx++]!;
+    result[idx] = { type: "bomb", index: idx, counter: level >= 60 ? 3 : 4 };
+  }
+
+  // Seviye 45+: Altın Harf (1-2 adet, +15 bonus çip)
+  if (level >= 45 && cellIdx < shuffledCells.length) {
+    const idx = shuffledCells[cellIdx++]!;
+    result[idx] = { type: "gold", index: idx, bonusChips: 15 };
+  }
+
+  return result;
+}
+
 export function createSoloBoard(level: number, variation = 0, theme: WordTheme = "general", excludeWords: string[] = []): SoloBoard {
   const config = getSoloLevel(level);
 
@@ -493,7 +533,8 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
       routes,
       wordDifficulties: makeDifficultyMap(entries),
       wordCount: words.length,
-      subtitle: `${words.length} kelime · ${config.timeLimit} sn · en az ${config.minTurns} dönüş`
+      subtitle: `${words.length} kelime · ${config.timeLimit} sn · en az ${config.minTurns} dönüş`,
+      specialTiles: generateSpecialTiles(config.level, routes, config.size, random),
     };
   }
   
@@ -524,7 +565,8 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
     routes,
     wordDifficulties: makeDifficultyMap(entries),
     wordCount: words.length,
-    subtitle: `${words.length} kelime · ${config.timeLimit} sn · en az ${config.minTurns} dönüş`
+    subtitle: `${words.length} kelime · ${config.timeLimit} sn · en az ${config.minTurns} dönüş`,
+    specialTiles: generateSpecialTiles(config.level, routes, config.size, random),
   };
 }
 

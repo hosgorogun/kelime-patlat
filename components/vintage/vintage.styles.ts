@@ -73,8 +73,8 @@ export const vintageStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1.5,
     backgroundColor: "#FFFFFF",
@@ -83,7 +83,7 @@ export const vintageStyles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 2,
     elevation: 1,
-    minHeight: 30,
+    minHeight: 28,
   },
   pressedPill: {
     opacity: 0.75,
@@ -93,7 +93,7 @@ export const vintageStyles = StyleSheet.create({
     fontSize: 12,
   },
   statusPillText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: "900",
   },
   livesPill: {
@@ -110,7 +110,7 @@ export const vintageStyles = StyleSheet.create({
   infiniteLivesPillText: {
     color: "#b45309",
     fontWeight: "900",
-    fontSize: 14,
+    fontSize: 12,
   },
   hintPill: {
     backgroundColor: "#fefce8",
@@ -610,9 +610,9 @@ export const vintageStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   mapReturnBtn: {
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#F0F5ED",
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#DCE1D7",
     paddingVertical: 12,
     paddingHorizontal: 20,

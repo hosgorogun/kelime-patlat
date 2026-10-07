@@ -15,6 +15,7 @@ import { gameRouter } from "../routes/game.routes";
 import { friendsRouter } from "../routes/friends.routes";
 import { dictionaryRouter } from "../routes/dictionary.routes";
 import { userRouter } from "../routes/user.routes";
+import { turnMatchRouter } from "../routes/turn-match.routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -143,6 +144,7 @@ async function startServer() {
   app.use("/api/friends", friendsRouter);
   app.use("/api/dictionary", dictionaryRouter);
   app.use("/api/user", userRouter);
+  app.use("/api/turn-matches", turnMatchRouter);
 
   // Production static web export support
   const staticDir = path.resolve(process.cwd(), "dist");

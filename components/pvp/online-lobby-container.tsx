@@ -2,6 +2,7 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { MainShell } from "../shell/main-shell";
 import { OnlineLobbyScreen } from "./online-lobby-screen";
+import { TurnMatchesModal } from "./turn-matches-modal";
 import { getPlayerLevel, type PlayerProgress } from "@/shared/progression";
 import type { BoardSize } from "@/shared/game";
 import type { ToastData } from "../common/global-game-toast";
@@ -46,6 +47,7 @@ export function OnlineLobbyContainer(props: OnlineLobbyContainerProps) {
   const onStartMatchmaking = props.onStartMatchmaking ?? ((size) => void pvp.startMatchmaking(size));
   const onPromptBotDuel = props.onPromptBotDuel ?? pvp.promptBotDuel;
   const currentLevel = getPlayerLevel(progress.xp);
+  const [showTurnMatchesModal, setShowTurnMatchesModal] = React.useState(false);
 
   return (
     <MainShell
@@ -66,6 +68,7 @@ export function OnlineLobbyContainer(props: OnlineLobbyContainerProps) {
         onOpenInfo={() => setSelectedModeInfo("pvp")}
         onStartMatchmaking={(size) => void onStartMatchmaking(size)}
         onPromptBotDuel={(size) => onPromptBotDuel(size)}
+        onOpenTurnMatches={() => setShowTurnMatchesModal(true)}
         onLockedSize={(size, reqLevel) => {
           setGlobalToast({
             id: `size-locked-${size}-${Date.now()}`,
@@ -75,6 +78,14 @@ export function OnlineLobbyContainer(props: OnlineLobbyContainerProps) {
             accentColor: "#FFC24A",
           });
         }}
+      />
+      <TurnMatchesModal
+        visible={showTurnMatchesModal}
+        onDismiss={() => setShowTurnMatchesModal(false)}
+        playerId={auth.playerId}
+        playerName={playerName}
+        avatar={progress.selectedAvatar}
+        friendsList={pvp.friendsList}
       />
     </MainShell>
   );

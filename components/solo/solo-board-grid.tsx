@@ -53,6 +53,7 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
     words: string[];
     routes: Record<string, number[]>;
     board: string[];
+    specialTiles?: Record<number, any>;
   };
   inspectedPath: number[] | null;
   inspectedColor: string | null;
@@ -246,6 +247,20 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
                 feedback === "accepted" && isSelected && styles.cellAccepted,
                 feedback === "bonus" && isSelected && styles.cellBonus,
                 isRadar && styles.cellRadar,
+                !isFound && challenge.specialTiles?.[index]?.type === "ice" && {
+                  borderColor: "#38BDF8",
+                  borderWidth: 2,
+                  backgroundColor: "rgba(186, 230, 253, 0.3)",
+                },
+                !isFound && challenge.specialTiles?.[index]?.type === "bomb" && {
+                  borderColor: "#F97316",
+                  borderWidth: 2,
+                },
+                !isFound && challenge.specialTiles?.[index]?.type === "gold" && {
+                  borderColor: "#FBBF24",
+                  borderWidth: 2,
+                  backgroundColor: "rgba(254, 240, 138, 0.25)",
+                },
               ]}
             >
               <Text
@@ -308,6 +323,25 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
                   </Text>
                 </View>
               )}
+              {/* Special Tile Badge (Ice, Bomb, Gold) */}
+              {!isFound && challenge.specialTiles?.[index] && (
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: challenge.size >= 8 ? 0.5 : 2,
+                    left: challenge.size >= 8 ? 0.5 : 2,
+                    zIndex: 5,
+                  }}
+                >
+                  <Text style={{ fontSize: challenge.size >= 8 ? 8 : 11 }}>
+                    {challenge.specialTiles[index]?.type === "ice"
+                      ? "🧊"
+                      : challenge.specialTiles[index]?.type === "bomb"
+                      ? "💣"
+                      : "🪙"}
+                  </Text>
+                </View>
+              )}
               {isFound && !isSelected && (
                 <Text
                   selectable={false}
@@ -340,6 +374,10 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
         <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
       ))}
       <View
+        pointerEvents={status === "playing" && countdown === null ? "auto" : "none"}
+        onStartShouldSetResponder={() => status === "playing" && countdown === null}
+        onMoveShouldSetResponder={() => status === "playing" && countdown === null}
+        onResponderTerminationRequest={() => false}
         onPointerDown={(e: any) => {
           if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
           onGestureStart(e);

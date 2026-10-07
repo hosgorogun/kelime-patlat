@@ -31,6 +31,7 @@ export interface BoardCellProps {
   isInspectedEnd?: boolean;
   isCountingDown?: boolean;
   cellColor?: CellColorConfig;
+  specialTileType?: "ice" | "bomb" | "gold";
 }
 
 export const BoardCell = React.memo(({
@@ -53,6 +54,7 @@ export const BoardCell = React.memo(({
   isInspectedEnd,
   cellColor,
   isCountingDown,
+  specialTileType,
 }: BoardCellProps) => {
   const isMissed = foundBy === "missed";
   const isFoundByMe = !isMissed && foundBy === playerId;
@@ -225,6 +227,13 @@ export const BoardCell = React.memo(({
           >
             ✗
           </Text>
+        )}
+        {specialTileType && !isFound && !selected && (
+          <View style={{ position: "absolute", bottom: size >= 8 ? 0.5 : 2, left: size >= 8 ? 0.5 : 2, zIndex: 4 }}>
+            <Text style={{ fontSize: size >= 8 ? 7 : 10 }}>
+              {specialTileType === "ice" ? "🧊" : specialTileType === "bomb" ? "💣" : "🪙"}
+            </Text>
+          </View>
         )}
       </Animated.View>
     </View>
