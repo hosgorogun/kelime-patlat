@@ -79,15 +79,28 @@ export async function savePlayerProfile(playerId: string, name: string, progress
   const cleanName = name.trim().slice(0, 16) || "OYUNCU";
   
   return safely(async () => {
+    const existing = await ProfileModel.findOne({ playerId });
+    const mergedProgress = existing
+      ? {
+          ...normalizedProgress(existing.progress),
+          ...nextProgress,
+          xp: Math.max(existing.progress?.xp ?? 0, nextProgress.xp ?? 0),
+          coins: Math.max(existing.progress?.coins ?? 0, nextProgress.coins ?? 0),
+          lp: Math.max(existing.progress?.lp ?? 0, nextProgress.lp ?? 0),
+          soloUnlockedLevel: Math.max(existing.progress?.soloUnlockedLevel ?? 1, nextProgress.soloUnlockedLevel ?? 1),
+          bestArcadeScore: Math.max(existing.progress?.bestArcadeScore ?? 0, nextProgress.bestArcadeScore ?? 0),
+        }
+      : nextProgress;
+
     await ProfileModel.updateOne(
       { playerId },
       { 
-        $set: { name: cleanName, progress: nextProgress, updatedAt: now }, 
+        $set: { name: cleanName, progress: mergedProgress, updatedAt: now }, 
         $setOnInsert: { createdAt: now } 
       },
       { upsert: true },
     );
-    return { playerId, name: cleanName, progress: nextProgress };
+    return { playerId, name: cleanName, progress: mergedProgress };
   }, null);
 }
 

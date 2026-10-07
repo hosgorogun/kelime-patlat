@@ -200,6 +200,32 @@ export function CommandCenter({
     })
   ).current;
 
+  // PATLAT Harf Taşları Animasyonları (Subtle Bounce & Wiggle Loop)
+  const tileAnims = useRef(PATLAT_TILES.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const animations = tileAnims.map((anim, i) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 180),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.delay((PATLAT_TILES.length - i) * 180 + 1200),
+        ])
+      );
+    });
+    animations.forEach((anim) => anim.start());
+    return () => animations.forEach((anim) => anim.stop());
+  }, [tileAnims]);
+
   return <>
     <BotPracticeModal
       visible={showBotPracticeModal}
@@ -408,34 +434,51 @@ export function CommandCenter({
         )}
       </View>
 
-      <OrnatePanel accent="sapphire" showJewels={false} style={{ marginTop: 12 }}>
+      <OrnatePanel accent="sapphire" showJewels={false} style={{ marginTop: 12 }} contentStyle={{ paddingHorizontal: 14, paddingVertical: 16 }}>
         <View style={styles.heroHead}>
           <Text style={[styles.deckEyebrow, { color: "#176C97" }]}>BİR KELİMEYLE BAŞLA</Text>
           <InfoMini color="#176C97" onPress={() => setInfoModal("rotani")} />
         </View>
         <JewelTitle>Azıcık mola. {"\n"}Bolca kelime.</JewelTitle>
         <View accessible={false} style={{ flexDirection: "row", gap: 6, marginTop: 16, marginBottom: 4 }}>
-          {PATLAT_TILES.map((tile, index) => (
-            <View
-              key={`${tile.letter}-${index}`}
-              style={{
-                width: 38,
-                height: 44,
-                borderRadius: 12,
-                borderWidth: 1.5,
-                borderBottomWidth: 4,
-                borderColor: tile.border,
-                backgroundColor: tile.bg,
-                alignItems: "center",
-                justifyContent: "center",
-                transform: [{ rotate: index % 2 ? "5deg" : "-5deg" }],
-              }}
-            >
-              <Text style={{ color: tile.text, fontWeight: "900", fontSize: 22 }}>
-                {tile.letter}
-              </Text>
-            </View>
-          ))}
+          {PATLAT_TILES.map((tile, index) => {
+            const anim = tileAnims[index];
+            const translateY = anim ? anim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0, -6, 0],
+            }) : 0;
+            const scale = anim ? anim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [1, 1.1, 1],
+            }) : 1;
+            const baseRotate = index % 2 ? 5 : -5;
+            const rotate = anim ? anim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [`${baseRotate}deg`, `${baseRotate + (index % 2 ? -6 : 6)}deg`, `${baseRotate}deg`],
+            }) : `${baseRotate}deg`;
+
+            return (
+              <Animated.View
+                key={`${tile.letter}-${index}`}
+                style={{
+                  width: 38,
+                  height: 44,
+                  borderRadius: 12,
+                  borderWidth: 1.5,
+                  borderBottomWidth: 4,
+                  borderColor: tile.border,
+                  backgroundColor: tile.bg,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: [{ translateY }, { scale }, { rotate }],
+                }}
+              >
+                <Text style={{ color: tile.text, fontWeight: "900", fontSize: 22 }}>
+                  {tile.letter}
+                </Text>
+              </Animated.View>
+            );
+          })}
         </View>
         <Text style={styles.deckBody}>Harfleri birleştir. Kelimeleri bul. Kendi rekorunu geç.</Text>
 

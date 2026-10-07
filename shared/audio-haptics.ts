@@ -13,7 +13,13 @@ export { getHapticsEnabled, setHapticsEnabled };
 // Haptics
 export function triggerHapticSelection() {
   if (!getHapticsEnabled() || Platform.OS === "web") return;
-  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+  if (typeof Haptics.selectionAsync === "function") {
+    void Haptics.selectionAsync().catch(() => {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    });
+  } else {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+  }
 }
 
 export function triggerHapticSuccess() {

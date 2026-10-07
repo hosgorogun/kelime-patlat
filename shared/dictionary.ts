@@ -1,4 +1,4 @@
-import { normalizeTrUpper } from "./tr-utils";
+import { normalizeTr, normalizeTrUpper } from "./tr-utils";
 import { WORD_CATALOG_DATA } from "./word-catalog";
 
 export const WORD_DEFINITIONS: Record<string, string> = {
@@ -207,15 +207,15 @@ export const WORD_DEFINITIONS: Record<string, string> = {
   "HOKEY": "Buz veya çim üzerinde özel sopalarla diski veya topu rakip kaleye sokma sporu."
 };
 
+
 function deaccent(str: string): string {
-  return str
-    .replace(/ç/gi, "c")
-    .replace(/ğ/gi, "g")
-    .replace(/[ıİiI]/gi, "i")
-    .replace(/ö/gi, "o")
-    .replace(/ş/gi, "s")
-    .replace(/ü/gi, "u")
-    .toLocaleLowerCase("tr-TR");
+  return normalizeTr(str)
+    .replace(/ç/g, "c")
+    .replace(/ğ/g, "g")
+    .replace(/[ıi]/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ş/g, "s")
+    .replace(/ü/g, "u");
 }
 
 export type WordDetail = {
@@ -240,13 +240,13 @@ function setCachedDetail(key: string, detail: WordDetail) {
 
 export function getCachedWordDetail(word: string): WordDetail | null {
   const clean = word.trim();
-  const trUpper = clean.toLocaleUpperCase("tr-TR");
+  const trUpper = normalizeTrUpper(clean);
   return DETAIL_CACHE.get(trUpper) || null;
 }
 
 export function getWordDefinition(word: string): string {
   const clean = word.trim();
-  const trUpper = clean.toLocaleUpperCase("tr-TR");
+  const trUpper = normalizeTrUpper(clean);
   if (WORD_DEFINITIONS[trUpper]) return WORD_DEFINITIONS[trUpper];
   const stdUpper = clean.toUpperCase();
   if (WORD_DEFINITIONS[stdUpper]) return WORD_DEFINITIONS[stdUpper];
@@ -333,7 +333,7 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
     };
   }
 
-  const trUpper = clean.toLocaleUpperCase("tr-TR");
+  const trUpper = normalizeTrUpper(clean);
   if (DETAIL_CACHE.has(trUpper)) {
     return DETAIL_CACHE.get(trUpper)!;
   }
@@ -366,7 +366,7 @@ export async function fetchWordDetail(word: string, apiBaseUrl?: string): Promis
 
   // 2. Doğrudan TDK GTS API sorgusu
   try {
-    const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(clean.toLocaleLowerCase("tr-TR"))}`;
+    const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(normalizeTr(clean))}`;
     const res = await fetchWithTimeout(tdkUrl, undefined, 2500);
     if (res.ok) {
       const data = await res.json();

@@ -66,7 +66,7 @@ vi.mock("expo-linking", () => ({
 }));
 
 vi.mock("expo-status-bar", () => ({
-  StatusBar: "StatusBar",
+  StatusBar: () => null,
 }));
 
 vi.mock("expo-constants", () => ({
@@ -102,6 +102,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
     getItem: vi.fn().mockResolvedValue(null),
     setItem: vi.fn().mockResolvedValue(null),
     removeItem: vi.fn().mockResolvedValue(null),
+    clear: vi.fn().mockResolvedValue(null),
   },
 }));
 

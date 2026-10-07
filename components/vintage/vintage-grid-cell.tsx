@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, Pressable } from "react-native";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { vintageStyles as styles } from "./vintage.styles";
 
 export type GridCellItemProps = {
@@ -46,7 +47,10 @@ export const GridCellItem = React.memo(
 
     return (
       <Pressable
-        onPress={() => onPress(row, col)}
+        onPress={() => {
+          triggerHapticSelection();
+          onPress(row, col);
+        }}
         style={({ pressed }) => [
           styles.gridCell,
           { width: cellSize, height: cellSize },

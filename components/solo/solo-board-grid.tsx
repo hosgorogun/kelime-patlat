@@ -2,6 +2,7 @@ import React from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { FloatingScoreBurst } from "./solo-floating-effects";
+import { TilePop } from "../game/tile-pop";
 import { SOLUTION_ROUTE_COLORS, APP_WORD_PALETTE } from "@/shared/solo";
 import type { VisualTheme } from "@/shared/themes";
 import { styles } from "./solo-challenge.styles";
@@ -209,6 +210,7 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
               },
             ]}
           >
+            <TilePop active={isSelected}>
             <View
               style={[
                 styles.cell,
@@ -366,12 +368,35 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
                 </Text>
               )}
             </View>
+            </TilePop>
           </View>
         );
       });
     })()}
-      {particles.map(p => (
-        <Animated.View key={p.id} style={{ position: 'absolute', left: p.x - 4, top: p.y - 4, width: 8, height: 8, borderRadius: 4, backgroundColor: p.color, transform: p.anim.getTranslateTransform() }} />
+      {particles.map((p: any) => (
+        <Animated.View
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: p.x - 6,
+            top: p.y - 6,
+            width: 12,
+            height: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            transform: p.anim.getTranslateTransform(),
+          }}
+        >
+          {p.type === "ice" ? (
+            <Text style={{ fontSize: 9 }}>❄️</Text>
+          ) : p.type === "bomb" ? (
+            <Text style={{ fontSize: 9 }}>💥</Text>
+          ) : p.type === "gold" ? (
+            <Text style={{ fontSize: 9 }}>✨</Text>
+          ) : (
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.color }} />
+          )}
+        </Animated.View>
       ))}
       <View
         pointerEvents={status === "playing" && countdown === null ? "auto" : "none"}

@@ -151,20 +151,36 @@ export function getLeaguePromotionDetails(tierName: string) {
   }
 }
 
-// 12 adet konfeti parçacığı için rastgele değerler
-const CONFETTI_PIECES = Array.from({ length: 14 }, (_, i) => ({
+// 16 adet konfeti parçacığı için rastgele değerler
+const CONFETTI_PIECES = Array.from({ length: 18 }, (_, i) => ({
   id: i,
-  x: (i * (SCREEN_WIDTH / 14)) + (Math.random() * 15 - 7),
+  x: (i * (SCREEN_WIDTH / 18)) + (Math.random() * 15 - 7),
   size: 7 + (i % 5) * 2,
-  color: ["#FFD66E", "#38BDF8", "#34D399", "#F472B6", "#FB923C", "#A78BFA"][i % 6]!,
-  delay: (i * 70) % 500,
+  color: ["#FFD66E", "#38BDF8", "#34D399", "#F472B6", "#FB923C", "#A78BFA", "#F59E0B"][i % 7]!,
+  delay: (i * 60) % 450,
 }));
 
+// Merkez rozetten dışarıya doğru radyal fırlayan 16 adet ışıltı / yıldız
+const SPARKLE_BURST = Array.from({ length: 16 }, (_, i) => {
+  const angle = (i / 16) * Math.PI * 2;
+  const dist = 65 + (i % 4) * 20;
+  return {
+    id: i,
+    dx: Math.cos(angle) * dist,
+    dy: Math.sin(angle) * dist,
+    char: ["⭐", "✨", "💫", "🌟"][i % 4]!,
+    size: 13 + (i % 3) * 3,
+  };
+});
+
 export function CelebrationModal({ data, onClose }: CelebrationModalProps) {
-  const scaleAnim = useRef(new Animated.Value(0.75)).current;
+  const scaleAnim = useRef(new Animated.Value(0.2)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const confettiAnim = useRef(new Animated.Value(0)).current;
+  const sunburstAnim = useRef(new Animated.Value(0)).current;
+  const shockwaveAnim = useRef(new Animated.Value(0)).current;
+  const sparkleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!data) return;
@@ -177,41 +193,75 @@ export function CelebrationModal({ data, onClose }: CelebrationModalProps) {
       // ignore
     }
 
-    // Modal açılış animasyonu
-    scaleAnim.setValue(0.75);
+    // Modal açılış animasyonu (Yüksek enerjili elastik giriş)
+    scaleAnim.setValue(0.2);
     opacityAnim.setValue(0);
     confettiAnim.setValue(0);
+    shockwaveAnim.setValue(0);
+    sparkleAnim.setValue(0);
 
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
-        damping: 14,
-        stiffness: 140,
+        friction: 4.5,
+        tension: 100,
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
-        duration: 250,
+        duration: 220,
         useNativeDriver: true,
       }),
       Animated.timing(confettiAnim, {
         toValue: 1,
-        duration: 2200,
+        duration: 2400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sparkleAnim, {
+        toValue: 1,
+        duration: 1200,
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Dönen altın güneş ışıkları (Sunburst 360° döngüsü)
+    const sunburstLoop = Animated.loop(
+      Animated.timing(sunburstAnim, {
+        toValue: 1,
+        duration: 9000,
+        useNativeDriver: true,
+      })
+    );
+    sunburstLoop.start();
+
+    // Şok dalgası genişleme döngüsü
+    const shockwaveLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shockwaveAnim, {
+          toValue: 1,
+          duration: 1400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shockwaveAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    shockwaveLoop.start();
 
     // Nabız parlaması
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.08,
-          duration: 900,
+          toValue: 1.12,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 900,
+          duration: 800,
           useNativeDriver: true,
         }),
       ])
@@ -219,9 +269,11 @@ export function CelebrationModal({ data, onClose }: CelebrationModalProps) {
     pulseLoop.start();
 
     return () => {
+      sunburstLoop.stop();
+      shockwaveLoop.stop();
       pulseLoop.stop();
     };
-  }, [data, confettiAnim, opacityAnim, pulseAnim, scaleAnim]);
+  }, [data, confettiAnim, opacityAnim, pulseAnim, scaleAnim, shockwaveAnim, sparkleAnim, sunburstAnim]);
 
   if (!data) return null;
 
@@ -283,6 +335,37 @@ export function CelebrationModal({ data, onClose }: CelebrationModalProps) {
             },
           ]}
         >
+          {/* Dönen Altın Güneş Işıkları (Sunburst God Rays) */}
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.sunburstContainer,
+              {
+                transform: [
+                  {
+                    rotate: sunburstAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0deg", "360deg"],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            {Array.from({ length: 12 }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.sunburstRay,
+                  {
+                    backgroundColor: isLevelUp ? "rgba(255, 214, 110, 0.28)" : `${leagueDetails?.color}35`,
+                    transform: [{ rotate: `${i * 30}deg` }],
+                  },
+                ]}
+              />
+            ))}
+          </Animated.View>
+
           {/* Işıltılı Arka Plan Efekti */}
           <Animated.View
             style={[
@@ -296,6 +379,65 @@ export function CelebrationModal({ data, onClose }: CelebrationModalProps) {
 
           {/* Rozet / Amblem Alanı */}
           <View style={styles.badgeContainer}>
+            {/* Şok Dalgası Genişleyen Halka */}
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.shockwaveRing,
+                {
+                  borderColor: isLevelUp ? "#F0C855" : leagueDetails?.color || "#3EE8B5",
+                  transform: [
+                    {
+                      scale: shockwaveAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.8, 2.3],
+                      }),
+                    },
+                  ],
+                  opacity: shockwaveAnim.interpolate({
+                    inputRange: [0, 0.6, 1],
+                    outputRange: [0.8, 0.35, 0],
+                  }),
+                },
+              ]}
+            />
+
+            {/* Radyal Fırlayan Yıldız ve Işıltı Parçacıkları */}
+            <View pointerEvents="none" style={styles.sparkleContainer}>
+              {SPARKLE_BURST.map((sp) => {
+                const translateX = sparkleAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, sp.dx],
+                });
+                const translateY = sparkleAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, sp.dy],
+                });
+                const scale = sparkleAnim.interpolate({
+                  inputRange: [0, 0.4, 1],
+                  outputRange: [0.2, 1.25, 0.85],
+                });
+                const opacity = sparkleAnim.interpolate({
+                  inputRange: [0, 0.15, 0.85, 1],
+                  outputRange: [0, 1, 0.9, 0],
+                });
+                return (
+                  <Animated.View
+                    key={sp.id}
+                    style={[
+                      styles.sparkleItem,
+                      {
+                        transform: [{ translateX }, { translateY }, { scale }],
+                        opacity,
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: sp.size }}>{sp.char}</Text>
+                  </Animated.View>
+                );
+              })}
+            </View>
+
             {isLevelUp ? (
               <View style={styles.levelBadgeCircle}>
                 <Text style={styles.levelBadgeStar}>⭐</Text>
@@ -347,6 +489,18 @@ export function CelebrationModal({ data, onClose }: CelebrationModalProps) {
 
           {/* Açılan Yenilikler & Ödüller Kartı */}
           <View style={styles.perksCard}>
+            {/* Özel Çip Ödülü Vitrini */}
+            {isLevelUp && (levelDetails?.coins ?? 0) > 0 && (
+              <View style={styles.coinRewardBox}>
+                <Text style={styles.coinRewardIcon}>🪙</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.coinRewardTitle}>+{levelDetails?.coins} ÇİP KAZANILDI!</Text>
+                  <Text style={styles.coinRewardSub}>Profil ve kasanıza anında eklendi</Text>
+                </View>
+                <Text style={styles.coinRewardSparkle}>✨</Text>
+              </View>
+            )}
+
             <Text style={styles.perksTitle}>
               {isLevelUp ? "KAZANILAN ÖDÜLLER VE YENİLİKLER" : "KADEME AVANTAJLARI VE ÖDÜLLER"}
             </Text>
@@ -440,11 +594,45 @@ const styles = StyleSheet.create({
     borderRadius: 70,
     zIndex: 0,
   },
+  sunburstContainer: {
+    position: "absolute",
+    top: -20,
+    width: 220,
+    height: 220,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 0,
+  },
+  sunburstRay: {
+    position: "absolute",
+    width: 14,
+    height: 220,
+    borderRadius: 7,
+  },
   badgeContainer: {
     zIndex: 1,
     marginBottom: 16,
     alignItems: "center",
     justifyContent: "center",
+  },
+  shockwaveRing: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    zIndex: 0,
+  },
+  sparkleContainer: {
+    position: "absolute",
+    width: 100,
+    height: 100,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  sparkleItem: {
+    position: "absolute",
   },
   levelBadgeCircle: {
     width: 90,
@@ -542,6 +730,33 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 18,
     zIndex: 1,
+  },
+  coinRewardBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1.5,
+    borderColor: "#F59E0B",
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 12,
+    gap: 10,
+  },
+  coinRewardIcon: {
+    fontSize: 24,
+  },
+  coinRewardTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#92400E",
+  },
+  coinRewardSub: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#B45309",
+  },
+  coinRewardSparkle: {
+    fontSize: 18,
   },
   perksTitle: {
     color: "#8c7540",

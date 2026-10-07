@@ -164,8 +164,11 @@ export function usePlayerProgression({
         });
         if (!response.ok) throw new Error("Ödül sunucuda hesaplanamadı.");
         const data = await response.json();
-        if (data.progress) setProgress(data.progress);
-        else throw new Error("Sunucu progress döndürmedi.");
+        if (data.progress) {
+          setProgress((current) => mergePlayerProgress(current, data.progress, { preferRemoteBalances: true }));
+        } else {
+          throw new Error("Sunucu progress döndürmedi.");
+        }
       } catch {
         try {
           const stored = await AsyncStorage.getItem(PENDING_AWARDS_KEY);
@@ -205,7 +208,9 @@ export function usePlayerProgression({
         }
         if (!response.ok) throw new Error("Görev ödülü alınamadı.");
         const data = await response.json();
-        if (data.progress) setProgress(data.progress);
+        if (data.progress) {
+          setProgress((current) => mergePlayerProgress(current, data.progress, { preferRemoteBalances: true }));
+        }
       } catch {
         applyLocalFallback();
       }
@@ -231,8 +236,11 @@ export function usePlayerProgression({
         }
         if (!response.ok) throw new Error("Sandık ödülü alınamadı.");
         const data = await response.json();
-        if (data.progress) setProgress(data.progress);
-        else setProgress(fallback);
+        if (data.progress) {
+          setProgress((current) => mergePlayerProgress(current, data.progress, { preferRemoteBalances: true }));
+        } else {
+          setProgress(fallback);
+        }
       } catch {
         setProgress(fallback);
       }
@@ -343,14 +351,17 @@ export function usePlayerProgression({
   useEffect(() => {
     if (!progressReady || !authToken || screen === "auth") return;
     if (progress.welcomeRewardClaimed) return;
-    void AsyncStorage.getItem("kelime-patlat:player-id").then((openId) => {
+    void (async () => {
+      const openId = await AsyncStorage.getItem("kelime-patlat:player-id");
       const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
-      AsyncStorage.getItem(key).then((seen) => {
-        if (!seen) {
-          setShowWelcomeModal(true);
-        }
-      });
-    });
+      const [seenSpecific, seenGeneral] = await Promise.all([
+        AsyncStorage.getItem(key),
+        AsyncStorage.getItem("kelime-patlat:guide-seen"),
+      ]);
+      if (!seenSpecific && !seenGeneral) {
+        setShowWelcomeModal(true);
+      }
+    })();
 
     const reconciliation = reconcilePlayerProgress(progress);
     if (

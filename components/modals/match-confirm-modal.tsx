@@ -1,6 +1,7 @@
 import React from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { BoardSize } from "@/shared/game";
+import { triggerHapticSuccess, triggerHapticSelection } from "@/shared/audio-haptics";
 
 export interface PendingMatchConfirm {
   size: BoardSize;
@@ -68,7 +69,10 @@ export const MatchConfirmModal: React.FC<MatchConfirmModalProps> = ({
           {/* Butonlar */}
           <View style={styles.buttonContainer}>
             <Pressable
-              onPress={() => onConfirm(matchInfo)}
+              onPress={() => {
+                triggerHapticSuccess();
+                onConfirm(matchInfo);
+              }}
               style={({ pressed }) => [
                 styles.primaryButton,
                 {
@@ -82,7 +86,10 @@ export const MatchConfirmModal: React.FC<MatchConfirmModalProps> = ({
               </Text>
             </Pressable>
             <Pressable
-              onPress={onCancel}
+              onPress={() => {
+                triggerHapticSelection();
+                onCancel();
+              }}
               style={({ pressed }) => [
                 styles.cancelButton,
                 { opacity: pressed ? 0.7 : 1 },

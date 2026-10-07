@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable } from "react-native";
 import { APP_WORD_PALETTE } from "@/shared/solo";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { styles } from "./solo-challenge.styles";
 
 export type SoloFoundWordsProps = {
@@ -38,6 +39,7 @@ export const SoloFoundWords = React.memo(({
               <Pressable
                 key={word}
                 onPress={() => {
+                  triggerHapticSelection();
                   onInspectWord(word, path || null, palette.border);
                 }}
                 style={({ pressed }) => [

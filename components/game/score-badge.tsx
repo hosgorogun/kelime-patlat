@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { AVATARS } from "@/shared/progression";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { normalizeTr } from "@/shared/tr-utils";
@@ -43,6 +43,21 @@ export function ScoreBadge({
   const avatarBorderColor = frameColor || (activeAvatarObj ? activeAvatarObj.color : accent);
   const avatarBgColor = activeAvatarObj ? activeAvatarObj.surface : `${accent}25`;
   const [imgError, setImgError] = useState(false);
+
+  const scoreScale = useRef(new Animated.Value(1)).current;
+  const prevScore = useRef(score);
+
+  useEffect(() => {
+    if (score !== prevScore.current) {
+      if (score > prevScore.current) {
+        Animated.sequence([
+          Animated.timing(scoreScale, { toValue: 1.25, duration: 110, useNativeDriver: true }),
+          Animated.spring(scoreScale, { toValue: 1, friction: 3.5, tension: 140, useNativeDriver: true }),
+        ]).start();
+      }
+      prevScore.current = score;
+    }
+  }, [score, scoreScale]);
 
   return (
     <Pressable
@@ -122,15 +137,15 @@ export function ScoreBadge({
           </View>
         </View>
 
-        <Text
+        <Animated.Text
           style={[
             styles.scoreValue,
             active && { color: accent },
-            { textAlign: "center", marginTop: 0 },
+            { textAlign: "center", marginTop: 0, transform: [{ scale: scoreScale }] },
           ]}
         >
           {score}
-        </Text>
+        </Animated.Text>
       </View>
     </Pressable>
   );

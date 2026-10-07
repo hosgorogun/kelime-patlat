@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, View, Text } from "react-native";
 import { styles } from "./solo-challenge.styles";
 
 export type SoloWordTrayProps = {
@@ -20,11 +20,27 @@ export const SoloWordTray = React.memo(({
   activeWord,
   activeTheme,
 }: SoloWordTrayProps) => {
+  const trayScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (feedback === "invalid") {
+      Animated.sequence([
+        Animated.timing(trayScale, { toValue: 1.05, duration: 60, useNativeDriver: true }),
+        Animated.spring(trayScale, { toValue: 1, friction: 3, tension: 160, useNativeDriver: true }),
+      ]).start();
+    } else if (feedback === "accepted" || feedback === "bonus" || status === "won") {
+      Animated.sequence([
+        Animated.timing(trayScale, { toValue: 1.08, duration: 80, useNativeDriver: true }),
+        Animated.spring(trayScale, { toValue: 1, friction: 3.5, tension: 140, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [feedback, status, trayScale]);
+
   return (
-    <View
+    <Animated.View
       style={[
         styles.tray,
-        { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder },
+        { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder, transform: [{ scale: trayScale }] },
         feedback === "invalid" && styles.trayInvalid,
         (feedback === "accepted" || status === "won") && styles.trayAccepted,
         feedback === "bonus" && styles.trayBonus,
@@ -64,7 +80,7 @@ export const SoloWordTray = React.memo(({
           ? "Kırmızı rota birazdan temizlenecek."
           : "Yalnız yatay ve dikey ilerle; geri dönmek için önceki hücreye sürükle."}
       </Text>
-    </View>
+    </Animated.View>
   );
 });
 

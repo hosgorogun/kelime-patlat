@@ -55,6 +55,8 @@ export interface PvpMatchContainerProps {
   handleLiveGameExitPress?: () => void;
   gameScrollRef?: React.RefObject<ScrollView | null>;
   boardWidth?: number;
+  livesModalElement?: React.ReactNode;
+  celebrationModalElement?: React.ReactNode;
 }
 
 export function PvpMatchContainer(props: PvpMatchContainerProps) {
@@ -241,8 +243,8 @@ export function PvpMatchContainer(props: PvpMatchContainerProps) {
       setInspectedUser={setInspectedUser}
       onAddFriendTarget={handleAddFriendTarget}
       onChallengeTarget={handleChallengeTarget}
-      livesModalElement={undefined}
-      celebrationModalElement={undefined}
+      livesModalElement={props.livesModalElement}
+      celebrationModalElement={props.celebrationModalElement}
       onLiveGameExitPress={handleLiveGameExitPress}
       gameScrollRef={gameScrollRef}
     />

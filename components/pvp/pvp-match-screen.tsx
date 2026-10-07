@@ -276,7 +276,7 @@ export function PvpMatchScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.gameHeader}>
-          <Pressable onPress={onLiveGameExitPress} style={styles.exitButton}>
+          <Pressable onPress={() => { triggerHapticSelection(); onLiveGameExitPress(); }} style={styles.exitButton}>
             <Text style={styles.exitText}>×</Text>
           </Pressable>
           <View>
@@ -394,7 +394,7 @@ export function PvpMatchScreen({
 
           {room.status === "playing" && (
             <View style={styles.compactEmoteMiniBar}>
-              {["🔥", "👏", "⚡", "😎"].map((emoji) => (
+              {["🔥", "👏", "⚡", "😎", "🎯", "⏳", "🤝", "💪"].map((emoji) => (
                 <Pressable
                   key={emoji}
                   onPress={() => onSendEmote(emoji)}
@@ -463,23 +463,27 @@ export function PvpMatchScreen({
                   inspectedPath.every((c, ci) => c === fw.path[ci])
               );
               const lineOpacity = inspectedPath ? (isCurrentInspected ? 1 : 0.4) : 0.92;
-              return fw.path.slice(0, -1).map((cellIdx, i) => {
-                const nextCellIdx = fw.path[i + 1]!;
-                const start = getCellCenter(cellIdx);
-                const end = getCellCenter(nextCellIdx);
-                return (
-                  <ConnectLine
-                    key={`finished-line-${fwIdx}-${i}`}
-                    x1={start.x}
-                    y1={start.y}
-                    x2={end.x}
-                    y2={end.y}
-                    color={fw.color}
-                    opacity={lineOpacity}
-                    showArrow
-                  />
-                );
-              });
+              return (
+                <React.Fragment key={`fw-group-${fwIdx}`}>
+                  {fw.path.slice(0, -1).map((cellIdx, i) => {
+                    const nextCellIdx = fw.path[i + 1]!;
+                    const start = getCellCenter(cellIdx);
+                    const end = getCellCenter(nextCellIdx);
+                    return (
+                      <ConnectLine
+                        key={`finished-line-${fwIdx}-${i}`}
+                        x1={start.x}
+                        y1={start.y}
+                        x2={end.x}
+                        y2={end.y}
+                        color={fw.color}
+                        opacity={lineOpacity}
+                        showArrow
+                      />
+                    );
+                  })}
+                </React.Fragment>
+              );
             })}
 
           {room.board.map((letter, index) => {

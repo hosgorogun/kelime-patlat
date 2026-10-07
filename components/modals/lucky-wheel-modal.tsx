@@ -17,6 +17,7 @@ import {
 } from "@/shared/progression";
 import { haptics } from "@/lib/haptics";
 import { gameSfx } from "@/lib/game-sfx";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 
 export interface LuckyWheelModalProps {
   visible: boolean;
@@ -155,7 +156,10 @@ export function LuckyWheelModal({
               <Text style={styles.title}>Şans Çarkıfeleği 🎡</Text>
             </View>
             <Pressable
-              onPress={onClose}
+              onPress={() => {
+                triggerHapticSelection();
+                onClose();
+              }}
               disabled={isSpinning}
               style={({ pressed }) => [styles.closeBtn, pressed && { opacity: 0.7 }]}
             >

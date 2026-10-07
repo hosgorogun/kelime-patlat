@@ -55,11 +55,12 @@ friendsRouter.post("/request", async (req, res) => {
     }
 
     await connectDb();
+    const cleanTarget = toUsername.trim();
     const targetUser = await UserModel.findOne({
       $or: [
-        { username: normalizeTr(toUsername) },
-        { openId: toUsername },
-        { name: new RegExp(`^${escapeRegex(toUsername)}$`, "i") },
+        { openId: cleanTarget },
+        { username: normalizeTr(cleanTarget) },
+        { name: new RegExp(`^${escapeRegex(cleanTarget)}$`, "i") },
       ],
     }).lean();
 

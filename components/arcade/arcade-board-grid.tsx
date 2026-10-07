@@ -2,6 +2,7 @@ import React from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { FloatingScoreBurst } from "../solo/solo-floating-effects";
+import { TilePop } from "../game/tile-pop";
 import { APP_WORD_PALETTE } from "@/shared/solo";
 import { styles } from "./arcade.styles";
 
@@ -206,6 +207,7 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
               },
             ]}
           >
+            <TilePop active={isSelected}>
             <View
               style={[
                 styles.cell,
@@ -244,7 +246,6 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
                   elevation: 2,
                 },
                 isSelected && styles.cellSelected,
-                isSelected && { transform: [{ scale: 1.15 }] },
                 isTail && styles.cellTail,
                 isTail && { transform: [{ scale: 1.2 }] },
                 feedback === "invalid" && isSelected && styles.cellInvalid,
@@ -322,25 +323,36 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
                 </Text>
               )}
             </View>
+            </TilePop>
           </View>
         );
       });
     })()}
 
-      {particles.map((p) => (
+      {particles.map((p: any) => (
         <Animated.View
           key={p.id}
           style={{
             position: "absolute",
-            left: p.x - 4,
-            top: p.y - 4,
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: p.color,
+            left: p.x - 6,
+            top: p.y - 6,
+            width: 12,
+            height: 12,
+            alignItems: "center",
+            justifyContent: "center",
             transform: p.anim.getTranslateTransform(),
           }}
-        />
+        >
+          {p.type === "ice" ? (
+            <Text style={{ fontSize: 9 }}>❄️</Text>
+          ) : p.type === "bomb" ? (
+            <Text style={{ fontSize: 9 }}>💥</Text>
+          ) : p.type === "gold" ? (
+            <Text style={{ fontSize: 9 }}>✨</Text>
+          ) : (
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.color }} />
+          )}
+        </Animated.View>
       ))}
       <View
         pointerEvents={status === "playing" && countdown === null ? "auto" : "none"}

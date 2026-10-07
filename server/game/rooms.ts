@@ -105,7 +105,7 @@ function finishRound(io: Server, room: Room) {
     room.message = `${winner.name} ${room.scores[winner.id] ?? 0} puanla turu kazandı!`;
   }
 
-  recordRoundForLeaderboard(io, room);
+  recordRoundForLeaderboard(io, room).catch(console.error);
   emitRoom(io, room);
 }
 
@@ -313,7 +313,7 @@ function leaveRoom(io: Server, socket: Socket, room: Room, playerId: string) {
       room.message = `${player.name} maçı terk etti. ${remaining.name} hükmen kazandı!`;
       room.status = "finished";
       if (room.isRanked || !remaining.isBot) {
-        recordRoundForLeaderboard(io, room);
+        recordRoundForLeaderboard(io, room).catch(console.error);
       }
       if (!remaining.isBot) {
         emitRoom(io, room);
@@ -1005,6 +1005,7 @@ export function registerGameRooms(io: Server) {
           room.disconnectTimer = setTimeout(() => {
             const currentRoom = rooms.get(room.code);
             if (!currentRoom || currentRoom.status !== "playing") return;
+            if (currentRoom.disconnectPlayerId !== player.id) return;
             const currentPlayer = currentRoom.host.id === player.id ? currentRoom.host : currentRoom.guest;
             if (currentPlayer && !currentPlayer.connected) {
               const currentOpponent = currentRoom.host.id === player.id ? currentRoom.guest : currentRoom.host;
@@ -1028,7 +1029,7 @@ export function registerGameRooms(io: Server) {
                 clearTimeout(currentRoom.disconnectTimer);
                 currentRoom.disconnectTimer = undefined;
               }
-              recordRoundForLeaderboard(io, currentRoom);
+              recordRoundForLeaderboard(io, currentRoom).catch(console.error);
               emitRoom(io, currentRoom);
             }
           }, 15_000);

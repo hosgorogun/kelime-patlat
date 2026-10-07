@@ -220,7 +220,7 @@ export function SeasonHub({
   const top1 = displayedLeaderboard[0];
   const top2 = displayedLeaderboard[1];
   const top3 = displayedLeaderboard[2];
-  const restOfLeaderboard = displayedLeaderboard.slice(3);
+  const restOfLeaderboard = useMemo(() => displayedLeaderboard.slice(3), [displayedLeaderboard]);
 
   const handleAddFriend = async () => {
     const trimmed = friendInput.trim();

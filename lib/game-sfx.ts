@@ -105,8 +105,14 @@ function playSynthMarimba(freq: number, duration = 0.16) {
 }
 
 function playerFor(effect: EffectName) {
-  if (!players[effect]) players[effect] = createAudioPlayer(SOURCES[effect]);
-  return players[effect]!;
+  if (!players[effect]) {
+    try {
+      players[effect] = createAudioPlayer(SOURCES[effect]);
+    } catch {
+      return null;
+    }
+  }
+  return players[effect] || null;
 }
 
 function play(effect: EffectName, playbackRate = 1.0) {
@@ -117,6 +123,7 @@ function play(effect: EffectName, playbackRate = 1.0) {
       void setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
     }
     const player = playerFor(effect);
+    if (!player) return;
     try {
       if (player && "playbackRate" in (player as any)) {
         (player as any).playbackRate = playbackRate;

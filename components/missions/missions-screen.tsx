@@ -15,6 +15,7 @@ import { haptics } from "@/lib/haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { palette } from "@/shared/palette";
 import { GameButton, GameIcon, ICONS, JewelTitle, OrnatePanel } from "@/components/game/game-ui";
+import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
 
 const DIFFICULTY_CONFIG = {
   easy: { label: "KOLAY", color: palette.gemGreen, bg: "rgba(74, 222, 128, 0.16)", border: palette.gemGreen },
@@ -59,6 +60,7 @@ export function MissionsScreen({
     desc: string;
     rewards: string[];
   } | null>(null);
+  const [coinCascadeTrigger, setCoinCascadeTrigger] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -138,6 +140,9 @@ export function MissionsScreen({
     claimingRef.current.add(mission.id);
     haptics.success();
     gameSfx.victory();
+
+    setCoinCascadeTrigger(true);
+    setTimeout(() => setCoinCascadeTrigger(false), 1200);
 
     const isDaily = mission.period === "daily";
     if (isDaily) {
@@ -434,6 +439,8 @@ export function MissionsScreen({
           </View>
         </>
       )}
+
+      <CoinCascadeOverlay trigger={coinCascadeTrigger} count={10} icon="🪙" />
     </ScrollView>
   );
 }

@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal, Pressable, Text, View } from "react-native";
+import { triggerHapticSuccess } from "@/shared/audio-haptics";
 import { styles } from "./cyber-store.styles";
 
 export type ConfirmPurchaseData = {
@@ -67,6 +68,7 @@ export function StorePurchaseModal({
 
             <Pressable
               onPress={() => {
+                triggerHapticSuccess();
                 const action = confirmPurchase.onConfirm;
                 onClose();
                 action();

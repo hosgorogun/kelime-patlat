@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { triggerHapticSuccess, gameSfx } from "@/shared/audio-haptics";
 
 interface WelcomeRewardModalProps {
   visible: boolean;
@@ -65,7 +66,11 @@ export const WelcomeRewardModal: React.FC<WelcomeRewardModalProps> = ({
           {/* Buton */}
           <Pressable
             disabled={isClaiming}
-            onPress={onClaim}
+            onPress={() => {
+              triggerHapticSuccess();
+              try { gameSfx.victory(); } catch {}
+              onClaim();
+            }}
             style={({ pressed }) => [
               styles.actionButton,
               { opacity: pressed || isClaiming ? 0.7 : 1 },

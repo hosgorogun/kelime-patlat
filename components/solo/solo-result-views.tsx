@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable } from "react-native";
 import { VictoryBanner } from "../game/victory-effect-overlay";
+import { CoinCascadeOverlay } from "../game/coin-cascade";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "@/shared/solo";
 import { gameSfx } from "@/lib/game-sfx";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
@@ -130,6 +131,8 @@ export function SoloWonView({
           )}
         </View>
       )}
+
+      <CoinCascadeOverlay trigger={chestState === "opened"} count={12} icon="🪙" />
 
       <View style={{ width: "100%", gap: 8, marginTop: 12 }}>
         {!daily && level < MAX_SOLO_LEVEL && (

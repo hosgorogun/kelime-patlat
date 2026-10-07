@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, Alert } from "react-native";
 import { VictoryBanner } from "../game/victory-effect-overlay";
+import { CoinCascadeOverlay } from "../game/coin-cascade";
 import { styles } from "./arcade.styles";
 
 export type ArcadeSummaryPanelProps = {
@@ -51,6 +52,8 @@ export const ArcadeSummaryPanel = React.memo(({
       )}
       <Text style={styles.resultCopy}>Arcade modunda ulaştığın nihai skor:</Text>
       <Text style={styles.finalScore}>{score}</Text>
+
+      <CoinCascadeOverlay trigger={score > 0} count={8} icon="🪙" />
 
       {/* Rewards Breakdown Strip */}
       <View style={styles.arcadeRewardsRow}>

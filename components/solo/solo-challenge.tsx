@@ -220,6 +220,9 @@ export function SoloChallenge({
       setCountdown(1); // 1 saniyelik odaklanma payı verir
       triggerHapticSuccess();
       playSuccessSound();
+      setTimeBonusText("⚡ +20sn SÜRE YENİLENDİ! ⚡");
+      const reviveTimer = setTimeout(() => setTimeBonusText(null), 2500);
+      particleTimers.current.push(reviveTimer);
       if (setProgress) {
         setProgress((curr) => {
           const isSameDay = curr.dailyRevivesDate === todayId;
@@ -265,7 +268,48 @@ export function SoloChallenge({
     return () => clearTimeout(timer);
   }, [radarCooldown]);
   
-  const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]>([]);
+  const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; type?: "ice" | "bomb" | "gold"; anim: Animated.ValueXY }[]>([]);
+
+  const explodeParticles = (cells: number[]) => {
+    const BOARD_PAD = 4;
+    const innerSize = boardWidth - BOARD_PAD * 2;
+    const cellSize = innerSize / challenge.size;
+    const newParticles: typeof particles = [];
+    
+    cells.forEach((cellIndex) => {
+      const row = Math.floor(cellIndex / challenge.size);
+      const col = cellIndex % challenge.size;
+      const x = col * cellSize + cellSize / 2 + BOARD_PAD;
+      const y = row * cellSize + cellSize / 2 + BOARD_PAD;
+      const tileType = challenge.specialTiles?.[cellIndex]?.type;
+
+      if (tileType === "bomb") {
+        triggerShake();
+      }
+      
+      for (let i = 0; i < 8; i++) {
+        const anim = new Animated.ValueXY({ x: 0, y: 0 });
+        const id = Math.random();
+        newParticles.push({ id, x, y, color: activeTheme.accentColor, type: tileType, anim });
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = (tileType === "bomb" ? 25 : 15) + Math.random() * 35;
+        
+        Animated.timing(anim, {
+          toValue: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+          duration: 380,
+          useNativeDriver: true
+        }).start();
+      }
+    });
+
+    setParticles((prev) => [...prev, ...newParticles]);
+    const cleanupTimer = setTimeout(() => {
+      setParticles((prev) => prev.filter(p => !newParticles.includes(p)));
+    }, 400);
+    particleTimers.current.push(cleanupTimer);
+  };
+  const particleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   const selectionRef = useRef<number[]>([]);
@@ -425,8 +469,6 @@ export function SoloChallenge({
     };
   };
 
-  const particleTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
   useEffect(() => () => {
     particleTimers.current.forEach(clearTimeout);
   }, []);
@@ -454,41 +496,6 @@ export function SoloChallenge({
     const cleanupTimer = setTimeout(() => {
       setParticles((prev) => prev.filter((p) => !newConfetti.includes(p)));
     }, 2600);
-    particleTimers.current.push(cleanupTimer);
-  };
-
-  const explodeParticles = (cells: number[]) => {
-    const BOARD_PAD = 4;
-    const innerSize = boardWidth - BOARD_PAD * 2;
-    const cellSize = innerSize / challenge.size;
-    const newParticles: typeof particles = [];
-    
-    cells.forEach((cellIndex) => {
-      const row = Math.floor(cellIndex / challenge.size);
-      const col = cellIndex % challenge.size;
-      const x = col * cellSize + cellSize / 2 + BOARD_PAD;
-      const y = row * cellSize + cellSize / 2 + BOARD_PAD;
-      
-      for (let i = 0; i < 8; i++) {
-        const anim = new Animated.ValueXY({ x: 0, y: 0 });
-        const id = Math.random();
-        newParticles.push({ id, x, y, color: activeTheme.accentColor, anim });
-        
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 15 + Math.random() * 35;
-        
-        Animated.timing(anim, {
-          toValue: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
-          duration: 350,
-          useNativeDriver: true
-        }).start();
-      }
-    });
-
-    setParticles((prev) => [...prev, ...newParticles]);
-    const cleanupTimer = setTimeout(() => {
-      setParticles((prev) => prev.filter(p => !newParticles.includes(p)));
-    }, 380);
     particleTimers.current.push(cleanupTimer);
   };
 

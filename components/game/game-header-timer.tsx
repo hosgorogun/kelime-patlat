@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { StyleSheet, Text, View, Animated } from "react-native";
 
 export type GameHeaderProps = {
   remainingSeconds: number;
@@ -20,6 +20,31 @@ export const GameHeaderTimer = React.memo(function GameHeaderTimer({
   myMultiplier = 1,
   isFinalPush = false,
 }: GameHeaderProps) {
+  const heartbeatScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isFinalPush) {
+      heartbeatScale.setValue(1);
+      return;
+    }
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(heartbeatScale, {
+          toValue: 1.12,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(heartbeatScale, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseLoop.start();
+    return () => pulseLoop.stop();
+  }, [isFinalPush, heartbeatScale]);
+
   const formatSeconds = (sec: number) => {
     const mins = Math.floor(sec / 60);
     const s = sec % 60;
@@ -34,11 +59,17 @@ export const GameHeaderTimer = React.memo(function GameHeaderTimer({
         {myMultiplier > 1 && <Text style={styles.multiplierBadge}>×{myMultiplier}</Text>}
       </View>
 
-      <View style={[styles.timerBadge, isFinalPush && styles.timerBadgeUrgent]}>
+      <Animated.View
+        style={[
+          styles.timerBadge,
+          isFinalPush && styles.timerBadgeUrgent,
+          { transform: [{ scale: heartbeatScale }] },
+        ]}
+      >
         <Text style={[styles.timerText, isFinalPush && styles.timerTextUrgent]}>
           ⏱ {formatSeconds(remainingSeconds)}
         </Text>
-      </View>
+      </Animated.View>
 
       <View style={[styles.playerBox, styles.opponentBox]}>
         <Text numberOfLines={1} style={styles.playerName}>{opponentName}</Text>

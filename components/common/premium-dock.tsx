@@ -1,6 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { palette } from "@/shared/palette";
 import { ICONS } from "@/components/game/game-ui";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 
 export type DockDestination =
   | "store"
@@ -44,7 +45,10 @@ export function PremiumDock({
             accessibilityRole="tab"
             accessibilityLabel={tab.label}
             accessibilityState={{ selected }}
-            onPress={() => onNavigate(tab.id)}
+            onPress={() => {
+              triggerHapticSelection();
+              onNavigate(tab.id);
+            }}
             style={({ pressed }) => [
               styles.tab,
               selected && styles.active,

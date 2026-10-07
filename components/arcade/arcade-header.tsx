@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, Animated } from "react-native";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { FloatingTimeBonus } from "../solo/solo-floating-effects";
 import { styles } from "./arcade.styles";
@@ -27,6 +27,25 @@ export const ArcadeHeader = React.memo(({
   onExitPress,
   onPausePress,
 }: ArcadeHeaderProps) => {
+  const timerScale = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (!timeBonusText) return;
+    Animated.sequence([
+      Animated.timing(timerScale, {
+        toValue: 1.25,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+      Animated.spring(timerScale, {
+        toValue: 1,
+        friction: 4,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [timeBonusText, timerScale]);
+
   return (
     <>
       <View style={styles.header}>
@@ -44,10 +63,16 @@ export const ArcadeHeader = React.memo(({
           <Text style={styles.scoreLabel}>SKOR</Text>
           <Text style={styles.scoreValue}>{score}</Text>
         </View>
-        <View style={[styles.timer, seconds <= 8 && styles.timerUrgent]}>
+        <Animated.View
+          style={[
+            styles.timer,
+            seconds <= 8 && styles.timerUrgent,
+            { transform: [{ scale: timerScale }] },
+          ]}
+        >
           <Text style={styles.timerText}>{seconds}s</Text>
           <FloatingTimeBonus text={timeBonusText} />
-        </View>
+        </Animated.View>
         <Pressable
           onPress={() => {
             triggerHapticSelection();

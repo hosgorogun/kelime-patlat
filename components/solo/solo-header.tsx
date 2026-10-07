@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, Animated } from "react-native";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { FloatingTimeBonus } from "./solo-floating-effects";
 import { styles } from "./solo-challenge.styles";
@@ -45,6 +45,24 @@ export const SoloHeader = React.memo(({
   onRadarPress,
   onPausePress,
 }: SoloHeaderProps) => {
+  const timerScale = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    if (!timeBonusText) return;
+    Animated.sequence([
+      Animated.timing(timerScale, {
+        toValue: 1.25,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+      Animated.spring(timerScale, {
+        toValue: 1,
+        friction: 4,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [timeBonusText, timerScale]);
   return (
     <>
       <View style={styles.header}>
@@ -79,16 +97,17 @@ export const SoloHeader = React.memo(({
               : "👁 REKLAMLA +1 HAK"}
           </Text>
         </Pressable>
-        <View
+        <Animated.View
           style={[
             styles.timer,
             { backgroundColor: activeTheme.surface, borderColor: activeTheme.accentColor },
             seconds <= 15 && styles.timerUrgent,
+            { transform: [{ scale: timerScale }] },
           ]}
         >
           <Text style={styles.timerText}>{seconds}s</Text>
           <FloatingTimeBonus text={timeBonusText} />
-        </View>
+        </Animated.View>
         <Pressable
           onPress={() => {
             triggerHapticSelection();

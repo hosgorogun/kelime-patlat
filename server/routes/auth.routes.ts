@@ -53,7 +53,7 @@ authRouter.post("/guest", async (_req, res) => {
 });
 
 const signupSchema = z.object({
-  username: z.string().trim().min(3, "Kullanıcı adı min 3 karakter olmalıdır.").max(32).regex(/^\S+$/, "Kullanıcı adı boşluk içeremez."),
+  username: z.string().trim().min(4, "Kullanıcı adı en az 4 karakter olmalıdır.").max(32).regex(/^[a-zA-Z0-9._-]+$/, "Kullanıcı adı yalnızca harf, rakam, nokta ve alt çizgi içerebilir."),
   password: z.string().min(6, "Şifre min 6 karakter olmalıdır.").max(128),
   email: z.string().trim().email("Geçerli bir e-posta adresi gereklidir.").max(128),
   fullName: z.string().trim().min(2, "Ad soyad en az 2 karakter olmalıdır.").max(64),
@@ -107,6 +107,21 @@ authRouter.post("/signup", async (req, res) => {
     res.json({ success: true, token, user: { openId, name: fullName.trim(), username: lowerUsername, progress: initialProgress } });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Kayıt işlemi başarısız." });
+  }
+});
+
+authRouter.get("/check-username", async (req, res) => {
+  try {
+    const rawUsername = typeof req.query?.username === "string" ? req.query.username.trim() : "";
+    if (!rawUsername || rawUsername.length < 4) {
+      return res.status(400).json({ available: false, error: "Kullanıcı adı en az 4 karakter olmalıdır." });
+    }
+    await connectDb();
+    const lowerUsername = normalizeTr(rawUsername);
+    const existing = await UserModel.findOne({ username: lowerUsername });
+    res.json({ available: !existing });
+  } catch (err: any) {
+    res.status(500).json({ available: false, error: "Kontrol edilemedi." });
   }
 });
 
@@ -224,9 +239,6 @@ authRouter.post("/sync-progress", async (req, res) => {
         dbUser.name = name.trim().slice(0, 32);
       }
       const currentProg = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
-      const incomingCoins = typeof progress.coins === "number" && Number.isFinite(progress.coins)
-        ? Math.max(0, Math.min(2_000_000, progress.coins))
-        : (currentProg.coins ?? 0);
       const incomingShields = typeof progress.streakShields === "number" && Number.isFinite(progress.streakShields)
         ? Math.max(0, Math.min(99, progress.streakShields))
         : (currentProg.streakShields ?? 0);
@@ -234,14 +246,14 @@ authRouter.post("/sync-progress", async (req, res) => {
         ? Math.max(0, Math.min(99, progress.radarChargesBonus))
         : (currentProg.radarChargesBonus ?? 0);
 
-      const nextCoins = incomingCoins;
+      const nextCoins = currentProg.coins ?? 0;
       const nextShields = Math.max(currentProg.streakShields ?? 0, incomingShields);
       const nextRadar = Math.max(currentProg.radarChargesBonus ?? 0, incomingRadar);
 
       const isClaimingWelcome = !currentProg.welcomeRewardClaimed && Boolean(progress.welcomeRewardClaimed);
-      const missingWelcomeCoins = isClaimingWelcome && incomingCoins <= (currentProg.coins ?? 0) ? 50 : 0;
-      const missingWelcomeShields = isClaimingWelcome && incomingShields <= (currentProg.streakShields ?? 0) ? 1 : 0;
-      const missingWelcomeRadar = isClaimingWelcome && incomingRadar <= (currentProg.radarChargesBonus ?? 0) ? 5 : 0;
+      const missingWelcomeCoins = isClaimingWelcome ? 50 : 0;
+      const missingWelcomeShields = isClaimingWelcome ? 1 : 0;
+      const missingWelcomeRadar = isClaimingWelcome ? 5 : 0;
 
       const todayId = getDayId();
       const isClaimingDailyLogin = Boolean(

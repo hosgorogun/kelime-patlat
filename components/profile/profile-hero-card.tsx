@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, Image, TextInput } from "react-native";
 import type { PlayerProgress, AvatarDefinition, LeagueTier } from "@/shared/progression";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { FRAME_IMAGES } from "./profile-constants";
 import { styles } from "./profile.styles";
 
@@ -106,11 +107,23 @@ export const ProfileHeroCard = React.memo(({
 
           {/* Photo Action Buttons */}
           <View style={styles.avatarActionsRow}>
-            <Pressable onPress={handlePickPhoto} style={styles.cameraIconBtn}>
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                handlePickPhoto();
+              }}
+              style={styles.cameraIconBtn}
+            >
               <Text style={styles.cameraIconText}>📷 FOTOĞRAF</Text>
             </Pressable>
             {Boolean(progress.avatarPhoto) && (
-              <Pressable onPress={handleResetToGlyph} style={styles.resetGlyphBtn}>
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  handleResetToGlyph();
+                }}
+                style={styles.resetGlyphBtn}
+              >
                 <Text style={styles.resetGlyphText}>✕ GLİF</Text>
               </Pressable>
             )}

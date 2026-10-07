@@ -8,6 +8,7 @@ vi.mock("react-native", () => ({
 vi.mock("expo-haptics", () => ({
   impactAsync: vi.fn().mockResolvedValue(undefined),
   notificationAsync: vi.fn().mockResolvedValue(undefined),
+  selectionAsync: vi.fn().mockResolvedValue(undefined),
   ImpactFeedbackStyle: { Light: "light", Heavy: "heavy" },
   NotificationFeedbackType: { Success: "success", Error: "error" },
 }));
@@ -40,7 +41,7 @@ describe("Audio & Haptics System Unit Tests", () => {
   it("should trigger haptic selection", () => {
     setHapticsEnabled(true);
     triggerHapticSelection();
-    expect(Haptics.impactAsync).toHaveBeenCalled();
+    expect(Haptics.selectionAsync).toHaveBeenCalled();
   });
 
   it("should trigger haptic success and error", () => {
