@@ -79,7 +79,7 @@ export const WeekendHuntCard: React.FC<WeekendHuntCardProps> = ({
         <View style={styles.wordsGrid}>
           {event.targetWords.map((target) => {
             const isFound = huntData.foundWords.some((w) => isEqualTr(w, target));
-            const isInspected = inspectedWord === target;
+            const isInspected = inspectedWord ? isEqualTr(inspectedWord, target) : false;
             const hint = event.hints[target] || "Temaya uygun özel kelime.";
 
             return (

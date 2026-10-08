@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { normalizeTrUpper } from "../../shared/tr-utils";
 
 export type WordInspectModalProps = {
   visible: boolean;
@@ -28,7 +29,7 @@ export const WordInspectModal = React.memo(function WordInspectModal({
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <View style={[styles.headerBadge, { backgroundColor: `${inspectedColor}20`, borderColor: inspectedColor }]}>
-            <Text style={[styles.wordText, { color: inspectedColor }]}>{wordInfo.word.toUpperCase()}</Text>
+            <Text style={[styles.wordText, { color: inspectedColor }]}>{normalizeTrUpper(wordInfo.word)}</Text>
           </View>
 
           {wordInfo.type && <Text style={styles.typeText}>{wordInfo.type}</Text>}

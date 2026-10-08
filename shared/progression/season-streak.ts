@@ -14,7 +14,6 @@ import { reconcileMissions } from "./progression-missions";
 
 import { getDayId, getWeekId, getDiffDays, getPreviousDayId } from "./date-utils";
 
-export { getDayId, getWeekId, getDiffDays, getPreviousDayId };
 
 function seededNumber(input: string) {
   return [...input].reduce((value, char) => ((value * 31) ^ char.charCodeAt(0)) >>> 0, 7_431);

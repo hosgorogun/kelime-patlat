@@ -3,6 +3,7 @@ import { View, Text, Pressable, Image } from "react-native";
 import type { LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { getTierColor, getMinLpForTier, getPlayerLevel, AVATARS, type AvatarId } from "@/shared/progression";
+import { normalizeTrUpper } from "@/shared/tr-utils";
 import type { WeeklyDivisionCohort } from "@/shared/leagues";
 import { styles } from "./season-hub.styles";
 import type { RankingType } from "./season-mock-data";
@@ -209,7 +210,7 @@ export const SeasonLeaderboardTab = React.memo(({
                     </Text>
                   </View>
                   <View style={styles.playerMark}>
-                    <Text style={styles.playerMarkText}>{member.name.slice(0, 1).toUpperCase()}</Text>
+                    <Text style={styles.playerMarkText}>{normalizeTrUpper(member.name.slice(0, 1))}</Text>
                   </View>
                   <View style={styles.playerCopy}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

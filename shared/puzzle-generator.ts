@@ -1,3 +1,5 @@
+import { isEqualTr } from "./tr-utils";
+
 export interface WordEntry {
   id: string;
   answer: string;
@@ -935,9 +937,8 @@ export function checkPlacement(
   }
 
   // 2. Çözüm ile uyumluluk kontrolü (Solution Validation)
-  const normalizedAnswer = wordAnswer.toLocaleUpperCase("tr-TR");
   const matchingWordExists = solutionWords.some(
-    (w) => w.answer.toLocaleUpperCase("tr-TR") === normalizedAnswer
+    (w) => isEqualTr(w.answer, wordAnswer)
   );
 
   if (!matchingWordExists) {
@@ -946,7 +947,7 @@ export function checkPlacement(
 
   const targetSolution = solutionWords.find(
     (w) =>
-      w.answer.toLocaleUpperCase("tr-TR") === normalizedAnswer &&
+      isEqualTr(w.answer, wordAnswer) &&
       w.row === startRow &&
       w.col === startCol &&
       w.direction === direction
@@ -961,7 +962,7 @@ export function checkPlacement(
     const r = direction === "horizontal" ? startRow : startRow + i;
     const c = direction === "horizontal" ? startCol + i : startCol;
     const cellChar = currentBoard[r]![c];
-    if (cellChar !== null && cellChar !== wordAnswer[i]) {
+    if (cellChar !== null && !isEqualTr(cellChar, wordAnswer[i])) {
       return { valid: false, reason: "Ortak hücredeki harf uyuşmuyor!" };
     }
   }

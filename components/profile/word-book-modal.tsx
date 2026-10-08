@@ -61,7 +61,7 @@ export const WordBookModal = React.memo(({
   const claimedMilestones = progress.wordBookClaimedMilestones || {};
 
   const handleInspectWord = useCallback(async (word: string) => {
-    if (selectedWord === word) {
+    if (selectedWord && isEqualTr(selectedWord, word)) {
       setSelectedWord(null);
       setCurrentDefinition(null);
       return;

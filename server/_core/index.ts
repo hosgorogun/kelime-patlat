@@ -9,6 +9,15 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { registerGameRooms } from "../game/rooms";
 
+// Process level safety handlers for production stability
+process.on("uncaughtException", (error) => {
+  console.error("[CRITICAL] Uncaught Exception trapped:", error);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[CRITICAL] Unhandled Rejection at:", promise, "reason:", reason);
+});
+
 // Modular Express Routers
 import { authRouter } from "../routes/auth.routes";
 import { gameRouter } from "../routes/game.routes";

@@ -121,3 +121,10 @@
 - [x] Yeni özellikler için test kapsamını genişletme (Sosyal, Mağaza, Temalar, Sözlük, Bulmaca — toplam 86 test)
 - [x] Üretim sunucu derlemesini (`npm run build`) esbuild ile doğrulama
 - [x] Güncel masaüstü proje arşivini ve kalite güvence raporunu tamamlama
+- [x] [PROD] `eas.json` dosyasına canlı API domain `EXPO_PUBLIC_API_BASE_URL` ortam değişkenlerini ekleme
+- [x] [PROD] `shared/progression.ts` ve `season-streak.ts` içindeki duplicate export hatasını çözme
+- [x] [PROD] `server/_core/index.ts` sunucu giriş noktasına global `uncaughtException` ve `unhandledRejection` crash handler ekleme
+- [x] [PROD] `server/db.ts` içinde canlı ortam için `MONGODB_URI` zorunluluğunu ve hata fırlatmasını sağlama
+- [x] [PROD] Bileşenlerdeki (`word-inspect-modal`, `profile-customizer`, `arcade-challenge`, `weekend-hunt-card`, `solo-challenge`) Türkçe karakter (`normalizeTrUpper` & `isEqualTr`) kurallarını uygulama
+- [x] [PROD] TypeScript tam derleme ve tip doğrulamasını (`tsc --noEmit`) 0 hata ile başarma
+

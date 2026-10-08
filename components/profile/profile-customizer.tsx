@@ -9,6 +9,7 @@ import {
   type Badge,
 } from "@/shared/progression";
 import { triggerHapticError, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { normalizeTrUpper } from "@/shared/tr-utils";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { FRAME_IMAGES } from "./profile-constants";
 import { styles } from "./profile.styles";
@@ -336,7 +337,7 @@ export const ProfileCustomizer = React.memo(({
                   onPress={() => {
                     if (!unlocked) {
                       if (onShowToast) {
-                        onShowToast(`🔒 ${title.name.toUpperCase()} KİLİTLİ`, title.unlockHint, "🔒", "#EF4444");
+                        onShowToast(`🔒 ${normalizeTrUpper(title.name)} KİLİTLİ`, title.unlockHint, "🔒", "#EF4444");
                       } else {
                         Alert.alert(`🔒 ${title.name} KİLİTLİ`, title.unlockHint);
                       }

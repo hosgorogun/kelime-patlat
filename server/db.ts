@@ -349,6 +349,9 @@ export async function updateTurnMatchRecord(matchId: string, updates: Partial<Tu
 
 function databaseUri() {
   const uri = process.env.MONGODB_URI?.trim();
+  if (!uri && process.env.NODE_ENV === "production") {
+    throw new Error("[CRITICAL] MONGODB_URI environment variable is missing in production mode!");
+  }
   return uri || "mongodb://127.0.0.1:27017/kelime_patlat";
 }
 

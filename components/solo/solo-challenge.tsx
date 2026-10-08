@@ -129,7 +129,7 @@ export function SoloChallenge({
 
   const inspectWord = (word: string, path: number[] | null, color: string) => {
     triggerHapticSelection();
-    if (selectedWordInfo?.word === word) {
+    if (selectedWordInfo?.word && isEqualTr(selectedWordInfo.word, word)) {
       setSelectedWordInfo(null);
       setInspectedPath(null);
       setInspectedColor(null);
