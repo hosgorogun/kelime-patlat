@@ -47,6 +47,7 @@ export function usePlayerProgression({
   const [progressReady, setProgressReady] = useState(false);
   const [soloUnlockedLevel, setSoloUnlockedLevel] = useState(1);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
   const syncDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasOfflineRef = useRef(false);
 
@@ -71,6 +72,7 @@ export function usePlayerProgression({
           }),
         });
         if (res.ok) {
+          setIsOffline(false);
           if (wasOfflineRef.current) {
             wasOfflineRef.current = false;
             setGlobalToast?.({
@@ -83,10 +85,12 @@ export function usePlayerProgression({
           }
         } else {
           wasOfflineRef.current = true;
+          setIsOffline(true);
         }
       } catch {
         // Çevrimdışı veya sunucuya ulaşılamayan durumlarda ilerleme yerel AsyncStorage içinde güvenle korunur.
         wasOfflineRef.current = true;
+        setIsOffline(true);
       }
     },
     [safeName, setGlobalToast]
@@ -486,5 +490,6 @@ export function usePlayerProgression({
     awardProgressOnServer,
     claimMissionOnServer,
     claimMilestoneOnServer,
+    isOffline,
   };
 }

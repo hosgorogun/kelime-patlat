@@ -21,6 +21,8 @@ import {
   triggerHapticLongWord,
   getSfxEnabled,
   setSfxEnabled,
+  getHapticsEnabled,
+  setHapticsEnabled,
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { VictoryEffectOverlay } from "../game/victory-effect-overlay";
@@ -36,6 +38,8 @@ import { SoloWordTray } from "./solo-word-tray";
 import { SoloFoundWords } from "./solo-found-words";
 import { SoloExitModal } from "./solo-exit-modal";
 import { SoloBoardGrid } from "./solo-board-grid";
+import { ModernAlertModal } from "../modals/modern-alert-modal";
+import { MAX_SOLO_LEVEL } from "@/shared/solo";
 
 type Feedback = "idle" | "invalid" | "accepted" | "bonus";
 
@@ -173,6 +177,7 @@ export function SoloChallenge({
   const [chestState, setChestState] = useState<"closed" | "decrypting" | "opened">("closed");
   const [decryptProgress, setDecryptProgress] = useState(0);
   const [decryptText, setDecryptText] = useState("");
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
 
   const decryptIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isDecryptingRef = useRef(false);
@@ -391,13 +396,18 @@ export function SoloChallenge({
 
   const [isPaused, setIsPaused] = useState(false);
   const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
+  const [hapticsOn, setHapticsOn] = useState(() => getHapticsEnabled());
 
   useEffect(() => {
     if (typeof progress?.sfxEnabled === "boolean") {
       setSoundOn(progress.sfxEnabled);
       setSfxEnabled(progress.sfxEnabled);
     }
-  }, [progress?.sfxEnabled]);
+    if (typeof progress?.hapticsEnabled === "boolean") {
+      setHapticsOn(progress.hapticsEnabled);
+      setHapticsEnabled(progress.hapticsEnabled);
+    }
+  }, [progress?.sfxEnabled, progress?.hapticsEnabled]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -634,6 +644,7 @@ export function SoloChallenge({
       triggerHapticLongWord();
       const winTimer = setTimeout(() => {
         setStatus("won");
+        setShowVictoryModal(true);
         setSelectedWordInfo(null);
         setInspectedPath(null);
         setInspectedColor(null);
@@ -1011,6 +1022,7 @@ export function SoloChallenge({
         seconds={seconds}
         accentColor={activeTheme.accentColor}
         soundOn={soundOn}
+        hapticsOn={hapticsOn}
         onResume={() => {
           triggerHapticSelection();
           setIsPaused(false);
@@ -1022,6 +1034,14 @@ export function SoloChallenge({
           setProgress?.((curr) => ({ ...curr, sfxEnabled: nextState }));
           AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(nextState)).catch(() => undefined);
           triggerHapticSelection();
+        }}
+        onToggleHaptics={() => {
+          const nextState = !getHapticsEnabled();
+          setHapticsEnabled(nextState);
+          setHapticsOn(nextState);
+          setProgress?.((curr) => ({ ...curr, hapticsEnabled: nextState }));
+          AsyncStorage.setItem("kelime-patlat:haptics-enabled", String(nextState)).catch(() => undefined);
+          if (nextState) triggerHapticSelection();
         }}
         onExit={() => {
           setIsPaused(false);
@@ -1041,6 +1061,48 @@ export function SoloChallenge({
           }
           onExit();
         }}
+      />
+
+      <ModernAlertModal
+        alert={
+          showVictoryModal
+            ? {
+                icon: "🎉",
+                kicker: daily ? "GÜNÜN ROTASI TAMAMLANDI" : `SEVİYE ${level} TAMAMLANDI`,
+                title: "Tüm Kelimeler Çözüldü!",
+                message: "Harika iş çıkardın! Bir sonraki seviyeye geçebilir ya da tahtadaki kelime rotalarını incelemek için burada kalabilirsin.",
+                accentColor: activeTheme.accentColor || "#3EE8B5",
+                primaryButton: !daily && level < MAX_SOLO_LEVEL
+                  ? {
+                      text: "SONRAKİ SEVİYE ➔",
+                      color: activeTheme.accentColor || "#3EE8B5",
+                      onPress: () => {
+                        setShowVictoryModal(false);
+                        triggerHapticSelection();
+                        if (onAdvanceLevel) onAdvanceLevel();
+                        else onNext();
+                      },
+                    }
+                  : {
+                      text: "ANA MENÜYE DÖN",
+                      color: activeTheme.accentColor || "#3EE8B5",
+                      onPress: () => {
+                        setShowVictoryModal(false);
+                        triggerHapticSelection();
+                        onExit();
+                      },
+                    },
+                secondaryButton: {
+                  text: "TAHTAYI İNCELE 🔍",
+                  onPress: () => {
+                    setShowVictoryModal(false);
+                    triggerHapticSelection();
+                  },
+                },
+              }
+            : null
+        }
+        onDismiss={() => setShowVictoryModal(false)}
       />
 
       <GameCountdownOverlay

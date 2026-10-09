@@ -53,7 +53,7 @@ function normalizedProgress(progress: Partial<PlayerProgress>): PlayerProgress {
   };
 }
 
-async function safely<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
+export async function safely<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
   try {
     await connectDb();
     return await operation();

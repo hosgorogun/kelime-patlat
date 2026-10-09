@@ -61,6 +61,7 @@ export function MissionsScreen({
     rewards: string[];
   } | null>(null);
   const [coinCascadeTrigger, setCoinCascadeTrigger] = useState(false);
+  const [xpCascadeTrigger, setXpCascadeTrigger] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -142,7 +143,11 @@ export function MissionsScreen({
     gameSfx.victory();
 
     setCoinCascadeTrigger(true);
-    setTimeout(() => setCoinCascadeTrigger(false), 1200);
+    setXpCascadeTrigger(true);
+    setTimeout(() => {
+      setCoinCascadeTrigger(false);
+      setXpCascadeTrigger(false);
+    }, 1200);
 
     const isDaily = mission.period === "daily";
     if (isDaily) {
@@ -441,6 +446,7 @@ export function MissionsScreen({
       )}
 
       <CoinCascadeOverlay trigger={coinCascadeTrigger} count={10} icon="🪙" />
+      <CoinCascadeOverlay trigger={xpCascadeTrigger} count={10} icon="⚡" targetX={80} targetY={80} />
     </ScrollView>
   );
 }

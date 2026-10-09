@@ -9,6 +9,7 @@ import type { ToastData } from "../common/global-game-toast";
 import { useLivesManager } from "@/hooks/use-lives-manager";
 import type { ModernAlertData } from "../modals/modern-alert-modal";
 import { useCelebrationManager } from "@/hooks/use-celebration-manager";
+import { OfflineBanner } from "../common/offline-banner";
 import { AppScreenRouter } from "./app-screen-router";
 import { AppProviders } from "@/context";
 import { usePlayerProgression } from "@/hooks/use-player-progression";
@@ -85,6 +86,7 @@ export function AppRoot() {
     awardProgressOnServer,
     claimMissionOnServer,
     claimMilestoneOnServer,
+    isOffline,
   } = usePlayerProgression({
     safeName,
     authToken,
@@ -387,23 +389,26 @@ export function AppRoot() {
       uiFeedback={uiFeedbackValue}
       pvp={pvpContextValue}
     >
-      <AppScreenRouter
-        splashFinished={splashFinished}
-        setSplashFinished={setSplashFinished}
-        dailySession={dailySession}
-        setDailySession={setDailySession}
-        recentSoloWords={recentSoloWords}
-        soloLevel={soloLevel}
-        setSoloLevel={setSoloLevel}
-        openSoloLevel={openSoloLevel}
-        completeSoloLevel={completeSoloLevel}
-        completeDailyChallenge={completeDailyChallenge}
-        livesModalElement={livesModalElement}
-        celebrationModalElement={celebrationModalElement}
-        luckyWheelModalElement={luckyWheelModalElement}
-        onOpenLuckyWheel={() => setShowLuckyWheel(true)}
-        watchAd={watchAd}
-      />
+      <>
+        <OfflineBanner isOffline={isOffline} />
+        <AppScreenRouter
+          splashFinished={splashFinished}
+          setSplashFinished={setSplashFinished}
+          dailySession={dailySession}
+          setDailySession={setDailySession}
+          recentSoloWords={recentSoloWords}
+          soloLevel={soloLevel}
+          setSoloLevel={setSoloLevel}
+          openSoloLevel={openSoloLevel}
+          completeSoloLevel={completeSoloLevel}
+          completeDailyChallenge={completeDailyChallenge}
+          livesModalElement={livesModalElement}
+          celebrationModalElement={celebrationModalElement}
+          luckyWheelModalElement={luckyWheelModalElement}
+          onOpenLuckyWheel={() => setShowLuckyWheel(true)}
+          watchAd={watchAd}
+        />
+      </>
     </AppProviders>
   );
 }

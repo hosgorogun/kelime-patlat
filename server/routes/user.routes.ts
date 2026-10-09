@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { UserModel, connectDb } from "../db";
-import { ProfileModel } from "../game/mongo-store";
+import { ProfileModel, safely } from "../game/mongo-store";
 import { normalizeTr } from "../../shared/tr-utils";
 import { getLeagueTier, getPlayerLevel, type PlayerProgress } from "../../shared/progression";
 
@@ -35,14 +35,16 @@ userRouter.get("/profile/:idOrName", async (req, res) => {
       });
     }
 
-    await connectDb();
-    const user = await UserModel.findOne({
-      $or: [
-        { openId: idOrName },
-        { username: normalizeTr(idOrName) },
-        { name: new RegExp(`^${escapeRegex(idOrName)}$`, "i") },
-      ],
-    }).lean();
+    const user = await safely(async () => {
+      await connectDb();
+      return UserModel.findOne({
+        $or: [
+          { openId: idOrName },
+          { username: normalizeTr(idOrName) },
+          { name: new RegExp(`^${escapeRegex(idOrName)}$`, "i") },
+        ],
+      }).lean();
+    }, null);
 
     if (user) {
       const prog = (user.progress || {}) as PlayerProgress;

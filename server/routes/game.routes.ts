@@ -41,7 +41,7 @@ gameRouter.use(async (req, res, next) => {
   } catch {
     return next(); // Kimlik doğrulama hatasını ilgili rota kendisi döner.
   }
-  const previous = userLocks.get(openId) ?? Promise.resolve();
+  const previous = (userLocks.get(openId) ?? Promise.resolve()).catch(() => {});
   let release!: () => void;
   const current = new Promise<void>((resolve) => { release = resolve; });
   const chained = previous.then(() => current);
@@ -55,7 +55,10 @@ gameRouter.use(async (req, res, next) => {
   };
   res.on("finish", done);
   res.on("close", done);
-  previous.then(() => next()).catch(console.error);
+  previous.then(() => next()).catch((err) => {
+    done();
+    next(err);
+  });
 });
 
 gameRouter.post("/daily-login", async (req, res) => {

@@ -126,9 +126,13 @@ export function SeasonHub({
   }, [pendingRequests]);
 
   useEffect(() => {
+    let active = true;
     socialManager.init().then((list) => {
-      setFriendsList([...list]);
-    });
+      if (active) setFriendsList([...list]);
+    }).catch(console.error);
+    return () => {
+      active = false;
+    };
   }, []);
 
   const rank = getRank(progress);

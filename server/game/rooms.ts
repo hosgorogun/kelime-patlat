@@ -997,42 +997,39 @@ export function registerGameRooms(io: Server) {
           room.message = `${player.name} bağlantısı koptu. (15s içinde yeniden bağlanmazsa hükmen yenilecek)`;
           emitRoom(io, room);
 
-          if (room.disconnectTimer) clearTimeout(room.disconnectTimer);
-          room.disconnectPlayerId = player.id;
-          room.disconnectExpiresAt = Date.now() + 15_000;
-          emitRoom(io, room);
+          if (!room.disconnectTimer) {
+            room.disconnectPlayerId = player.id;
+            room.disconnectExpiresAt = Date.now() + 15_000;
+            emitRoom(io, room);
 
-          room.disconnectTimer = setTimeout(() => {
-            const currentRoom = rooms.get(room.code);
-            if (!currentRoom || currentRoom.status !== "playing") return;
-            if (currentRoom.disconnectPlayerId !== player.id) return;
-            const currentPlayer = currentRoom.host.id === player.id ? currentRoom.host : currentRoom.guest;
-            if (currentPlayer && !currentPlayer.connected) {
-              const currentOpponent = currentRoom.host.id === player.id ? currentRoom.guest : currentRoom.host;
-              if (currentOpponent) {
-                currentRoom.winnerId = currentOpponent.id;
-                currentRoom.message = `${currentPlayer.name} maçı terk etti. ${currentOpponent.name} hükmen kazandı!`;
-              } else {
-                currentRoom.winnerId = null;
-                currentRoom.message = `${currentPlayer.name} maçı terk etti.`;
+            room.disconnectTimer = setTimeout(() => {
+              const currentRoom = rooms.get(room.code);
+              if (!currentRoom || currentRoom.status !== "playing") return;
+              if (currentRoom.disconnectPlayerId !== player.id) return;
+              const currentPlayer = currentRoom.host.id === player.id ? currentRoom.host : currentRoom.guest;
+              if (currentPlayer && !currentPlayer.connected) {
+                const currentOpponent = currentRoom.host.id === player.id ? currentRoom.guest : currentRoom.host;
+                if (currentOpponent) {
+                  currentRoom.winnerId = currentOpponent.id;
+                  currentRoom.message = `${currentPlayer.name} maçı terk etti. ${currentOpponent.name} hükmen kazandı!`;
+                } else {
+                  currentRoom.winnerId = null;
+                  currentRoom.message = `${currentPlayer.name} maçı terk etti.`;
+                }
+                currentRoom.status = "finished";
+                if (currentRoom.roundEndTimer) {
+                  clearTimeout(currentRoom.roundEndTimer);
+                  currentRoom.roundEndTimer = undefined;
+                }
+                if (currentRoom.botTurnTimer) {
+                  clearTimeout(currentRoom.botTurnTimer);
+                  currentRoom.botTurnTimer = undefined;
+                }
+                recordRoundForLeaderboard(io, currentRoom).catch(console.error);
+                emitRoom(io, currentRoom);
               }
-              currentRoom.status = "finished";
-              if (currentRoom.roundEndTimer) {
-                clearTimeout(currentRoom.roundEndTimer);
-                currentRoom.roundEndTimer = undefined;
-              }
-              if (currentRoom.botTurnTimer) {
-                clearTimeout(currentRoom.botTurnTimer);
-                currentRoom.botTurnTimer = undefined;
-              }
-              if (currentRoom.disconnectTimer) {
-                clearTimeout(currentRoom.disconnectTimer);
-                currentRoom.disconnectTimer = undefined;
-              }
-              recordRoundForLeaderboard(io, currentRoom).catch(console.error);
-              emitRoom(io, currentRoom);
-            }
-          }, 15_000);
+            }, 15_000);
+          }
         } else {
           room.message = `${player.name} bağlantısını yeniliyor…`;
           emitRoom(io, room);

@@ -164,12 +164,10 @@ class SocialManager {
     const rawUsername = typeof userOrUsername === "string" ? userOrUsername : userOrUsername.username || userOrUsername.name || "";
     const cleanName = rawUsername.trim();
     if (!cleanName) return { success: false, message: "Geçerli bir kullanıcı adı girin." };
-    const cleanAscii = cleanName.toLowerCase().replace(/ı/g, "i");
+    const normClean = normalizeTr(cleanName);
     const exists = this.friends.some((f) => {
       if (isEqualTr(f.username, cleanName) || isEqualTr(f.name, cleanName)) return true;
-      const fUserAscii = (f.username || "").toLowerCase().replace(/ı/g, "i");
-      const fNameAscii = (f.name || "").toLowerCase().replace(/ı/g, "i");
-      return fUserAscii === cleanAscii || fNameAscii === cleanAscii;
+      return normalizeTr(f.username || "") === normClean || normalizeTr(f.name || "") === normClean;
     });
     if (exists) return { success: false, message: "Bu kullanıcı zaten arkadaş listenizde." };
 

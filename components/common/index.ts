@@ -5,3 +5,4 @@ export * from "./error-boundary";
 export * from "./global-game-toast";
 export * from "./premium-dock";
 export * from "./screen-container";
+export * from "./offline-banner";

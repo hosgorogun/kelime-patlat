@@ -1,6 +1,6 @@
 import { io as ClientIO, Socket } from "socket.io-client";
 
-const BASE_URL = "http://127.0.0.1:3000";
+const BASE_URL = "http://localhost:3000";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

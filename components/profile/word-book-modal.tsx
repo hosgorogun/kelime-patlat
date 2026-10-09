@@ -261,7 +261,7 @@ export const WordBookModal = React.memo(({
             ) : (
               <View style={styles.wordsGrid}>
                 {filteredWords.map((word) => {
-                  const isInspected = selectedWord === word;
+                  const isInspected = isEqualTr(selectedWord, word);
                   return (
                     <Pressable
                       key={`word-item-${word}`}

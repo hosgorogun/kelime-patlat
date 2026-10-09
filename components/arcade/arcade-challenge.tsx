@@ -150,7 +150,7 @@ export function ArcadeChallenge({
       })
       .catch(() => {
         if (!isMountedRef.current) return;
-        setSelectedWordInfo((prev) => (prev && prev.word === word ? { ...prev, loading: false } : prev));
+        setSelectedWordInfo((prev) => (prev && isEqualTr(prev.word, word) ? { ...prev, loading: false } : prev));
       });
   };
 

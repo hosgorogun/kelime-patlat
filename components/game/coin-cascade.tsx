@@ -16,6 +16,8 @@ interface CoinCascadeOverlayProps {
   trigger: boolean;
   count?: number;
   icon?: string;
+  targetX?: number;
+  targetY?: number;
   onComplete?: () => void;
 }
 
@@ -23,6 +25,8 @@ export function CoinCascadeOverlay({
   trigger,
   count = 10,
   icon = "🪙",
+  targetX,
+  targetY,
   onComplete,
 }: CoinCascadeOverlayProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -42,8 +46,8 @@ export function CoinCascadeOverlay({
 
     const startCenterX = screenWidth * 0.5;
     const startCenterY = screenHeight * 0.45;
-    const targetHeaderX = screenWidth - 50;
-    const targetHeaderY = 40;
+    const targetHeaderX = targetX ?? (screenWidth - 50);
+    const targetHeaderY = targetY ?? 40;
 
     const newParticles: CoinParticle[] = Array.from({ length: count }, (_, i) => ({
       id: Math.random() + i,
@@ -90,7 +94,7 @@ export function CoinCascadeOverlay({
       timeoutIdsRef.current.forEach(clearTimeout);
       timeoutIdsRef.current = [];
     };
-  }, [trigger, count, icon, animValues, onComplete, screenWidth, screenHeight]);
+  }, [trigger, count, icon, targetX, targetY, animValues, onComplete, screenWidth, screenHeight]);
 
   if (!particles.length) return null;
 
