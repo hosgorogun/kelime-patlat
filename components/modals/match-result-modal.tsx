@@ -224,6 +224,7 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
               streakBonus={progress.lastMatchReward?.streakBonus}
               pvpWinStreak={progress.lastMatchReward?.pvpWinStreak ?? progress.pvpWinStreak}
               isCrushingWin={progress.lastMatchReward?.isCrushingWin}
+              shieldUsed={progress.lastMatchReward?.shieldUsed}
             />
 
             {/* 2. Ayrılmış Rota ve Performans Analizi Kartı */}

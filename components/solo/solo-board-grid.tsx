@@ -1,11 +1,236 @@
 import React from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { FloatingScoreBurst } from "./solo-floating-effects";
 import { TilePop } from "../game/tile-pop";
 import { SOLUTION_ROUTE_COLORS, APP_WORD_PALETTE } from "@/shared/solo";
 import type { VisualTheme } from "@/shared/themes";
 import { styles } from "./solo-challenge.styles";
+
+interface SoloCellProps {
+  letter: string;
+  index: number;
+  size: number;
+  isSelected: boolean;
+  order: number;
+  isTail: boolean;
+  isFound: boolean;
+  foundColor?: { bg: string; border: string; letterText: string };
+  isSolution: boolean;
+  solutionColor?: number;
+  isRadar: boolean;
+  isInspected: boolean;
+  inspectedOrder: number;
+  isInspectedStart: boolean;
+  isInspectedEnd: boolean;
+  inspectedColor?: string | null;
+  feedback: any;
+  countdown: number | null;
+  specialTileType?: "ice" | "bomb" | "gold";
+  surface: string;
+  cellBorder: string;
+  surfaceSelected: string;
+  accentColor: string;
+}
+
+const SoloCell = React.memo(function SoloCell({
+  letter,
+  index,
+  size,
+  isSelected,
+  order,
+  isTail,
+  isFound,
+  foundColor,
+  isSolution,
+  solutionColor,
+  isRadar,
+  isInspected,
+  inspectedOrder,
+  isInspectedStart,
+  isInspectedEnd,
+  inspectedColor,
+  feedback,
+  countdown,
+  specialTileType,
+  surface,
+  cellBorder,
+  surfaceSelected,
+  accentColor,
+}: SoloCellProps) {
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.cellWrap,
+        {
+          width: `${100 / size}%`,
+          height: `${100 / size}%`,
+          padding: size === 10 ? 1.5 : size === 8 ? 2 : size === 6 ? 3 : 4,
+        },
+      ]}
+    >
+      <TilePop active={isSelected}>
+        <View
+          style={[
+            styles.cell,
+            { backgroundColor: surface, borderColor: cellBorder },
+            isSolution && solutionColor !== undefined && SOLUTION_ROUTE_COLORS[solutionColor % SOLUTION_ROUTE_COLORS.length],
+            isFound && !isSolution && (foundColor ? {
+              backgroundColor: foundColor.bg,
+              borderColor: foundColor.border,
+              borderWidth: 2,
+            } : styles.cellFound),
+            isInspected && {
+              borderColor: inspectedColor || accentColor,
+              borderWidth: 2.5,
+              backgroundColor: "rgba(245, 158, 11, 0.25)",
+              transform: [{ scale: 1.06 }],
+            },
+            isInspectedStart && {
+              borderColor: "#DCE1D7",
+              borderWidth: 2.5,
+              shadowColor: "#293541",
+              shadowOpacity: 0.08,
+              shadowRadius: 4,
+              elevation: 2,
+            },
+            isInspectedEnd && {
+              borderColor: "#DCE1D7",
+              borderWidth: 2.5,
+              shadowColor: "#293541",
+              shadowOpacity: 0.08,
+              shadowRadius: 4,
+              elevation: 2,
+            },
+            isSelected && [styles.cellSelected, { backgroundColor: surfaceSelected }],
+            isTail && styles.cellTail,
+            feedback === "invalid" && isSelected && styles.cellInvalid,
+            feedback === "accepted" && isSelected && styles.cellAccepted,
+            feedback === "bonus" && isSelected && styles.cellBonus,
+            isRadar && styles.cellRadar,
+            !isFound && specialTileType === "ice" && {
+              borderColor: "#38BDF8",
+              borderWidth: 2,
+              backgroundColor: "rgba(186, 230, 253, 0.3)",
+            },
+            !isFound && specialTileType === "bomb" && {
+              borderColor: "#F97316",
+              borderWidth: 2,
+            },
+            !isFound && specialTileType === "gold" && {
+              borderColor: "#FBBF24",
+              borderWidth: 2,
+              backgroundColor: "rgba(254, 240, 138, 0.25)",
+            },
+          ]}
+        >
+          <Text
+            selectable={false}
+            style={[
+              styles.letter,
+              size === 6 && styles.letterMedium,
+              size === 8 && styles.letterSmall,
+              size === 10 && styles.letterExtraSmall,
+              isSelected && { color: "#78350F" },
+              feedback === "accepted" && isSelected && { color: "#065F46" },
+              feedback === "bonus" && isSelected && { color: "#854D0E" },
+              feedback === "invalid" && isSelected && { color: "#991B1B" },
+              foundColor && !isSolution && { color: foundColor.letterText },
+              isRadar && styles.letterRadar,
+              countdown !== null && countdown > 0 && { opacity: 0 },
+            ]}
+          >
+            {letter}
+          </Text>
+          {isSelected && (
+            <Text
+              selectable={false}
+              style={[
+                styles.order,
+                size >= 8 && { fontSize: 7, top: 1, right: 2 },
+              ]}
+            >
+              {order + 1}
+            </Text>
+          )}
+          {!isSelected && inspectedOrder >= 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: size >= 8 ? 1 : 2,
+                right: size >= 8 ? 1 : 2,
+                backgroundColor: isInspectedStart ? "#F0F5ED" : isInspectedEnd ? "#f0a4a4" : "#F0F5ED",
+                borderRadius: size >= 8 ? 4 : 6,
+                minWidth: size >= 8 ? 12 : 16,
+                height: size >= 8 ? 12 : 16,
+                justifyContent: "center",
+                alignItems: "center",
+                paddingHorizontal: 2,
+                borderWidth: 1,
+                borderColor: isInspectedStart ? "#DCE1D7" : isInspectedEnd ? "#DCE1D7" : "#DCE1D7",
+                zIndex: 6,
+              }}
+            >
+              <Text
+                selectable={false}
+                style={{
+                  color: "#293541",
+                  fontSize: size >= 8 ? 7 : 8,
+                  fontWeight: "900",
+                  textAlign: "center",
+                }}
+              >
+                {isInspectedStart ? "1" : isInspectedEnd ? "✓" : inspectedOrder + 1}
+              </Text>
+            </View>
+          )}
+          {!isFound && specialTileType && (
+            <View
+              style={{
+                position: "absolute",
+                bottom: size >= 8 ? 0.5 : 2,
+                left: size >= 8 ? 0.5 : 2,
+                zIndex: 5,
+              }}
+            >
+              <Text style={{ fontSize: size >= 8 ? 8 : 11 }}>
+                {specialTileType === "ice"
+                  ? "🧊"
+                  : specialTileType === "bomb"
+                  ? "💣"
+                  : "🪙"}
+              </Text>
+            </View>
+          )}
+          {isFound && !isSelected && (
+            <Text
+              selectable={false}
+              style={[
+                styles.check,
+                foundColor && { color: foundColor.border },
+                size >= 8 && { fontSize: 7, left: 2, bottom: 1 },
+              ]}
+            >
+              ✓
+            </Text>
+          )}
+          {isSolution && !isFound && (
+            <Text
+              selectable={false}
+              style={[
+                styles.solutionMark,
+                size >= 8 && { fontSize: 8, bottom: 1, left: 2 },
+              ]}
+            >
+              •
+            </Text>
+          )}
+        </View>
+      </TilePop>
+    </View>
+  );
+});
 
 export const SoloBoardGrid = React.memo(function SoloBoardGrid({
   boardRef,
@@ -184,10 +409,12 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
           inspectedPath.forEach((idx, i) => inspectedMap.set(idx, i));
         }
 
+        const tailIndex = selected.length > 0 ? selected[selected.length - 1] : -1;
+
         return challenge.board.map((letter, index) => {
           const order = orderMap.get(index) ?? -1;
           const isSelected = order !== -1;
-          const isTail = selected.length > 0 && selected[selected.length - 1] === index;
+          const isTail = tailIndex === index;
           const isFound = foundCells.has(index);
           const foundColor = foundCellColors.get(index);
           const solutionColor = solutionColors.get(index);
@@ -197,182 +424,37 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
           const isInspected = inspectedOrder !== -1;
           const isInspectedStart = status !== "playing" && inspectedOrder === 0;
           const isInspectedEnd = (status !== "playing" && inspectedPath) ? inspectedOrder === inspectedPath.length - 1 : false;
-        return (
-          <View
-            key={`${letter}-${index}`}
-            pointerEvents="none"
-            style={[
-              styles.cellWrap,
-              {
-                width: `${100 / challenge.size}%`,
-                height: `${100 / challenge.size}%`,
-                padding: challenge.size === 10 ? 1.5 : challenge.size === 8 ? 2 : challenge.size === 6 ? 3 : 4,
-              },
-            ]}
-          >
-            <TilePop active={isSelected}>
-            <View
-              style={[
-                styles.cell,
-                { backgroundColor: activeTheme.surface, borderColor: activeTheme.cellBorder },
-                isSolution && SOLUTION_ROUTE_COLORS[solutionColor % SOLUTION_ROUTE_COLORS.length],
-                isFound && !isSolution && (foundColor ? {
-                  backgroundColor: foundColor.bg,
-                  borderColor: foundColor.border,
-                  borderWidth: 2,
-                } : styles.cellFound),
-                isInspected && {
-                  borderColor: inspectedColor || activeTheme.accentColor,
-                  borderWidth: 2.5,
-                  backgroundColor: "rgba(245, 158, 11, 0.25)",
-                  transform: [{ scale: 1.06 }],
-                },
-                isInspectedStart && {
-                  borderColor: "#DCE1D7",
-                  borderWidth: 2.5,
-                  shadowColor: "#293541",
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  elevation: 2,
-                },
-                isInspectedEnd && {
-                  borderColor: "#DCE1D7",
-                  borderWidth: 2.5,
-                  shadowColor: "#293541",
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  elevation: 2,
-                },
-                isSelected && [styles.cellSelected, { backgroundColor: activeTheme.surfaceSelected }],
-                isTail && styles.cellTail,
-                feedback === "invalid" && isSelected && styles.cellInvalid,
-                feedback === "accepted" && isSelected && styles.cellAccepted,
-                feedback === "bonus" && isSelected && styles.cellBonus,
-                isRadar && styles.cellRadar,
-                !isFound && challenge.specialTiles?.[index]?.type === "ice" && {
-                  borderColor: "#38BDF8",
-                  borderWidth: 2,
-                  backgroundColor: "rgba(186, 230, 253, 0.3)",
-                },
-                !isFound && challenge.specialTiles?.[index]?.type === "bomb" && {
-                  borderColor: "#F97316",
-                  borderWidth: 2,
-                },
-                !isFound && challenge.specialTiles?.[index]?.type === "gold" && {
-                  borderColor: "#FBBF24",
-                  borderWidth: 2,
-                  backgroundColor: "rgba(254, 240, 138, 0.25)",
-                },
-              ]}
-            >
-              <Text
-                selectable={false}
-                style={[
-                  styles.letter,
-                  challenge.size === 6 && styles.letterMedium,
-                  challenge.size === 8 && styles.letterSmall,
-                  challenge.size === 10 && styles.letterExtraSmall,
-                  isSelected && { color: "#78350F" },
-                  feedback === "accepted" && isSelected && { color: "#065F46" },
-                  feedback === "bonus" && isSelected && { color: "#854D0E" },
-                  feedback === "invalid" && isSelected && { color: "#991B1B" },
-                  foundColor && !isSolution && { color: foundColor.letterText },
-                  isRadar && styles.letterRadar,
-                  countdown !== null && countdown > 0 && { opacity: 0 },
-                ]}
-              >
-                {letter}
-              </Text>
-              {isSelected && (
-                <Text
-                  selectable={false}
-                  style={[
-                    styles.order,
-                    challenge.size >= 8 && { fontSize: 7, top: 1, right: 2 },
-                  ]}
-                >
-                  {order + 1}
-                </Text>
-              )}
-              {!isSelected && inspectedOrder >= 0 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: challenge.size >= 8 ? 1 : 2,
-                    right: challenge.size >= 8 ? 1 : 2,
-                    backgroundColor: isInspectedStart ? "#F0F5ED" : isInspectedEnd ? "#f0a4a4" : "#F0F5ED",
-                    borderRadius: challenge.size >= 8 ? 4 : 6,
-                    minWidth: challenge.size >= 8 ? 12 : 16,
-                    height: challenge.size >= 8 ? 12 : 16,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    paddingHorizontal: 2,
-                    borderWidth: 1,
-                    borderColor: isInspectedStart ? "#DCE1D7" : isInspectedEnd ? "#DCE1D7" : "#DCE1D7",
-                    zIndex: 6,
-                  }}
-                >
-                  <Text
-                    selectable={false}
-                    style={{
-                      color: "#293541",
-                      fontSize: challenge.size >= 8 ? 7 : 8,
-                      fontWeight: "900",
-                      textAlign: "center",
-                    }}
-                  >
-                    {isInspectedStart ? "1" : isInspectedEnd ? "✓" : inspectedOrder + 1}
-                  </Text>
-                </View>
-              )}
-              {/* Special Tile Badge (Ice, Bomb, Gold) */}
-              {!isFound && challenge.specialTiles?.[index] && (
-                <View
-                  style={{
-                    position: "absolute",
-                    bottom: challenge.size >= 8 ? 0.5 : 2,
-                    left: challenge.size >= 8 ? 0.5 : 2,
-                    zIndex: 5,
-                  }}
-                >
-                  <Text style={{ fontSize: challenge.size >= 8 ? 8 : 11 }}>
-                    {challenge.specialTiles[index]?.type === "ice"
-                      ? "🧊"
-                      : challenge.specialTiles[index]?.type === "bomb"
-                      ? "💣"
-                      : "🪙"}
-                  </Text>
-                </View>
-              )}
-              {isFound && !isSelected && (
-                <Text
-                  selectable={false}
-                  style={[
-                    styles.check,
-                    foundColor && { color: foundColor.border },
-                    challenge.size >= 8 && { fontSize: 7, left: 2, bottom: 1 },
-                  ]}
-                >
-                  ✓
-                </Text>
-              )}
-              {isSolution && !isFound && (
-                <Text
-                  selectable={false}
-                  style={[
-                    styles.solutionMark,
-                    challenge.size >= 8 && { fontSize: 8, bottom: 1, left: 2 },
-                  ]}
-                >
-                  •
-                </Text>
-              )}
-            </View>
-            </TilePop>
-          </View>
-        );
-      });
-    })()}
+
+          return (
+            <SoloCell
+              key={`${letter}-${index}`}
+              letter={letter}
+              index={index}
+              size={challenge.size}
+              isSelected={isSelected}
+              order={order}
+              isTail={isTail}
+              isFound={isFound}
+              foundColor={foundColor}
+              isSolution={isSolution}
+              solutionColor={solutionColor}
+              isRadar={isRadar}
+              isInspected={isInspected}
+              inspectedOrder={inspectedOrder}
+              isInspectedStart={isInspectedStart}
+              isInspectedEnd={isInspectedEnd}
+              inspectedColor={inspectedColor}
+              feedback={feedback}
+              countdown={countdown}
+              specialTileType={challenge.specialTiles?.[index]?.type}
+              surface={activeTheme.surface}
+              cellBorder={activeTheme.cellBorder}
+              surfaceSelected={activeTheme.surfaceSelected}
+              accentColor={activeTheme.accentColor}
+            />
+          );
+        });
+      })()}
       {particles.map((p: any) => (
         <Animated.View
           key={p.id}
@@ -403,16 +485,22 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
         onStartShouldSetResponder={() => status === "playing" && countdown === null}
         onMoveShouldSetResponder={() => status === "playing" && countdown === null}
         onResponderTerminationRequest={() => false}
-        onPointerDown={(e: any) => {
-          if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
-          onGestureStart(e);
-        }}
-        onPointerMove={onGestureMove}
-        onPointerUp={onGestureEnd}
-        onPointerCancel={onGestureCancel}
-        onTouchStart={onGestureStart}
-        onTouchMove={onGestureMove}
-        onTouchEnd={onGestureEnd}
+        {...(Platform.OS === "web"
+          ? {
+              onPointerDown: (e: any) => {
+                if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
+                onGestureStart(e);
+              },
+              onPointerMove: onGestureMove,
+              onPointerUp: onGestureEnd,
+              onPointerCancel: onGestureCancel,
+            }
+          : {
+              onTouchStart: onGestureStart,
+              onTouchMove: onGestureMove,
+              onTouchEnd: onGestureEnd,
+              onTouchCancel: onGestureCancel,
+            })}
         style={StyleSheet.absoluteFill}
       />
     </Animated.View>

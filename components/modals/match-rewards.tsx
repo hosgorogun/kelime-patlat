@@ -41,6 +41,7 @@ export function MatchRewardsCard({
   pvpWinStreak,
   streakBonus,
   isCrushingWin,
+  shieldUsed,
 }: {
   progress?: PlayerProgress;
   xpEarned: number;
@@ -51,6 +52,7 @@ export function MatchRewardsCard({
   pvpWinStreak?: number;
   streakBonus?: number;
   isCrushingWin?: boolean;
+  shieldUsed?: boolean;
 }) {
   const league = getLeagueTier(progress ?? currentLp ?? 0);
   const isLpGain = lpEarned > 0;
@@ -63,6 +65,7 @@ export function MatchRewardsCard({
   const winStreak = pvpWinStreak ?? progress?.lastMatchReward?.pvpWinStreak ?? progress?.pvpWinStreak ?? 0;
   const streakBonusLp = streakBonus ?? progress?.lastMatchReward?.streakBonus ?? 0;
   const crushing = isCrushingWin ?? progress?.lastMatchReward?.isCrushingWin ?? false;
+  const isShieldUsed = shieldUsed ?? progress?.lastMatchReward?.shieldUsed ?? false;
 
   return (
     <View style={styles.card}>
@@ -103,6 +106,24 @@ export function MatchRewardsCard({
                   <Text style={styles.streakLpPillText}>+{streakBonusLp} LP</Text>
                 </View>
               )}
+            </View>
+          )}
+
+          {/* Seri Kalkanı Koruması Bandı */}
+          {isShieldUsed && (
+            <View style={[styles.streakBanner, { backgroundColor: "#EFF6FF", borderColor: "#60A5FA" }]}>
+              <View style={styles.streakBannerLeft}>
+                <Text style={styles.streakBannerFire}>🛡️</Text>
+                <View>
+                  <Text style={[styles.streakBannerTitle, { color: "#1D4ED8" }]}>SERİ KORUMA KALKANI AKTİF!</Text>
+                  <Text style={[styles.streakBannerSub, { color: "#2563EB" }]}>
+                    {`1 Kalkan harcandı · 🔥 ${winStreak} Maçlık alevli zafer serin korundu!`}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.streakLpPill, { backgroundColor: "#DBEAFE" }]}>
+                <Text style={[styles.streakLpPillText, { color: "#1E40AF" }]}>🔥 {winStreak} KORUNDU</Text>
+              </View>
             </View>
           )}
 

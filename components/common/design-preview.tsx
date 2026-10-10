@@ -104,9 +104,7 @@ export default function DesignPreview() {
             <CommandCenter
               playerName="Deniz"
               progress={progress}
-              daily={getDailyChallenge()}
               leaderboard={[]}
-              onPlayDaily={() => setScreen("solo")}
               onPlayBot={() => setScreen("solo")}
               onSolo={() => setScreen("levels")}
               onNavigate={navigate}

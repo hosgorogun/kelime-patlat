@@ -118,8 +118,10 @@ export interface ArcadePauseModalProps {
   visible: boolean;
   seconds: number;
   soundOn: boolean;
+  hapticsOn?: boolean;
   onResume: () => void;
   onToggleSound: () => void;
+  onToggleHaptics?: () => void;
   onExit: () => void;
 }
 
@@ -127,8 +129,10 @@ export function ArcadePauseModal({
   visible,
   seconds,
   soundOn,
+  hapticsOn = true,
   onResume,
   onToggleSound,
+  onToggleHaptics,
   onExit,
 }: ArcadePauseModalProps) {
   if (!visible) return null;
@@ -150,6 +154,13 @@ export function ArcadePauseModal({
               {soundOn ? "🔊 OYUN SESİ: AÇIK" : "🔇 OYUN SESİ: KAPALI"}
             </Text>
           </Pressable>
+          {onToggleHaptics && (
+            <Pressable onPress={onToggleHaptics} style={[styles.pauseSoundBtn, { marginTop: 6 }]}>
+              <Text style={styles.pauseSoundBtnText}>
+                {hapticsOn ? "📳 TİTREŞİM (HAPTİK): AÇIK" : "📴 TİTREŞİM (HAPTİK): KAPALI"}
+              </Text>
+            </Pressable>
+          )}
           <Pressable onPress={onExit} style={styles.pauseExitBtn}>
             <Text style={styles.pauseExitBtnText}>‹ MODDAN AYRIL</Text>
           </Pressable>

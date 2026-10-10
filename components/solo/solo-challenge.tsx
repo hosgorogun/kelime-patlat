@@ -424,15 +424,21 @@ export function SoloChallenge({
 
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
+    let lastTick = Date.now();
     const timer = setInterval(() => {
-      setSeconds((value) => {
-        const next = Math.max(0, value - 1);
-        if (next <= 8 && next > 0) {
-          playTimerTick(true);
-        }
-        return next;
-      });
-    }, 1000);
+      const now = Date.now();
+      const deltaSec = Math.floor((now - lastTick) / 1000);
+      if (deltaSec >= 1) {
+        lastTick += deltaSec * 1000;
+        setSeconds((value) => {
+          const next = Math.max(0, value - deltaSec);
+          if (next <= 8 && next > 0) {
+            playTimerTick(true);
+          }
+          return next;
+        });
+      }
+    }, 250);
     return () => clearInterval(timer);
   }, [status, countdown, isPaused, showExitModal]);
 
@@ -514,11 +520,31 @@ export function SoloChallenge({
     setFeedback("invalid"); triggerHapticError(); playErrorSound(); triggerShake();
     resetTimer.current = setTimeout(() => { clearSelection(); setFeedback("idle"); submitted.current = false; }, 620);
   };
+  const { foundCells, foundCellColors } = useMemo(() => {
+    const cells = new Set(foundPaths.flat());
+    const colors = new Map<number, { bg: string; border: string; letterText: string }>();
+    found.forEach((word, wordIndex) => {
+      const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
+      const path = foundPaths[wordIndex];
+      if (path) {
+        path.forEach((cell) => {
+          colors.set(cell, { bg: palette.bg, border: palette.border, letterText: palette.letterText });
+        });
+      }
+    });
+    return { foundCells: cells, foundCellColors: colors };
+  }, [foundPaths, found]);
+
+  const solutionColors = useMemo(() => {
+    return status === "lost" ? solutionColorByCell(challenge) : new Map<number, number>();
+  }, [status, challenge]);
+
   const include = (index: number) => {
     if (status !== "playing") return;
     const previous = selectionRef.current;
     const next = advanceSelection(previous, index, challenge.size);
     if (next === previous) return;
+    if (next.some((cell) => foundCells.has(cell) || solutionColors.has(cell))) return;
     selectionRef.current = next; setSelected(next);
     triggerHapticSelection();
     if (next.length >= previous.length) playSelectionNote(next.length - 1);
@@ -612,17 +638,62 @@ export function SoloChallenge({
     const isCombo = lastTime > 0 && (now - lastTime < 8000);
     lastWordTimeRef.current = now;
 
+    // Özel Karo (Special Tiles: Gold, Ice, Bomb) Etkilerini Uygula
+    let goldCount = 0;
+    let iceCount = 0;
+    let bombCount = 0;
+
+    path.forEach((cellIdx) => {
+      const tileType = challenge.specialTiles?.[cellIdx]?.type;
+      if (tileType === "gold") goldCount++;
+      if (tileType === "ice") iceCount++;
+      if (tileType === "bomb") bombCount++;
+    });
+
+    let specialTimeBonus = 0;
+    let specialScoreBonus = 0;
+    let specialBonusMsg = "";
+
+    if (goldCount > 0) {
+      const coinGain = goldCount * 2;
+      specialBonusMsg += ` +${coinGain} 🪙`;
+      if (setProgress) {
+        setProgress((curr) => {
+          const updated = { ...curr, coins: (curr.coins ?? 0) + coinGain };
+          void syncProgressToCloud?.(updated);
+          return updated;
+        });
+      }
+    }
+
+    if (iceCount > 0) {
+      specialTimeBonus = iceCount * 5;
+      specialBonusMsg += ` +${specialTimeBonus}s ❄️`;
+    }
+
+    if (bombCount > 0) {
+      specialScoreBonus = bombCount * 50;
+      specialBonusMsg += ` +${specialScoreBonus} 💣`;
+      triggerShake();
+    }
+
     const nextStreak = isCombo ? comboStreak + 1 : 1;
     setComboStreak(nextStreak);
 
-    const bonus = isCombo ? Math.min(12, 4 + nextStreak * 2) : 4;
+    const bonus = (isCombo ? Math.min(12, 4 + nextStreak * 2) : 4) + specialTimeBonus;
     setSeconds((s) => Math.min(challenge.timeLimit, s + bonus));
-    setTimeBonusText(nextStreak >= 2 ? `🔥 ATEŞLİ KOMBO x${nextStreak}! +${bonus}s` : `+${bonus}s`);
-    const bonusTextTimer = setTimeout(() => setTimeBonusText(null), 1500);
+    setTimeBonusText(
+      specialBonusMsg
+        ? `${nextStreak >= 2 ? `🔥 x${nextStreak}` : ""}${specialBonusMsg} (+${bonus}s)`
+        : nextStreak >= 2
+        ? `🔥 ATEŞLİ KOMBO x${nextStreak}! +${bonus}s`
+        : `+${bonus}s`
+    );
+    const bonusTextTimer = setTimeout(() => setTimeBonusText(null), 1600);
     particleTimers.current.push(bonusTextTimer);
 
-    const scoreVal = word.length * 15 * (isCombo ? nextStreak : 1);
-    setScoreBurstText(`+${scoreVal} ${isCombo ? "🔥" : "⭐"}`);
+    const scoreVal = word.length * 15 * (isCombo ? nextStreak : 1) + specialScoreBonus;
+    setScoreBurstText(`+${scoreVal} ${isCombo ? "🔥" : bombCount > 0 ? "💣" : goldCount > 0 ? "🪙" : "⭐"}`);
     const scoreBurstTimer = setTimeout(() => setScoreBurstText(null), 1200);
     particleTimers.current.push(scoreBurstTimer);
 
@@ -662,48 +733,13 @@ export function SoloChallenge({
   };
 
   const handleExitPress = useCallback(() => {
-    if (status === "lost" && daily) {
-      if (!hasFinishedRef.current) {
-        hasFinishedRef.current = true;
-        const allFound = [...foundRef.current, ...bonusWordsRef.current];
-        onCompleteRef.current(levelRef.current, allFound, false);
-      }
-      onExit();
-      return;
-    }
     // Geri sayım bitmiş ve oyun aktifken çıkış yapmak 1 can kaybına yol açar
     if (status === "playing" && countdown === null) {
       setShowExitModal(true);
     } else {
       onExit();
     }
-  }, [status, daily, countdown, onExit, setShowExitModal]);
-
-  const handleShareDaily = async () => {
-    try {
-      triggerHapticSuccess();
-      const elapsed = Math.max(1, (challenge.timeLimit || 90) - seconds);
-      const totalWords = challenge.words.length;
-      const foundCount = found.length;
-      const emojiRows = challenge.words.map((w) => {
-        const isSolved = found.some((f) => isEqualTr(f, w));
-        const len = w.length || 4;
-        return isSolved ? "🟩".repeat(len) : "⬜".repeat(len);
-      }).join("\n");
-      const shareMessage =
-        `💥 Kelime Patlat · Günün Rotası\n` +
-        `⏱️ ${elapsed} saniyede ${foundCount}/${totalWords} kelime tamamlandı!\n\n` +
-        `${emojiRows}\n\n` +
-        `Sen de çözebilir misin? 👉 https://kelimepatlat.com`;
-
-      await Share.share({
-        message: shareMessage,
-        title: "Kelime Patlat Günün Rotası",
-      });
-    } catch {
-      // ignore
-    }
-  };
+  }, [status, countdown, onExit, setShowExitModal]);
 
   // Donanım geri tuşu kontrolü (Android BackHandler)
   useEffect(() => {
@@ -839,24 +875,6 @@ export function SoloChallenge({
     handleGesture(x, y);
   };
   const handleGestureEnd = () => { finish(); };
-  const { foundCells, foundCellColors } = useMemo(() => {
-    const cells = new Set(foundPaths.flat());
-    const colors = new Map<number, { bg: string; border: string; letterText: string }>();
-    found.forEach((word, wordIndex) => {
-      const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
-      const path = foundPaths[wordIndex];
-      if (path) {
-        path.forEach((cell) => {
-          colors.set(cell, { bg: palette.bg, border: palette.border, letterText: palette.letterText });
-        });
-      }
-    });
-    return { foundCells: cells, foundCellColors: colors };
-  }, [foundPaths, found]);
-
-  const solutionColors = useMemo(() => {
-    return status === "lost" ? solutionColorByCell(challenge) : new Map<number, number>();
-  }, [status, challenge]);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const isUrgent = seconds <= 15 && status === "playing";
@@ -966,13 +984,11 @@ export function SoloChallenge({
     />
     {status === "won" && (
       <SoloWonView
-        daily={daily}
         level={level}
         foundCount={found.length}
         seconds={seconds}
         boardSkinColor={boardSkinColor}
         accentColor={activeTheme.accentColor}
-        handleShareDaily={handleShareDaily}
         chestState={chestState}
         decryptText={decryptText}
         decryptProgress={decryptProgress}
@@ -995,24 +1011,15 @@ export function SoloChallenge({
         revived={revived}
         remainingRevives={remainingDailyRevives}
         onReviveWithAd={handleReviveWithAd}
-        daily={daily}
         accentColor={activeTheme.accentColor}
         onRetry={handleRetry}
-        onExit={() => {
-          if (daily) {
-            if (!hasFinishedRef.current) {
-              hasFinishedRef.current = true;
-              onCompleteRef.current(levelRef.current, foundRef.current, false);
-            }
-          }
-          onExit();
-        }}
+        onExit={onExit}
       />
     )}
       </ScrollView>
       <VictoryEffectOverlay effectId={selectedVictoryEffect} visible={status === "won"}
         showToast={false}
-        title={daily ? "Günlük rota tamam!" : "Seviye senin!"}
+        title="Seviye senin!"
         subtitle={`${found.length} kelimeyi de buldun. Harika iş!`} />
 
 
@@ -1051,7 +1058,6 @@ export function SoloChallenge({
 
       <SoloExitModal
         visible={showExitModal}
-        daily={daily}
         accentColor={activeTheme.accentColor}
         onDismiss={() => setShowExitModal(false)}
         onConfirmExit={() => {
@@ -1068,11 +1074,11 @@ export function SoloChallenge({
           showVictoryModal
             ? {
                 icon: "🎉",
-                kicker: daily ? "GÜNÜN ROTASI TAMAMLANDI" : `SEVİYE ${level} TAMAMLANDI`,
+                kicker: `SEVİYE ${level} TAMAMLANDI`,
                 title: "Tüm Kelimeler Çözüldü!",
                 message: "Harika iş çıkardın! Bir sonraki seviyeye geçebilir ya da tahtadaki kelime rotalarını incelemek için burada kalabilirsin.",
                 accentColor: activeTheme.accentColor || "#3EE8B5",
-                primaryButton: !daily && level < MAX_SOLO_LEVEL
+                primaryButton: level < MAX_SOLO_LEVEL
                   ? {
                       text: "SONRAKİ SEVİYE ➔",
                       color: activeTheme.accentColor || "#3EE8B5",
@@ -1107,9 +1113,9 @@ export function SoloChallenge({
 
       <GameCountdownOverlay
         countdown={countdown}
-        title={daily ? "GÜNLÜK BULMACA" : "SOLO MÜCADELE"}
+        title="SOLO MÜCADELE"
         subtitle="Kelimeleri birleştir, rekoru kır!"
-        icon={daily ? "📅" : "🎯"}
+        icon="🎯"
       />
 
     </View>

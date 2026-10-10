@@ -1,7 +1,7 @@
 import { getLeagueTier } from "../leagues";
 import { getDailyMissions, getWeeklyMissions } from "../missions-catalog";
 import { getDayId, getWeekId } from "./date-utils";
-import { getDailyMysteryWord } from "./season-streak";
+import { getDailyMysteryWord, reconcileDailyStreak } from "./season-streak";
 import { updateMissionAction } from "./progression-missions";
 import { DailyChallenge, MatchHistoryEntry, PlayerProgress } from "./progression.types";
 import { isEqualTr, normalizeTrUpper } from "../tr-utils";
@@ -58,6 +58,9 @@ export function applyMatchProgress(
   // Galibiyet Serisi (Win Streak) hesaplaması
   let pvpWinStreak = progress.pvpWinStreak ?? 0;
   let streakBonus = 0;
+  let shieldUsed = false;
+  let streakShields = progress.streakShields ?? 0;
+
   if (type === "pvp" && !isFriend) {
     if (result.won) {
       pvpWinStreak += 1;
@@ -67,7 +70,15 @@ export function applyMatchProgress(
         streakBonus = 3;
       }
     } else if (!result.isDraw) {
-      pvpWinStreak = 0;
+      // Mağlubiyet durumunda: Eğer oyuncunun galibiyet serisi varsa (pvpWinStreak > 0)
+      // ve Seri Koruma Kalkanı varsa (streakShields > 0), 1 kalkan harcanarak alevli seri korunur!
+      if (pvpWinStreak > 0 && streakShields > 0) {
+        streakShields -= 1;
+        shieldUsed = true;
+        // pvpWinStreak sıfırlanmaz, korunur!
+      } else {
+        pvpWinStreak = 0;
+      }
     }
   }
 
@@ -265,6 +276,7 @@ export function applyMatchProgress(
     lp: nextLp,
     coins: (progress.coins ?? 0) + coinsEarned,
     pvpWinStreak: type === "pvp" && !isFriend ? pvpWinStreak : (progress.pvpWinStreak ?? 0),
+    streakShields: shieldUsed ? streakShields : (progress.streakShields ?? 0),
     wins: progress.wins + (result.won && !isFriend ? 1 : 0),
     matches: progress.matches + (type !== "solo" && type !== "daily" && !isFriend ? 1 : 0),
     bestScore: Math.max(progress.bestScore, result.score),
@@ -284,6 +296,8 @@ export function applyMatchProgress(
       streakBonus,
       pvpWinStreak: type === "pvp" && !isFriend ? pvpWinStreak : undefined,
       isCrushingWin,
+      shieldUsed,
+      shieldProtectedStreak: shieldUsed ? pvpWinStreak : undefined,
     },
   };
 }
@@ -440,8 +454,10 @@ export function completeDailyProgress(
   foundWords?: string[]
 ) {
   if (progress.dailyCompletedId === daily.id && (progress.missions?.daily ?? 0) >= 1) return progress;
+  const streakRecon = reconcileDailyStreak(progress, daily.id);
+  const baseProgress = streakRecon.updatedProgress;
   const activeCatalog = [...getDailyMissions(daily.id), ...getWeeklyMissions(getWeekId())];
-  let updatedMissions = updateMissionAction({ ...progress.missions, daily: 1 }, activeCatalog, "daily_route", 1);
+  let updatedMissions = updateMissionAction({ ...baseProgress.missions, daily: 1 }, activeCatalog, "daily_route", 1);
   const effectiveWordsCount = wordsCount ?? (foundWords?.length || daily.words?.length || 5);
   if (effectiveWordsCount > 0) {
     updatedMissions = updateMissionAction(updatedMissions, activeCatalog, "word_count", effectiveWordsCount);
@@ -453,7 +469,7 @@ export function completeDailyProgress(
     }
   }
 
-  const alreadyHasDaily = progress.matchHistory?.[0]?.mode === "daily" && Date.now() - (progress.matchHistory[0].date || 0) < 5000;
+  const alreadyHasDaily = baseProgress.matchHistory?.[0]?.mode === "daily" && Date.now() - (baseProgress.matchHistory[0].date || 0) < 5000;
 
   const dailyHistoryItem: MatchHistoryEntry = {
     id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -467,33 +483,33 @@ export function completeDailyProgress(
   };
 
   const nextHistory = alreadyHasDaily
-    ? (progress.matchHistory || [])
-    : [dailyHistoryItem, ...(progress.matchHistory || [])].slice(0, 50);
+    ? (baseProgress.matchHistory || [])
+    : [dailyHistoryItem, ...(baseProgress.matchHistory || [])].slice(0, 50);
 
   const wordsForDailyHistory = foundWords || daily.words || [];
   const updatedHistory = wordsForDailyHistory.length > 0
-    ? [...(progress.history || []), ...wordsForDailyHistory].slice(-150)
-    : (progress.history || []);
+    ? [...(baseProgress.history || []), ...wordsForDailyHistory].slice(-150)
+    : (baseProgress.history || []);
 
   const validWordsToDiscover = wordsForDailyHistory
     .filter((w) => typeof w === "string" && w.trim().length >= 3)
     .map((w) => normalizeTrUpper(w));
   const updatedDiscoveredWords = Array.from(new Set([
-    ...(progress.discoveredWords || []),
+    ...(baseProgress.discoveredWords || []),
     ...validWordsToDiscover,
   ])).slice(-2000);
 
   const updatedHunt = isWeekendActive() && wordsForDailyHistory.length > 0
-    ? recordWeekendHuntWords(progress, wordsForDailyHistory).weekendHunt
-    : progress.weekendHunt;
+    ? recordWeekendHuntWords(baseProgress, wordsForDailyHistory).weekendHunt
+    : baseProgress.weekendHunt;
 
   return {
-    ...progress,
-    xp: progress.xp + daily.rewardXp,
-    coins: (progress.coins ?? 0) + 5,
+    ...baseProgress,
+    xp: baseProgress.xp + daily.rewardXp,
+    coins: (baseProgress.coins ?? 0) + 5,
     dailyCompletedId: daily.id,
     lastStreakCheckDate: daily.id,
-    streak: progress.streak + 1,
+    streak: baseProgress.streak + 1,
     missions: updatedMissions,
     history: updatedHistory,
     discoveredWords: updatedDiscoveredWords,

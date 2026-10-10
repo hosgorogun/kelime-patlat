@@ -19,9 +19,7 @@ type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "s
 type CommandCenterProps = {
   playerName: string;
   progress: PlayerProgress;
-  daily: DailyChallenge;
   leaderboard: LeaderboardEntry[];
-  onPlayDaily: () => void;
   onPlayBot: (size: 4 | 6 | 8 | 10) => void;
   onSolo: () => void;
   onNavigate: (destination: NavKey) => void;
@@ -31,7 +29,7 @@ type CommandCenterProps = {
   unclaimedMilestonesCount?: number;
   onClaimDailyReward?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
-  onOpenModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo") => void;
+  onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo") => void;
   onOpenLivesModal?: () => void;
   onOpenHistory?: () => void;
   onOpenLuckyWheel?: () => void;
@@ -65,8 +63,6 @@ const PATLAT_TILES = [
 export function CommandCenter({
   playerName,
   progress,
-  daily,
-  onPlayDaily,
   onPlayBot,
   onSolo,
   onNavigate,
@@ -130,9 +126,8 @@ export function CommandCenter({
   const leagueProgressPercent = league.tier === "RADIAN"
     ? 100
     : Math.min(100, Math.round((league.currentTierPoints / league.targetTierPoints) * 100));
-  const activeTheme = THEME_PACKS.find((pack) => pack.id === (progress.selectedTheme || daily.themeId)) ?? THEME_PACKS[0]!;
+  const activeTheme = THEME_PACKS.find((pack) => pack.id === progress.selectedTheme) ?? THEME_PACKS[0]!;
   const mystery = getDailyMysteryWord();
-  const dailyDone = progress.dailyCompletedId === daily.id;
 
   const todayId = getDayId();
   const isClaimedToday = progress.lastLoginDay === todayId;
@@ -249,17 +244,30 @@ export function CommandCenter({
       <LinearGradient colors={["#FFFFFF", "#FAF4EC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hud, { borderColor: "#DED6C7" }]}>
         <View style={styles.hudInner}>
           <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
-            <View style={[styles.avatar, { borderColor: activeFrameColor, backgroundColor: activeAvatar.surface }]}>
-              {progress.avatarPhoto && !imgError ? (
-                <Image
-                  source={{ uri: progress.avatarPhoto }}
-                  style={styles.avatarImage}
-                  onError={() => setImgError(true)}
-                />
-              ) : (
-                <Text style={[styles.avatarText, { color: activeAvatar.color }]}>{activeAvatar.icon}</Text>
+            <View style={styles.avatarWrap}>
+              <View style={[styles.avatar, { borderColor: activeFrameColor, backgroundColor: activeAvatar.surface }]}>
+                {progress.avatarPhoto && !imgError ? (
+                  <Image
+                    source={{ uri: progress.avatarPhoto }}
+                    style={styles.avatarImage}
+                    onError={() => setImgError(true)}
+                  />
+                ) : (
+                  <Text style={[styles.avatarText, { color: activeAvatar.color }]}>{activeAvatar.icon}</Text>
+                )}
+              </View>
+              {/* ALEVLİ ZAFER SERİSİ ROZETİ */}
+              {(progress.pvpWinStreak ?? 0) >= 2 && (
+                <View style={styles.avatarFlameBadge}>
+                  <Text style={styles.avatarFlameEmoji}>🔥</Text>
+                  <Text style={styles.avatarFlameCount}>{progress.pvpWinStreak}</Text>
+                  {(progress.streakShields ?? 0) > 0 && (
+                    <Text style={styles.avatarFlameShield}>🛡️</Text>
+                  )}
+                </View>
               )}
             </View>
+
             <View style={styles.identityMeta}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Text numberOfLines={1} style={[styles.name, { flexShrink: 1 }]}>{playerName}</Text>
@@ -269,7 +277,23 @@ export function CommandCenter({
                   </View>
                 ) : null}
               </View>
-              <Text numberOfLines={1} style={styles.rank}>Sv. {getPlayerLevel(progress.xp)} · {rank}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                <Text numberOfLines={1} style={styles.rank}>Sv. {getPlayerLevel(progress.xp)} · {rank}</Text>
+                {(progress.pvpWinStreak ?? 0) >= 2 && (
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      triggerHapticSelection();
+                      setInfoModal("shield");
+                    }}
+                    style={styles.flameStreakPill}
+                  >
+                    <Text style={styles.flameStreakPillText}>
+                      🔥 {progress.pvpWinStreak} ZAFER{(progress.streakShields ?? 0) > 0 ? " · 🛡️" : ""}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
             </View>
           </Pressable>
 
@@ -316,6 +340,17 @@ export function CommandCenter({
             >
               <Text style={styles.topIconText}>📜</Text>
             </Pressable>
+
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                onNavigate("profile");
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.topIconText}>⚙️</Text>
+            </Pressable>
           </View>
         </View>
       </LinearGradient>
@@ -346,17 +381,6 @@ export function CommandCenter({
         />
       </View>
 
-
-
-      {progress.streak > 0 && !dailyDone && (
-        <Pressable onPress={onPlayDaily} style={({ pressed }) => [styles.streakWarningPill, pressed && styles.pressed]}>
-          <Text style={styles.streakWarningIcon}>🔥</Text>
-          <Text style={styles.streakWarningText}>
-            {progress.streak} GÜNLÜK SERİN TEHLİKEDE · BUGÜNÜN İZİNİ OYNA
-          </Text>
-          <Text style={styles.streakWarningArrow}>→</Text>
-        </Pressable>
-      )}
 
       {/* Daima 2'li yan yana duran Hazine ve Çark kartları */}
       <View style={styles.quickActionsRow}>
@@ -571,6 +595,8 @@ export function CommandCenter({
           <GameButton label="BAŞLA ▶" size="sm" variant="emerald" onPress={onSolo} style={styles.soloActionBtn} />
         </OrnatePanel>
       </Pressable>
+
+
 
       {/* 3. DİĞER MODLAR: 2 SÜTUN YAN YANA EŞİT DENGELİ KARTLAR */}
       <View style={styles.cardsRow}>

@@ -18,6 +18,7 @@ import {
   triggerHapticSelection,
   triggerHapticSuccess,
 } from "@/shared/audio-haptics";
+import { normalizeTrUpper } from "@/shared/tr-utils";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { styles } from "./profile.styles";
 import { ProfileHeroCard } from "./profile-hero-card";
@@ -122,7 +123,7 @@ export function ProfileScreen({
       : "—";
 
   const handleSaveName = () => {
-    const trimmed = nameInput.trim().toLocaleUpperCase("tr-TR").slice(0, 16);
+    const trimmed = normalizeTrUpper(nameInput.trim()).slice(0, 16);
     if (trimmed.length < 3) {
       triggerHapticError();
       if (onShowToast) {
@@ -143,24 +144,29 @@ export function ProfileScreen({
   };
 
   const handlePickPhoto = async () => {
-    triggerHapticSelection();
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "İzin Gerekli",
-        "Profil fotoğrafı seçmek için fotoğraf galerisine erişim izni vermeniz gerekmektedir. Ayarlar'dan izin verebilirsiniz."
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (!result.canceled && result.assets[0]) {
-      triggerHapticSuccess();
-      onUpdateAvatarPhoto?.(result.assets[0].uri);
+    try {
+      triggerHapticSelection();
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "İzin Gerekli",
+          "Profil fotoğrafı seçmek için fotoğraf galerisine erişim izni vermeniz gerekmektedir. Ayarlar'dan izin verebilirsiniz."
+        );
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets[0]) {
+        triggerHapticSuccess();
+        onUpdateAvatarPhoto?.(result.assets[0].uri);
+      }
+    } catch {
+      triggerHapticError();
+      Alert.alert("Fotoğraf Seçilemedi", "Fotoğraf galerisinden seçim yapılırken bir sorun oluştu. Lütfen tekrar deneyin.");
     }
   };
 

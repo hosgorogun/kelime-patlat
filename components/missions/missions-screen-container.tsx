@@ -33,8 +33,9 @@ export function MissionsScreenContainer(props: MissionsScreenContainerProps) {
       <StatusBar style="dark" />
       <MissionsScreen
         progress={progress}
+        setProgress={progression.setProgress}
+        syncProgressToCloud={progression.syncProgressToCloud}
         onBack={() => onNavigate("home")}
-        onPlayDaily={() => onNavigate("daily-lobby")}
         onNavigate={onNavigate}
         onClaimDaily={(missionId, xp, coins) => {
           claimMissionOnServer("daily", missionId, (current) => ({

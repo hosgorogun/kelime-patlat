@@ -9,6 +9,7 @@ import { styles } from "./cyber-store.styles";
 import { StorePurchaseModal, type ConfirmPurchaseData } from "./store-purchase-modal";
 import { StoreEquipmentTab } from "./store-equipment-tab";
 import { StoreCosmeticsTab } from "./store-cosmetics-tab";
+import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
 
 const DAILY_AD_LIMIT = 3;
 
@@ -93,23 +94,41 @@ export function CyberStore({
 
   // Satın alma onay modalı durumu
   const [confirmPurchase, setConfirmPurchase] = useState<ConfirmPurchaseData | null>(null);
+  const [purchaseCascade, setPurchaseCascade] = useState<{ trigger: boolean; icon: string; badgeText?: string }>({
+    trigger: false,
+    icon: "✨",
+  });
+
+  const isProcessingSpendRef = useRef(false);
 
   const executeSpendChips = async (item: ChipEquipmentItem) => {
-    if (coins < item.cost) {
-      triggerHapticError();
-      gameSfx.rejected();
-      showFeedbackMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} altın çip gerekiyor.`);
-      return;
-    }
-    const success = await onSpendCoins?.(item);
-    if (success !== false) {
-      triggerHapticSuccess();
-      gameSfx.victory();
-      showFeedbackMessage(`Tebrikler! ${item.name} başarıyla envanterine eklendi! 🎉`);
-    } else {
-      triggerHapticError();
-      gameSfx.rejected();
-      showFeedbackMessage(`İşlem gerçekleştirilemedi. Lütfen çip bakiyenizi kontrol edin.`);
+    if (isProcessingSpendRef.current) return;
+    isProcessingSpendRef.current = true;
+    try {
+      if (coins < item.cost) {
+        triggerHapticError();
+        gameSfx.rejected();
+        showFeedbackMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} altın çip gerekiyor.`);
+        return;
+      }
+      const success = await onSpendCoins?.(item);
+      if (success !== false) {
+        triggerHapticSuccess();
+        gameSfx.victory();
+        setPurchaseCascade({
+          trigger: true,
+          icon: item.icon || "🎁",
+          badgeText: item.name,
+        });
+        setTimeout(() => setPurchaseCascade({ trigger: false, icon: "✨" }), 1500);
+        showFeedbackMessage(`Tebrikler! ${item.name} başarıyla envanterine eklendi! 🎉`);
+      } else {
+        triggerHapticError();
+        gameSfx.rejected();
+        showFeedbackMessage(`İşlem gerçekleştirilemedi. Lütfen çip bakiyenizi kontrol edin.`);
+      }
+    } finally {
+      isProcessingSpendRef.current = false;
     }
   };
 
@@ -176,6 +195,12 @@ export function CyberStore({
           triggerHapticSuccess();
           gameSfx.victory();
           onEquip?.(id);
+          setPurchaseCascade({
+            trigger: true,
+            icon: kind === "frame" ? "✨" : kind === "effect" ? "💥" : "🌌",
+            badgeText: label,
+          });
+          setTimeout(() => setPurchaseCascade({ trigger: false, icon: "✨" }), 1500);
           showFeedbackMessage(`Tebrikler! "${label}" satın alındı ve profiline donanıldı! 🎉`);
         } else {
           triggerHapticError();
@@ -236,17 +261,10 @@ export function CyberStore({
             <Text style={styles.headerKicker}>OYUNUNA RENK KAT</Text>
             <Text numberOfLines={1} style={styles.headerTitle}>Mağaza</Text>
           </View>
-          <Pressable
-            disabled={adLoading || remainingAds <= 0}
-            onPress={handleWatchAdForCoins}
-            style={({ pressed }) => [styles.coinBadge, pressed && { opacity: 0.8 }]}
-          >
+          <View style={styles.coinBadge}>
             <Text style={styles.coinIcon}>🪙</Text>
             <Text style={styles.coinText}>{coins}</Text>
-            <Text style={styles.coinUnit}>
-              {remainingAds > 0 ? `+15 (${remainingAds}/${DAILY_AD_LIMIT}) 📺` : `DOLDU ✓`}
-            </Text>
-          </Pressable>
+          </View>
         </View>
 
         {storeMessage && (
@@ -302,6 +320,13 @@ export function CyberStore({
           )}
         </View>
       </ScrollView>
+
+      <CoinCascadeOverlay
+        trigger={purchaseCascade.trigger}
+        count={12}
+        icon={purchaseCascade.icon}
+        badgeText={purchaseCascade.badgeText}
+      />
     </>
   );
 }

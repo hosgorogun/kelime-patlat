@@ -152,15 +152,71 @@ function play(effect: EffectName, playbackRate = 1.0) {
   }
 }
 
+const selectPlayersPool: any[] = [];
+let selectPoolIndex = 0;
+let lastSelectPlayTimestamp = 0;
+
+function playSelectEffect(playbackRate = 1.0) {
+  if (!sfxEnabled) return;
+  const now = Date.now();
+  // 35ms minimum throttle prevents audio buffer underruns and native thread stalls during fast drags
+  if (now - lastSelectPlayTimestamp < 35) return;
+  lastSelectPlayTimestamp = now;
+
+  try {
+    if (!audioConfigured) {
+      audioConfigured = true;
+      void setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
+    }
+
+    // Lazily build a 3-player pool for smooth polyphonic overlap
+    if (selectPlayersPool.length < 3) {
+      try {
+        const p = createAudioPlayer(SOURCES.select);
+        if (p) selectPlayersPool.push(p);
+      } catch {
+        // Fallback
+      }
+    }
+
+    const player = selectPlayersPool.length > 0
+      ? selectPlayersPool[selectPoolIndex % selectPlayersPool.length]
+      : playerFor("select");
+    selectPoolIndex++;
+
+    if (!player) return;
+
+    try {
+      if ("playbackRate" in (player as any)) {
+        (player as any).playbackRate = playbackRate;
+      }
+    } catch {}
+
+    try {
+      const seekRes: any = player.seekTo(0);
+      if (seekRes && typeof seekRes.catch === "function") seekRes.catch(() => undefined);
+    } catch {}
+
+    try {
+      const playRes: any = player.play();
+      if (playRes && typeof playRes.catch === "function") playRes.catch(() => undefined);
+    } catch {}
+  } catch {}
+}
+
 export const gameSfx = {
   select: (index: number = 0) => {
     if (!sfxEnabled) return;
+    const now = Date.now();
+    if (now - lastSelectPlayTimestamp < 35) return;
+    lastSelectPlayTimestamp = now;
+
     const noteIdx = Math.min(Math.max(0, index), PENTATONIC_SCALE.length - 1);
     const freq = PENTATONIC_SCALE[noteIdx]!;
     const playedSynth = playSynthMarimba(freq, 0.16);
     if (!playedSynth) {
       const rate = 1.0 + Math.min(index, 7) * 0.08;
-      play("select", rate);
+      playSelectEffect(rate);
     }
   },
   tap: () => {

@@ -15,6 +15,8 @@ interface OnlineLobbyScreenProps {
   selectedSize: BoardSize;
   onSelectSize: (size: BoardSize) => void;
   currentLevel: number;
+  pvpWinStreak?: number;
+  streakShields?: number;
   notice?: string | null;
   onBack: () => void;
   onOpenInfo: () => void;
@@ -40,6 +42,8 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
   selectedSize,
   onSelectSize,
   currentLevel,
+  pvpWinStreak,
+  streakShields,
   notice,
   onBack,
   onOpenInfo,
@@ -73,6 +77,28 @@ export const OnlineLobbyScreen: React.FC<OnlineLobbyScreenProps> = ({
           <Text style={styles.infoIcon}>ℹ️</Text>
         </Pressable>
       </View>
+
+      {/* Alevli Zafer Serisi & Kalkan Koruma Kartı */}
+      {(pvpWinStreak ?? 0) >= 2 && (
+        <View style={styles.streakBanner}>
+          <View style={styles.streakBannerLeft}>
+            <Text style={styles.streakBannerFlame}>🔥</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.streakBannerTitle}>
+                {pvpWinStreak} MAÇLIK ZAFER SERİSİ!
+              </Text>
+              <Text style={styles.streakBannerSubtitle}>
+                {(streakShields ?? 0) > 0
+                  ? `🛡️ Seri Koruma Kalkanı devrede (${streakShields} adet)`
+                  : "🛡️ Kalkanın yok! Mağazadan kalkan alarak serini koru"}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.streakBadgePill}>
+            <Text style={styles.streakBadgePillText}>🔥 {pvpWinStreak}</Text>
+          </View>
+        </View>
+      )}
 
       <Text style={styles.modeIntro}>
         Tahta boyutunu seç. Canlı dereceli arenada rakiplerinle hemen eşleş ve lig puanı kazan.
@@ -480,5 +506,57 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+  streakBanner: {
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1.5,
+    borderColor: "#FDBA74",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#EA580C",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  streakBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    marginRight: 8,
+  },
+  streakBannerFlame: {
+    fontSize: 22,
+  },
+  streakBannerTitle: {
+    color: "#C2410C",
+    fontSize: 12.5,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+  streakBannerSubtitle: {
+    color: "#9A3412",
+    fontSize: 10.5,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  streakBadgePill: {
+    backgroundColor: "#FFEDD5",
+    borderWidth: 1,
+    borderColor: "#FB923C",
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  streakBadgePillText: {
+    color: "#EA580C",
+    fontSize: 12,
+    fontWeight: "900",
   },
 });

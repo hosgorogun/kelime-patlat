@@ -298,11 +298,17 @@ const CATALOG_WORDS_SET = new Set<string>([
   ...COMMON_ROOT_WORDS.map((w) => normalizeTrUpper(w)),
 ]);
 
+const DEACCENT_WORDS_SET = new Set<string>();
+for (const w of CATALOG_WORDS_SET) {
+  DEACCENT_WORDS_SET.add(deaccent(w));
+}
+
 export function isValidTurkishWord(word: string): boolean {
   if (!word || word.trim().length < 3) return false;
   const clean = normalizeTrUpper(word);
   if (CATALOG_WORDS_SET.has(clean)) return true;
   if (WORD_DEFINITIONS[clean]) return true;
+  if (DEACCENT_WORDS_SET.has(deaccent(clean))) return true;
   return false;
 }
 

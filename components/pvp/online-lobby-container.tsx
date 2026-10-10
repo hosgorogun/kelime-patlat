@@ -63,6 +63,8 @@ export function OnlineLobbyContainer(props: OnlineLobbyContainerProps) {
         selectedSize={selectedSize}
         onSelectSize={setSelectedSize}
         currentLevel={currentLevel}
+        pvpWinStreak={progress.pvpWinStreak}
+        streakShields={progress.streakShields}
         notice={notice}
         onBack={() => onNavigate("home")}
         onOpenInfo={() => setSelectedModeInfo("pvp")}

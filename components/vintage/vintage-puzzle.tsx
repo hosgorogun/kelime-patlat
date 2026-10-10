@@ -5,6 +5,7 @@ import {
   ScrollView,
   Animated,
   BackHandler,
+  Pressable,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -15,6 +16,10 @@ import {
   playSelectionNote,
   playSuccessSound,
   playErrorSound,
+  getSfxEnabled,
+  setSfxEnabled,
+  getHapticsEnabled,
+  setHapticsEnabled,
 } from "@/shared/audio-haptics";
 import { generatePuzzle, PuzzleResult, PlacedWord } from "@/shared/puzzle-generator";
 import { MAX_LIVES } from "@/shared/progression";
@@ -31,6 +36,7 @@ import {
   VintageExitModal,
   VintageResetModal,
 } from "./vintage-dialogs";
+import { GameCountdownOverlay } from "../game/game-countdown-overlay";
 import {
   TR_ALPHABET,
   VINTAGE_STORAGE_KEY,
@@ -102,7 +108,39 @@ export function VintagePuzzle({
   const [score, setScore] = useState(() => vintageProgress?.score ?? 0);
   const [boardSwapCount, setBoardSwapCount] = useState(1);
   const [isLevelComplete, setIsLevelComplete] = useState(false);
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
+  const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
+  const [hapticsOn, setHapticsOn] = useState(() => getHapticsEnabled());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  // Countdown overlay effect for smooth level entry
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      const timer = setTimeout(() => {
+        setCountdown(null);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => {
+      setCountdown((prev) => {
+        if (prev === null) return null;
+        if (prev === 1) {
+          gameSfx.accepted();
+          triggerHapticSuccess();
+          return 0;
+        }
+        if (prev > 1) {
+          gameSfx.tap();
+          triggerHapticSelection();
+          return prev - 1;
+        }
+        return null;
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   const [showExitModal, setShowExitModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -284,6 +322,7 @@ export function VintagePuzzle({
     setSolvedWordIds(new Set());
     setSelectedCell([generated.centerWord.row, generated.centerWord.col]);
     setIsLevelComplete(false);
+    setShowVictoryModal(false);
     setErrorMessage(null);
     if (clearErrorTimeoutRef.current) {
       clearTimeout(clearErrorTimeoutRef.current);
@@ -407,6 +446,7 @@ export function VintagePuzzle({
             triggerHapticLongWord();
             gameSfx.victory();
             setIsLevelComplete(true);
+            setShowVictoryModal(true);
             const isFirstTime = !completedLevels.has(levelIndex);
             const baseXP = levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100;
             const xpEarned = isFirstTime ? baseXP : Math.max(3, Math.floor(baseXP / 10));
@@ -828,6 +868,7 @@ export function VintagePuzzle({
           } else {
             setLevelIndex(lvl);
           }
+          setCountdown(3);
           setViewMode("play");
         }}
       />
@@ -849,6 +890,20 @@ export function VintagePuzzle({
         onBackPress={handlePlayBackPress}
         onUseHint={handleUseHint}
         onResetLevel={handleResetLevel}
+        soundOn={soundOn}
+        hapticsOn={hapticsOn}
+        onToggleSound={() => {
+          const next = !getSfxEnabled();
+          setSfxEnabled(next);
+          setSoundOn(next);
+          AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(next)).catch(() => undefined);
+        }}
+        onToggleHaptics={() => {
+          const next = !getHapticsEnabled();
+          setHapticsEnabled(next);
+          setHapticsOn(next);
+          AsyncStorage.setItem("kelime-patlat:haptics-enabled", String(next)).catch(() => undefined);
+        }}
       />
 
       {/* Bulmaca Alanı - Duyarlı Kaydırılabilir Kağıt */}
@@ -930,22 +985,69 @@ export function VintagePuzzle({
 
       {/* Seviye Başarı Modalı */}
       <VintageVictoryModal
-        visible={isLevelComplete}
+        visible={showVictoryModal}
         selectedVictoryEffect={selectedVictoryEffect}
         levelIndex={levelIndex}
         isInfiniteLives={isInfiniteLives}
         lives={lives}
         onOpenLivesModal={onOpenLivesModal}
+        onInspectBoard={() => {
+          setShowVictoryModal(false);
+        }}
         onNextLevel={() => {
           setIsLevelComplete(false);
+          setShowVictoryModal(false);
           const nextLvl = levelIndex + 1;
           setLevelIndex(nextLvl);
         }}
         onReturnToMap={() => {
           setIsLevelComplete(false);
+          setShowVictoryModal(false);
           setViewMode("map");
         }}
       />
+
+      {/* Bulmaca Çözüldükten Sonra Tahtayı İnceleme Banner'ı */}
+      {isLevelComplete && !showVictoryModal && (
+        <View style={styles.reviewBanner}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={styles.reviewBannerTitle}>📰 Bulmaca Tamamlandı!</Text>
+            <Text style={styles.reviewBannerSubtitle}>Tüm kelimeler doğru yerleştirildi</Text>
+          </View>
+          <View style={styles.reviewBannerBtns}>
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                setShowVictoryModal(true);
+              }}
+              style={({ pressed }: { pressed: boolean }) => [styles.reviewReopenBtn, pressed && { opacity: 0.8 }]}
+            >
+              <Text style={styles.reviewReopenBtnText}>ÖDÜLÜ GÖR 🏆</Text>
+            </Pressable>
+            {levelIndex < 20 && (
+              <Pressable
+                onPress={() => {
+                  if (!isInfiniteLives && typeof lives === "number" && lives <= 0) {
+                    triggerHapticError();
+                    playErrorSound();
+                    onOpenLivesModal?.();
+                    return;
+                  }
+                  triggerHapticSelection();
+                  playSuccessSound();
+                  setIsLevelComplete(false);
+                  setShowVictoryModal(false);
+                  const nextLvl = levelIndex + 1;
+                  setLevelIndex(nextLvl);
+                }}
+                style={({ pressed }: { pressed: boolean }) => [styles.reviewActionBtn, pressed && { opacity: 0.8 }]}
+              >
+                <Text style={styles.reviewActionBtnText}>SONRAKİ ➔</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      )}
 
       <VintageExitModal
         visible={showExitModal}
@@ -970,6 +1072,13 @@ export function VintagePuzzle({
           setBoardSwapCount((prev) => Math.max(0, prev - 1));
           loadNewPuzzleForLevel(levelIndex);
         }}
+      />
+
+      <GameCountdownOverlay
+        countdown={countdown}
+        title={`GAZETE BULMACASI - SEVİYE ${levelIndex}`}
+        subtitle="10x10 Gazete bulmacasını tamamla, ödülleri kap!"
+        icon="📰"
       />
     </View>
   );

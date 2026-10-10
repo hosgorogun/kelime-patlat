@@ -56,7 +56,7 @@ describe("Çapraz Sistem Etkileşimi (Cross-System Interaction Matrix) Testleri"
 
   it("Günlük Oturum (dailySession ↔ Solo Level) navigasyon değişimlerinde session sıfırlama kuralına uymalıdır", () => {
     let dailySession: { id: string; themeId: any } | null = { id: "2026-09-17", themeId: "space" };
-    let currentScreen = "daily-lobby";
+    let currentScreen = "home";
 
     const openSoloLevel = (level: number) => {
       dailySession = null;

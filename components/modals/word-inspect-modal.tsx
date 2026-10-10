@@ -42,7 +42,15 @@ export const WordInspectModal = React.memo(function WordInspectModal({
           </View>
 
           <View style={styles.footerRow}>
-            <Text style={styles.sourceText}>Kaynak: {wordInfo.source || "TDK Sözlüğü"}</Text>
+            <Pressable 
+              onPress={() => {
+                onClose();
+                alert(`"${normalizeTrUpper(wordInfo.word)}" kelimesi inceleme için ekibimize bildirildi. Teşekkür ederiz!`);
+              }}
+              style={styles.reportBtn}
+            >
+              <Text style={styles.reportBtnText}>⚠️ Hata Bildir</Text>
+            </Pressable>
             <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: inspectedColor }]}>
               <Text style={styles.closeBtnText}>KAPAT</Text>
             </Pressable>
@@ -120,6 +128,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#94a3b8",
     fontWeight: "600",
+  },
+  reportBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  reportBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#EF4444",
   },
   closeBtn: {
     paddingHorizontal: 16,

@@ -10,13 +10,13 @@ import { styles } from "./solo-challenge.styles";
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
 
 export interface SoloWonViewProps {
-  daily: boolean;
+  daily?: boolean;
   level: number;
   foundCount: number;
   seconds: number;
   boardSkinColor?: string;
   accentColor: string;
-  handleShareDaily: () => void;
+  handleShareDaily?: () => void;
   chestState: "closed" | "decrypting" | "opened";
   decryptText: string;
   decryptProgress: number;
@@ -53,89 +53,12 @@ export function SoloWonView({
   return (
     <View style={[styles.result, boardSkinColor && { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor }]}>
       <VictoryBanner
-        title={daily ? "Günün yıldızı sensin!" : "Seviye senin!"}
+        title="Seviye senin!"
         subtitle={`${foundCount} kelime buldun · ${seconds} saniye artırdın`}
       />
 
-      {daily && (
-        <Pressable
-          onPress={handleShareDaily}
-          style={({ pressed }) => [
-            {
-              backgroundColor: "#E8F7EE",
-              borderWidth: 1.5,
-              borderColor: "#349d5a",
-              borderRadius: 14,
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              alignItems: "center",
-              justifyContent: "center",
-              marginTop: 10,
-              width: "100%",
-            },
-            pressed && { opacity: 0.8 },
-          ]}
-        >
-          <Text style={{ color: "#167653", fontWeight: "900", fontSize: 13, letterSpacing: 0.4 }}>
-            📤 GÜNÜN SKORUNU PAYLAŞ (WORDLE FORMATI)
-          </Text>
-        </Pressable>
-      )}
-
-      {daily && (
-        <View style={[styles.chestCard, { borderColor: accentColor }]}>
-          {chestState === "closed" && (
-            <>
-              <Text style={styles.chestIcon}>🎁</Text>
-              <Text style={styles.chestTitle}>GÜNÜN ÖDÜL SANDIĞI</Text>
-              <Text style={styles.chestCopy}>Günün özel hazinesi açılmaya hazır. Sandığı aç ve ödülü topla!</Text>
-              <Pressable onPress={startDecryption} style={[styles.chestButton, { backgroundColor: accentColor }]}>
-                <Text style={styles.chestButtonText}>SANDIĞI AÇ ➔</Text>
-              </Pressable>
-            </>
-          )}
-          {chestState === "decrypting" && (
-            <>
-              <Text style={styles.chestIcon}>✨</Text>
-              <Text style={styles.chestTitle}>{decryptText}</Text>
-              <Text style={styles.chestProgress}>
-                [{"=".repeat(Math.floor(decryptProgress / 10)) + " ".repeat(10 - Math.floor(decryptProgress / 10))}] {decryptProgress}%
-              </Text>
-            </>
-          )}
-          {chestState === "opened" && (
-            <>
-              <Text style={styles.chestIcon}>🎁</Text>
-              <Text style={[styles.chestTitle, { color: "#349d5a" }]}>SANDIK AÇILDI!</Text>
-              <Text style={styles.chestSuccessReward}>
-                {doubleXpEarned
-                  ? "ÖDÜL KATLANDI: +300 SEZON XP & +1 RADAR HAKKI!"
-                  : "ÖDÜL KAZANILDI: +150 SEZON XP & +1 RADAR HAKKI!"}
-              </Text>
-              {!doubleXpEarned && (
-                <Pressable
-                  onPress={() =>
-                    safeWatchAd(() => {
-                      setDoubleXpEarned(true);
-                      gameSfx.victory();
-                      triggerHapticSuccess();
-                      onBonusReward?.(150, 1);
-                    })
-                  }
-                  style={[styles.chestButton, { backgroundColor: "#ffeb94", marginTop: 8 }]}
-                >
-                  <Text style={styles.chestButtonText}>🎁 REKLAMLA ÖDÜLÜ 2X YAP</Text>
-                </Pressable>
-              )}
-            </>
-          )}
-        </View>
-      )}
-
-      <CoinCascadeOverlay trigger={chestState === "opened"} count={12} icon="🪙" />
-
       <View style={{ width: "100%", gap: 8, marginTop: 12 }}>
-        {!daily && level < MAX_SOLO_LEVEL && (
+        {level < MAX_SOLO_LEVEL && (
           <Pressable
             onPress={() => {
               triggerHapticSelection();
@@ -188,7 +111,7 @@ export interface SoloLostViewProps {
   revived: boolean;
   remainingRevives?: number;
   onReviveWithAd: () => void;
-  daily: boolean;
+  daily?: boolean;
   accentColor: string;
   onRetry: () => void;
   onExit: () => void;
@@ -258,32 +181,23 @@ export function SoloLostView({
         </View>
       )}
 
-      {daily ? (
-        <Pressable onPress={onExit} style={[styles.action, { backgroundColor: accentColor }]}>
-          <Text style={styles.actionText}>KOMUTA MERKEZİNE DÖN</Text>
-          <Text style={styles.actionArrow}>→</Text>
-        </Pressable>
-      ) : (
-        <>
-          <Pressable
-            onPress={onRetry}
-            style={[styles.action, { backgroundColor: accentColor, marginBottom: 8 }]}
-          >
-            <Text style={styles.actionText}>↺ YENİ IZGARA İLE TEKRAR DENE</Text>
-            <Text style={styles.actionArrow}>↺</Text>
-          </Pressable>
-          <Pressable
-            onPress={onExit}
-            style={[
-              styles.action,
-              { backgroundColor: "rgba(255, 100, 124, 0.2)", borderWidth: 1, borderColor: "#DCE1D7" },
-            ]}
-          >
-            <Text style={[styles.actionText, { color: "#293541" }]}>HARİTAYA DÖN</Text>
-            <Text style={[styles.actionArrow, { color: "#293541" }]}>→</Text>
-          </Pressable>
-        </>
-      )}
+      <Pressable
+        onPress={onRetry}
+        style={[styles.action, { backgroundColor: accentColor, marginBottom: 8 }]}
+      >
+        <Text style={styles.actionText}>↺ YENİ IZGARA İLE TEKRAR DENE</Text>
+        <Text style={styles.actionArrow}>↺</Text>
+      </Pressable>
+      <Pressable
+        onPress={onExit}
+        style={[
+          styles.action,
+          { backgroundColor: "rgba(255, 100, 124, 0.2)", borderWidth: 1, borderColor: "#DCE1D7" },
+        ]}
+      >
+        <Text style={[styles.actionText, { color: "#293541" }]}>HARİTAYA DÖN</Text>
+        <Text style={[styles.actionArrow, { color: "#293541" }]}>→</Text>
+      </Pressable>
     </View>
   );
 }

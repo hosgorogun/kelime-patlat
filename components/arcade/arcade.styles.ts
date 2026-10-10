@@ -20,7 +20,7 @@ export const styles = StyleSheet.create({
   board: { alignSelf: "center", flexDirection: "row", flexWrap: "wrap", backgroundColor: "#FFFFFF", borderWidth: 2, borderColor: "#CBD5E1", borderRadius: 24, padding: 4, userSelect: "none", touchAction: "none", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 } as any,
   boardUrgent: { borderColor: "#EF4444", shadowColor: "#EF4444", shadowOpacity: 0.35, shadowRadius: 10, elevation: 6 },
   cellWrap: { padding: 5 },
-  cell: { flex: 1, borderRadius: 12, borderBottomWidth: 3.5, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", borderBottomColor: "#CBD5E1", alignItems: "center", justifyContent: "center", aspectRatio: 1, shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2 },
+  cell: { flex: 1, borderRadius: 12, borderBottomWidth: 3.5, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", borderBottomColor: "#CBD5E1", alignItems: "center", justifyContent: "center", aspectRatio: 1 },
   cellSelected: { backgroundColor: "#FEF3C7", borderColor: "#F59E0B", borderBottomColor: "#D97706", borderWidth: 2, shadowColor: "#F59E0B", shadowOpacity: 0.4, shadowRadius: 6, elevation: 4 },
   cellTail: { backgroundColor: "#FDE68A", borderColor: "#D97706", borderBottomColor: "#B45309", borderWidth: 2.5, shadowColor: "#D97706", shadowOpacity: 0.6, shadowRadius: 8, elevation: 6 },
   cellInvalid: { backgroundColor: "#FEE2E2", borderColor: "#EF4444", borderBottomColor: "#DC2626", borderWidth: 2, shadowColor: "#EF4444", shadowOpacity: 0.4, shadowRadius: 5, elevation: 4 },

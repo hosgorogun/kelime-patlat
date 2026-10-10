@@ -236,9 +236,9 @@ export const WEEKLY_POOL: CatalogMission[] = [
   {
     "period": "weekly",
     "id": "w_21",
-    "title": "Haftalık Sadakat",
-    "desc": "4 farklı gün Günün Gizemli Kelimesini çöz",
-    "actionType": "daily_route",
+    "title": "Haftalık Yolculuk",
+    "desc": "4 tek oyunculu seviye tamamla",
+    "actionType": "solo_progress",
     "target": 4,
     "rewardXp": 500,
     "rewardCoins": 78,

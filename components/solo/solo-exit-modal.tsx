@@ -3,7 +3,7 @@ import { ModernAlertModal } from "../modals/modern-alert-modal";
 
 export type SoloExitModalProps = {
   visible: boolean;
-  daily: boolean;
+  daily?: boolean;
   accentColor: string;
   onDismiss: () => void;
   onConfirmExit: () => void;
@@ -11,7 +11,6 @@ export type SoloExitModalProps = {
 
 export const SoloExitModal = React.memo(({
   visible,
-  daily,
   accentColor,
   onDismiss,
   onConfirmExit,
@@ -22,11 +21,9 @@ export const SoloExitModal = React.memo(({
         visible
           ? {
               icon: "⚠️",
-              kicker: daily ? "GÜNÜN ROTASI" : "TEK OYUNCULU MOD",
-              title: daily ? "Günün Rotasından Ayrıl" : "Seviyeden Ayrıl (-1 Can)",
-              message: daily
-                ? "Günün rotasından çıkmak istediğinize emin misiniz? Günlük tek oynama hakkınızı korumak için oyunu tamamlamayı deneyin."
-                : "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
+              kicker: "TEK OYUNCULU MOD",
+              title: "Seviyeden Ayrıl (-1 Can)",
+              message: "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
               accentColor: "#FF647C",
               primaryButton: {
                 text: "DEVAM ET",
@@ -34,7 +31,7 @@ export const SoloExitModal = React.memo(({
                 onPress: onDismiss,
               },
               secondaryButton: {
-                text: daily ? "AYRIL" : "AYRIL (-1 CAN)",
+                text: "AYRIL (-1 CAN)",
                 onPress: () => {
                   onDismiss();
                   onConfirmExit();

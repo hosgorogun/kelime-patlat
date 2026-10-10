@@ -1,10 +1,182 @@
 import React from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { FloatingScoreBurst } from "../solo/solo-floating-effects";
 import { TilePop } from "../game/tile-pop";
 import { APP_WORD_PALETTE } from "@/shared/solo";
 import { styles } from "./arcade.styles";
+
+interface ArcadeCellProps {
+  letter: string;
+  index: number;
+  size: number;
+  isSelected: boolean;
+  order: number;
+  isTail: boolean;
+  isFound: boolean;
+  foundColor?: { bg: string; border: string; text?: string };
+  missedColor?: { bg: string; border: string; text?: string };
+  isRadar: boolean;
+  isInspected: boolean;
+  inspectedOrder: number;
+  isInspectedStart: boolean;
+  isInspectedEnd: boolean;
+  inspectedColor?: string | null;
+  feedback: any;
+  countdown: number | null;
+}
+
+const ArcadeCell = React.memo(function ArcadeCell({
+  letter,
+  index,
+  size,
+  isSelected,
+  order,
+  isTail,
+  isFound,
+  foundColor,
+  missedColor,
+  isRadar,
+  isInspected,
+  inspectedOrder,
+  isInspectedStart,
+  isInspectedEnd,
+  inspectedColor,
+  feedback,
+  countdown,
+}: ArcadeCellProps) {
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.cellWrap,
+        {
+          width: `${100 / size}%`,
+          height: `${100 / size}%`,
+          padding: size === 10 ? 1.5 : size === 8 ? 2 : size === 6 ? 3 : 4,
+        },
+      ]}
+    >
+      <TilePop active={isSelected}>
+        <View
+          style={[
+            styles.cell,
+            isFound && styles.cellFound,
+            foundColor && {
+              backgroundColor: foundColor.bg,
+              borderColor: foundColor.border,
+              borderWidth: 2,
+            },
+            missedColor && {
+              backgroundColor: missedColor.bg,
+              borderColor: missedColor.border,
+              borderWidth: 1.5,
+              borderStyle: "dashed",
+            },
+            isInspected && {
+              borderColor: inspectedColor || "#DCE1D7",
+              borderWidth: 2.5,
+              backgroundColor: "rgba(255, 194, 74, 0.25)",
+              transform: [{ scale: 1.06 }],
+            },
+            isInspectedStart && {
+              borderColor: "#DCE1D7",
+              borderWidth: 2.5,
+              shadowColor: "#293541",
+              shadowOpacity: 0.08,
+              shadowRadius: 4,
+              elevation: 2,
+            },
+            isInspectedEnd && {
+              borderColor: "#DCE1D7",
+              borderWidth: 2.5,
+              shadowColor: "#293541",
+              shadowOpacity: 0.08,
+              shadowRadius: 4,
+              elevation: 2,
+            },
+            isSelected && styles.cellSelected,
+            isTail && styles.cellTail,
+            isTail && { transform: [{ scale: 1.2 }] },
+            feedback === "invalid" && isSelected && styles.cellInvalid,
+            feedback === "accepted" && isSelected && styles.cellAccepted,
+            feedback === "bonus" && isSelected && styles.cellBonus,
+            isRadar && styles.cellRadar,
+          ]}
+        >
+          <Text
+            selectable={false}
+            style={[
+              styles.letter,
+              size === 6 && styles.letterMedium,
+              size === 8 && styles.letterSmall,
+              size === 10 && styles.letterExtraSmall,
+              isSelected && { color: "#78350F" },
+              feedback === "accepted" && isSelected && { color: "#065F46" },
+              feedback === "bonus" && isSelected && { color: "#854D0E" },
+              feedback === "invalid" && isSelected && { color: "#991B1B" },
+              foundColor && { color: foundColor.text },
+              isRadar && styles.letterRadar,
+              missedColor && { color: missedColor.text },
+              countdown !== null && countdown > 0 && { opacity: 0 },
+            ]}
+          >
+            {letter}
+          </Text>
+          {isSelected && (
+            <Text
+              selectable={false}
+              style={[styles.order, size >= 8 && { fontSize: 7, top: 1, right: 2 }]}
+            >
+              {order + 1}
+            </Text>
+          )}
+          {!isSelected && inspectedOrder >= 0 && (
+            <View
+              style={{
+                position: "absolute",
+                top: size >= 8 ? 1 : 2,
+                right: size >= 8 ? 1 : 2,
+                backgroundColor: isInspectedStart ? "#F0F5ED" : isInspectedEnd ? "#f0a4a4" : "#F0F5ED",
+                borderRadius: size >= 8 ? 4 : 6,
+                minWidth: size >= 8 ? 12 : 16,
+                height: size >= 8 ? 12 : 16,
+                justifyContent: "center",
+                alignItems: "center",
+                paddingHorizontal: 2,
+                borderWidth: 1,
+                borderColor: "#DCE1D7",
+                zIndex: 6,
+              }}
+            >
+              <Text
+                selectable={false}
+                style={{
+                  color: "#293541",
+                  fontSize: size >= 8 ? 7 : 8,
+                  fontWeight: "900",
+                  textAlign: "center",
+                }}
+              >
+                {isInspectedStart ? "1" : isInspectedEnd ? "✓" : inspectedOrder + 1}
+              </Text>
+            </View>
+          )}
+          {isFound && !isSelected && (
+            <Text selectable={false} style={[styles.check, foundColor && { color: foundColor.border }]}>
+              ✓
+            </Text>
+          )}
+          {missedColor && !isSelected && !isFound && (
+            <Text selectable={false} style={[styles.check, { color: missedColor.border }]}>
+              ✗
+            </Text>
+          )}
+        </View>
+      </TilePop>
+    </View>
+  );
+});
 
 export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
   boardRef,
@@ -181,10 +353,12 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
           inspectedPath.forEach((idx, i) => inspectedMap.set(idx, i));
         }
 
+        const tailIndex = selected.length > 0 ? selected[selected.length - 1] : -1;
+
         return challenge.board.map((letter, index) => {
           const order = orderMap.get(index) ?? -1;
           const isSelected = order !== -1;
-          const isTail = selected.length > 0 && selected[selected.length - 1] === index;
+          const isTail = tailIndex === index;
           const isFound = foundCells.has(index);
           const foundColor = foundCellColors.get(index);
           const missedColor = missedCellColors.get(index);
@@ -194,140 +368,30 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
           const isInspectedEnd = status !== "playing" && inspectedPath ? inspectedOrder === inspectedPath.length - 1 : false;
           const isRadar = radarHighlights.has(index);
 
-        return (
-          <View
-            key={`${letter}-${index}`}
-            pointerEvents="none"
-            style={[
-              styles.cellWrap,
-              {
-                width: `${100 / challenge.size}%`,
-                height: `${100 / challenge.size}%`,
-                padding: challenge.size === 10 ? 1.5 : challenge.size === 8 ? 2 : challenge.size === 6 ? 3 : 4,
-              },
-            ]}
-          >
-            <TilePop active={isSelected}>
-            <View
-              style={[
-                styles.cell,
-                isFound && styles.cellFound,
-                foundColor && {
-                  backgroundColor: foundColor.bg,
-                  borderColor: foundColor.border,
-                  borderWidth: 2,
-                },
-                missedColor && {
-                  backgroundColor: missedColor.bg,
-                  borderColor: missedColor.border,
-                  borderWidth: 1.5,
-                  borderStyle: "dashed",
-                },
-                isInspected && {
-                  borderColor: inspectedColor || "#DCE1D7",
-                  borderWidth: 2.5,
-                  backgroundColor: "rgba(255, 194, 74, 0.25)",
-                  transform: [{ scale: 1.06 }],
-                },
-                isInspectedStart && {
-                  borderColor: "#DCE1D7",
-                  borderWidth: 2.5,
-                  shadowColor: "#293541",
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  elevation: 2,
-                },
-                isInspectedEnd && {
-                  borderColor: "#DCE1D7",
-                  borderWidth: 2.5,
-                  shadowColor: "#293541",
-                  shadowOpacity: 0.08,
-                  shadowRadius: 4,
-                  elevation: 2,
-                },
-                isSelected && styles.cellSelected,
-                isTail && styles.cellTail,
-                isTail && { transform: [{ scale: 1.2 }] },
-                feedback === "invalid" && isSelected && styles.cellInvalid,
-                feedback === "accepted" && isSelected && styles.cellAccepted,
-                feedback === "bonus" && isSelected && styles.cellBonus,
-                isRadar && styles.cellRadar,
-              ]}
-            >
-              <Text
-                selectable={false}
-                style={[
-                  styles.letter,
-                  challenge.size === 6 && styles.letterMedium,
-                  challenge.size === 8 && styles.letterSmall,
-                  challenge.size === 10 && styles.letterExtraSmall,
-                  isSelected && { color: "#78350F" },
-                  feedback === "accepted" && isSelected && { color: "#065F46" },
-                  feedback === "bonus" && isSelected && { color: "#854D0E" },
-                  feedback === "invalid" && isSelected && { color: "#991B1B" },
-                  foundColor && { color: foundColor.text },
-                  isRadar && styles.letterRadar,
-                  missedColor && { color: missedColor.text },
-                  countdown !== null && countdown > 0 && { opacity: 0 },
-                ]}
-              >
-                {letter}
-              </Text>
-              {isSelected && (
-                <Text
-                  selectable={false}
-                  style={[styles.order, challenge.size >= 8 && { fontSize: 7, top: 1, right: 2 }]}
-                >
-                  {order + 1}
-                </Text>
-              )}
-              {!isSelected && inspectedOrder >= 0 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: challenge.size >= 8 ? 1 : 2,
-                    right: challenge.size >= 8 ? 1 : 2,
-                    backgroundColor: isInspectedStart ? "#F0F5ED" : isInspectedEnd ? "#f0a4a4" : "#F0F5ED",
-                    borderRadius: challenge.size >= 8 ? 4 : 6,
-                    minWidth: challenge.size >= 8 ? 12 : 16,
-                    height: challenge.size >= 8 ? 12 : 16,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    paddingHorizontal: 2,
-                    borderWidth: 1,
-                    borderColor: "#DCE1D7",
-                    zIndex: 6,
-                  }}
-                >
-                  <Text
-                    selectable={false}
-                    style={{
-                      color: "#293541",
-                      fontSize: challenge.size >= 8 ? 7 : 8,
-                      fontWeight: "900",
-                      textAlign: "center",
-                    }}
-                  >
-                    {isInspectedStart ? "1" : isInspectedEnd ? "✓" : inspectedOrder + 1}
-                  </Text>
-                </View>
-              )}
-              {isFound && !isSelected && (
-                <Text selectable={false} style={[styles.check, foundColor && { color: foundColor.border }]}>
-                  ✓
-                </Text>
-              )}
-              {missedColor && !isSelected && !isFound && (
-                <Text selectable={false} style={[styles.check, { color: missedColor.border }]}>
-                  ✗
-                </Text>
-              )}
-            </View>
-            </TilePop>
-          </View>
-        );
-      });
-    })()}
+          return (
+            <ArcadeCell
+              key={`${letter}-${index}`}
+              letter={letter}
+              index={index}
+              size={challenge.size}
+              isSelected={isSelected}
+              order={order}
+              isTail={isTail}
+              isFound={isFound}
+              foundColor={foundColor}
+              missedColor={missedColor}
+              isRadar={isRadar}
+              isInspected={isInspected}
+              inspectedOrder={inspectedOrder}
+              isInspectedStart={isInspectedStart}
+              isInspectedEnd={isInspectedEnd}
+              inspectedColor={inspectedColor}
+              feedback={feedback}
+              countdown={countdown}
+            />
+          );
+        });
+      })()}
 
       {particles.map((p: any) => (
         <Animated.View
@@ -359,17 +423,23 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
         onStartShouldSetResponder={() => status === "playing" && countdown === null}
         onMoveShouldSetResponder={() => status === "playing" && countdown === null}
         onResponderTerminationRequest={() => false}
-        onPointerDown={(e: any) => {
-          if (status !== "playing") return;
-          if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
-          onGestureStart(e);
-        }}
-        onPointerMove={onGestureMove}
-        onPointerUp={onGestureEnd}
-        onPointerCancel={onGestureCancel}
-        onTouchStart={onGestureStart}
-        onTouchMove={onGestureMove}
-        onTouchEnd={onGestureEnd}
+        {...(Platform.OS === "web"
+          ? {
+              onPointerDown: (e: any) => {
+                if (status !== "playing") return;
+                if (e.target?.setPointerCapture) e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
+                onGestureStart(e);
+              },
+              onPointerMove: onGestureMove,
+              onPointerUp: onGestureEnd,
+              onPointerCancel: onGestureCancel,
+            }
+          : {
+              onTouchStart: onGestureStart,
+              onTouchMove: onGestureMove,
+              onTouchEnd: onGestureEnd,
+              onTouchCancel: onGestureCancel,
+            })}
         style={StyleSheet.absoluteFill}
       />
     </Animated.View>

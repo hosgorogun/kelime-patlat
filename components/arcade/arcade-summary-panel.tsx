@@ -54,6 +54,12 @@ export const ArcadeSummaryPanel = React.memo(({
       <Text style={styles.finalScore}>{score}</Text>
 
       <CoinCascadeOverlay trigger={score > 0} count={8} icon="🪙" />
+      <CoinCascadeOverlay
+        trigger={score > 0}
+        count={6}
+        icon="⚡"
+        badgeText={`+${doubled ? Math.max(5, Math.floor(score / 10)) * 2 : Math.max(5, Math.floor(score / 10))} XP`}
+      />
 
       {/* Rewards Breakdown Strip */}
       <View style={styles.arcadeRewardsRow}>

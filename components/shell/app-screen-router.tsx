@@ -5,7 +5,6 @@ import { ScreenContainer } from "../common/screen-container";
 import { GameSplashScreen } from "../game/game-splash-screen";
 import { AuthScreenContainer } from "../auth/auth-screen-container";
 import { HomeScreenView } from "./home-screen-view";
-import { DailyLobbyContainer } from "../daily/daily-lobby-container";
 import { SeasonHubContainer } from "../season/season-hub-container";
 import { SoloLevelsContainer } from "../solo/solo-levels-container";
 import { SoloPlayContainer } from "../solo/solo-play-container";
@@ -30,14 +29,14 @@ export interface AppScreenRouterProps {
   splashFinished: boolean;
   setSplashFinished: (finished: boolean) => void;
   // Solo game
-  dailySession: any;
-  setDailySession: (session: any) => void;
+  dailySession?: any;
+  setDailySession?: (session: any) => void;
   recentSoloWords: string[];
   soloLevel: number;
   setSoloLevel: (level: number) => void;
   openSoloLevel: (level: number) => void;
   completeSoloLevel: (level: number, words?: string[], won?: boolean) => void;
-  completeDailyChallenge: (level: number, words?: string[], won?: boolean) => void;
+  completeDailyChallenge?: (level: number, words?: string[], won?: boolean) => void;
   // Root overlay elements & feedback
   livesModalElement: React.ReactNode;
   celebrationModalElement: React.ReactNode;
@@ -138,15 +137,6 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
           }}
           onOpenLuckyWheel={onOpenLuckyWheel}
           luckyWheelModalElement={luckyWheelModalElement}
-        />
-      );
-    }
-
-    if (screen === "daily-lobby") {
-      return (
-        <DailyLobbyContainer
-          setDailySession={setDailySession}
-          setSoloLevel={setSoloLevel}
         />
       );
     }

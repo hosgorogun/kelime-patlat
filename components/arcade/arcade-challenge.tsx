@@ -35,6 +35,8 @@ import {
   triggerHapticLongWord,
   getSfxEnabled,
   setSfxEnabled,
+  getHapticsEnabled,
+  setHapticsEnabled,
 } from "@/shared/audio-haptics";
 import { gameSfx } from "@/lib/game-sfx";
 import { VictoryEffectOverlay } from "../game/victory-effect-overlay";
@@ -241,6 +243,7 @@ export function ArcadeChallenge({
 
   const [isPaused, setIsPaused] = useState(false);
   const [soundOn, setSoundOn] = useState(() => getSfxEnabled());
+  const [hapticsOn, setHapticsOn] = useState(() => getHapticsEnabled());
 
   useEffect(() => {
     if (typeof progress?.sfxEnabled === "boolean") {
@@ -248,6 +251,13 @@ export function ArcadeChallenge({
       setSfxEnabled(progress.sfxEnabled);
     }
   }, [progress?.sfxEnabled]);
+
+  useEffect(() => {
+    if (typeof progress?.hapticsEnabled === "boolean") {
+      setHapticsOn(progress.hapticsEnabled);
+      setHapticsEnabled(progress.hapticsEnabled);
+    }
+  }, [progress?.hapticsEnabled]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -263,15 +273,21 @@ export function ArcadeChallenge({
   // Time Countdown (pauses when paused, countdown is active, or exit confirmation modal is open)
   useEffect(() => {
     if (status !== "playing" || countdown !== null || isPaused || showExitModal) return;
+    let lastTick = Date.now();
     const timer = setInterval(() => {
-      setSeconds((value) => {
-        const next = Math.max(0, value - 1);
-        if (next <= 8 && next > 0) {
-          playTimerTick(true);
-        }
-        return next;
-      });
-    }, 1000);
+      const now = Date.now();
+      const deltaSec = Math.floor((now - lastTick) / 1000);
+      if (deltaSec >= 1) {
+        lastTick += deltaSec * 1000;
+        setSeconds((value) => {
+          const next = Math.max(0, value - deltaSec);
+          if (next <= 8 && next > 0) {
+            playTimerTick(true);
+          }
+          return next;
+        });
+      }
+    }, 250);
     return () => clearInterval(timer);
   }, [status, countdown, isPaused, showExitModal]);
 
@@ -436,11 +452,27 @@ export function ArcadeChallenge({
     }, 620);
   };
 
+  const { foundCells, foundCellColors } = useMemo(() => {
+    const cells = new Set(foundPaths.flat());
+    const colors = new Map<number, { bg: string; border: string; text: string }>();
+    found.forEach((word, wordIndex) => {
+      const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
+      const path = foundPaths[wordIndex];
+      if (path) {
+        path.forEach((cell) => {
+          colors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
+        });
+      }
+    });
+    return { foundCells: cells, foundCellColors: colors };
+  }, [foundPaths, found]);
+
   const include = (index: number) => {
     if (status !== "playing") return;
     const previous = selectionRef.current;
     const next = advanceSelection(previous, index, challenge.size);
     if (next === previous) return;
+    if (next.some((cell) => foundCells.has(cell))) return;
     selectionRef.current = next;
     setSelected(next);
     triggerHapticSelection();
@@ -645,8 +677,7 @@ export function ArcadeChallenge({
       const index = row * challenge.size + col;
       if (lastTouchedIndexRef.current === index) return;
       lastTouchedIndexRef.current = index;
-      const isFound = foundPaths.some((p) => p.includes(index));
-      if (isFound) return;
+      if (foundCells.has(index)) return;
       if (!pointerActive.current) {
         if (resetTimer.current) clearTimeout(resetTimer.current);
         submitted.current = false;
@@ -711,21 +742,6 @@ export function ArcadeChallenge({
     }
     finish();
   };
-
-  const { foundCells, foundCellColors } = useMemo(() => {
-    const cells = new Set(foundPaths.flat());
-    const colors = new Map<number, { bg: string; border: string; text: string }>();
-    found.forEach((word, wordIndex) => {
-      const palette = APP_WORD_PALETTE[wordIndex % APP_WORD_PALETTE.length]!;
-      const path = foundPaths[wordIndex];
-      if (path) {
-        path.forEach((cell) => {
-          colors.set(cell, { bg: palette.bg, border: palette.border, text: palette.letterText });
-        });
-      }
-    });
-    return { foundCells: cells, foundCellColors: colors };
-  }, [foundPaths, found]);
 
   const { missedWords, missedCellColors } = useMemo(() => {
     if (status !== "lost") return { missedWords: [], missedCellColors: new Map<number, { bg: string; border: string; text: string }>() };
@@ -902,6 +918,7 @@ export function ArcadeChallenge({
         visible={isPaused}
         seconds={seconds}
         soundOn={soundOn}
+        hapticsOn={hapticsOn}
         onResume={() => {
           triggerHapticSelection();
           setIsPaused(false);
@@ -913,6 +930,14 @@ export function ArcadeChallenge({
           setProgress?.((curr) => ({ ...curr, sfxEnabled: nextState }));
           AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(nextState)).catch(() => undefined);
           triggerHapticSelection();
+        }}
+        onToggleHaptics={() => {
+          const nextState = !getHapticsEnabled();
+          setHapticsEnabled(nextState);
+          setHapticsOn(nextState);
+          setProgress?.((curr) => ({ ...curr, hapticsEnabled: nextState }));
+          AsyncStorage.setItem("kelime-patlat:haptics-enabled", String(nextState)).catch(() => undefined);
+          if (nextState) triggerHapticSelection();
         }}
         onExit={() => {
           setIsPaused(false);

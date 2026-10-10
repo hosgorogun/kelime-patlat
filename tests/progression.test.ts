@@ -58,6 +58,28 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(getLeagueTier({ ...base, xp: 900, lp: 0 }).tier).toBe("DEMİR");
   });
 
+  it("seri koruma kalkanı mağlubiyette alevli zafer serisini (pvpWinStreak) korur ve 1 kalkan harcar", () => {
+    // 1. Kalkanı varken mağlubiyet: seri korunur, 1 kalkan harcanır, shieldUsed: true
+    const baseWithShield = { ...DEFAULT_PROGRESS, pvpWinStreak: 3, streakShields: 2 };
+    const lossWithShield = applyMatchProgress(baseWithShield, { score: 40, tempo: 1, won: false }, "pvp");
+    expect(lossWithShield.pvpWinStreak).toBe(3);
+    expect(lossWithShield.streakShields).toBe(1);
+    expect(lossWithShield.lastMatchReward?.shieldUsed).toBe(true);
+
+    // 2. Kalkanı yokken mağlubiyet: seri sıfırlanır
+    const baseWithoutShield = { ...DEFAULT_PROGRESS, pvpWinStreak: 3, streakShields: 0 };
+    const lossWithoutShield = applyMatchProgress(baseWithoutShield, { score: 40, tempo: 1, won: false }, "pvp");
+    expect(lossWithoutShield.pvpWinStreak).toBe(0);
+    expect(lossWithoutShield.streakShields).toBe(0);
+    expect(lossWithoutShield.lastMatchReward?.shieldUsed).toBe(false);
+
+    // 3. Galibiyette zafer serisi artar ve kalkan harcanmaz
+    const winWithShield = applyMatchProgress(baseWithShield, { score: 100, tempo: 3, won: true }, "pvp");
+    expect(winWithShield.pvpWinStreak).toBe(4);
+    expect(winWithShield.streakShields).toBe(2);
+    expect(winWithShield.lastMatchReward?.shieldUsed).toBe(false);
+  });
+
   it("arcade raporu en yüksek skoru ve XP ilerlemesini günceller", () => {
     const updated = applyArcadeProgress(DEFAULT_PROGRESS, 120);
     expect(updated.bestArcadeScore).toBe(120);

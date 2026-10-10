@@ -16,6 +16,10 @@ export function VintagePlayHeader({
   onBackPress,
   onUseHint,
   onResetLevel,
+  soundOn = true,
+  hapticsOn = true,
+  onToggleSound,
+  onToggleHaptics,
 }: {
   levelIndex: number;
   lives: number;
@@ -27,6 +31,10 @@ export function VintagePlayHeader({
   onBackPress: () => void;
   onUseHint: () => void;
   onResetLevel: () => void;
+  soundOn?: boolean;
+  hapticsOn?: boolean;
+  onToggleSound?: () => void;
+  onToggleHaptics?: () => void;
 }) {
   return (
     <View style={styles.headerContainer}>
@@ -40,7 +48,26 @@ export function VintagePlayHeader({
           <Text style={styles.newspaperKicker}>10×10 KELİME BULMACA</Text>
           <Text style={styles.newspaperTitle}>{levelIndex}. BÖLÜM</Text>
         </View>
-        <View style={styles.headerNavRight} />
+        <View style={styles.headerNavRight}>
+          {onToggleSound && (
+            <Pressable
+              onPress={onToggleSound}
+              style={({ pressed }) => [styles.headerControlBtn, pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+            >
+              <Text style={styles.headerControlIcon}>{soundOn ? "🔊" : "🔇"}</Text>
+            </Pressable>
+          )}
+          {onToggleHaptics && (
+            <Pressable
+              onPress={onToggleHaptics}
+              style={({ pressed }) => [styles.headerControlBtn, pressed && { opacity: 0.7 }]}
+              hitSlop={8}
+            >
+              <Text style={styles.headerControlIcon}>{hapticsOn ? "📳" : "📴"}</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <View style={styles.statusBarRow}>

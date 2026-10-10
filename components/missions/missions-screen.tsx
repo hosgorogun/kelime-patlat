@@ -16,6 +16,8 @@ import { gameSfx } from "@/lib/game-sfx";
 import { palette } from "@/shared/palette";
 import { GameButton, GameIcon, ICONS, JewelTitle, OrnatePanel } from "@/components/game/game-ui";
 import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
+import { WeekendHuntCard } from "../daily/weekend-hunt-card";
+import { isWeekendActive } from "@/shared/weekend-hunt";
 
 const DIFFICULTY_CONFIG = {
   easy: { label: "KOLAY", color: palette.gemGreen, bg: "rgba(74, 222, 128, 0.16)", border: palette.gemGreen },
@@ -42,15 +44,18 @@ function getMissionIcon(actionType: string): string {
 
 export function MissionsScreen({
   progress,
+  setProgress,
+  syncProgressToCloud,
   onBack,
-  onPlayDaily,
   onClaimDaily,
   onClaimWeekly,
   onNavigate,
 }: {
   progress: PlayerProgress;
+  setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud?: (next: PlayerProgress) => Promise<void>;
   onBack: () => void;
-  onPlayDaily: () => void;
+  onPlayDaily?: () => void;
   onClaimDaily?: (missionId: string, xp: number, coins: number) => void;
   onClaimWeekly?: (missionId: string, xp: number, shield?: number, coins?: number) => void;
   onNavigate?: (destination: any) => void;
@@ -62,6 +67,7 @@ export function MissionsScreen({
   } | null>(null);
   const [coinCascadeTrigger, setCoinCascadeTrigger] = useState(false);
   const [xpCascadeTrigger, setXpCascadeTrigger] = useState(false);
+  const [claimedXpBadge, setClaimedXpBadge] = useState<string>("+XP");
 
   useEffect(() => {
     if (!toast) return;
@@ -69,7 +75,7 @@ export function MissionsScreen({
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const [activeTab, setActiveTab] = useState<"daily" | "weekly">("daily");
+  const [activeTab, setActiveTab] = useState<"daily" | "weekly" | "weekend">("daily");
 
   const [todayId, setTodayId] = useState(() => getDayId());
   const [weekId, setWeekId] = useState(() => getWeekId());
@@ -142,12 +148,13 @@ export function MissionsScreen({
     haptics.success();
     gameSfx.victory();
 
+    setClaimedXpBadge(`+${mission.rewardXp} XP`);
     setCoinCascadeTrigger(true);
     setXpCascadeTrigger(true);
     setTimeout(() => {
       setCoinCascadeTrigger(false);
       setXpCascadeTrigger(false);
-    }, 1200);
+    }, 1400);
 
     const isDaily = mission.period === "daily";
     if (isDaily) {
@@ -309,7 +316,8 @@ export function MissionsScreen({
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]} hitSlop={8}>
           <Text style={styles.backText}>‹</Text>
@@ -416,10 +424,67 @@ export function MissionsScreen({
               </View>
             )}
           </Pressable>
+          <Pressable
+            onPress={() => {
+              haptics.select();
+              setActiveTab("weekend");
+            }}
+            style={styles.tabHit}
+          >
+            {activeTab === "weekend" ? (
+              <LinearGradient colors={["#fff9de", "#f9e5b3", "#e6cea0"]} style={styles.tabButtonActive}>
+                <Text numberOfLines={1} style={styles.tabButtonTextOn}>🎯 HAFTA SONU</Text>
+                {isWeekendActive() && (
+                  <View style={[styles.tabBadgeOn, { backgroundColor: "#10B981" }]}>
+                    <Text style={[styles.tabBadgeTextOn, { color: "#FFFFFF" }]}>●</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            ) : (
+              <View style={styles.tabButton}>
+                <Text numberOfLines={1} style={styles.tabButtonText}>🎯 HAFTA SONU</Text>
+                {isWeekendActive() && (
+                  <View style={[styles.tabBadge, { backgroundColor: "#10B98122", borderColor: "#10B981" }]}>
+                    <Text style={[styles.tabBadgeText, { color: "#059669" }]}>●</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </Pressable>
         </LinearGradient>
       </View>
 
-      {activeTab === "daily" ? (
+      {activeTab === "weekend" ? (
+        <View style={{ marginTop: 4, marginBottom: 20 }}>
+          {setProgress ? (
+            <WeekendHuntCard
+              progress={progress}
+              setProgress={setProgress}
+              onRewardClaimed={(reward) => {
+                setToast({
+                  title: "🎁 HAFTA SONU ÖDÜLÜ ALINDI!",
+                  desc: "Kademe ödülleri hesabına başarıyla eklendi!",
+                  rewards: [
+                    reward.xp > 0 ? `+${reward.xp} XP` : "",
+                    reward.coins > 0 ? `+${reward.coins} Çip` : "",
+                    reward.shields ? `+${reward.shields} Kalkan` : "",
+                  ].filter(Boolean),
+                });
+                setCoinCascadeTrigger(true);
+                setClaimedXpBadge(`+${reward.xp} XP`);
+                setXpCascadeTrigger(true);
+                setTimeout(() => {
+                  setCoinCascadeTrigger(false);
+                  setXpCascadeTrigger(false);
+                }, 1800);
+                if (syncProgressToCloud) {
+                  void syncProgressToCloud(progress);
+                }
+              }}
+            />
+          ) : null}
+        </View>
+      ) : activeTab === "daily" ? (
         <>
           <View style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>GÜNLÜK Görevler</Text>
@@ -444,9 +509,15 @@ export function MissionsScreen({
           </View>
         </>
       )}
-
-      <CoinCascadeOverlay trigger={coinCascadeTrigger} count={10} icon="🪙" />
-      <CoinCascadeOverlay trigger={xpCascadeTrigger} count={10} icon="⚡" targetX={80} targetY={80} />
     </ScrollView>
-  );
+
+    <CoinCascadeOverlay trigger={coinCascadeTrigger} count={10} icon="🪙" />
+    <CoinCascadeOverlay
+      trigger={xpCascadeTrigger}
+      count={8}
+      icon="⚡"
+      badgeText={claimedXpBadge}
+    />
+  </View>
+);
 }

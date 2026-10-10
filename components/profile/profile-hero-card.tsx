@@ -133,6 +133,16 @@ export const ProfileHeroCard = React.memo(({
           <View style={styles.levelBadge}>
             <Text style={styles.levelBadgeText}>LV.{currentLevel}</Text>
           </View>
+
+          {/* Alevli Zafer Serisi Rozeti */}
+          {(progress.pvpWinStreak ?? 0) >= 2 && (
+            <View style={styles.flameBadge}>
+              <Text style={{ fontSize: 9.5, marginRight: 2 }}>🔥</Text>
+              <Text style={styles.flameBadgeText}>
+                {progress.pvpWinStreak}{(progress.streakShields ?? 0) > 0 ? " 🛡️" : ""}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Name & Badges */}
@@ -187,6 +197,16 @@ export const ProfileHeroCard = React.memo(({
                 {currentLeague.name} · {progress.lp ?? 0} LP
               </Text>
             </View>
+
+            {/* Alevli Zafer Serisi Rozeti */}
+            {(progress.pvpWinStreak ?? 0) >= 2 && (
+              <View style={[styles.leagueBadge, { borderColor: "#F97316", backgroundColor: "#FFF7ED" }]}>
+                <Text style={{ fontSize: 11, marginRight: 2 }}>🔥</Text>
+                <Text style={[styles.leagueBadgeText, { color: "#C2410C" }]}>
+                  {progress.pvpWinStreak} Zafer{(progress.streakShields ?? 0) > 0 ? " · 🛡️ Korumalı" : ""}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </View>

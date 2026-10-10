@@ -10,12 +10,14 @@ export type CoinParticle = {
   targetY: number;
   delay: number;
   icon: string;
+  badgeText?: string;
 };
 
 interface CoinCascadeOverlayProps {
   trigger: boolean;
   count?: number;
   icon?: string;
+  badgeText?: string;
   targetX?: number;
   targetY?: number;
   onComplete?: () => void;
@@ -25,6 +27,7 @@ export function CoinCascadeOverlay({
   trigger,
   count = 10,
   icon = "🪙",
+  badgeText,
   targetX,
   targetY,
   onComplete,
@@ -46,8 +49,10 @@ export function CoinCascadeOverlay({
 
     const startCenterX = screenWidth * 0.5;
     const startCenterY = screenHeight * 0.45;
-    const targetHeaderX = targetX ?? (screenWidth - 50);
-    const targetHeaderY = targetY ?? 40;
+    const isXp = icon === "⚡" || Boolean(badgeText);
+    const isShield = icon === "🛡️";
+    const targetHeaderX = targetX ?? (isXp ? screenWidth * 0.5 : isShield ? 60 : screenWidth - 50);
+    const targetHeaderY = targetY ?? (isXp ? 42 : 40);
 
     const newParticles: CoinParticle[] = Array.from({ length: count }, (_, i) => ({
       id: Math.random() + i,
@@ -57,6 +62,7 @@ export function CoinCascadeOverlay({
       targetY: targetHeaderY,
       delay: i * 75,
       icon,
+      badgeText,
     }));
 
     newParticles.forEach((p) => {
@@ -128,14 +134,21 @@ export function CoinCascadeOverlay({
           <Animated.View
             key={p.id}
             style={[
-              styles.coin,
+              p.badgeText ? styles.badgeParticle : styles.coin,
               {
                 transform: [{ translateX }, { translateY }, { scale }],
                 opacity,
               },
             ]}
           >
-            <Text style={styles.coinText}>{p.icon}</Text>
+            {p.badgeText ? (
+              <View style={styles.xpBadge}>
+                <Text style={styles.xpBadgeIcon}>{p.icon}</Text>
+                <Text style={styles.xpBadgeText}>{p.badgeText}</Text>
+              </View>
+            ) : (
+              <Text style={styles.coinText}>{p.icon}</Text>
+            )}
           </Animated.View>
         );
       })}
@@ -146,13 +159,44 @@ export function CoinCascadeOverlay({
 const styles = StyleSheet.create({
   coin: {
     position: "absolute",
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 999,
   },
   coinText: {
-    fontSize: 24,
+    fontSize: 26,
+  },
+  badgeParticle: {
+    position: "absolute",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  xpBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0284C7",
+    borderColor: "#38BDF8",
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    shadowColor: "#0284C7",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  xpBadgeIcon: {
+    fontSize: 14,
+  },
+  xpBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "900",
+    marginLeft: 3,
+    letterSpacing: 0.5,
   },
 });

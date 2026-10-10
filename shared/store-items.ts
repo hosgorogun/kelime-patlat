@@ -31,7 +31,7 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
   {
     id: "shield_1",
     name: "Seri Kalkanı",
-    description: "Bir gün oyuna giremesen bile günlük serini (streak) korur.",
+    description: "Üst üste zaferlerinde profilinde yanan alevli serini (🔥 Win Streak) yenilgilere karşı korur.",
     cost: 120,
     icon: "🛡️",
     imageKey: "shield",

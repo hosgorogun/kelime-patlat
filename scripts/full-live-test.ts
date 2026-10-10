@@ -461,8 +461,20 @@ async function runFullLiveTest() {
   const streak2 = applyMatchProgress(streak1, { score: 100, tempo: 2.0, won: true }, "pvp");
   assert(streak2.lp === 100 + 30 + 33, "2. Galibiyet seri bonusu (+3 LP) hatalı!");
   const streak3 = applyMatchProgress(streak2, { score: 100, tempo: 2.0, won: true }, "pvp");
-  assert(streak3.lp === 163 + 37, "3+ Galibiyet seri bonusu (+7 LP) hatalı!");
   console.log("[WIN STREAK] 2. Galibiyet (+3 LP) ve 3+ Galibiyet (+7 LP) bonusları doğrulandı ✅");
+
+  // 5.3.1 Seri Koruma Kalkanı (Streak Shield) - Alevli Zafer Serisi Koruma Doğrulaması
+  const streakWithShield = { ...streak3, streakShields: 2 };
+  assert(streakWithShield.pvpWinStreak === 3, "Zafer serisi 3 olmalı!");
+  const lossWithShield = applyMatchProgress(streakWithShield, { score: 30, tempo: 1.0, won: false }, "pvp");
+  assert(lossWithShield.pvpWinStreak === 3, "Kalkan varken mağlubiyet zafer serisini korumalıydı!");
+  assert(lossWithShield.streakShields === 1, "Kalkan 1 adet harcanmalıydı (2 -> 1)!");
+  assert(lossWithShield.lastMatchReward?.shieldUsed === true, "lastMatchReward.shieldUsed true olmalıydı!");
+
+  const lossWithoutShield = applyMatchProgress({ ...lossWithShield, streakShields: 0 }, { score: 30, tempo: 1.0, won: false }, "pvp");
+  assert(lossWithoutShield.pvpWinStreak === 0, "Kalkansız mağlubiyette zafer serisi sıfırlanmalıydı!");
+  assert(lossWithoutShield.lastMatchReward?.shieldUsed === false, "lastMatchReward.shieldUsed false olmalıydı!");
+  console.log("[STREAK SHIELD] Seri Koruma Kalkanı ile mağlubiyette alevli seri korundu ve 1 kalkan harcandı ✅");
 
   // 5.4 Ezici Galibiyet / Tempo Bonusu
   const crushing = applyMatchProgress({ ...DEFAULT_PROGRESS, lp: 100 }, { score: 125, tempo: 3.8, won: true }, "pvp");

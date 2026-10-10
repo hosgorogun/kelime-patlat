@@ -5,8 +5,8 @@ import { useProgression, useNavigation, useUIFeedback, usePvP } from "@/context"
 
 export interface SoloPlayContainerProps {
   soloLevel: number;
-  dailySession: DailyChallenge | null;
-  setDailySession: (session: DailyChallenge | null) => void;
+  dailySession?: DailyChallenge | null;
+  setDailySession?: (session: DailyChallenge | null) => void;
   recentSoloWords: string[];
   progress?: PlayerProgress;
   setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
@@ -14,7 +14,7 @@ export interface SoloPlayContainerProps {
   onOpenLivesModal?: () => void;
   watchAd?: (onReward: () => void) => void;
   completeSoloLevel: (level: number, foundWords?: string[], won?: boolean) => void;
-  completeDailyChallenge: (level: number, foundWords?: string[], won?: boolean) => void;
+  completeDailyChallenge?: (level: number, foundWords?: string[], won?: boolean) => void;
   openSoloLevel: (level: number) => void;
   setScreen?: (screen: any) => void;
   syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
@@ -39,7 +39,7 @@ export function SoloPlayContainer(props: SoloPlayContainerProps) {
   return (
     <SoloPlayScreen
       soloLevel={props.soloLevel}
-      dailySession={props.dailySession}
+      dailySession={props.dailySession ?? null}
       recentSoloWords={props.recentSoloWords}
       progress={progress}
       setProgress={setProgress}
@@ -49,11 +49,9 @@ export function SoloPlayContainer(props: SoloPlayContainerProps) {
       onOpenLivesModal={onOpenLivesModal}
       watchAd={watchAd}
       onExit={() => {
-        const destination = props.dailySession ? "home" : "levels";
-        props.setDailySession(null);
-        setScreen(destination);
+        setScreen("levels");
       }}
-      onComplete={props.dailySession ? props.completeDailyChallenge : props.completeSoloLevel}
+      onComplete={props.completeSoloLevel}
       onNext={() => setScreen("levels")}
       openSoloLevel={props.openSoloLevel}
       onNavigate={setScreen}

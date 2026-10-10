@@ -61,21 +61,28 @@ export const BoardCell = React.memo(({
   const isFoundByOpponent = !isMissed && Boolean(foundBy && foundBy !== playerId);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (isFound && !isMissed) {
-      Animated.sequence([
-        Animated.timing(scaleAnim, { toValue: 1.25, duration: 110, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, friction: 3.5, tension: 70, useNativeDriver: true }),
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.35, duration: 90, useNativeDriver: true }),
+          Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 90, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(rotateAnim, { toValue: order % 2 === 0 ? 1 : -1, duration: 80, useNativeDriver: true }),
+          Animated.spring(rotateAnim, { toValue: 0, friction: 4, tension: 80, useNativeDriver: true }),
+        ]),
       ]).start();
     }
-  }, [isFound, isMissed, scaleAnim]);
+  }, [isFound, isMissed, order, scaleAnim, rotateAnim]);
 
   useEffect(() => {
     if (selected) {
       Animated.sequence([
-        Animated.timing(scaleAnim, { toValue: 1.1, duration: 70, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1.15, duration: 60, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 3.5, useNativeDriver: true }),
       ]).start();
     }
   }, [selected, scaleAnim]);
@@ -95,7 +102,17 @@ export const BoardCell = React.memo(({
       <Animated.View
         style={[
           styles.cell,
-          { transform: [{ scale: scaleAnim }] },
+          {
+            transform: [
+              { scale: scaleAnim },
+              {
+                rotate: rotateAnim.interpolate({
+                  inputRange: [-1, 0, 1],
+                  outputRange: ["-6deg", "0deg", "6deg"],
+                }),
+              },
+            ],
+          },
           isFound && !isMissed && styles.cellFound,
           isFoundByMe && styles.cellFoundMine,
           isFoundByOpponent && styles.cellFoundOpponent,

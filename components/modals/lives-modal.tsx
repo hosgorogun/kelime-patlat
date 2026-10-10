@@ -106,7 +106,11 @@ export function LivesModal({
             <Pressable
               onPress={() => {
                 haptics.light();
-                onWatchAd();
+                try {
+                  Promise.resolve(onWatchAd()).catch(console.error);
+                } catch (e) {
+                  console.error(e);
+                }
               }}
               disabled={isFull || calc.isInfinite}
               style={({ pressed }) => [

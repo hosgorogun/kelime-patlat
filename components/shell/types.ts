@@ -10,7 +10,6 @@ export type Screen =
   | "season"
   | "league"
   | "arcade"
-  | "daily-lobby"
   | "missions"
   | "auth"
   | "store"

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,7 +20,8 @@ import { GameModeInfoModal } from "../modals/game-mode-info-modal";
 import { GameCountdownOverlay } from "../game/game-countdown-overlay";
 import { UserProfileModal, type InspectableUser } from "../profile/user-profile-modal";
 import { APP_WORD_PALETTE } from "@/shared/solo";
-import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { triggerHapticSelection, triggerHapticSuccess, getHapticsEnabled, setHapticsEnabled } from "@/shared/audio-haptics";
 import { isEqualTr } from "@/shared/tr-utils";
 import { haptics } from "@/lib/haptics";
 import { gameSfx } from "@/lib/game-sfx";
@@ -265,6 +267,8 @@ export function PvpMatchScreen({
     prevOpponentWordsCount.current = opponentWordCount;
   }, [opponentWordCount, room.status, opponentFlashAnim]);
 
+  const [hapticsOn, setHapticsOn] = React.useState(() => getHapticsEnabled());
+
   return (
     <ScreenContainer style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20 }}>
       <StatusBar style="dark" />
@@ -290,8 +294,22 @@ export function PvpMatchScreen({
                 toggleSfx(!sfxOn);
               }}
               style={styles.soundToggleBtn}
+              hitSlop={6}
             >
               <Text style={{ fontSize: 14 }}>{sfxOn ? "🔊" : "🔇"}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                const next = !getHapticsEnabled();
+                setHapticsEnabled(next);
+                setHapticsOn(next);
+                AsyncStorage.setItem("kelime-patlat:haptics-enabled", String(next)).catch(() => undefined);
+                if (next) triggerHapticSelection();
+              }}
+              style={styles.soundToggleBtn}
+              hitSlop={6}
+            >
+              <Text style={{ fontSize: 13 }}>{hapticsOn ? "📳" : "📴"}</Text>
             </Pressable>
             <View style={styles.liveChip}>
               <View style={styles.liveDot} />
@@ -554,21 +572,31 @@ export function PvpMatchScreen({
             onStartShouldSetResponder={() => room.status === "playing" && gameCountdown === null}
             onMoveShouldSetResponder={() => room.status === "playing" && gameCountdown === null}
             onResponderTerminationRequest={() => false}
-            onPointerDown={(e: any) => {
-              if (e.target?.setPointerCapture)
-                e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
-              handleGestureStart(e);
-            }}
-            onPointerMove={handleGestureMove}
-            onPointerUp={handleGestureEnd}
-            onPointerCancel={() => {
-              selectionActiveRef.current = false;
-              clearSelection();
-              setIsSelecting(false);
-            }}
-            onTouchStart={handleGestureStart}
-            onTouchMove={handleGestureMove}
-            onTouchEnd={handleGestureEnd}
+            {...(Platform.OS === "web"
+              ? {
+                  onPointerDown: (e: any) => {
+                    if (e.target?.setPointerCapture)
+                      e.target.setPointerCapture(e.pointerId ?? e.nativeEvent?.pointerId);
+                    handleGestureStart(e);
+                  },
+                  onPointerMove: handleGestureMove,
+                  onPointerUp: handleGestureEnd,
+                  onPointerCancel: () => {
+                    selectionActiveRef.current = false;
+                    clearSelection();
+                    setIsSelecting(false);
+                  },
+                }
+              : {
+                  onTouchStart: handleGestureStart,
+                  onTouchMove: handleGestureMove,
+                  onTouchEnd: handleGestureEnd,
+                  onTouchCancel: () => {
+                    selectionActiveRef.current = false;
+                    clearSelection();
+                    setIsSelecting(false);
+                  },
+                })}
             style={StyleSheet.absoluteFill}
           />
         </View>

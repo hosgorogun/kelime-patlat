@@ -795,9 +795,11 @@ export function placeWordOnBoard(
   const cells: [number, number][] = [];
   const len = word.answer.length;
   for (let i = 0; i < len; i++) {
-    const r = direction === "horizontal" ? row : row + i;
-    const c = direction === "horizontal" ? col + i : col;
-    board[r]![c] = word.answer[i]!;
+    const r = Math.max(0, Math.min(9, direction === "horizontal" ? row : row + i));
+    const c = Math.max(0, Math.min(9, direction === "horizontal" ? col + i : col));
+    if (board[r]) {
+      board[r]![c] = word.answer[i]!;
+    }
     cells.push([r, c]);
   }
 

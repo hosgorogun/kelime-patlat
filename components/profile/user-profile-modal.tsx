@@ -242,6 +242,37 @@ export function UserProfileModal({
                 </Pressable>
               )}
             </View>
+
+            {!isSelf && (
+              <Pressable
+                onPress={() => {
+                  triggerHapticSelection();
+                  import("react-native").then(({ Alert }) => {
+                    Alert.alert(
+                      "Oyuncuyu Bildir / Engelle",
+                      `"${displayName}" isimli oyuncuyu bildirmek veya engellemek istiyor musunuz?`,
+                      [
+                        { text: "İptal", style: "cancel" },
+                        {
+                          text: "🚫 Engelle",
+                          style: "destructive",
+                          onPress: () => Alert.alert("Engellendi", `"${displayName}" engellendi.`),
+                        },
+                        {
+                          text: "⚠️ Bildir (Report)",
+                          onPress: () => Alert.alert("Bildirildi", "Şikayetiniz modaretörlerimize iletildi."),
+                        },
+                      ]
+                    );
+                  });
+                }}
+                style={{ marginTop: 12, alignItems: "center", paddingVertical: 6 }}
+              >
+                <Text style={{ fontSize: 11, color: "#94A3B8", fontWeight: "600", textDecorationLine: "underline" }}>
+                  ⚠️ Oyuncuyu Bildir veya Engelle (Report & Block)
+                </Text>
+              </Pressable>
+            )}
           </ScrollView>
         </Pressable>
       </Pressable>

@@ -140,22 +140,17 @@ export function useAndroidBackHandler({
       if (screen === "solo") {
         setGlobalAlert({
           icon: "⚠️",
-          kicker: dailySession ? "GÜNÜN ROTASI" : "TEK OYUNCULU MOD",
-          title: dailySession ? "Günün Rotasından Ayrıl" : "Bölümden Ayrıl (-1 Can)",
-          message: dailySession
-            ? "Günün rotasından çıkmak istediğinize emin misiniz? Günlük tek oynama hakkınızı korumak için oyunu tamamlamayı deneyin."
-            : "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
+          kicker: "TEK OYUNCULU MOD",
+          title: "Bölümden Ayrıl (-1 Can)",
+          message: "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
           accentColor: "#FF647C",
           primaryButton: {
-            text: dailySession ? "AYRIL" : "AYRIL (-1 CAN)",
+            text: "AYRIL (-1 CAN)",
             color: "#ca4f62",
             onPress: () => {
-              if (!dailySession) {
-                completeSoloLevel(soloLevel, [], false);
-              }
-              const destination = dailySession ? "home" : "levels";
+              completeSoloLevel(soloLevel, [], false);
               setDailySession(null);
-              setScreen(destination);
+              setScreen("levels");
             },
           },
           secondaryButton: {
@@ -166,7 +161,6 @@ export function useAndroidBackHandler({
       }
       if (
         screen === "arcade" ||
-        screen === "daily-lobby" ||
         screen === "levels" ||
         screen === "season" ||
         screen === "league" ||

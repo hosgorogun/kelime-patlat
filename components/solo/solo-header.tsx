@@ -5,7 +5,7 @@ import { FloatingTimeBonus } from "./solo-floating-effects";
 import { styles } from "./solo-challenge.styles";
 
 export type SoloHeaderProps = {
-  daily: boolean;
+  daily?: boolean;
   level: number;
   challengeTitle: string;
   challengeSubtitle: string;
@@ -74,10 +74,10 @@ export const SoloHeader = React.memo(({
         </Pressable>
         <View style={{ flex: 1, marginHorizontal: 8, minWidth: 0 }}>
           <Text numberOfLines={1} style={[styles.kicker, { color: activeTheme.headerText }]}>
-            {daily ? "GÜNLÜK ROTA · SABİT TAHTA" : `TEK OYUNCU · SEVİYE ${level}`}
+            {`TEK OYUNCU · SEVİYE ${level}`}
           </Text>
           <Text numberOfLines={1} style={styles.title}>
-            {daily ? "GÜNÜN ROTASI" : challengeTitle}
+            {challengeTitle}
           </Text>
         </View>
         <Pressable

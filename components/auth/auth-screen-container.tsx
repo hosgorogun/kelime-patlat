@@ -76,8 +76,33 @@ export function AuthScreenContainer(props: AuthScreenContainerProps) {
                 reconnectGameSocket();
                 onFinishAuth({ showWelcomeModal: false });
                 return;
-              } catch {
-                // Devam et
+              } catch (parseErr) {
+                console.warn("[Auth] Corrupted local progress cache, attempting server recovery:", parseErr);
+              }
+            }
+
+            if (cachedToken && cachedId) {
+              try {
+                const profRes = await fetch(`${getApiBaseUrl()}/api/user/profile`, {
+                  headers: { Authorization: `Bearer ${cachedToken}` },
+                });
+                if (profRes.ok) {
+                  const profData = await profRes.json();
+                  if (profData?.user) {
+                    setAuthToken(cachedToken);
+                    setPlayerId(cachedId);
+                    setPlayerName(profData.user.name || cachedName || "Misafir");
+                    if (profData.user.progress) {
+                      setProgress(profData.user.progress);
+                      await AsyncStorage.setItem("kelime-patlat:player-progress", JSON.stringify(profData.user.progress));
+                    }
+                    reconnectGameSocket();
+                    onFinishAuth({ showWelcomeModal: false });
+                    return;
+                  }
+                }
+              } catch (remoteErr) {
+                console.warn("[Auth] Server profile recovery error:", remoteErr);
               }
             }
 

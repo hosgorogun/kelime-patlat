@@ -112,7 +112,10 @@ function finishRound(io: Server, room: Room) {
 function claimWord(io: Server, room: Room, playerId: string, word: string, path: number[]) {
   if (room.status !== "playing" || room.foundWords.some((entry) => isEqualTr(entry.word, word) && entry.playerId === playerId))
     return false;
-  room.botSelection = undefined;
+  const claimingPlayer = roomForPlayer(room, playerId);
+  if (claimingPlayer?.isBot) {
+    room.botSelection = undefined;
+  }
 
   if (!room.lastWordFoundTime) room.lastWordFoundTime = {};
   if (!room.comboCount) room.comboCount = {};
@@ -982,8 +985,28 @@ export function registerGameRooms(io: Server) {
         player.connected = false;
         player.socketId = null;
 
-        if (room.status === "lobby" || room.status === "waiting") {
+        if (room.status === "waiting") {
           leaveRoom(io, socket, room, player.id);
+        } else if (room.status === "lobby") {
+          const opponent = room.host.id === player.id ? room.guest : room.host;
+          if (!opponent || opponent.isBot) {
+            leaveRoom(io, socket, room, player.id);
+          } else {
+            room.message = `${player.name} bağlantısı koptu...`;
+            emitRoom(io, room);
+            if (!room.disconnectTimer) {
+              room.disconnectPlayerId = player.id;
+              room.disconnectExpiresAt = Date.now() + 10_000;
+              room.disconnectTimer = setTimeout(() => {
+                const currentRoom = rooms.get(room.code);
+                if (!currentRoom || currentRoom.status !== "lobby") return;
+                const p = roomForPlayer(currentRoom, player.id);
+                if (p && !p.connected) {
+                  leaveRoom(io, socket, currentRoom, player.id);
+                }
+              }, 10_000);
+            }
+          }
         } else if (room.status === "finished") {
           const hostConnected = room.host?.connected;
           const guestConnected = room.guest && !room.guest.isBot ? room.guest.connected : false;
@@ -997,39 +1020,39 @@ export function registerGameRooms(io: Server) {
           room.message = `${player.name} bağlantısı koptu. (15s içinde yeniden bağlanmazsa hükmen yenilecek)`;
           emitRoom(io, room);
 
-          if (!room.disconnectTimer) {
-            room.disconnectPlayerId = player.id;
-            room.disconnectExpiresAt = Date.now() + 15_000;
-            emitRoom(io, room);
-
-            room.disconnectTimer = setTimeout(() => {
-              const currentRoom = rooms.get(room.code);
-              if (!currentRoom || currentRoom.status !== "playing") return;
-              if (currentRoom.disconnectPlayerId !== player.id) return;
-              const currentPlayer = currentRoom.host.id === player.id ? currentRoom.host : currentRoom.guest;
-              if (currentPlayer && !currentPlayer.connected) {
-                const currentOpponent = currentRoom.host.id === player.id ? currentRoom.guest : currentRoom.host;
-                if (currentOpponent) {
-                  currentRoom.winnerId = currentOpponent.id;
-                  currentRoom.message = `${currentPlayer.name} maçı terk etti. ${currentOpponent.name} hükmen kazandı!`;
-                } else {
-                  currentRoom.winnerId = null;
-                  currentRoom.message = `${currentPlayer.name} maçı terk etti.`;
-                }
-                currentRoom.status = "finished";
-                if (currentRoom.roundEndTimer) {
-                  clearTimeout(currentRoom.roundEndTimer);
-                  currentRoom.roundEndTimer = undefined;
-                }
-                if (currentRoom.botTurnTimer) {
-                  clearTimeout(currentRoom.botTurnTimer);
-                  currentRoom.botTurnTimer = undefined;
-                }
-                recordRoundForLeaderboard(io, currentRoom).catch(console.error);
-                emitRoom(io, currentRoom);
-              }
-            }, 15_000);
+          if (room.disconnectTimer) {
+            clearTimeout(room.disconnectTimer);
           }
+          room.disconnectPlayerId = player.id;
+          room.disconnectExpiresAt = Date.now() + 15_000;
+          emitRoom(io, room);
+
+          room.disconnectTimer = setTimeout(() => {
+            const currentRoom = rooms.get(room.code);
+            if (!currentRoom || currentRoom.status !== "playing") return;
+            const currentPlayer = currentRoom.host.id === player.id ? currentRoom.host : currentRoom.guest;
+            if (currentPlayer && !currentPlayer.connected) {
+              const currentOpponent = currentRoom.host.id === player.id ? currentRoom.guest : currentRoom.host;
+              if (currentOpponent) {
+                currentRoom.winnerId = currentOpponent.id;
+                currentRoom.message = `${currentPlayer.name} maçı terk etti. ${currentOpponent.name} hükmen kazandı!`;
+              } else {
+                currentRoom.winnerId = null;
+                currentRoom.message = `${currentPlayer.name} maçı terk etti.`;
+              }
+              currentRoom.status = "finished";
+              if (currentRoom.roundEndTimer) {
+                clearTimeout(currentRoom.roundEndTimer);
+                currentRoom.roundEndTimer = undefined;
+              }
+              if (currentRoom.botTurnTimer) {
+                clearTimeout(currentRoom.botTurnTimer);
+                currentRoom.botTurnTimer = undefined;
+              }
+              recordRoundForLeaderboard(io, currentRoom).catch(console.error);
+              emitRoom(io, currentRoom);
+            }
+          }, 15_000);
         } else {
           room.message = `${player.name} bağlantısını yeniliyor…`;
           emitRoom(io, room);

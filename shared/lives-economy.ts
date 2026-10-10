@@ -19,11 +19,17 @@ export function getCalculatedLives(progress: Partial<LivesProgressState>): {
   infiniteRemainingSeconds?: number;
 } {
   const now = Date.now();
+  // Anti-time travel protection: If infiniteLivesUntil is absurdly far in future (> 2 days), cap it to max 2 hours
   if (progress.infiniteLivesUntil && progress.infiniteLivesUntil > now) {
-    const remainingSeconds = Math.ceil((progress.infiniteLivesUntil - now) / 1000);
+    const maxAllowedFuture = now + 48 * 60 * 60 * 1000;
+    const safeInfiniteUntil = Math.min(progress.infiniteLivesUntil, maxAllowedFuture);
+    const remainingSeconds = Math.ceil((safeInfiniteUntil - now) / 1000);
     return {
       lives: MAX_LIVES,
-      lastLifeRegenTimestamp: now,
+      lastLifeRegenTimestamp:
+        typeof progress.lastLifeRegenTimestamp === "number" && Number.isFinite(progress.lastLifeRegenTimestamp)
+          ? progress.lastLifeRegenTimestamp
+          : now,
       nextLifeTimerSeconds: 0,
       isInfinite: true,
       infiniteRemainingSeconds: remainingSeconds,
@@ -38,6 +44,7 @@ export function getCalculatedLives(progress: Partial<LivesProgressState>): {
     return { lives: max, lastLifeRegenTimestamp: Date.now(), nextLifeTimerSeconds: 0 };
   }
 
+  // Anti time-jump exploit: If lastRegen is in the future or corrupted, reset to current now
   if (lastRegen > now) {
     lastRegen = now;
   }

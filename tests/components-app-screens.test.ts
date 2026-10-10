@@ -1,11 +1,10 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { DEFAULT_PROGRESS, type DailyChallenge } from "@/shared/progression";
+import { DEFAULT_PROGRESS } from "@/shared/progression";
 
 // 1. Dashboard & Lobby Screens
 import { CommandCenter } from "@/components/command/command-center";
-import { DailyLobbyScreen } from "@/components/daily/daily-lobby-screen";
 
 // 2. Store & Customization Tabs
 import { StoreCosmeticsTab } from "@/components/store/store-cosmetics-tab";
@@ -24,15 +23,6 @@ import { PvpRouteInspectorCard } from "@/components/pvp/pvp-route-inspector";
 import { MatchInsight } from "@/components/modals/match-insight";
 import { MatchRewardsCard } from "@/components/modals/match-rewards";
 
-const MOCK_DAILY: DailyChallenge = {
-  id: "daily-2026-10-07",
-  themeId: "denizcilik" as any,
-  title: "Denizcilik",
-  rewardXp: 100,
-  words: ["ADA", "BAL"],
-  size: 4,
-};
-
 describe("Component Tests: App Screens, Tabs & Post-Match Cards", () => {
   describe("CommandCenter", () => {
     it("komuta merkezi başlığını, oyuncu adını ve oyun modlarını render etmelidir", () => {
@@ -40,9 +30,7 @@ describe("Component Tests: App Screens, Tabs & Post-Match Cards", () => {
         React.createElement(CommandCenter, {
           playerName: "Yıldız_Kelimeci",
           progress: DEFAULT_PROGRESS,
-          daily: MOCK_DAILY,
           leaderboard: [],
-          onPlayDaily: vi.fn(),
           onPlayBot: vi.fn(),
           onSolo: vi.fn(),
           onNavigate: vi.fn(),
@@ -55,27 +43,6 @@ describe("Component Tests: App Screens, Tabs & Post-Match Cards", () => {
       expect(html).toContain("SKOR HÜCUMU");
       expect(html).toContain("GAZETE BULMACASI");
       expect(html).toContain("BİR KELİMEYLE BAŞLA");
-    });
-  });
-
-  describe("DailyLobbyScreen", () => {
-    it("günlük meydan okuma temasını, seriyi ve başla butonunu göstermelidir", () => {
-      const html = renderToStaticMarkup(
-        React.createElement(DailyLobbyScreen, {
-          daily: MOCK_DAILY,
-          progress: { ...DEFAULT_PROGRESS, streak: 5, streakShields: 2 },
-          onBack: vi.fn(),
-          onOpenInfo: vi.fn(),
-          onSelectTheme: vi.fn(),
-          onStartDaily: vi.fn(),
-          onLockedNotice: vi.fn(),
-        })
-      );
-
-      expect(html).toContain("ETKİNLİK MERKEZİ");
-      expect(html).toContain("GÜNLÜK ROTA &amp; ETKİNLİKLER");
-      expect(html).toContain("GÜNLÜK SERİ");
-      expect(html).toContain("5");
     });
   });
 

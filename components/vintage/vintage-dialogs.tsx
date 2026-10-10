@@ -19,6 +19,7 @@ export type VintageVictoryModalProps = {
   onOpenLivesModal?: () => void;
   onNextLevel: () => void;
   onReturnToMap: () => void;
+  onInspectBoard?: () => void;
 };
 
 export const VintageVictoryModal = React.memo(({
@@ -30,6 +31,7 @@ export const VintageVictoryModal = React.memo(({
   onOpenLivesModal,
   onNextLevel,
   onReturnToMap,
+  onInspectBoard,
 }: VintageVictoryModalProps) => {
   if (!visible) return null;
 
@@ -72,6 +74,18 @@ export const VintageVictoryModal = React.memo(({
             <View style={styles.completedAllBanner}>
               <Text style={styles.completedAllText}>🏆 TEBRİKLER! TÜM BÖLÜMLERİ TAMAMLADINIZ! 🏆</Text>
             </View>
+          )}
+
+          {onInspectBoard && (
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                onInspectBoard();
+              }}
+              style={({ pressed }) => [styles.inspectBoardBtn, pressed && { opacity: 0.8 }]}
+            >
+              <Text style={styles.inspectBoardBtnText}>BULMACAYI İNCELE 🔍</Text>
+            </Pressable>
           )}
 
           <Pressable

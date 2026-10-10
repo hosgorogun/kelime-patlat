@@ -95,11 +95,6 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     aspectRatio: 1,
-    shadowColor: "#293541",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
   },
   cellSelected: {
     backgroundColor: "#FEF3C7",

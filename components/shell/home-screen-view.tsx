@@ -22,15 +22,14 @@ export interface HomeScreenViewProps {
   onCloseGuide?: () => void;
   onShowGuide?: () => void;
   onNavigate?: (destination: any) => void;
-  onPlayDaily?: () => void;
   onPlayBot?: (size: BoardSize) => void;
   onSolo?: () => void;
   onLeaderboard?: () => void;
   onOpenLivesModal?: () => void;
   onClaimDailyReward?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
-  selectedModeInfo?: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null;
-  onOpenModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo") => void;
+  selectedModeInfo?: "pvp" | "vintage" | "arcade" | "solo" | null;
+  onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo") => void;
   onCloseModeInfo?: () => void;
   pendingMatchConfirm?: { size: BoardSize; modeTitle: string; durationText: string; routesText: string; isBot?: boolean } | null;
   onConfirmMatch?: (info: { size: BoardSize; isBot?: boolean }) => void;
@@ -63,7 +62,6 @@ export function HomeScreenView(props: HomeScreenViewProps) {
   const onCloseGuide = props.onCloseGuide ?? uiFeedback.handleCloseGuide;
   const onShowGuide = props.onShowGuide ?? (() => uiFeedback.setShowGuide(true));
   const onNavigate = props.onNavigate ?? navigation.setScreen;
-  const onPlayDaily = props.onPlayDaily ?? (() => navigation.setScreen("daily-lobby"));
   const onPlayBot = props.onPlayBot ?? pvp.promptBotDuel;
   const onSolo = props.onSolo ?? (() => navigation.setScreen("levels"));
   const onLeaderboard = props.onLeaderboard ?? (() => navigation.setScreen("season"));
@@ -98,9 +96,7 @@ export function HomeScreenView(props: HomeScreenViewProps) {
       <CommandCenter
         playerName={safeName}
         progress={progress}
-        daily={daily}
         leaderboard={leaderboard}
-        onPlayDaily={onPlayDaily}
         onPlayBot={onPlayBot}
         onSolo={onSolo}
         onNavigate={onNavigate}

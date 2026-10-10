@@ -284,7 +284,7 @@ export function SectionLabel({
   );
 }
 
-export function ConnectLine({
+export const ConnectLine = React.memo(function ConnectLine({
   x1,
   y1,
   x2,
@@ -371,7 +371,7 @@ export function ConnectLine({
       ) : null}
     </View>
   );
-}
+});
 
 export function BoardCountdownShield({
   countdown,

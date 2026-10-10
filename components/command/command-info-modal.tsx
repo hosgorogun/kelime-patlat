@@ -58,16 +58,16 @@ export function CommandInfoModal({
 
             <View style={styles.modalCountPill}>
               <Text style={styles.modalCountLabel}>
-                {infoModal === "rotani" ? "MEVCUT LİG KADEMEN:" : infoModal === "mystery" ? "GÖREV ÖDÜLÜ:" : "MEVCUT MİKTAR:"}
+                {infoModal === "shield" ? "KALKAN & SERİ:" : infoModal === "rotani" ? "MEVCUT LİG KADEMEN:" : infoModal === "mystery" ? "GÖREV ÖDÜLÜ:" : "MEVCUT MİKTAR:"}
               </Text>
               <Text style={[styles.modalCountValue, infoModal === "shield" ? { color: palette.gemBlue } : infoModal === "radar" ? { color: palette.emerald } : infoModal === "lives" ? { color: palette.gemGreen } : infoModal === "mystery" ? { color: "#2a8fbc" } : { color: league.color }]}>
-                {infoModal === "shield" ? (progress.streakShields || 0) : infoModal === "radar" ? (progress.radarChargesBonus || 0) : infoModal === "lives" ? (livesCalc.isInfinite ? `SONSUZ CAN (${Math.ceil((livesCalc.infiniteRemainingSeconds || 0) / 60)} dk)` : `${livesCalc.lives}/5`) : infoModal === "mystery" ? `+${mystery.rewardXp} XP` : `${league.name} (${league.currentTierPoints} LP)`}
+                {infoModal === "shield" ? `${progress.streakShields || 0} Kalkan · 🔥 ${progress.pvpWinStreak || 0} Seri` : infoModal === "radar" ? (progress.radarChargesBonus || 0) : infoModal === "lives" ? (livesCalc.isInfinite ? `SONSUZ CAN (${Math.ceil((livesCalc.infiniteRemainingSeconds || 0) / 60)} dk)` : `${livesCalc.lives}/5`) : infoModal === "mystery" ? `+${mystery.rewardXp} XP` : `${league.name} (${league.currentTierPoints} LP)`}
               </Text>
             </View>
 
             <Text style={styles.modalBody}>
               {infoModal === "shield"
-                ? "Oyuna giremediğin günlerde otomatik olarak 1 Seri Kalkanı tüketilir. Böylece günlük giriş ve galibiyet serin sıfırlanmaz ve korunur."
+                ? "Üst üste galibiyetlerde profilinde yanan alevli zafer serini (🔥 Win Streak) korur.\n\nBir düelloda mağlup olduğunda otomatik olarak 1 Seri Kalkanı harcanır; böylece alevli serin ve seriden gelen yüksek LP çarpanların sıfırlanmadan korunur!"
                 : infoModal === "radar"
                 ? "Tek oyunculu seviyelerde ve bulmacalarda tahtadaki gizli kelimelerin baş ve son harflerini tespit eder. Sıkıştığın anlarda doğru rotayı bularak zaman kazandırır."
                 : infoModal === "lives"
@@ -83,7 +83,7 @@ export function CommandInfoModal({
               </Text>
               <Text style={styles.modalTipText}>
                 {infoModal === "shield"
-                  ? "• Mağaza'dan Çip ile satın alabilirsin.\n• Haftalık görevleri tamamlayarak kazanabilirsin.\n• 7 günlük giriş zincirinin son gününde epik hediye olarak verilir."
+                  ? "• Mağaza'dan Çip ile satın alabilirsin.\n• Haftalık görevleri ve seviye dönüm noktalarını tamamlayarak kazanabilirsin.\n• Profilindeki alevli zafer serisini mağlubiyetlere karşı korur."
                   : infoModal === "radar"
                   ? "• Her seviyede 3 temel hak otomatik verilir.\n• Mağaza ve görevlerden ek kalıcı bonus haklar elde edebilirsin.\n• Seviye içi gizli sandıkları çözerek ekstra hak toplayabilirsin."
                   : infoModal === "lives"

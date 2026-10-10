@@ -152,6 +152,8 @@ export type PlayerProgress = {
     streakBonus?: number;
     pvpWinStreak?: number;
     isCrushingWin?: boolean;
+    shieldUsed?: boolean;
+    shieldProtectedStreak?: number;
   };
   pvpWinStreak?: number;
   lastLoginDay?: string;

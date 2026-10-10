@@ -71,12 +71,15 @@ userRouter.get("/profile/:idOrName", async (req, res) => {
       });
     }
 
-    const profile = await ProfileModel.findOne({
-      $or: [
-        { playerId: idOrName },
-        { name: new RegExp(`^${escapeRegex(idOrName)}$`, "i") },
-      ],
-    }).lean();
+    const profile = await safely(async () => {
+      await connectDb();
+      return ProfileModel.findOne({
+        $or: [
+          { playerId: idOrName },
+          { name: new RegExp(`^${escapeRegex(idOrName)}$`, "i") },
+        ],
+      }).lean();
+    }, null);
 
     if (profile) {
       const prog = (profile.progress || {}) as PlayerProgress;

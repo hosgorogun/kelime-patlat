@@ -4,6 +4,7 @@ import { palette } from "@/shared/palette";
 import { GameButton, OrnatePanel } from "@/components/game/game-ui";
 import { DAILY_LOGIN_REWARDS, getDayId, type PlayerProgress } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
+import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
 
 type DailyTreasureModalProps = {
   visible: boolean;
@@ -19,6 +20,7 @@ export function DailyTreasureModal({
   onClaim,
 }: DailyTreasureModalProps) {
   const [isClaiming, setIsClaiming] = React.useState(false);
+  const [showCascade, setShowCascade] = React.useState(false);
   const claimTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -249,10 +251,14 @@ export function DailyTreasureModal({
                 onPress={() => {
                   if (isClaiming || isClaimedToday) return;
                   setIsClaiming(true);
+                  setShowCascade(true);
                   triggerHapticSelection();
                   onClaim();
                   if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
-                  claimTimerRef.current = setTimeout(() => setIsClaiming(false), 2000);
+                  claimTimerRef.current = setTimeout(() => {
+                    setIsClaiming(false);
+                    setShowCascade(false);
+                  }, 2000);
                 }}
                 style={styles.claimButton}
               />
@@ -282,6 +288,13 @@ export function DailyTreasureModal({
           </OrnatePanel>
         </Pressable>
       </Pressable>
+
+      <CoinCascadeOverlay
+        trigger={showCascade}
+        count={12}
+        icon={todayReward.icon}
+        badgeText={todayReward.rewardType === "xp" ? `+${todayReward.amount} XP` : undefined}
+      />
     </Modal>
   );
 }
