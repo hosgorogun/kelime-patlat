@@ -30,5 +30,5 @@ export function useLocalNotificationEngine(progress?: PlayerProgress) {
     return () => {
       sub.remove();
     };
-  }, [progress?.lives, progress?.lastLifeRegenTimestamp]);
+  }, [progress]);
 }

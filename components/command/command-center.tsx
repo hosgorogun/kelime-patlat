@@ -13,6 +13,7 @@ import { MatchHistoryModal } from "@/components/match-history/match-history-moda
 import { DailyTreasureModal } from "@/components/modals/daily-treasure-modal";
 import { BotPracticeModal } from "./bot-practice-modal";
 import { CommandInfoModal } from "./command-info-modal";
+import { FRAME_IMAGES } from "@/components/profile/profile-constants";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends" | "vintage";
 
@@ -123,7 +124,7 @@ export function CommandCenter({
   }, [progress]);
   const rank = getRank(progress);
   const league = getLeagueTier(progress);
-  const leagueProgressPercent = league.tier === "RADIAN"
+  const leagueProgressPercent = league.tier === "HAKİM"
     ? 100
     : Math.min(100, Math.round((league.currentTierPoints / league.targetTierPoints) * 100));
   const activeTheme = THEME_PACKS.find((pack) => pack.id === progress.selectedTheme) ?? THEME_PACKS[0]!;
@@ -155,65 +156,81 @@ export function CommandCenter({
 
   const [showBotPracticeModal, setShowBotPracticeModal] = useState(false);
 
-  // Serbest sürüklenebilir Büyüteç Rozeti (Draggable Floating FAB)
-  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const panOffset = useRef({ x: 0, y: 0 });
-  const isDragging = useRef(false);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gesture) => {
-        return Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4;
-      },
-      onPanResponderGrant: () => {
-        isDragging.current = false;
-        pan.setOffset({
-          x: panOffset.current.x,
-          y: panOffset.current.y,
-        });
-        pan.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: (_, gesture) => {
-        if (Math.abs(gesture.dx) > 6 || Math.abs(gesture.dy) > 6) {
-          isDragging.current = true;
-        }
-        pan.setValue({ x: gesture.dx, y: gesture.dy });
-      },
-      onPanResponderRelease: (_, gesture) => {
-        pan.flattenOffset();
-        panOffset.current = {
-          x: panOffset.current.x + gesture.dx,
-          y: panOffset.current.y + gesture.dy,
-        };
-        // Eğer sürükleme yapılmadıysa tıklama say ve modalı aç
-        if (!isDragging.current) {
-          triggerHapticSelection();
-          setInfoModal("mystery");
-        }
-      },
-    })
-  ).current;
-
   // PATLAT Harf Taşları Animasyonları (Subtle Bounce & Wiggle Loop)
   const tileAnims = useRef(PATLAT_TILES.map(() => new Animated.Value(0))).current;
+
+  // Staggered dashboard entrance animations (Buttery smooth HUD & card arrival)
+  const hudAnim = useRef(new Animated.Value(0)).current;
+  const quickActionsAnim = useRef(new Animated.Value(0)).current;
+  const heroAnim = useRef(new Animated.Value(0)).current;
+  const modesAnim = useRef(new Animated.Value(0)).current;
+
+  // Breathing pulse for primary play button
+  const playPulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.stagger(70, [
+      Animated.spring(hudAnim, {
+        toValue: 1,
+        tension: 190,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.spring(quickActionsAnim, {
+        toValue: 1,
+        tension: 190,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.spring(heroAnim, {
+        toValue: 1,
+        tension: 190,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+      Animated.spring(modesAnim, {
+        toValue: 1,
+        tension: 190,
+        friction: 12,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(playPulseAnim, {
+          toValue: 1.035,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(playPulseAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+
+    return () => pulse.stop();
+  }, [hudAnim, quickActionsAnim, heroAnim, modesAnim, playPulseAnim]);
 
   useEffect(() => {
     const animations = tileAnims.map((anim, i) => {
       return Animated.loop(
         Animated.sequence([
-          Animated.delay(i * 180),
+          Animated.delay(i * 120),
           Animated.timing(anim, {
             toValue: 1,
-            duration: 400,
+            duration: 380,
             useNativeDriver: true,
           }),
           Animated.timing(anim, {
             toValue: 0,
-            duration: 400,
+            duration: 380,
             useNativeDriver: true,
           }),
-          Animated.delay((PATLAT_TILES.length - i) * 180 + 1200),
+          Animated.delay((PATLAT_TILES.length - i) * 120 + 800),
         ])
       );
     });
@@ -241,31 +258,51 @@ export function CommandCenter({
     />
 
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={["#FFFFFF", "#FAF4EC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.hud, { borderColor: "#DED6C7" }]}>
-        <View style={styles.hudInner}>
-          <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
+      <Animated.View
+        style={{
+          opacity: hudAnim,
+          transform: [
+            {
+              translateY: hudAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [14, 0],
+              }),
+            },
+          ],
+        }}
+      >
+        <LinearGradient colors={["#FFFFFF", "#FFFDF7"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hud}>
+          <View style={styles.hudInner}>
+            <Pressable onPress={() => onNavigate("profile")} style={({ pressed }) => [styles.identity, pressed && styles.pressed]}>
             <View style={styles.avatarWrap}>
               <View style={[styles.avatar, { borderColor: activeFrameColor, backgroundColor: activeAvatar.surface }]}>
+                {progress.selectedFrame && FRAME_IMAGES[progress.selectedFrame] ? (
+                  <Image
+                    source={FRAME_IMAGES[progress.selectedFrame]}
+                    style={{ position: "absolute", width: "100%", height: "100%", borderRadius: 24, zIndex: 2 }}
+                    resizeMode="cover"
+                  />
+                ) : null}
                 {progress.avatarPhoto && !imgError ? (
                   <Image
                     source={{ uri: progress.avatarPhoto }}
-                    style={styles.avatarImage}
+                    style={[
+                      styles.avatarImage,
+                      progress.selectedFrame && FRAME_IMAGES[progress.selectedFrame] && { width: "84%", height: "84%", borderRadius: 18, zIndex: 1 },
+                    ]}
                     onError={() => setImgError(true)}
                   />
                 ) : (
-                  <Text style={[styles.avatarText, { color: activeAvatar.color }]}>{activeAvatar.icon}</Text>
+                  <View
+                    style={[
+                      { width: "100%", height: "100%", justifyContent: "center", alignItems: "center" },
+                      progress.selectedFrame && FRAME_IMAGES[progress.selectedFrame] && { width: "84%", height: "84%", borderRadius: 18, zIndex: 1 },
+                    ]}
+                  >
+                    <Text style={[styles.avatarText, { color: activeAvatar.color }]}>{activeAvatar.icon}</Text>
+                  </View>
                 )}
               </View>
-              {/* ALEVLİ ZAFER SERİSİ ROZETİ */}
-              {(progress.pvpWinStreak ?? 0) >= 2 && (
-                <View style={styles.avatarFlameBadge}>
-                  <Text style={styles.avatarFlameEmoji}>🔥</Text>
-                  <Text style={styles.avatarFlameCount}>{progress.pvpWinStreak}</Text>
-                  {(progress.streakShields ?? 0) > 0 && (
-                    <Text style={styles.avatarFlameShield}>🛡️</Text>
-                  )}
-                </View>
-              )}
             </View>
 
             <View style={styles.identityMeta}>
@@ -313,17 +350,19 @@ export function CommandCenter({
                 pressed && styles.pressed,
               ]}
             >
-              <GameGlyph source={ICONS.heart} size={22} />
+              <GameGlyph source={ICONS.heart} size={20} />
               <Text style={[styles.livesHeaderValue, livesCalc.isInfinite && styles.livesHeaderValueInfinite]}>
                 {livesCalc.isInfinite ? "∞" : `${livesCalc.lives}/5`}
               </Text>
             </Pressable>
+
             <Pressable
               onPress={onShowGuide}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
+              accessibilityLabel="Nasıl Oynanır"
             >
-              <Text style={styles.topIconText}>❓</Text>
+              <Text style={styles.topIconText}>💡</Text>
             </Pressable>
 
             <Pressable
@@ -337,186 +376,246 @@ export function CommandCenter({
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
+              accessibilityLabel="Maç Geçmişi"
             >
-              <Text style={styles.topIconText}>📜</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                triggerHapticSelection();
-                onNavigate("profile");
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={({ pressed }) => [styles.topIconBtn, pressed && styles.pressed]}
-            >
-              <Text style={styles.topIconText}>⚙️</Text>
+              <Image source={ICONS.history} style={{ width: 22, height: 22 }} resizeMode="contain" />
             </Pressable>
           </View>
         </View>
       </LinearGradient>
+      </Animated.View>
 
-      <View style={styles.resourceRow}>
-        <GemChip
-          iconSource={ICONS.shield}
-          label="KALKAN"
-          value={progress.streakShields || 0}
-          color={palette.gemBlue}
-          onPress={() => { triggerHapticSelection(); setInfoModal("shield"); }}
-        />
-        <GemChip
-          iconSource={ICONS.radar}
-          label="RADAR"
-          value={progress.radarChargesBonus || 0}
-          color={palette.emerald}
-          onPress={() => { triggerHapticSelection(); setInfoModal("radar"); }}
-        />
-        <GemChip
-          iconSource={ICONS.coin}
-          label="ÇİP"
-          value={displayCoins}
-          color={palette.gold}
-          plus
-          badge={!isClaimedToday}
-          onPress={() => onNavigate("store")}
-        />
-      </View>
+      <Animated.View
+        style={{
+          opacity: quickActionsAnim,
+          transform: [
+            {
+              translateY: quickActionsAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [16, 0],
+              }),
+            },
+          ],
+        }}
+      >
+        <View style={styles.resourceRow}>
+          <GemChip
+            iconSource={ICONS.shield}
+            iconSize={28}
+            label="KALKAN"
+            value={progress.streakShields || 0}
+            color="#1D4ED8"
+            bg="#EFF6FF"
+            borderColor="#93C5FD"
+            onPress={() => { triggerHapticSelection(); setInfoModal("shield"); }}
+          />
+          <GemChip
+            iconSource={ICONS.radar}
+            iconSize={28}
+            label="RADAR"
+            value={progress.radarChargesBonus || 0}
+            color="#047857"
+            bg="#ECFDF5"
+            borderColor="#6EE7B7"
+            onPress={() => { triggerHapticSelection(); setInfoModal("radar"); }}
+          />
+          <GemChip
+            iconSource={ICONS.coin}
+            iconSize={26}
+            label="ÇİP"
+            value={displayCoins}
+            color="#A06300"
+            bg="#FFFDF0"
+            borderColor="#F6DC8A"
+            plus
+            badge={!isClaimedToday}
+            onPress={() => onNavigate("store")}
+          />
+        </View>
 
-
-      {/* Daima 2'li yan yana duran Hazine ve Çark kartları */}
-      <View style={styles.quickActionsRow}>
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            setShowDailyRewardModal(true);
-          }}
-          style={({ pressed }) => [
-            styles.quickActionCard,
-            { backgroundColor: isClaimedToday ? "#F3F5EE" : "#FFF5D6", borderColor: isClaimedToday ? "#DDE3D6" : "#F3D267" },
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.quickActionIcon}>🎁</Text>
-          <View style={styles.quickActionContent}>
-            <Text numberOfLines={1} style={[styles.quickActionTitle, { color: isClaimedToday ? "#62737D" : "#7A5910" }]}>
-              GÜN {displayDayNumber}/7
-            </Text>
-            <Text numberOfLines={1} style={[styles.quickActionSub, { color: isClaimedToday ? "#85959F" : "#925D00" }]}>
-              {isClaimedToday ? "Toplandı ✓" : "Hazineyi Al"}
-            </Text>
-          </View>
-          <Text style={[styles.quickActionArrow, { color: isClaimedToday ? "#85959F" : "#925D00" }]}>
-            {isClaimedToday ? "✓" : "➔"}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            onOpenLuckyWheel?.();
-          }}
-          style={({ pressed }) => [
-            styles.quickActionCard,
-            { backgroundColor: "#EFF6FF", borderColor: "#93C5FD" },
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.quickActionIcon}>🎡</Text>
-          <View style={styles.quickActionContent}>
-            <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#1E40AF" }]}>
-              {canSpinWheel ? "ÇARK HAZIR" : "ŞANS ÇARKI"}
-            </Text>
-            <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#2563EB" }]}>
-              {canSpinWheel ? "Ücretsiz Çevir" : "Hediyeler"}
-            </Text>
-          </View>
-          <Text style={[styles.quickActionArrow, { color: "#2563EB" }]}>➔</Text>
-        </Pressable>
-
-        {unclaimedMissionsCount > 0 && (
+        {/* Daima 2'li yan yana duran Hazine ve Çark kartları */}
+        <View style={styles.quickActionsRow}>
           <Pressable
             onPress={() => {
               triggerHapticSelection();
-              onNavigate("missions");
+              setShowDailyRewardModal(true);
             }}
             style={({ pressed }) => [
               styles.quickActionCard,
-              { backgroundColor: "#DEF7EC", borderColor: "#88DFB3" },
+              {
+                backgroundColor: "#FFF8E7",
+                borderColor: "#F4D267",
+              },
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.quickActionIcon}>📜</Text>
+            <View style={[styles.quickActionIconWrap, { backgroundColor: "#FEEDBE" }]}>
+              <Image source={ICONS.gift} style={{ width: 22, height: 22 }} resizeMode="contain" />
+            </View>
             <View style={styles.quickActionContent}>
-              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#166544" }]}>
-                {unclaimedMissionsCount} GÖREV
+              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#8A5F0B" }]}>
+                GÜN {displayDayNumber}/7
               </Text>
-              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#15803D" }]}>
-                Ödülü Al
+              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#B87A00" }]}>
+                {isClaimedToday ? "Giriş Hediyesi" : "Hazineyi Al"}
               </Text>
             </View>
-            <Text style={[styles.quickActionArrow, { color: "#15803D" }]}>➔</Text>
+            <View style={[styles.quickActionBadgePill, styles.readyPill]}>
+              <Text style={[styles.quickActionBadgeText, styles.readyPillText]}>➔</Text>
+            </View>
           </Pressable>
-        )}
-      </View>
 
-      <OrnatePanel accent="sapphire" showJewels={false} style={{ marginTop: 12 }} contentStyle={{ paddingHorizontal: 14, paddingVertical: 16 }}>
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              onOpenLuckyWheel?.();
+            }}
+            style={({ pressed }) => [
+              styles.quickActionCard,
+              { backgroundColor: "#F0F7FF", borderColor: "#BAD9FB" },
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: "#DBEAFE" }]}>
+              <Image source={ICONS.wheel} style={{ width: 22, height: 22 }} resizeMode="contain" />
+            </View>
+            <View style={styles.quickActionContent}>
+              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#1D4ED8" }]}>
+                {canSpinWheel ? "ÇARK HAZIR" : "ŞANS ÇARKI"}
+              </Text>
+              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#2563EB" }]}>
+                {canSpinWheel ? "Ücretsiz Çevir" : "Hediyeler"}
+              </Text>
+            </View>
+            <View style={[styles.quickActionBadgePill, { backgroundColor: "#DBEAFE", borderColor: "#93C5FD" }]}>
+              <Text style={[styles.quickActionBadgeText, { color: "#1D4ED8" }]}>➔</Text>
+            </View>
+          </Pressable>
+
+          {unclaimedMissionsCount > 0 && (
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                onNavigate("missions");
+              }}
+              style={({ pressed }) => [
+                styles.quickActionCard,
+                { backgroundColor: "#EFFBF4", borderColor: "#A2DFBB" },
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={[styles.quickActionIconWrap, { backgroundColor: "#DCF5E7" }]}>
+                <Text style={styles.quickActionIcon}>📜</Text>
+              </View>
+              <View style={styles.quickActionContent}>
+                <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#166544" }]}>
+                  {unclaimedMissionsCount} GÖREV
+                </Text>
+                <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#15803D" }]}>
+                  Ödülü Al
+                </Text>
+              </View>
+              <View style={[styles.quickActionBadgePill, { backgroundColor: "#DCF5E7", borderColor: "#88DFB3" }]}>
+                <Text style={[styles.quickActionBadgeText, { color: "#166544" }]}>➔</Text>
+              </View>
+            </Pressable>
+          )}
+        </View>
+      </Animated.View>
+
+      <Animated.View
+        style={{
+          opacity: heroAnim,
+          transform: [
+            {
+              translateY: heroAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [18, 0],
+              }),
+            },
+          ],
+        }}
+      >
+        <OrnatePanel accent="sapphire" showJewels={false} style={{ marginTop: 12 }} contentStyle={{ paddingHorizontal: 16, paddingVertical: 18 }}>
         <View style={styles.heroHead}>
-          <Text style={[styles.deckEyebrow, { color: "#176C97" }]}>BİR KELİMEYLE BAŞLA</Text>
+          <View style={styles.deckEyebrowPill}>
+            <Text style={styles.deckEyebrowText}>BİR KELİMEYLE BAŞLA</Text>
+          </View>
           <InfoMini color="#176C97" onPress={() => setInfoModal("rotani")} />
         </View>
-        <JewelTitle>Azıcık mola. {"\n"}Bolca kelime.</JewelTitle>
-        <View accessible={false} style={{ flexDirection: "row", gap: 6, marginTop: 16, marginBottom: 4 }}>
+        <JewelTitle style={{ fontSize: 26, lineHeight: 30, marginTop: 6 }}>Azıcık mola. {"\n"}Bolca kelime.</JewelTitle>
+        <View accessible={false} style={{ flexDirection: "row", gap: 7, marginTop: 14, marginBottom: 4 }}>
           {PATLAT_TILES.map((tile, index) => {
             const anim = tileAnims[index];
             const translateY = anim ? anim.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0, -6, 0],
+              inputRange: [0, 0.45, 1],
+              outputRange: [0, -10, 0],
             }) : 0;
             const scale = anim ? anim.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [1, 1.1, 1],
+              inputRange: [0, 0.45, 1],
+              outputRange: [1, 1.15, 1],
             }) : 1;
-            const baseRotate = index % 2 ? 5 : -5;
+            const baseRotate = index % 2 === 0 ? -6 : 6;
+            const swingRotate = index % 2 === 0 ? 12 : -12;
             const rotate = anim ? anim.interpolate({
               inputRange: [0, 0.5, 1],
-              outputRange: [`${baseRotate}deg`, `${baseRotate + (index % 2 ? -6 : 6)}deg`, `${baseRotate}deg`],
+              outputRange: [`${baseRotate}deg`, `${swingRotate}deg`, `${baseRotate}deg`],
             }) : `${baseRotate}deg`;
 
+            const handleTileTap = () => {
+              triggerHapticSelection();
+              if (anim) {
+                Animated.sequence([
+                  Animated.timing(anim, { toValue: 1, duration: 160, useNativeDriver: true }),
+                  Animated.spring(anim, { toValue: 0, tension: 260, friction: 6, useNativeDriver: true }),
+                ]).start();
+              }
+            };
+
             return (
-              <Animated.View
-                key={`${tile.letter}-${index}`}
-                style={{
-                  width: 38,
-                  height: 44,
-                  borderRadius: 12,
-                  borderWidth: 1.5,
-                  borderBottomWidth: 4,
-                  borderColor: tile.border,
-                  backgroundColor: tile.bg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transform: [{ translateY }, { scale }, { rotate }],
-                }}
-              >
-                <Text style={{ color: tile.text, fontWeight: "900", fontSize: 22 }}>
-                  {tile.letter}
-                </Text>
-              </Animated.View>
+              <Pressable key={`${tile.letter}-${index}`} onPress={handleTileTap} style={{ flex: 1, maxWidth: 44 }}>
+                <Animated.View
+                  style={{
+                    width: "100%",
+                    height: 48,
+                    borderRadius: 13,
+                    borderWidth: 1.5,
+                    borderBottomWidth: 4,
+                    borderColor: tile.border,
+                    backgroundColor: tile.bg,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: tile.border,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.22,
+                    shadowRadius: 4,
+                    elevation: 4,
+                    transform: [{ translateY }, { scale }, { rotate }],
+                  }}
+                >
+                  <View style={styles.tileSheen} />
+                  <Text style={{ color: tile.text, fontWeight: "900", fontSize: 23 }}>
+                    {tile.letter}
+                  </Text>
+                </Animated.View>
+              </Pressable>
             );
           })}
         </View>
-        <Text style={styles.deckBody}>Harfleri birleştir. Kelimeleri bul. Kendi rekorunu geç.</Text>
+        <Text style={styles.deckBody}>Harfleri birleştir, gizli kelimeleri bul ve rekorunu kır.</Text>
 
         <Pressable
           onPress={() => {
             triggerHapticSelection();
             onNavigate("league");
           }}
-          style={({ pressed }) => [styles.xpPanel, { borderColor: "#BCD8F0", backgroundColor: "#FFFFFF" }, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.xpPanel, pressed && styles.pressed]}
         >
           <View style={styles.xpHead}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-              <Text style={[styles.xpLabel, { color: "#2C6B8D" }]}>LİG · {league.name}</Text>
-              <Text style={{ color: "#176C97", fontSize: 10, fontWeight: "900" }}>➔</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <GameGlyph source={ICONS.trophy} size={16} />
+              <Text style={[styles.xpLabel, { color: "#16648B" }]}>LİG · {league.name}</Text>
+              <Text style={{ color: "#176C97", fontSize: 11, fontWeight: "900" }}>➔</Text>
             </View>
             <Text style={[styles.xpValue, { color: "#16648B" }]}>{league.currentTierPoints} / {league.targetTierPoints} LP</Text>
           </View>
@@ -531,47 +630,57 @@ export function CommandCenter({
         </Pressable>
 
         <View style={styles.heroActions}>
-          <GameButton
-            label="Düelloya başla"
-            iconSource={ICONS.play}
-            variant="gold"
-            onPress={() => onNavigate("online")}
-            style={{ flex: 1 }}
-          />
-          <GameButton
-            label="Arkadaşla oyna"
-            icon="🤝"
-            variant="sapphire"
-            onPress={() => onNavigate("friends")}
-            style={{ flex: 1 }}
-          />
-        </View>
-
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            setShowBotPracticeModal(true);
-          }}
-          style={({ pressed }) => [styles.botPracticeBtn, pressed && styles.pressed]}
-        >
-          <Text style={styles.botPracticeIcon}>🤖</Text>
-          <Text style={styles.botPracticeText}>Önce biraz pratik yap</Text>
-          <Text style={styles.botPracticeArrow}>➔</Text>
-        </Pressable>
-
-        <View style={[styles.signalFooter, { borderTopColor: "rgba(33, 106, 159, 0.2)" }]}>
-          <View style={styles.footerCol}>
-            <Text style={[styles.signalLabel, { color: "#466E85" }]}>ORT. TEMPO</Text>
-            <Text style={styles.signalValue}>{progress.bestTempo || 0} <Text style={styles.signalUnit}>K/DK</Text></Text>
+          <Animated.View style={{ width: "100%", transform: [{ scale: playPulseAnim }] }}>
+            <GameButton
+              label="Düelloya Başla"
+              iconSource={ICONS.duel}
+              iconSize={30}
+              iconBoxStyle={{ backgroundColor: "transparent" }}
+              variant="primary"
+              size="lg"
+              onPress={() => onNavigate("online")}
+              style={{ width: "100%" }}
+            />
+          </Animated.View>
+          
+          <View style={styles.secondaryHeroRow}>
+            <GameButton
+              label="Arkadaşla oyna"
+              icon="👥"
+              variant="friend"
+              size="md"
+              onPress={() => onNavigate("friends")}
+              style={{ flex: 1 }}
+            />
+            <Pressable
+              onPress={() => {
+                triggerHapticSelection();
+                setShowBotPracticeModal(true);
+              }}
+              style={({ pressed }) => [styles.botPracticeBtnMini, pressed && styles.pressed]}
+            >
+              <Text style={styles.botPracticeIcon}>🎯</Text>
+              <Text numberOfLines={1} style={styles.botPracticeText}>Pratik Yap</Text>
+              <Text style={styles.botPracticeArrow}>➔</Text>
+            </Pressable>
           </View>
-          <View style={[styles.signalRule, { backgroundColor: "rgba(33, 106, 159, 0.25)" }]} />
-          <Pressable onPress={() => onNavigate("league")} style={styles.footerCol}>
-            <Text style={[styles.signalLabel, { color: "#466E85" }]}>GALİBİYET</Text>
-            <Text style={styles.signalValue}>{progress.wins} <Text style={styles.signalUnit}>MAÇ</Text></Text>
-          </Pressable>
         </View>
       </OrnatePanel>
+      </Animated.View>
 
+      <Animated.View
+        style={{
+          opacity: modesAnim,
+          transform: [
+            {
+              translateY: modesAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              }),
+            },
+          ],
+        }}
+      >
       <SectionLabel title="OYUN MODLARI" meta="MACERA & REKOR" />
 
       {/* 2. ANA MACERA: SEVİYE YOLCULUĞU (Öne Çıkan Geniş Prestij Kartı) */}
@@ -603,10 +712,10 @@ export function CommandCenter({
         {/* SOL: SKOR HÜCUMU */}
         <Pressable onPress={() => onNavigate("arcade")} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
           <LinearGradient
-            colors={["#FFF6ED", "#FFE6D1"]}
+            colors={["#FFFFFF", "#FFF9F2"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0.5, y: 1 }}
-            style={[styles.columnCard, { borderColor: "#F7BE93" }]}
+            style={[styles.columnCard, { borderColor: "#EAD5C3" }]}
           >
             <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
               <View style={styles.cardRibbonAmber}>
@@ -620,7 +729,7 @@ export function CommandCenter({
             </View>
 
             <View style={{ alignItems: "center", marginVertical: 6 }}>
-              <View style={[styles.cardIconCircle, { borderColor: "#F4AF79", backgroundColor: "#FFE0C0" }]}>
+              <View style={[styles.cardIconCircle, { borderColor: "#E8C8AE", backgroundColor: "#FFF4EA" }]}>
                 <Text style={[styles.cardIconText, { color: "#B25610" }]}>⚡</Text>
               </View>
             </View>
@@ -644,13 +753,13 @@ export function CommandCenter({
         {/* SAĞ: GAZETE BULMACASI */}
         <Pressable onPress={() => onNavigate("vintage")} style={({ pressed }) => [styles.columnCardWrap, pressed && styles.pressed]}>
           <LinearGradient
-            colors={["#FFF1F3", "#FDE0E4"]}
+            colors={["#FFFFFF", "#FFF4F6"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0.5, y: 1 }}
-            style={[styles.columnCard, { borderColor: "#FCA5A5" }]}
+            style={[styles.columnCard, { borderColor: "#F2D0D6" }]}
           >
             <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
-              <View style={[styles.cardRibbonAmber, { backgroundColor: "#FFE4E8", borderColor: "#F87171" }]}>
+              <View style={[styles.cardRibbonAmber, { backgroundColor: "#FFF0F2", borderColor: "#F4B8C1" }]}>
                 <Text style={[styles.cardRibbonTextAmber, { color: "#991B1B" }]}>10×10 MATRİS</Text>
               </View>
               {onOpenModeInfo && (
@@ -661,7 +770,7 @@ export function CommandCenter({
             </View>
 
             <View style={{ alignItems: "center", marginVertical: 6 }}>
-              <View style={[styles.cardIconCircle, { borderColor: "#F87171", backgroundColor: "#FEE2E2" }]}>
+              <View style={[styles.cardIconCircle, { borderColor: "#F2B6C0", backgroundColor: "#FFEBF0" }]}>
                 <Text style={[styles.cardIconText, { color: "#991B1B" }]}>🗞️</Text>
               </View>
             </View>
@@ -682,6 +791,16 @@ export function CommandCenter({
           </LinearGradient>
         </Pressable>
       </View>
+      </Animated.View>
+
+      <DailyTreasureModal
+        visible={showDailyRewardModal}
+        onClose={() => setShowDailyRewardModal(false)}
+        progress={progress}
+        onClaim={() => {
+          onClaimDailyReward?.();
+        }}
+      />
 
       <MatchHistoryModal
         visible={showHistoryModal}
@@ -692,28 +811,19 @@ export function CommandCenter({
           onNavigate("online");
         }}
       />
-
-      <DailyTreasureModal
-        visible={showDailyRewardModal}
-        onClose={() => setShowDailyRewardModal(false)}
-        progress={progress}
-        onClaim={() => {
-          onClaimDailyReward?.();
-        }}
-      />
     </ScrollView>
 
-    {/* Ekran Üzerinde İstenilen Yere Serbestçe Taşınabilen Büyüteç Rozeti (Draggable Floating FAB) */}
-    <Animated.View
-      {...panResponder.panHandlers}
-      style={[
-        styles.mysteryFab,
-        {
-          transform: [{ translateX: pan.x }, { translateY: pan.y }],
-        },
-      ]}
+    <Pressable
+      onPress={() => {
+        triggerHapticSelection();
+        setInfoModal("mystery");
+      }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={({ pressed }) => [styles.mysteryFab, pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel="Günün Gizemli Kelimesi"
     >
       <Text style={styles.mysteryFabIcon}>🔍</Text>
-    </Animated.View>
+    </Pressable>
   </>;
 }

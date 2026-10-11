@@ -1,4 +1,4 @@
-export type LeagueTierName = "DEMİR" | "BRONZ" | "GÜMÜŞ" | "ALTIN" | "PLATİN" | "ELMAS" | "YÜCELİK" | "ÖLÜMSÜZLÜK" | "RADIAN";
+export type LeagueTierName = "DEMİR" | "BRONZ" | "GÜMÜŞ" | "ALTIN" | "PLATİN" | "ELMAS" | "KOZMİK" | "EBEDİ" | "HAKİM";
 
 export type LeagueTierInfo = {
   name: string;
@@ -31,9 +31,9 @@ export const LEAGUE_TIERS: readonly LeagueTierConfig[] = [
   { tier: "ALTIN", name: "ALTIN LİGİ", icon: "🦅", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/gold.jpg", color: "#FBBF24", minPoints: 1600, maxPoints: 2499 },
   { tier: "PLATİN", name: "PLATİN LİGİ", icon: "🪽", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/platinum.jpg", color: "#67E8F9", minPoints: 2500, maxPoints: 3599 },
   { tier: "ELMAS", name: "ELMAS LİGİ", icon: "💎", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/diamond.jpg", color: "#60A5FA", minPoints: 3600, maxPoints: 4999 },
-  { tier: "YÜCELİK", name: "YÜCELİK LİGİ", icon: "🔮", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/ascendant.jpg", color: "#C084FC", minPoints: 5000, maxPoints: 6999 },
-  { tier: "ÖLÜMSÜZLÜK", name: "ÖLÜMSÜZLÜK LİGİ", icon: "🔥", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/immortal.jpg", color: "#FB7185", minPoints: 7000, maxPoints: 9999 },
-  { tier: "RADIAN", name: "RADIAN LİGİ", icon: "👑", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/radian.jpg", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
+  { tier: "KOZMİK", name: "KOZMİK LİG", icon: "🔮", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/ascendant.jpg", color: "#C084FC", minPoints: 5000, maxPoints: 6999 },
+  { tier: "EBEDİ", name: "EBEDİ LİG", icon: "🔥", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/immortal.jpg", color: "#FB7185", minPoints: 7000, maxPoints: 9999 },
+  { tier: "HAKİM", name: "HAKİM LİGİ", icon: "👑", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/radian.jpg", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
 ] as const;
 
 export function getTierColor(tier?: string): string {

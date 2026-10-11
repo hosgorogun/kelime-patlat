@@ -2,6 +2,7 @@ import React from "react";
 import { View, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { ScreenContainer } from "../common/screen-container";
+import { ScreenTransitionView } from "../common/screen-transition-view";
 import { GameSplashScreen } from "../game/game-splash-screen";
 import { AuthScreenContainer } from "../auth/auth-screen-container";
 import { HomeScreenView } from "./home-screen-view";
@@ -210,7 +211,9 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
 
   return (
     <>
-      {renderScreen()}
+      <ScreenTransitionView key={screen} style={{ flex: 1 }}>
+        {renderScreen()}
+      </ScreenTransitionView>
       {rootOverlays}
     </>
   );

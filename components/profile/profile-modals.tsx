@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, Modal, TextInput } from "react-native";
+import { Alert, Linking, View, Text, Pressable, Modal, TextInput } from "react-native";
 import { isEqualTr } from "@/shared/tr-utils";
 import { styles } from "./profile.styles";
 
@@ -144,19 +144,33 @@ export const ProfilePrivacyModal = React.memo(({
     >
       <View style={styles.deleteModalOverlay}>
         <View style={[styles.deleteModalCard, { borderColor: "#DCE1D7" }]}>
-          <Text style={{ fontSize: 40, marginBottom: 6 }}>🔒</Text>
+          <Text style={{ fontSize: 36, marginBottom: 6 }}>🔒</Text>
           <Text style={[styles.deleteModalTitle, { color: "#2a9c7a" }]}>GİZLİLİK POLİTİKASI</Text>
           <Text style={[styles.deleteModalDesc, { color: "#293541", lineHeight: 20 }]}>
-            Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız ve maç ilerlemeniz yalnızca sıralama ve senkronizasyon için saklanır.
+            Kelime Patlat, kullanıcı verilerini en yüksek güvenlik standartlarında korur. Hesabınız, takma adınız ve maç ilerlemeniz yalnızca çok oyunculu sıralama ve cihazlar arası senkronizasyon için saklanır.
             {"\n\n"}
-            İletişim: destek@kelimepatlat.app
+            Kişisel verileriniz asla 3. taraflarla paylaşılmaz veya satılmaz. Dilediğiniz zaman ayarlar menüsünden hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz.
+            {"\n\n"}
+            İletişim & Destek: destek@kelimepatlat.app
           </Text>
-          <Pressable
-            onPress={onDismiss}
-            style={[styles.deleteModalCancelBtn, { backgroundColor: "#aef5e0", borderColor: "#DCE1D7", marginTop: 12 }]}
-          >
-            <Text style={[styles.deleteModalCancelText, { color: "#293541", fontWeight: "900" }]}>ANLADIM</Text>
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+            <Pressable
+              onPress={() => {
+                Linking.openURL("https://kelimepatlat.app/privacy").catch(() => {
+                  Alert.alert("Bağlantı", "Gizlilik politikası sayfasına https://kelimepatlat.app/privacy adresinden ulaşabilirsiniz.");
+                });
+              }}
+              style={[styles.deleteModalCancelBtn, { flex: 1, backgroundColor: "#E9EDE7", borderColor: "#DCE1D7" }]}
+            >
+              <Text style={[styles.deleteModalCancelText, { color: "#293541", fontSize: 12 }]}>🌐 WEB SAYFASI</Text>
+            </Pressable>
+            <Pressable
+              onPress={onDismiss}
+              style={[styles.deleteModalCancelBtn, { flex: 1, backgroundColor: "#aef5e0", borderColor: "#DCE1D7" }]}
+            >
+              <Text style={[styles.deleteModalCancelText, { color: "#293541", fontWeight: "900", fontSize: 12 }]}>ANLADIM</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>

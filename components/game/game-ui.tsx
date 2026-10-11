@@ -13,6 +13,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { palette } from "@/shared/palette";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 
 export const ICONS = {
   coin: require("../../assets/ui/icon-coin.png"),
@@ -24,6 +25,10 @@ export const ICONS = {
   store: require("../../assets/ui/icon-store.png"),
   missions: require("../../assets/ui/icon-missions.png"),
   profile: require("../../assets/ui/icon-profile.png"),
+  gift: require("../../assets/ui/icon-gift.png"),
+  wheel: require("../../assets/ui/icon-wheel.png"),
+  history: require("../../assets/ui/icon-history.png"),
+  duel: require("../../assets/ui/icon-duel.png"),
 } as const;
 
 export function GameGlyph({
@@ -115,63 +120,91 @@ export function OrnatePanel({
   );
 }
 
-type GameButtonVariant = "gold" | "emerald" | "ruby" | "sapphire" | "dark";
+type GameButtonVariant = "gold" | "emerald" | "ruby" | "sapphire" | "dark" | "primary" | "friend";
 
-const buttons = {
-  gold: ["#FFD66E", "#D3A63D"],
-  emerald: ["#9DE5BB", "#64AD84"],
-  ruby: ["#FFAA99", "#CE796B"],
-  sapphire: ["#B6DCFF", "#7BA9D0"],
-  dark: ["#E9EDE7", "#BFC8BD"],
-} as const;
+const buttons: Record<GameButtonVariant, readonly [string, string, string]> = {
+  gold: ["#FFD66E", "#D3A63D", "#293541"],
+  emerald: ["#2ECC71", "#219653", "#FFFFFF"],
+  primary: ["#2ECC71", "#219653", "#FFFFFF"],
+  ruby: ["#FFAA99", "#CE796B", "#293541"],
+  sapphire: ["#4FA3E3", "#2C7CB9", "#FFFFFF"],
+  friend: ["#4FA3E3", "#2C7CB9", "#FFFFFF"],
+  dark: ["#E9EDE7", "#BFC8BD", "#293541"],
+};
 
 export function GameButton({
   label,
   icon,
   iconSource,
+  iconSize,
   variant = "gold",
   size = "lg",
   onPress,
   disabled,
   style,
+  textStyle,
+  iconBoxStyle,
 }: {
   label: string;
   icon?: string;
   iconSource?: ImageSourcePropType;
+  iconSize?: number;
   variant?: GameButtonVariant;
   size?: "lg" | "md" | "sm";
   onPress?: PressableProps["onPress"];
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  iconBoxStyle?: StyleProp<ViewStyle>;
 }) {
-  const [backgroundColor, borderColor] = buttons[variant];
+  const [backgroundColor, borderColor, textColor] = buttons[variant];
+  const defaultIconSize = size === "lg" ? 22 : size === "md" ? 18 : 16;
+  const actualIconSize = iconSize ?? defaultIconSize;
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
-      onPress={onPress}
+      onPress={(e) => {
+        if (!disabled) {
+          triggerHapticSelection();
+        }
+        onPress?.(e);
+      }}
       disabled={disabled}
       style={({ pressed }) => [
         styles.button,
         {
-          minHeight: size === "lg" ? 56 : 44,
+          minHeight: size === "lg" ? 56 : size === "md" ? 44 : 38,
           backgroundColor,
           borderColor,
           opacity: disabled ? 0.45 : 1,
         },
         style,
-        pressed && { transform: [{ translateY: 2 }], borderBottomWidth: 2 },
+        pressed && { transform: [{ scale: 0.97 }, { translateY: 2 }], borderBottomWidth: 2 },
       ]}
     >
+      <View style={styles.buttonTopGlow} />
       {iconSource ? (
-        <GameGlyph source={iconSource} size={18} />
+        <View style={[styles.buttonIconBox, iconBoxStyle]}>
+          <GameGlyph source={iconSource} size={actualIconSize} />
+        </View>
       ) : icon ? (
-        <Text style={{ fontSize: 18 }}>{icon}</Text>
+        <Text style={{ fontSize: size === "lg" ? 20 : 17 }}>{icon}</Text>
       ) : null}
       <Text
         numberOfLines={2}
-        style={[styles.buttonText, { fontSize: size === "sm" ? 12 : 14 }]}
+        style={[
+          styles.buttonText,
+          {
+            color: textColor,
+            fontSize: size === "lg" ? 15.5 : size === "sm" ? 12 : 13.5,
+            fontWeight: "900",
+            letterSpacing: 0.3,
+          },
+          textStyle,
+        ]}
       >
         {label}
       </Text>
@@ -220,40 +253,57 @@ export function GemChip({
   value,
   label,
   color,
+  bg,
+  borderColor,
   onPress,
   plus,
   badge,
+  iconSize = 25,
 }: {
   icon?: string;
   iconSource?: ImageSourcePropType;
   value: string | number;
   label?: string;
   color: string;
+  bg?: string;
+  borderColor?: string;
   onPress?: () => void;
   plus?: boolean;
   badge?: boolean;
+  iconSize?: number;
 }) {
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityLabel={`${label ?? ""}: ${value}`}
       onPress={onPress}
-      style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [
+        styles.chip,
+        bg ? { backgroundColor: bg } : null,
+        borderColor ? { borderColor } : null,
+        pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
+      ]}
     >
       {iconSource ? (
-        <GameGlyph source={iconSource} size={19} color={color} />
+        <View style={[styles.chipIconBox, bg ? { backgroundColor: "rgba(255,255,255,0.85)" } : null]}>
+          <GameGlyph source={iconSource} size={iconSize} color={color} />
+        </View>
       ) : (
-        <Text>{icon}</Text>
+        <Text style={{ fontSize: 20 }}>{icon}</Text>
       )}
       <View style={{ flex: 1, minWidth: 0 }}>
         {label ? (
-          <Text numberOfLines={1} style={styles.chipLabel}>
+          <Text numberOfLines={1} style={[styles.chipLabel, color ? { color } : null]}>
             {label}
           </Text>
         ) : null}
         <Text style={styles.chipValue}>{value}</Text>
       </View>
-      {plus ? <Text style={styles.plus}>+</Text> : null}
+      {plus ? (
+        <View style={styles.plusPill}>
+          <Text style={styles.plusText}>+</Text>
+        </View>
+      ) : null}
       {badge ? <View style={styles.badge} /> : null}
     </Pressable>
   );
@@ -479,19 +529,44 @@ const styles = StyleSheet.create({
   },
   panelContent: { borderRadius: 22, padding: 20, overflow: "hidden" },
   button: {
-    borderRadius: 17,
-    borderWidth: 1,
-    borderBottomWidth: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderBottomWidth: 4.5,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 9,
+    position: "relative",
+    overflow: "hidden",
+    shadowColor: "#293541",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  buttonTopGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "38%",
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  buttonIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
     color: palette.text,
-    fontWeight: "800",
+    fontWeight: "900",
     textAlign: "center",
     flexShrink: 1,
   },
@@ -514,16 +589,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 7,
   },
-  chipLabel: { color: "#54646B", fontSize: 9, fontWeight: "800", letterSpacing: 0.3 },
-  chipValue: { color: palette.text, fontSize: 15, fontWeight: "900" },
-  plus: { color: palette.text, fontSize: 20, fontWeight: "700" },
+  chipIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipLabel: { color: "#54646B", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.3 },
+  chipValue: { color: palette.text, fontSize: 16, fontWeight: "900" },
+  plusPill: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    backgroundColor: "#FCE7A6",
+    borderWidth: 1,
+    borderColor: "#F0B938",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plusText: { color: "#8E5E04", fontSize: 14, fontWeight: "900", lineHeight: 16 },
   badge: {
     position: "absolute",
     right: 5,
     top: 5,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: palette.heart,
   },
   title: {

@@ -50,6 +50,24 @@ export function SoloWonView({
   onNext,
   onExit,
 }: SoloWonViewProps) {
+  const [displayXp, setDisplayXp] = React.useState(0);
+  const targetXp = Math.max(30, foundCount * 15 + Math.min(30, seconds));
+
+  React.useEffect(() => {
+    let start = 0;
+    const step = Math.max(1, Math.floor(targetXp / 16));
+    const interval = setInterval(() => {
+      start += step;
+      if (start >= targetXp) {
+        setDisplayXp(targetXp);
+        clearInterval(interval);
+      } else {
+        setDisplayXp(start);
+      }
+    }, 45);
+    return () => clearInterval(interval);
+  }, [targetXp]);
+
   return (
     <View style={[styles.result, boardSkinColor && { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor }]}>
       <VictoryBanner
@@ -57,7 +75,35 @@ export function SoloWonView({
         subtitle={`${foundCount} kelime buldun · ${seconds} saniye artırdın`}
       />
 
-      <View style={{ width: "100%", gap: 8, marginTop: 12 }}>
+      {/* Roll-up Ödül Kartı */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-around",
+          backgroundColor: "rgba(62, 232, 181, 0.08)",
+          borderColor: "#3EE8B5",
+          borderWidth: 1.5,
+          borderRadius: 16,
+          paddingVertical: 10,
+          paddingHorizontal: 16,
+          marginTop: 8,
+          marginBottom: 4,
+          width: "100%",
+        }}
+      >
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ fontSize: 10, color: "#626F73", fontWeight: "700" }}>KAZANILAN XP</Text>
+          <Text style={{ fontSize: 20, color: "#279f73", fontWeight: "900" }}>+{displayXp} ⭐</Text>
+        </View>
+        <View style={{ width: 1, height: 26, backgroundColor: "rgba(62, 232, 181, 0.25)" }} />
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ fontSize: 10, color: "#626F73", fontWeight: "700" }}>KAZANILAN ÇİP</Text>
+          <Text style={{ fontSize: 20, color: "#B45309", fontWeight: "900" }}>+{Math.max(10, Math.floor(foundCount * 4))} 🪙</Text>
+        </View>
+      </View>
+
+      <View style={{ width: "100%", gap: 8, marginTop: 10 }}>
         {level < MAX_SOLO_LEVEL && (
           <Pressable
             onPress={() => {

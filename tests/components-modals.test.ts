@@ -2,6 +2,7 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DEFAULT_PROGRESS, type PlayerProgress } from "@/shared/progression";
+import { normalizeTrUpper } from "@/shared/tr-utils";
 
 // Modal Components
 import { LivesModal } from "@/components/modals/lives-modal";
@@ -273,7 +274,7 @@ describe("Component Tests: Modals & Dialogs", () => {
           onClose: vi.fn(),
         })
       );
-      expect(html).toContain(wordInfo.word.toUpperCase());
+      expect(html).toContain(normalizeTrUpper(wordInfo.word));
       expect(html).toContain("isim");
       expect(html).toContain("Karmaşık mantıksal ve aritmetik işlemleri yapan elektronik aygıt.");
       expect(html).toContain("Bilgisayar teknolojisi hızla ilerliyor.");

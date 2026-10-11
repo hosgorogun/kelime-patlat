@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import {
+  Alert,
+  Clipboard,
   Image,
   Pressable,
   ScrollView,
@@ -111,7 +113,7 @@ export const RoomWaitingScreen: React.FC<RoomWaitingScreenProps> = ({
 }) => {
   const bothPlayers = room.players.length === 2;
   const me = room.players.find((p) => p.id === playerId);
-  const isBotRoom = room.players.some((p) => p.isBot);
+  const isBotRoom = !room.isRanked && room.players.some((p) => p.isBot);
 
   return (
     <ScrollView contentContainerStyle={styles.roomScroll} showsVerticalScrollIndicator={false}>
@@ -120,15 +122,27 @@ export const RoomWaitingScreen: React.FC<RoomWaitingScreenProps> = ({
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <Text style={styles.navTitle}>
-          {isBotRoom ? "BOT DÜELLOSU" : "CANLI DÜELLO LOBİSİ"}
+          {isBotRoom ? "BOT ALIŞTIRMASI" : "CANLI DÜELLO"}
         </Text>
         <View style={styles.navSpacer} />
       </View>
 
       <View style={styles.roomHero}>
         <Text style={styles.eyebrow}>DAVET KODU</Text>
-        <Text style={styles.roomCode}>{room.code}</Text>
-        <Text style={styles.roomHint}>Rakibin bu kodla odaya katılabilir.</Text>
+        <Pressable
+          onPress={() => {
+            if (room?.code) {
+              Clipboard.setString(room.code);
+              Alert.alert("Kopyalandı", `Oda kodu "${room.code}" panoya kopyalandı!`);
+            }
+          }}
+          hitSlop={8}
+          style={{ flexDirection: "row", alignItems: "center", gap: 6, marginVertical: 4 }}
+        >
+          <Text style={styles.roomCode}>{room.code}</Text>
+          <Text style={{ fontSize: 18 }}>📋</Text>
+        </Pressable>
+        <Text style={styles.roomHint}>Koda dokunarak kopyalayabilirsin.</Text>
         <Pressable
           onPress={onShareInvite}
           style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}

@@ -51,7 +51,7 @@ export function applyMatchProgress(
   // --- KADEMELİ VE DİNAMİK LİG PUANI (LP) HESAPLAMASI ---
   const currentLp = Math.max(0, progress.lp ?? 0);
   const tierInfo = getLeagueTier(currentLp);
-  const isHighTier = tierInfo.tier === "ELMAS" || tierInfo.tier === "YÜCELİK" || tierInfo.tier === "ÖLÜMSÜZLÜK" || tierInfo.tier === "RADIAN";
+  const isHighTier = tierInfo.tier === "ELMAS" || tierInfo.tier === "KOZMİK" || tierInfo.tier === "EBEDİ" || tierInfo.tier === "HAKİM";
   const isEntryTier = tierInfo.tier === "DEMİR" || tierInfo.tier === "BRONZ";
   const isCrushingWin = Boolean(result.won && (result.score >= 120 || (result.tempo && result.tempo >= 3.5)));
 
@@ -385,6 +385,9 @@ export function applyArcadeProgress(
     bestArcadeScore: newBest,
     missions: nextMissions,
     history: newHistory,
+    weekendHunt: isWeekendActive() && foundWords && foundWords.length > 0
+      ? recordWeekendHuntWords(progress, foundWords).weekendHunt
+      : progress.weekendHunt,
     matchHistory: [arcadeHistoryItem, ...(progress.matchHistory || [])].slice(0, 50),
   };
 }
@@ -442,6 +445,9 @@ export function applyVintageProgress(
       completedLevels: nextCompleted,
       score: nextScore,
     },
+    weekendHunt: isWeekendActive() && foundWords && foundWords.length > 0
+      ? recordWeekendHuntWords(progress, foundWords).weekendHunt
+      : progress.weekendHunt,
     matchHistory: [vintageHistoryItem, ...(progress.matchHistory || [])].slice(0, 50),
   };
 }

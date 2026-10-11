@@ -1,8 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { getApiBaseUrl } from "@/constants/oauth";
-import { SESSION_TOKEN_KEY } from "@/constants/oauth";
+import { getApiBaseUrl, SESSION_TOKEN_KEY } from "@/constants/oauth";
 
 let gameSocket: Socket | null = null;
 

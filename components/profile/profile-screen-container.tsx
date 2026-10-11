@@ -94,6 +94,7 @@ export function ProfileScreenContainer(props: ProfileScreenContainerProps) {
         }}
         progress={progress}
         setProgress={setProgress}
+        syncProgressToCloud={syncProgressToCloud}
         onShowToast={(title, subtitle, icon, color) => {
           setGlobalToast({
             id: `toast-${Date.now()}`,

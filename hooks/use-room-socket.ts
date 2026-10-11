@@ -6,7 +6,6 @@ import { haptics } from "../lib/haptics";
 import { gameSfx } from "../lib/game-sfx";
 import { triggerHapticSelection, triggerHapticSuccess } from "../shared/audio-haptics";
 import { inviteMessage, normalizeRoomCode } from "../shared/invite";
-import { isEqualTr } from "../shared/tr-utils";
 import { monetizationManager } from "../shared/monetization";
 import { applyMatchProgress, getPlayerLevel, getLeagueTier, type PlayerProgress } from "../shared/progression";
 import { socialManager, type FriendRequest, type FriendUser } from "../shared/social";
@@ -89,8 +88,17 @@ export function useRoomSocket({
         setInspectedPath(null);
         setSelectedWordInfo(null);
       }
-      if (next.status === "playing" || next.status === "finished") setScreen("game");
-      else setScreen("room");
+      if (next.status === "playing" || next.status === "finished") {
+        setScreen("game");
+      } else if (next.isRanked && next.players.length >= 2) {
+        // Dereceli canlı düellolarda lobi beklemesi olmaz, doğrudan maça geçilir
+        setScreen("game");
+        if (next.status === "lobby") {
+          getGameSocket().emit("room:ready", { code: next.code, playerId });
+        }
+      } else {
+        setScreen("room");
+      }
       setNotice(next.message);
 
       const opponentFoundCount = next.foundWords.filter((entry) => entry.playerId !== playerId).length;
@@ -317,7 +325,7 @@ export function useRoomSocket({
               opponentScore: opponentScore,
               isFriendGame: isFriend,
             },
-            isBotMatch ? "bot" : "pvp"
+            isBotMatch && !room.isRanked ? "bot" : "pvp"
           );
           void syncProgressToCloud(updated);
           return updated;

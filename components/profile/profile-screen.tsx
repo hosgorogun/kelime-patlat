@@ -52,11 +52,13 @@ export function ProfileScreen({
   onLogout,
   onDeleteAccount,
   onShowToast,
+  syncProgressToCloud,
 }: {
   playerName: string;
   onUpdatePlayerName: (name: string) => void;
   progress: PlayerProgress;
   setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
+  syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
   onSelectAvatar?: (avatar: AvatarId) => void;
   onSelectTitle?: (titleBadge: string) => void;
   onSelectFrame?: (frameId: string) => void;
@@ -143,9 +145,8 @@ export function ProfileScreen({
     setIsEditingName(false);
   };
 
-  const handlePickPhoto = async () => {
+  const handlePickFromLibrary = async () => {
     try {
-      triggerHapticSelection();
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
@@ -166,8 +167,60 @@ export function ProfileScreen({
       }
     } catch {
       triggerHapticError();
-      Alert.alert("Fotoğraf Seçilemedi", "Fotoğraf galerisinden seçim yapılırken bir sorun oluştu. Lütfen tekrar deneyin.");
+      Alert.alert("Fotoğraf Seçilemedi", "Fotoğraf galerisinden seçim yapılırken bir sorun oluştu.");
     }
+  };
+
+  const handleTakePhotoWithCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Kamera İzni Gerekli",
+          "Profil fotoğrafı çekmek için kamera izni vermeniz gerekmektedir."
+        );
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets[0]) {
+        triggerHapticSuccess();
+        onUpdateAvatarPhoto?.(result.assets[0].uri);
+      }
+    } catch {
+      triggerHapticError();
+      Alert.alert("Fotoğraf Çekilemedi", "Kamera ile fotoğraf çekilirken bir sorun oluştu.");
+    }
+  };
+
+  const handlePickPhoto = () => {
+    triggerHapticSelection();
+    Alert.alert(
+      "Profil Fotoğrafı",
+      "Yeni bir profil fotoğrafı belirlemek için seçim yapın:",
+      [
+        {
+          text: "📷 Fotoğraf Çek",
+          onPress: () => {
+            void handleTakePhotoWithCamera();
+          },
+        },
+        {
+          text: "🖼️ Galeriden Seç",
+          onPress: () => {
+            void handlePickFromLibrary();
+          },
+        },
+        {
+          text: "İptal",
+          style: "cancel",
+        },
+      ]
+    );
   };
 
   const handleResetToGlyph = () => {
@@ -261,32 +314,38 @@ export function ProfileScreen({
             }}
             style={({ pressed }) => [
               {
-                backgroundColor: "#FAFDF7",
+                backgroundColor: "#FFFFFF",
                 borderRadius: 20,
                 padding: 14,
                 borderWidth: 1.5,
-                borderColor: "#DCE1D7",
+                borderBottomWidth: 3.5,
+                borderColor: "#CBD5E1",
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
                 marginBottom: 14,
+                shadowColor: "#293541",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.07,
+                shadowRadius: 5,
+                elevation: 3,
               },
               pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
             ]}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
-              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#C8E6C9" }}>
-                <Text style={{ fontSize: 22 }}>📖</Text>
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "#ECFDF5", justifyContent: "center", alignItems: "center", borderWidth: 1.5, borderColor: "#A7F3D0" }}>
+                <Text style={{ fontSize: 24 }}>📖</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: "900", color: "#293541" }}>LÜGAT MÜZESİ & DEFTERİ</Text>
-                <Text style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>
+                <Text style={{ fontSize: 13.5, fontWeight: "900", color: "#0F172A", letterSpacing: 0.3 }}>LÜGAT MÜZESİ & DEFTERİ</Text>
+                <Text style={{ fontSize: 11, color: "#475569", marginTop: 2, fontWeight: "600" }}>
                   {progress.discoveredWords?.length || 0} Kelime Keşfedildi · TDK Tanımları & Hediyeler
                 </Text>
               </View>
             </View>
-            <View style={{ backgroundColor: "#293541", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12 }}>
-              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "900" }}>AÇ ›</Text>
+            <View style={{ backgroundColor: "#0F172A", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: "#334155" }}>
+              <Text style={{ color: "#FFFFFF", fontSize: 11.5, fontWeight: "900" }}>AÇ ›</Text>
             </View>
           </Pressable>
 
@@ -363,6 +422,20 @@ export function ProfileScreen({
         setProgress={setProgress || (() => {})}
         onClaimMilestone={(m) => {
           onShowToast?.("LÜGAT ÖDÜLÜ ALINDI", `${m.count} kelime başarısı: +${m.rewardCoins} Çip!`, "📖", "#10B981");
+          if (syncProgressToCloud && setProgress) {
+            setProgress((curr) => {
+              const updated = {
+                ...curr,
+                coins: (curr.coins ?? 0) + m.rewardCoins,
+                wordBookClaimedMilestones: {
+                  ...(curr.wordBookClaimedMilestones || {}),
+                  [m.count]: true,
+                },
+              };
+              void syncProgressToCloud(updated);
+              return updated;
+            });
+          }
         }}
       />
     </ScrollView>

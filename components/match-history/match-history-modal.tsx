@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { type MatchHistoryEntry, type PlayerProgress } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
+import { ICONS } from "@/components/game/game-ui";
 import { styles } from "./match-history.styles";
 
 export type MatchHistoryModalProps = {
@@ -91,7 +92,7 @@ export function MatchHistoryModal({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIconWrap}>
-                <Text style={styles.headerIcon}>📜</Text>
+                <Image source={ICONS.history} style={{ width: 28, height: 28 }} resizeMode="contain" />
               </View>
               <View>
                 <Text style={styles.headerKicker}>KARİYER KAYITLARI</Text>

@@ -187,7 +187,7 @@ export function usePvpMatchEffects({
           opponentScore: opponentScore,
           isFriendGame: isFriendGame,
         },
-        isBotMatch ? "bot" : "pvp"
+        isBotMatch && !room.isRanked ? "bot" : "pvp"
       );
       void syncProgressToCloud(updated);
       return updated;
@@ -206,9 +206,13 @@ export function usePvpMatchEffects({
       if (room.startedAt && room.startedAt !== prevStartedAtRef.current) {
         prevStartedAtRef.current = room.startedAt;
         if (room.startedAt > Date.now() - 1500) {
-          setGameCountdown(3);
-          gameSfx.tap();
-          haptics.select();
+          // Allow Versus Clash entrance animation to play first, then start countdown HUD
+          const delayTimer = setTimeout(() => {
+            setGameCountdown(3);
+            gameSfx.tap();
+            haptics.select();
+          }, 1100);
+          return () => clearTimeout(delayTimer);
         } else {
           setGameCountdown(null);
         }

@@ -61,7 +61,7 @@ export function SeasonHub({
 }) {
   const [activeTab, setActiveTab] = useState<SeasonTab>(() => initialTab || "leagues");
   const [friendsSubTab, setFriendsSubTab] = useState<"friends" | "requests">("friends");
-  const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends" | "division">("global");
+  const [leaderboardFilter, setLeaderboardFilter] = useState<"global" | "friends">("global");
   const [rankingType, setRankingType] = useState<RankingType>("lp");
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
   const [friendInput, setFriendInput] = useState("");

@@ -120,7 +120,7 @@ authRouter.get("/check-username", async (req, res) => {
     const lowerUsername = normalizeTr(rawUsername);
     const existing = await UserModel.findOne({ username: lowerUsername });
     res.json({ available: !existing });
-  } catch (err: any) {
+  } catch {
     res.status(500).json({ available: false, error: "Kontrol edilemedi." });
   }
 });

@@ -81,7 +81,6 @@ export function StoreEquipmentTab({
       {CHIP_EQUIPMENT_ITEMS.map((item) => {
         const isRadar = item.rewardType === "radar";
         const isShield = item.rewardType === "shield";
-        const isXp = item.rewardType === "xp";
         const isLives = item.rewardType === "lives";
 
         const livesCalc = progress ? getCalculatedLives(progress) : null;
@@ -90,12 +89,12 @@ export function StoreEquipmentTab({
         const canAfford = coins >= item.cost;
         const isDisabled = !canAfford && !isLivesFull;
 
-        const accentColor = isLives ? "#22C55E" : isRadar ? "#3EE8B5" : isShield ? "#60A5FA" : isXp ? "#F59E0B" : "#EC4899";
+        const accentColor = isLives ? "#F43F5E" : isRadar ? "#10B981" : isShield ? "#3B82F6" : "#EC4899";
 
         return (
           <View key={item.id} style={[styles.productCard, { borderColor: `${accentColor}40` }]}>
-            <View style={[styles.productIconWrap, { borderColor: accentColor, backgroundColor: `${accentColor}18` }]}>
-              <View style={{ width: 48, height: 48, borderRadius: 15, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "#FFF0C7" }}>
+            <View style={[styles.productIconWrap, { borderColor: accentColor, backgroundColor: `${accentColor}12` }]}>
+              <View style={{ width: 48, height: 48, borderRadius: 15, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
                 {item.imageKey && STORE_ASSETS[item.imageKey] ? (
                   <Image
                     source={STORE_ASSETS[item.imageKey]}
@@ -126,13 +125,6 @@ export function StoreEquipmentTab({
                 {isRadar && (
                   <View style={[styles.inventoryCountBadge, { borderColor: "#DCE1D7" }]}>
                     <Text style={[styles.inventoryCountText, { color: "#2a9c7a" }]}>Bonus: +{progress?.radarChargesBonus ?? 0}</Text>
-                  </View>
-                )}
-                {isXp && (
-                  <View style={[styles.inventoryCountBadge, { borderColor: "#DCE1D7" }]}>
-                    <Text style={[styles.inventoryCountText, { color: "#ad6f08" }]}>
-                      Mevcut: {progress?.xp ?? 0} XP (Sv. {getPlayerLevel(progress?.xp ?? 0)})
-                    </Text>
                   </View>
                 )}
               </View>

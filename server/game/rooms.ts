@@ -31,7 +31,7 @@ import {
 } from "./schemas";
 import type { Room, QueueEntry } from "./types";
 import { buildGameBoard, makeUniqueCode } from "./board-builder";
-import { snapshot, emitRoom } from "./room-snapshot";
+import { emitRoom } from "./room-snapshot";
 import { findWordPath } from "./word-path";
 import {
   registerUserSocket,
@@ -221,10 +221,19 @@ function scheduleBotFill(io: Server, room: Room) {
       ...botPersona,
       id: `bot:${room.code}`,
       socketId: null,
+      ready: true,
+      connected: true,
     };
-    room.status = "lobby";
-    room.message = "Rakip bulunamadı — KELİME BOT düelloya hazır.";
-    emitRoom(io, room);
+    if (room.isRanked) {
+      room.host.ready = true;
+      room.status = "playing";
+      room.message = "Rakip bağlandı! Canlı düello başlıyor...";
+      startRound(io, room);
+    } else {
+      room.status = "lobby";
+      room.message = "Rakip bulunamadı — KELİME BOT düelloya hazır.";
+      emitRoom(io, room);
+    }
   }, 2_200);
 }
 
@@ -240,8 +249,14 @@ function startRound(io: Server, room: Room) {
   room.startedAt = Date.now() + 3000;
   room.winnerId = null;
   room.message = `${words.length} gizli kelime var. Yalnız yatay ve dikey bağla!`;
-  room.host.ready = false;
-  if (room.guest) room.guest.ready = false;
+  // Dereceli veya bot içeren maçlarda doğrudan oyun başlar, hazır durumu korunur
+  if (room.isRanked || room.guest?.isBot) {
+    room.host.ready = true;
+    if (room.guest) room.guest.ready = true;
+  } else {
+    room.host.ready = false;
+    if (room.guest) room.guest.ready = false;
+  }
   room.host.rematch = false;
   if (room.guest) room.guest.rematch = false;
   room.lastWordFoundTime = {};
@@ -512,7 +527,12 @@ export function registerGameRooms(io: Server) {
         const hostSocket = io.sockets.sockets.get(opponent.socketId || "");
         if (hostSocket) hostSocket.join(`room:${code}`);
         socket.join(`room:${code}`);
-        emitRoom(io, room);
+
+        // Genel eşleştirmede (Matchmaking) bekleme ve manuel "Hazır" zorunluluğu yok:
+        // Doğrudan iki oyuncu da hazır işaretlenir ve VS animasyonu ile raunt başlar.
+        room.host.ready = true;
+        if (room.guest) room.guest.ready = true;
+        startRound(io, room);
       } else {
         const existingSelfTimer = matchmakingTimers.get(socket.id);
         if (existingSelfTimer) {
@@ -545,7 +565,7 @@ export function registerGameRooms(io: Server) {
             const room: Room = {
               code,
               size: payload.size,
-              status: "lobby",
+              status: "playing",
               isCustom: false,
               isRanked: true,
               board: [],
@@ -559,7 +579,7 @@ export function registerGameRooms(io: Server) {
                 isBot: false,
                 socketId: socket.id,
                 connected: true,
-                ready: false,
+                ready: true,
                 rematch: false,
                 ...(queueEntry.profile || payload.profile || {}),
               },
@@ -568,7 +588,7 @@ export function registerGameRooms(io: Server) {
                 id: `bot:${code}`,
                 socketId: null,
                 connected: true,
-                ready: false,
+                ready: true,
                 rematch: false,
               },
               winnerId: null,
@@ -580,7 +600,9 @@ export function registerGameRooms(io: Server) {
             };
             rooms.set(code, room);
             socket.join(`room:${code}`);
-            emitRoom(io, room);
+
+            // Bot ile genel eşleşmede de bekleme yok, direkt başlar
+            startRound(io, room);
           }
         }, 4000);
         matchmakingTimers.set(socket.id, timer);
@@ -654,12 +676,29 @@ export function registerGameRooms(io: Server) {
           botFillToken: 0,
           roundToken: 0,
         };
-        rooms.set(code, room);
-        socket.join(`room:${code}`);
-        emitRoom(io, room);
         if (payload.immediateBot) {
-          scheduleBotFill(io, room);
-        } else if (payload.inviteTarget) {
+          const botPersona = getRandomBotPersona(room.host);
+          room.guest = {
+            ...botPersona,
+            id: `bot:${code}`,
+            socketId: null,
+            connected: true,
+            ready: true,
+            rematch: false,
+          };
+          room.host.ready = true;
+          room.status = "playing";
+          room.message = "Bot düellosu başlıyor! Gizli kelimeleri ilk bulan kazanır.";
+          rooms.set(code, room);
+          socket.join(`room:${code}`);
+          startRound(io, room);
+        } else {
+          rooms.set(code, room);
+          socket.join(`room:${code}`);
+          emitRoom(io, room);
+        }
+
+        if (payload.inviteTarget) {
           const { toPlayerId, toUsername } = payload.inviteTarget;
           const targetSockets = [
             ...getSocketsForUser(toPlayerId),
@@ -1016,7 +1055,6 @@ export function registerGameRooms(io: Server) {
             emitRoom(io, room);
           }
         } else if (room.status === "playing") {
-          const opponent = room.host.id === player.id ? room.guest : room.host;
           room.message = `${player.name} bağlantısı koptu. (15s içinde yeniden bağlanmazsa hükmen yenilecek)`;
           emitRoom(io, room);
 

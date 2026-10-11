@@ -15,8 +15,9 @@ import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } fr
 import { monetizationManager } from "../shared/monetization";
 
 describe("Sosyal ve Mağaza Sistemi Testleri", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     storageMap.clear();
+    await socialManager.reset();
   });
 
   describe("SocialManager (Arkadaş Listesi ve Sosyal Özellikler)", () => {

@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
+  Image,
   Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { ICONS } from "@/components/game/game-ui";
 import {
   canSpinLuckyWheel,
   claimLuckyWheelReward,
@@ -151,9 +153,12 @@ export function LuckyWheelModal({
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            <View>
-              <Text style={styles.kicker}>GÜNLÜK ŞANS ÇARKI</Text>
-              <Text style={styles.title}>Şans Çarkıfeleği 🎡</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Image source={ICONS.wheel} style={{ width: 34, height: 34 }} resizeMode="contain" />
+              <View>
+                <Text style={styles.kicker}>GÜNLÜK ŞANS ÇARKI</Text>
+                <Text style={styles.title}>Şans Çarkıfeleği</Text>
+              </View>
             </View>
             <Pressable
               onPress={() => {
@@ -187,6 +192,12 @@ export function LuckyWheelModal({
                 },
               ]}
             >
+              <Image
+                source={ICONS.wheel}
+                style={[StyleSheet.absoluteFill, { width: "100%", height: "100%", opacity: 0.92 }]}
+                resizeMode="contain"
+              />
+
               {LUCKY_WHEEL_SECTORS.map((sector, idx) => {
                 const angle = (idx * 360) / LUCKY_WHEEL_SECTORS.length;
                 return (
@@ -197,7 +208,7 @@ export function LuckyWheelModal({
                       {
                         transform: [
                           { rotate: `${angle}deg` },
-                          { translateY: -85 },
+                          { translateY: -82 },
                         ],
                       },
                     ]}
@@ -212,7 +223,9 @@ export function LuckyWheelModal({
 
               {/* Çark Göbeği */}
               <View style={styles.wheelCenterHub}>
-                <Text style={{ fontSize: 20 }}>⚡</Text>
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#FFF8D6", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 13 }}>⚡</Text>
+                </View>
               </View>
             </Animated.View>
           </View>

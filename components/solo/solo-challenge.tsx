@@ -559,7 +559,15 @@ export function SoloChallenge({
     if (path && path.length > 0) {
       setRadarHighlights(new Set()); // Eski vurgulamayı anında temizle
       setRadarCooldown(12);
-      setRadarCharges((prev) => prev - 1);
+      setRadarCharges((prev) => Math.max(0, prev - 1));
+      if (setProgress) {
+        setProgress((curr) => {
+          const nextBonus = Math.max(0, (curr.radarChargesBonus ?? 0) - 1);
+          const updated = { ...curr, radarChargesBonus: nextBonus };
+          void syncProgressToCloud?.(updated);
+          return updated;
+        });
+      }
       setTimeBonusText("👁 İPUCU AKTİF");
       const t1 = setTimeout(() => setTimeBonusText(null), 1500);
       particleTimers.current.push(t1);
@@ -806,7 +814,13 @@ export function SoloChallenge({
     setRadarCooldown(0);
   };
 
-  const finish = () => { if (!pointerActive.current) return; pointerActive.current = false; setIsSelecting(false); submit(); };
+  const finish = () => {
+    lastTouchedIndexRef.current = -1;
+    if (!pointerActive.current) return;
+    pointerActive.current = false;
+    setIsSelecting(false);
+    submit();
+  };
   const handleGesture = (locationX: number, locationY: number) => {
     if (status !== "playing") return;
     const BOARD_PAD = 4;
@@ -864,6 +878,7 @@ export function SoloChallenge({
   };
   const handleGestureStart = (event: any) => {
     event.preventDefault?.(); event.stopPropagation?.();
+    lastTouchedIndexRef.current = -1;
     setIsSelecting(true); measureBoard();
     const { x, y } = getEventBoardCoords(event);
     handleGesture(x, y);

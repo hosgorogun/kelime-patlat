@@ -132,13 +132,11 @@ export function useCelebrationManager({
     const livesCalc = getCalculatedLives(progress);
     notificationManager.initAndScheduleReminders(livesCalc.lives, livesCalc.nextLifeTimerSeconds);
   }, [
-    progress.xp,
-    progress.lp,
-    progress.lives,
-    progress.lastLifeRegenTimestamp,
+    progress,
     progressReady,
     setProgress,
     setGlobalToast,
+    syncProgressToCloud,
   ]);
 
   const celebrationModalElement = (

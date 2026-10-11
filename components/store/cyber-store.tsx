@@ -47,7 +47,7 @@ export function CyberStore({
 }) {
   const [todayId, setTodayId] = useState(() => getDayId());
   const [dailyAdCount, setDailyAdCount] = useState<number>(0);
-  const [storeMessage, setStoreMessage] = useState<string | null>(null);
+  const [storeMessage, setStoreMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [adLoading, setAdLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<StoreTab>("equipment");
 
@@ -78,8 +78,8 @@ export function CyberStore({
 
   const storeMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showFeedbackMessage = (msg: string) => {
-    setStoreMessage(msg);
+  const showFeedbackMessage = (msg: string, type: "success" | "error" = "success") => {
+    setStoreMessage({ text: msg, type });
     if (storeMessageTimeoutRef.current) clearTimeout(storeMessageTimeoutRef.current);
     storeMessageTimeoutRef.current = setTimeout(() => setStoreMessage(null), 3500);
   };
@@ -148,7 +148,7 @@ export function CyberStore({
     if (coins < item.cost) {
       triggerHapticError();
       gameSfx.rejected();
-      showFeedbackMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} altın çip gerekiyor.`);
+      showFeedbackMessage(`Yetersiz Çip! Bu ekipman için ${item.cost} altın çip gerekiyor.`, "error");
       return;
     }
 
@@ -173,14 +173,14 @@ export function CyberStore({
     if (owned) {
       triggerHapticSelection();
       onEquip?.(id);
-      showFeedbackMessage(`"${label}" başarıyla donanıldı! ✨`);
+      showFeedbackMessage(`"${label}" başarıyla donanıldı! ✨`, "success");
       return;
     }
 
     if (coins < cost) {
       triggerHapticError();
       gameSfx.rejected();
-      showFeedbackMessage(`Yetersiz Çip! "${label}" için ${cost} altın çip gerekiyor.`);
+      showFeedbackMessage(`Yetersiz Çip! "${label}" için ${cost} altın çip gerekiyor.`, "error");
       return;
     }
 
@@ -201,11 +201,11 @@ export function CyberStore({
             badgeText: label,
           });
           setTimeout(() => setPurchaseCascade({ trigger: false, icon: "✨" }), 1500);
-          showFeedbackMessage(`Tebrikler! "${label}" satın alındı ve profiline donanıldı! 🎉`);
+          showFeedbackMessage(`Tebrikler! "${label}" satın alındı ve profiline donanıldı! 🎉`, "success");
         } else {
           triggerHapticError();
           gameSfx.rejected();
-          showFeedbackMessage("Satın alma işlemi tamamlanamadı. Bakiyeni kontrol et.");
+          showFeedbackMessage("Satın alma işlemi tamamlanamadı. Bakiyeni kontrol et.", "error");
         }
       },
     });
@@ -268,8 +268,10 @@ export function CyberStore({
         </View>
 
         {storeMessage && (
-          <View style={styles.msgBanner}>
-            <Text style={styles.msgBannerText}>{storeMessage}</Text>
+          <View style={[styles.msgBanner, storeMessage.type === "error" && styles.msgBannerError]}>
+            <Text style={[styles.msgBannerText, storeMessage.type === "error" && styles.msgBannerErrorText]}>
+              {storeMessage.text}
+            </Text>
           </View>
         )}
 

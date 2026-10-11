@@ -14,15 +14,15 @@ import { type LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
 const RANK_IMAGES: Record<string, any> = {
-  DEMİR: require("../../assets/ranks/iron.jpg"),
-  BRONZ: require("../../assets/ranks/bronze.jpg"),
-  GÜMÜŞ: require("../../assets/ranks/silver.jpg"),
-  ALTIN: require("../../assets/ranks/gold.jpg"),
-  PLATİN: require("../../assets/ranks/platinum.jpg"),
-  ELMAS: require("../../assets/ranks/diamond.jpg"),
-  YÜCELİK: require("../../assets/ranks/ascendant.jpg"),
-  ÖLÜMSÜZLÜK: require("../../assets/ranks/immortal.jpg"),
-  RADIAN: require("../../assets/ranks/radian.jpg"),
+  DEMİR: require("../../assets/ranks/iron.png"),
+  BRONZ: require("../../assets/ranks/bronze.png"),
+  GÜMÜŞ: require("../../assets/ranks/silver.png"),
+  ALTIN: require("../../assets/ranks/gold.png"),
+  PLATİN: require("../../assets/ranks/platinum.png"),
+  ELMAS: require("../../assets/ranks/diamond.png"),
+  KOZMİK: require("../../assets/ranks/ascendant.png"),
+  EBEDİ: require("../../assets/ranks/immortal.png"),
+  HAKİM: require("../../assets/ranks/radian.png"),
 };
 
 
@@ -46,9 +46,9 @@ const LEAGUES: LeagueTierInfo[] = LEAGUE_TIERS.map((tier, idx) => {
 });
 
 const MOCK_STANDINGS: LeaderboardEntry[] = [
-  { id: "mock-1", name: "Radyant_Yalçın", score: 9200, wins: 84, matches: 92, bestRound: 580, lp: 10450, tier: "RADIAN", level: 32 },
-  { id: "mock-2", name: "Ege Neon", score: 4850, wins: 38, matches: 45, bestRound: 420, lp: 7800, tier: "ÖLÜMSÜZLÜK", level: 24 },
-  { id: "mock-3", name: "Kraliçe_Bora", score: 6100, wins: 52, matches: 64, bestRound: 490, lp: 5900, tier: "YÜCELİK", level: 29 },
+  { id: "mock-1", name: "Radyant_Yalçın", score: 9200, wins: 84, matches: 92, bestRound: 580, lp: 10450, tier: "HAKİM", level: 32 },
+  { id: "mock-2", name: "Ege Neon", score: 4850, wins: 38, matches: 45, bestRound: 420, lp: 7800, tier: "EBEDİ", level: 24 },
+  { id: "mock-3", name: "Kraliçe_Bora", score: 6100, wins: 52, matches: 64, bestRound: 490, lp: 5900, tier: "KOZMİK", level: 29 },
 ];
 
 export function LeagueHub({
@@ -176,8 +176,6 @@ export function LeagueHub({
                 style={({ pressed }) => [
                   styles.carouselCard,
                   { width: CARD_WIDTH },
-                  isSelected && styles.carouselCardSelected,
-                  isSelected && { borderColor: item.color, shadowColor: item.color },
                   !isUnlocked && styles.carouselCardLocked,
                   pressed && styles.pressed,
                 ]}
@@ -190,32 +188,44 @@ export function LeagueHub({
                       <Text style={styles.cardPillTextCurrent}>BURADASIN</Text>
                     </View>
                   ) : isUnlocked ? (
-                    <View style={[styles.cardPill, { backgroundColor: `${item.color}20`, borderWidth: 1, borderColor: `${item.color}55` }]}>
-                      <Text style={[styles.cardPillTextUnlocked, { color: "#293541" }]}>AÇIK</Text>
+                    <View style={[styles.cardPill, { backgroundColor: `${item.color}25`, borderWidth: 1.5, borderColor: item.color }]}>
+                      <Text style={[styles.cardPillTextUnlocked, { color: item.color }]}>AÇIK</Text>
                     </View>
                   ) : (
-                    <View style={[styles.cardPill, { backgroundColor: "rgba(255,255,255,0.06)" }]}>
+                    <View style={[styles.cardPill, { backgroundColor: "#F1F5F9", borderWidth: 1, borderColor: "#E2E8F0" }]}>
                       <Text style={styles.cardPillTextLocked}>🔒 KİLİTLİ</Text>
                     </View>
                   )}
                 </View>
 
-                {/* 3D Rank Artwork */}
-                <View style={[styles.artworkContainer, { borderColor: isUnlocked ? item.color : "#DCE1D7", shadowColor: item.color }]}>
+                {/* 3D Rank Artwork with Hero Aura */}
+                <View style={[styles.artworkContainer, isSelected && { shadowColor: item.color, borderColor: item.color }]}>
+                  {/* Glowing background aura */}
+                  <View
+                    style={[
+                      styles.artworkGlowAura,
+                      {
+                        backgroundColor: `${item.color}15`,
+                        borderColor: isUnlocked ? `${item.color}40` : "transparent",
+                      },
+                    ]}
+                  />
                   {imgSource ? (
-                    <Image source={imgSource} style={[styles.artworkImage, !isUnlocked && { opacity: 0.35 }]} resizeMode="cover" />
+                    <Image source={imgSource} style={[styles.artworkImage, !isUnlocked && { opacity: 0.3 }]} resizeMode="contain" />
                   ) : (
-                    <Text style={{ fontSize: 56, color: "#293541" }}>{item.icon}</Text>
+                    <Text style={{ fontSize: 72 }}>{item.icon}</Text>
                   )}
                   {!isUnlocked && (
                     <View style={styles.artworkLockOverlay}>
-                      <Text style={{ fontSize: 24 }}>🔒</Text>
+                      <View style={styles.lockBadge}>
+                        <Text style={{ fontSize: 20 }}>🔒</Text>
+                      </View>
                     </View>
                   )}
                 </View>
 
                 {/* Title & LP Info */}
-                <Text style={[styles.cardLeagueTitle, { color: "#293541" }]}>{item.name}</Text>
+                <Text style={styles.cardLeagueTitle}>{item.name}</Text>
                 <Text style={styles.cardLpRange}>
                   {item.maxPoints === Number.POSITIVE_INFINITY ? `${item.minPoints}+ LP GEREKLİ` : `${item.minPoints} - ${item.maxPoints} LP`}
                 </Text>
@@ -223,9 +233,9 @@ export function LeagueHub({
                 {/* If current, show live LP status */}
                 {isCurrent && (
                   <View style={styles.cardLiveProgress}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
                       <Text style={styles.cardLiveLabel}>Mevcut İlerleme:</Text>
-                      <Text style={[styles.cardLiveValue, { color: "#293541" }]}>{current.currentTierPoints} / {current.targetTierPoints} LP</Text>
+                      <Text style={[styles.cardLiveValue, { color: "#0F172A" }]}>{current.currentTierPoints} / {current.targetTierPoints} LP</Text>
                     </View>
                     <View style={styles.cardTrack}>
                       <View style={[styles.cardFill, { width: `${Math.max(6, progressRatio * 100)}%`, backgroundColor: item.color }]} />
@@ -239,10 +249,12 @@ export function LeagueHub({
       </View>
 
       {/* Selected League Detail Card */}
-      <View style={[styles.detailCard, { borderColor: `${selectedLeague.color}55` }]}>
+      <View style={[styles.detailCard, { borderColor: selectedLeague.color }]}>
         <View style={styles.detailHeader}>
           <Text style={styles.detailKicker}>KADEME DETAYI & AVANTAJLARI</Text>
-          <Text style={[styles.detailBadge, { color: "#293541" }]}>{selectedLeague.tier}</Text>
+          <View style={[styles.detailBadgeWrap, { backgroundColor: `${selectedLeague.color}20`, borderColor: selectedLeague.color }]}>
+            <Text style={[styles.detailBadge, { color: selectedLeague.color }]}>{selectedLeague.tier}</Text>
+          </View>
         </View>
 
         <View style={styles.detailGrid}>
@@ -253,7 +265,7 @@ export function LeagueHub({
           <View style={styles.detailRule} />
           <View style={styles.detailBox}>
             <Text style={styles.detailBoxLabel}>KADEME DURUMU</Text>
-            <Text numberOfLines={1} style={[styles.detailBoxValue, { color: isSelectedUnlocked ? "#1daa51" : "#ed4343" }]}>
+            <Text numberOfLines={1} style={[styles.detailBoxValue, { color: isSelectedCurrent ? "#2563EB" : isSelectedUnlocked ? "#059669" : "#DC2626" }]}>
               {isSelectedCurrent ? "BURADASIN" : isSelectedUnlocked ? "AÇIK" : "KİLİTLİ"}
             </Text>
           </View>
@@ -266,7 +278,7 @@ export function LeagueHub({
 
         <Text style={styles.detailDesc}>
           {isSelectedCurrent
-            ? "Şu an bu kademede mücadele ediyorsun. Canlı düelloları veya bot maçlarını kazanarak LP biriktir ve yüksel!"
+            ? "Şu an bu kademede mücadele ediyorsun. Canlı düelloları kazanarak LP biriktir ve zirveye tırman!"
             : isSelectedUnlocked
             ? "Bu kademeyi başarıyla açtın. 3D kademe amblemi profilinde sergilenmeye hazır."
             : `Bu kademeyi açmak için toplam ${selectedLeague.minPoints} LP puanına ulaşman gerekmektedir.`}
@@ -351,61 +363,103 @@ const styles = StyleSheet.create({
   content: { paddingVertical: 12, paddingBottom: 140 },
   embeddedContainer: { paddingTop: 4, paddingBottom: 24 },
   header: { flexDirection: "row", alignItems: "center", marginBottom: 12, paddingHorizontal: 18 },
-  backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", alignItems: "center", justifyContent: "center", marginRight: 10 },
-  backText: { color: "#293541", fontSize: 28, lineHeight: 30, marginTop: -3 },
+  backButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#F1F5F9", borderWidth: 1.5, borderColor: "#E2E8F0", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  backText: { color: "#0F172A", fontSize: 28, lineHeight: 30, marginTop: -3 },
   headerCopy: { flex: 1 },
-  overline: { color: "#293541", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-  title: { color: "#293541", fontSize: 26, fontWeight: "900", letterSpacing: 0.5, marginTop: 1, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
-  timerPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#F0F5ED", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
-  timerIcon: { fontSize: 12 },
-  timerLabel: { color: "#9b7616", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-  timerValue: { color: "#293541", fontSize: 11, fontWeight: "900" },
+  overline: { color: "#64748B", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.6 },
+  title: { color: "#0F172A", fontSize: 24, fontWeight: "900", letterSpacing: 0.3, marginTop: 1 },
+  timerPill: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FFFBEB", borderWidth: 1.5, borderColor: "#FDE68A", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  timerIcon: { fontSize: 13 },
+  timerLabel: { color: "#92400E", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  timerValue: { color: "#78350F", fontSize: 11, fontWeight: "900" },
 
-  carouselContainer: { marginVertical: 8 },
-  carouselCard: { backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", borderRadius: 24, padding: 16, marginRight: 14, alignItems: "center", shadowColor: "#293541", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
-  carouselCardSelected: { backgroundColor: "#FFFFFF", borderWidth: 2.5, shadowOpacity: 0.12, shadowRadius: 6, elevation: 3 },
-  carouselCardLocked: { opacity: 0.7 },
+  carouselContainer: { marginVertical: 6 },
+  carouselCard: {
+    backgroundColor: "transparent",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginRight: 14,
+    alignItems: "center",
+  },
+  carouselCardSelected: {},
+  carouselCardLocked: { opacity: 0.65 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
 
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: 12 },
-  cardIndexText: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
-  cardPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  cardPillTextCurrent: { color: "#293541", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
-  cardPillTextUnlocked: { fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
-  cardPillTextLocked: { color: "#64748B", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: 14 },
+  cardIndexText: { color: "#64748B", fontSize: 11.5, fontWeight: "900", letterSpacing: 0.6 },
+  cardPill: { paddingHorizontal: 10, paddingVertical: 3.5, borderRadius: 8 },
+  cardPillTextCurrent: { color: "#FFFFFF", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  cardPillTextUnlocked: { fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  cardPillTextLocked: { color: "#64748B", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
 
-  artworkContainer: { width: 110, height: 110, borderRadius: 24, borderWidth: 2.5, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 12, position: "relative" },
-  artworkImage: { width: 104, height: 104, borderRadius: 20 },
-  artworkLockOverlay: { position: "absolute", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.45)", alignItems: "center", justifyContent: "center" },
+  artworkContainer: {
+    width: 156,
+    height: 156,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    position: "relative",
+  },
+  artworkGlowAura: {
+    position: "absolute",
+    width: 156,
+    height: 156,
+    borderRadius: 78,
+    borderWidth: 2,
+  },
+  artworkImage: {
+    width: 136,
+    height: 136,
+  },
+  artworkLockOverlay: {
+    position: "absolute",
+    inset: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    borderRadius: 78,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lockBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(15, 23, 42, 0.8)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  cardLeagueTitle: { fontSize: 20, fontWeight: "900", letterSpacing: 0.5, marginBottom: 2, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
-  cardLpRange: { color: "#293541", fontSize: 11, fontWeight: "700", marginBottom: 12 },
+  cardLeagueTitle: { color: "#0F172A", fontSize: 21, fontWeight: "900", letterSpacing: 0.4, marginBottom: 3 },
+  cardLpRange: { color: "#475569", fontSize: 12, fontWeight: "800", marginBottom: 14 },
 
-  cardLiveProgress: { width: "100%", marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#DCE1D7" },
-  cardLiveLabel: { color: "#293541", fontSize: 10, fontWeight: "700" },
-  cardLiveValue: { fontSize: 10.5, fontWeight: "900" },
-  cardTrack: { width: "100%", height: 6, borderRadius: 3, backgroundColor: "#E2E8F0", marginTop: 4, overflow: "hidden" },
-  cardFill: { height: "100%", borderRadius: 3 },
+  cardLiveProgress: { width: "100%", marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.06)" },
+  cardLiveLabel: { color: "#64748B", fontSize: 11, fontWeight: "700" },
+  cardLiveValue: { fontSize: 11.5, fontWeight: "900" },
+  cardTrack: { width: "100%", height: 8, borderRadius: 4, backgroundColor: "#E2E8F0", marginTop: 6, overflow: "hidden" },
+  cardFill: { height: "100%", borderRadius: 4 },
 
-  detailCard: { marginHorizontal: 18, marginTop: 6, padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-  detailHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  detailKicker: { color: "#293541", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
-  detailBadge: { fontSize: 10.5, fontWeight: "900", letterSpacing: 0.5 },
+  detailCard: { marginHorizontal: 18, marginTop: 10, padding: 16, borderRadius: 20, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderBottomWidth: 3, borderColor: "#E2E8DC", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
+  detailHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  detailKicker: { color: "#0F172A", fontSize: 11, fontWeight: "900", letterSpacing: 0.6 },
+  detailBadgeWrap: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, borderWidth: 1.5 },
+  detailBadge: { fontSize: 11, fontWeight: "900", letterSpacing: 0.5 },
 
-  detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F7F5EE", paddingVertical: 8, paddingHorizontal: 6, borderRadius: 12, marginBottom: 8, gap: 2 },
+  detailGrid: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F8FAFC", paddingVertical: 10, paddingHorizontal: 8, borderRadius: 14, marginBottom: 12, borderWidth: 1, borderColor: "#E2E8F0" },
   detailBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-  detailBoxLabel: { color: "#54646B", fontSize: 9, fontWeight: "900", letterSpacing: 0.3, textAlign: "center" },
-  detailBoxValue: { color: "#293541", fontSize: 10.5, fontWeight: "900", marginTop: 2, textAlign: "center" },
-  detailRule: { width: 1, height: 20, backgroundColor: "#DCE1D7" },
+  detailBoxLabel: { color: "#64748B", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.4, textAlign: "center" },
+  detailBoxValue: { color: "#0F172A", fontSize: 12, fontWeight: "900", marginTop: 3, textAlign: "center" },
+  detailRule: { width: 1, height: 24, backgroundColor: "#CBD5E1" },
 
-  detailDesc: { color: "#54646B", fontSize: 11, fontWeight: "600", lineHeight: 16, textAlign: "center" },
+  detailDesc: { color: "#475569", fontSize: 12, fontWeight: "600", lineHeight: 18, textAlign: "center" },
 
   playCtaButton: {
     marginHorizontal: 18,
-    marginTop: 14,
+    marginTop: 16,
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1.5,
+    borderBottomWidth: 3,
     borderColor: "#059669",
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 4 },
@@ -414,7 +468,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   playCtaGradient: {
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -439,13 +493,13 @@ const styles = StyleSheet.create({
   },
   playCtaTitle: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   playCtaSubtitle: {
     color: "#D1FAE5",
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "700",
     marginTop: 2,
   },
@@ -463,15 +517,15 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
-  standingsCard: { marginHorizontal: 18, marginTop: 12, padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#DCE1D7", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-  standingsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  standingsTitle: { color: "#293541", fontSize: 11, fontWeight: "900", letterSpacing: 0.5, textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
-  standingsBadge: { backgroundColor: "rgba(62, 232, 181, 0.15)", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  standingsBadgeText: { color: "#2a9c7a", fontSize: 8.5, fontWeight: "900", letterSpacing: 0.5 },
+  standingsCard: { marginHorizontal: 18, marginTop: 14, padding: 16, borderRadius: 20, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderBottomWidth: 3, borderColor: "#E2E8DC", shadowColor: "#293541", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
+  standingsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  standingsTitle: { color: "#0F172A", fontSize: 12, fontWeight: "900", letterSpacing: 0.6 },
+  standingsBadge: { backgroundColor: "#ECFDF5", borderWidth: 1, borderColor: "#A7F3D0", paddingHorizontal: 10, paddingVertical: 3.5, borderRadius: 8 },
+  standingsBadgeText: { color: "#059669", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
 
-  top3Row: { flexDirection: "row", gap: 8 },
-  top3Item: { flex: 1, backgroundColor: "#F7F5EE", borderWidth: 1, borderColor: "#DCE1D7", borderRadius: 12, padding: 8, alignItems: "center", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
-  top3Medal: { fontSize: 14, marginBottom: 2 },
-  top3Name: { color: "#293541", fontSize: 10, fontWeight: "900", width: "100%", textAlign: "center", textShadowColor: "transparent", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 0 },
-  top3Lp: { color: "#2a9c7a", fontSize: 8.5, fontWeight: "800", marginTop: 1 },
+  top3Row: { flexDirection: "row", gap: 10 },
+  top3Item: { flex: 1, backgroundColor: "#F8FAFC", borderWidth: 1.5, borderColor: "#E2E8F0", borderRadius: 14, padding: 10, alignItems: "center" },
+  top3Medal: { fontSize: 16, marginBottom: 4 },
+  top3Name: { color: "#0F172A", fontSize: 11, fontWeight: "900", width: "100%", textAlign: "center" },
+  top3Lp: { color: "#047857", fontSize: 10, fontWeight: "900", marginTop: 3 },
 });

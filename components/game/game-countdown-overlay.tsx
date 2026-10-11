@@ -103,11 +103,13 @@ export function GameCountdownOverlay({
   const isStart = countdown === 0;
 
   return (
-    <View style={styles.countdownOverlay} pointerEvents="auto">
-      <View style={[styles.countdownCard, { borderColor: `${currentStage.accentColor}55`, shadowColor: currentStage.accentColor }]}>
-        {/* Mode & Title Tag */}
-        <View style={styles.modeTag}>
-          <Text style={styles.modeTagText}>{icon} {title}</Text>
+    <View style={styles.countdownOverlay} pointerEvents="none">
+      {/* Central Glassmorphic Halo HUD */}
+      <View style={styles.contentWrap}>
+        {/* Mode Tag */}
+        <View style={[styles.modeTag, { borderColor: `${currentStage.accentColor}55`, backgroundColor: "rgba(255, 255, 255, 0.95)" }]}>
+          <Text style={styles.modeTagIcon}>{icon}</Text>
+          <Text style={[styles.modeTagText, { color: "#1E293B" }]}>{title}</Text>
         </View>
 
         {/* Central Glowing Orb with Dynamic Counter */}
@@ -131,6 +133,7 @@ export function GameCountdownOverlay({
               {
                 transform: [{ scale: pulseScale }],
                 opacity: pulseOpacity,
+                shadowColor: currentStage.accentColor,
               },
             ]}
           >
@@ -143,7 +146,6 @@ export function GameCountdownOverlay({
               {isStart ? (
                 <View style={styles.startWrap}>
                   <Text style={styles.startText}>BAŞLA!</Text>
-                  <Text style={styles.startEmoji}>🚀</Text>
                 </View>
               ) : (
                 <Text style={styles.numberText}>{countdown}</Text>
@@ -152,11 +154,13 @@ export function GameCountdownOverlay({
           </Animated.View>
         </View>
 
-        {/* Dynamic Stage Prompt & Hint */}
-        <Text style={[styles.statusLabel, { color: currentStage.accentColor }]}>
-          {currentStage.statusLabel}
-        </Text>
-        <Text style={styles.subtitleText}>{subtitle}</Text>
+        {/* Dynamic Stage Prompt Banner */}
+        <View style={[styles.promptBadge, { backgroundColor: "rgba(255, 255, 255, 0.96)", borderColor: `${currentStage.accentColor}66` }]}>
+          <Text style={[styles.statusLabel, { color: currentStage.accentColor }]}>
+            {currentStage.statusLabel}
+          </Text>
+          <Text style={styles.subtitleText}>{subtitle}</Text>
+        </View>
 
         {/* Step Indicator Progress Dots */}
         <View style={styles.stepDotsRow}>
@@ -171,12 +175,12 @@ export function GameCountdownOverlay({
                     ? {
                         backgroundColor: currentStage.accentColor,
                         shadowColor: currentStage.accentColor,
-                        shadowOpacity: 0.8,
+                        shadowOpacity: 0.9,
                         shadowRadius: 6,
                         elevation: 4,
-                        width: 22,
+                        width: 24,
                       }
-                    : { backgroundColor: "rgba(255, 255, 255, 0.15)" },
+                    : { backgroundColor: "rgba(255, 255, 255, 0.45)" },
                 ]}
               />
             );
@@ -189,87 +193,77 @@ export function GameCountdownOverlay({
 
 const styles = StyleSheet.create({
   countdownOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.88)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 999,
-    paddingHorizontal: 20,
-  } as any,
-  countdownCard: {
-    width: "100%",
-    maxWidth: 330,
-    backgroundColor: "#1E293B",
-    borderRadius: 32,
-    paddingVertical: 28,
-    paddingHorizontal: 22,
+  },
+  contentWrap: {
     alignItems: "center",
-    borderWidth: 2,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 12,
+    justifyContent: "center",
+    paddingHorizontal: 24,
   },
   modeTag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
+    gap: 6,
+  },
+  modeTagIcon: {
+    fontSize: 14,
   },
   modeTagText: {
-    color: "#E2E8F0",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
   },
   orbArea: {
-    marginVertical: 24,
+    marginVertical: 18,
     alignItems: "center",
     justifyContent: "center",
-    width: 150,
-    height: 150,
+    width: 156,
+    height: 156,
     position: "relative",
   },
   expandingRing: {
     position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 2.5,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 3,
   },
   centerOrbWrap: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 126,
+    height: 126,
+    borderRadius: 63,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
+    borderWidth: 4,
+    borderColor: "#FFFFFF",
   },
   orbGradient: {
     width: "100%",
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    padding: 6,
   },
   numberText: {
     color: "#FFFFFF",
-    fontSize: 66,
+    fontSize: 68,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: -1,
     textShadowColor: "rgba(0, 0, 0, 0.35)",
     textShadowOffset: { width: 0, height: 3 },
     textShadowRadius: 6,
@@ -282,36 +276,43 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 26,
     fontWeight: "900",
-    letterSpacing: 0.8,
-    textShadowColor: "rgba(0, 0, 0, 0.35)",
+    letterSpacing: 1,
+    textShadowColor: "rgba(0, 0, 0, 0.4)",
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  startEmoji: {
-    fontSize: 20,
-    marginTop: 2,
+  promptBadge: {
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    maxWidth: 290,
   },
   statusLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "900",
-    letterSpacing: 0.8,
-    marginBottom: 6,
+    letterSpacing: 1,
     textTransform: "uppercase",
+    marginBottom: 2,
   },
   subtitleText: {
-    color: "#94A3B8",
-    fontSize: 12,
-    fontWeight: "600",
+    color: "#475569",
+    fontSize: 11.5,
+    fontWeight: "700",
     textAlign: "center",
-    lineHeight: 17,
-    paddingHorizontal: 8,
   },
   stepDotsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginTop: 18,
+    marginTop: 14,
   },
   stepDot: {
     width: 10,

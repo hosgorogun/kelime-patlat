@@ -3,15 +3,15 @@ import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { getLeagueTier } from "@/shared/progression";
 
 const RANK_IMAGES: Record<string, any> = {
-  DEMİR: require("../../assets/ranks/iron.jpg"),
-  BRONZ: require("../../assets/ranks/bronze.jpg"),
-  GÜMÜŞ: require("../../assets/ranks/silver.jpg"),
-  ALTIN: require("../../assets/ranks/gold.jpg"),
-  PLATİN: require("../../assets/ranks/platinum.jpg"),
-  ELMAS: require("../../assets/ranks/diamond.jpg"),
-  YÜCELİK: require("../../assets/ranks/ascendant.jpg"),
-  ÖLÜMSÜZLÜK: require("../../assets/ranks/immortal.jpg"),
-  RADIAN: require("../../assets/ranks/radian.jpg"),
+  DEMİR: require("../../assets/ranks/iron.png"),
+  BRONZ: require("../../assets/ranks/bronze.png"),
+  GÜMÜŞ: require("../../assets/ranks/silver.png"),
+  ALTIN: require("../../assets/ranks/gold.png"),
+  PLATİN: require("../../assets/ranks/platinum.png"),
+  ELMAS: require("../../assets/ranks/diamond.png"),
+  KOZMİK: require("../../assets/ranks/ascendant.png"),
+  EBEDİ: require("../../assets/ranks/immortal.png"),
+  HAKİM: require("../../assets/ranks/radian.png"),
 };
 
 export type SeasonResetModalData = {

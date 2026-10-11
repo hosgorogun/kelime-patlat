@@ -259,6 +259,7 @@ export function useBoardSelection({
     // 60ms içinde gelen mükerrer pointer/touch çift tetiklenmesini engelle
     if (now - lastGestureStartTimeRef.current < 60) return;
     lastGestureStartTimeRef.current = now;
+    lastTouchedIndexRef.current = null;
     setIsSelecting(true);
     measureBoard();
     const { x, y } = getEventBoardCoords(event);

@@ -1,7 +1,7 @@
 import React from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { palette } from "@/shared/palette";
-import { GameButton, OrnatePanel } from "@/components/game/game-ui";
+import { GameButton, ICONS, OrnatePanel } from "@/components/game/game-ui";
 import { DAILY_LOGIN_REWARDS, getDayId, type PlayerProgress } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
@@ -71,7 +71,7 @@ export function DailyTreasureModal({
 
             {/* Başlık ve İkon */}
             <View style={styles.headerIconRing}>
-              <Text style={styles.headerEmoji}>🎁</Text>
+              <Image source={ICONS.gift} style={{ width: 38, height: 38 }} resizeMode="contain" />
             </View>
 
             <Text style={styles.kicker}>7 GÜNLÜK SERİ ÖDÜLÜ</Text>

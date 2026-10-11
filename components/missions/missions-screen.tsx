@@ -17,7 +17,7 @@ import { palette } from "@/shared/palette";
 import { GameButton, GameIcon, ICONS, JewelTitle, OrnatePanel } from "@/components/game/game-ui";
 import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
 import { WeekendHuntCard } from "../daily/weekend-hunt-card";
-import { isWeekendActive } from "@/shared/weekend-hunt";
+import { isWeekendActive, getWeekendHuntUnclaimedCount } from "@/shared/weekend-hunt";
 
 const DIFFICULTY_CONFIG = {
   easy: { label: "KOLAY", color: palette.gemGreen, bg: "rgba(74, 222, 128, 0.16)", border: palette.gemGreen },
@@ -137,6 +137,7 @@ export function MissionsScreen({
 
   const dailyCompletedCount = dailyMissions.filter((m) => (progress.missions?.[m.id] ?? 0) >= m.target).length;
   const weeklyCompletedCount = weeklyMissions.filter((m) => (progress.missions?.[m.id] ?? 0) >= m.target).length;
+  const weekendHuntUnclaimedCount = useMemo(() => getWeekendHuntUnclaimedCount(progress), [progress]);
 
   const totalPossibleXp = allActiveMissions.reduce((sum, m) => sum + m.rewardXp, 0);
   const claimingRef = useRef<Set<string>>(new Set());
@@ -385,15 +386,15 @@ export function MissionsScreen({
             style={styles.tabHit}
           >
             {activeTab === "daily" ? (
-              <LinearGradient colors={["#fff9de", "#f9e5b3", "#e6cea0"]} style={styles.tabButtonActive}>
-                <Text numberOfLines={1} style={styles.tabButtonTextOn}>☀️ GÜNLÜK</Text>
+              <LinearGradient colors={["#FFFDF5", "#FEF3C7"]} style={styles.tabButtonActive}>
+                <Text numberOfLines={1} style={styles.tabButtonTextOn}>☀️ Günlük</Text>
                 <View style={styles.tabBadgeOn}>
                   <Text style={styles.tabBadgeTextOn}>{dailyCompletedCount}/{dailyMissions.length}</Text>
                 </View>
               </LinearGradient>
             ) : (
               <View style={styles.tabButton}>
-                <Text numberOfLines={1} style={styles.tabButtonText}>☀️ GÜNLÜK</Text>
+                <Text numberOfLines={1} style={styles.tabButtonText}>☀️ Günlük</Text>
                 <View style={styles.tabBadge}>
                   <Text style={styles.tabBadgeText}>{dailyCompletedCount}/{dailyMissions.length}</Text>
                 </View>
@@ -409,15 +410,15 @@ export function MissionsScreen({
             style={styles.tabHit}
           >
             {activeTab === "weekly" ? (
-              <LinearGradient colors={["#fff9de", "#f9e5b3", "#e6cea0"]} style={styles.tabButtonActive}>
-                <Text numberOfLines={1} style={styles.tabButtonTextOn}>🏆 HAFTALIK</Text>
+              <LinearGradient colors={["#FFFDF5", "#FEF3C7"]} style={styles.tabButtonActive}>
+                <Text numberOfLines={1} style={styles.tabButtonTextOn}>🏆 Haftalık</Text>
                 <View style={styles.tabBadgeOn}>
                   <Text style={styles.tabBadgeTextOn}>{weeklyCompletedCount}/{weeklyMissions.length}</Text>
                 </View>
               </LinearGradient>
             ) : (
               <View style={styles.tabButton}>
-                <Text numberOfLines={1} style={styles.tabButtonText}>🏆 HAFTALIK</Text>
+                <Text numberOfLines={1} style={styles.tabButtonText}>🏆 Haftalık</Text>
                 <View style={styles.tabBadge}>
                   <Text style={styles.tabBadgeText}>{weeklyCompletedCount}/{weeklyMissions.length}</Text>
                 </View>
@@ -432,20 +433,36 @@ export function MissionsScreen({
             style={styles.tabHit}
           >
             {activeTab === "weekend" ? (
-              <LinearGradient colors={["#fff9de", "#f9e5b3", "#e6cea0"]} style={styles.tabButtonActive}>
-                <Text numberOfLines={1} style={styles.tabButtonTextOn}>🎯 HAFTA SONU</Text>
-                {isWeekendActive() && (
-                  <View style={[styles.tabBadgeOn, { backgroundColor: "#10B981" }]}>
+              <LinearGradient colors={["#FFFDF5", "#FEF3C7"]} style={styles.tabButtonActive}>
+                <Text numberOfLines={1} style={styles.tabButtonTextOn}>🎯 Av</Text>
+                {weekendHuntUnclaimedCount > 0 ? (
+                  <View style={[styles.tabBadgeOn, { backgroundColor: "#EF4444", minWidth: 20, paddingHorizontal: 5 }]}>
+                    <Text style={[styles.tabBadgeTextOn, { color: "#FFFFFF", fontWeight: "900" }]}>{weekendHuntUnclaimedCount}</Text>
+                  </View>
+                ) : isWeekendActive() ? (
+                  <View style={[styles.tabBadgeOn, { backgroundColor: "#10B981", minWidth: 16, paddingHorizontal: 4 }]}>
                     <Text style={[styles.tabBadgeTextOn, { color: "#FFFFFF" }]}>●</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.tabBadgeOn, { backgroundColor: "#E2E8F0" }]}>
+                    <Text style={[styles.tabBadgeTextOn, { color: "#64748B" }]}>Kapalı</Text>
                   </View>
                 )}
               </LinearGradient>
             ) : (
               <View style={styles.tabButton}>
-                <Text numberOfLines={1} style={styles.tabButtonText}>🎯 HAFTA SONU</Text>
-                {isWeekendActive() && (
-                  <View style={[styles.tabBadge, { backgroundColor: "#10B98122", borderColor: "#10B981" }]}>
+                <Text numberOfLines={1} style={styles.tabButtonText}>🎯 Av</Text>
+                {weekendHuntUnclaimedCount > 0 ? (
+                  <View style={[styles.tabBadge, { backgroundColor: "#FEE2E2", borderColor: "#FCA5A5", borderWidth: 1, minWidth: 20, paddingHorizontal: 5 }]}>
+                    <Text style={[styles.tabBadgeText, { color: "#DC2626", fontWeight: "900" }]}>{weekendHuntUnclaimedCount}</Text>
+                  </View>
+                ) : isWeekendActive() ? (
+                  <View style={[styles.tabBadge, { backgroundColor: "#ECFDF5", borderColor: "#6EE7B7", borderWidth: 1, minWidth: 16, paddingHorizontal: 4 }]}>
                     <Text style={[styles.tabBadgeText, { color: "#059669" }]}>●</Text>
+                  </View>
+                ) : (
+                  <View style={styles.tabBadge}>
+                    <Text style={styles.tabBadgeText}>Kapalı</Text>
                   </View>
                 )}
               </View>

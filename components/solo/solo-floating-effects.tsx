@@ -170,3 +170,149 @@ export function FloatingScoreBurst({ text }: { text: string | null }) {
     </Animated.View>
   );
 }
+
+/**
+ * Parmak altında kalan harfi yukarı fırlatarak görünür kılan dokunma büyüteci
+ */
+export function TouchMagnifierBubble({
+  letter,
+  center,
+  visible,
+  accentColor = "#3EE8B5",
+}: {
+  letter: string | null;
+  center: { x: number; y: number } | null;
+  visible: boolean;
+  accentColor?: string;
+}) {
+  const popAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible && letter) {
+      Animated.spring(popAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 140,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      popAnim.setValue(0);
+    }
+  }, [visible, letter, popAnim]);
+
+  if (!visible || !letter || !center) return null;
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        left: center.x - 26,
+        top: center.y - 62,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: "#293541",
+        borderWidth: 2.5,
+        borderColor: accentColor,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: accentColor,
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        elevation: 12,
+        zIndex: 9999,
+        transform: [
+          {
+            scale: popAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.5, 1.15],
+            }),
+          },
+          {
+            translateY: popAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [10, 0],
+            }),
+          },
+        ],
+      }}
+    >
+      <Text
+        style={{
+          color: "#FFFFFF",
+          fontSize: 24,
+          fontWeight: "900",
+          textAlign: "center",
+        }}
+      >
+        {letter}
+      </Text>
+      {/* Balon ok ucu (pointer tail) */}
+      <View
+        style={{
+          position: "absolute",
+          bottom: -6,
+          width: 0,
+          height: 0,
+          borderLeftWidth: 6,
+          borderRightWidth: 6,
+          borderTopWidth: 6,
+          borderLeftColor: "transparent",
+          borderRightColor: "transparent",
+          borderTopColor: accentColor,
+        }}
+      />
+    </Animated.View>
+  );
+}
+
+/**
+ * Son saniyelerde adrenalin pompalayan kırmızı nabız vinyeti (Pulsing Urgency Vignette)
+ */
+export function UrgencyVignette({ active }: { active: boolean }) {
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!active) {
+      pulseAnim.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.25,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [active, pulseAnim]);
+
+  if (!active) return null;
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        borderWidth: 5,
+        borderColor: "rgba(239, 68, 68, 0.75)",
+        borderRadius: 24,
+        opacity: pulseAnim,
+        zIndex: 90,
+      }}
+    />
+  );
+}

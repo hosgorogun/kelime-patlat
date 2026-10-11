@@ -440,10 +440,10 @@ async function runFullLiveTest() {
   assert(getLeagueTier(1600).tier === "ALTIN", "1600 LP Altın olmalı!");
   assert(getLeagueTier(2500).tier === "PLATİN", "2500 LP Platin olmalı!");
   assert(getLeagueTier(3600).tier === "ELMAS", "3600 LP Elmas olmalı!");
-  assert(getLeagueTier(5000).tier === "YÜCELİK", "5000 LP Yücelik olmalı!");
-  assert(getLeagueTier(7000).tier === "ÖLÜMSÜZLÜK", "7000 LP Ölümsüzlük olmalı!");
-  assert(getLeagueTier(10000).tier === "RADIAN", "10000 LP Radian olmalı!");
-  console.log("[LEAGUE TIERS] 9 Lig Kademesi (Demir, Bronz, Gümüş, Altın, Platin, Elmas, Yücelik, Ölümsüzlük, Radian) doğrulandı ✅");
+  assert(getLeagueTier(5000).tier === "KOZMİK", "5000 LP Kozmik olmalı!");
+  assert(getLeagueTier(7000).tier === "EBEDİ", "7000 LP Ebedi olmalı!");
+  assert(getLeagueTier(10000).tier === "HAKİM", "10000 LP Hakim olmalı!");
+  console.log("[LEAGUE TIERS] 9 Lig Kademesi (Demir, Bronz, Gümüş, Altın, Platin, Elmas, Kozmik, Ebedi, Hakim) doğrulandı ✅");
 
   // 5.2 Kademeli LP Formülü ve Taban Koruması
   const demirWin = applyMatchProgress({ ...DEFAULT_PROGRESS, lp: 100 }, { score: 100, tempo: 2.0, won: true }, "pvp");
@@ -517,12 +517,10 @@ async function runFullLiveTest() {
   assert(buyAd.success === true && buyAd.updatedProgress.lives === 1, "Reklam can vermedi!");
   console.log("[AD REWARD] Reklam izleme ile +1 can kazanımı doğrulandı ✅");
 
-  // 6.6 Mağaza Ekipman Kataloğu Doğrulaması
   assert(CHIP_EQUIPMENT_ITEMS.some((i) => i.id === "lives_refill" && i.rewardType === "lives"), "Can doldurma ürünü eksik!");
   assert(CHIP_EQUIPMENT_ITEMS.some((i) => i.id === "radar_5" && i.rewardType === "radar"), "Radar ürünü eksik!");
   assert(CHIP_EQUIPMENT_ITEMS.some((i) => i.id === "shield_1" && i.rewardType === "shield"), "Kalkan ürünü eksik!");
-  assert(CHIP_EQUIPMENT_ITEMS.some((i) => i.id === "xp_250" && i.rewardType === "xp"), "XP ürünü eksik!");
-  console.log("[STORE ITEMS] Tüm mağaza siber ekipmanları (Radar, Kalkan, XP, Can) doğrulandı ✅");
+  console.log("[STORE ITEMS] Tüm mağaza siber ekipmanları (Radar, Kalkan, Can) doğrulandı ✅");
 
   // 6.7 Kozmetik Kataloğu
   assert(PROFILE_FRAMES.length >= 5, "Çerçeve kataloğu eksik!");

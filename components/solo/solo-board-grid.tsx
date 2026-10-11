@@ -1,7 +1,7 @@
 import React from "react";
 import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
-import { FloatingScoreBurst } from "./solo-floating-effects";
+import { FloatingScoreBurst, TouchMagnifierBubble, UrgencyVignette } from "./solo-floating-effects";
 import { TilePop } from "../game/tile-pop";
 import { SOLUTION_ROUTE_COLORS, APP_WORD_PALETTE } from "@/shared/solo";
 import type { VisualTheme } from "@/shared/themes";
@@ -503,6 +503,22 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
             })}
         style={StyleSheet.absoluteFill}
       />
+      {/* 1. Touch Magnifier Bubble (Parmağın hemen üstünde parlayan harf büyüteci) */}
+      {selected.length > 0 && (() => {
+        const lastCellIdx = selected[selected.length - 1]!;
+        const lastLetter = challenge.board[lastCellIdx] || null;
+        const cellCenter = getCellCenter(lastCellIdx);
+        return (
+          <TouchMagnifierBubble
+            letter={lastLetter}
+            center={cellCenter}
+            visible={status === "playing"}
+            accentColor={activeTheme.accentColor}
+          />
+        );
+      })()}
+      {/* 2. Pulsing Urgency Vignette (Son 10 saniyede ekranda atan nabız çerçevesi) */}
+      <UrgencyVignette active={isUrgent && status === "playing"} />
     </Animated.View>
   );
 });

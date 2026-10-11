@@ -14,8 +14,10 @@ export const styles = StyleSheet.create({
   coinText: { color: "#D97706", fontSize: 15, fontWeight: "700" },
   coinUnit: { color: "#293541", fontSize: 11, fontWeight: "600" },
 
-  msgBanner: { backgroundColor: "#ECFDF5", padding: 12, borderRadius: 12, marginBottom: 12 },
-  msgBannerText: { color: "#059669", fontSize: 12, fontWeight: "600", textAlign: "center" },
+  msgBanner: { backgroundColor: "#ECFDF5", borderWidth: 1.5, borderColor: "#10B981", padding: 12, borderRadius: 14, marginBottom: 12 },
+  msgBannerText: { color: "#065F46", fontSize: 12, fontWeight: "700", textAlign: "center" },
+  msgBannerError: { backgroundColor: "#FEF2F2", borderWidth: 1.5, borderColor: "#EF4444" },
+  msgBannerErrorText: { color: "#B91C1C" },
 
   storeList: { gap: 10 },
   tabs: { flexDirection: "row", backgroundColor: "#F1F5F9", borderRadius: 12, padding: 3, marginBottom: 14 },

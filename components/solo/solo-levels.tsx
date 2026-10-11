@@ -251,7 +251,13 @@ export function SoloLevels({
           accessibilityLabel={isSelectedLocked ? `Önce seviye ${selectedLevel - 1}'i tamamla` : `Seviye ${selectedLevel}'i oyna`}
           accessibilityState={{ disabled: isSelectedLocked }}
           disabled={isSelectedLocked}
-          onPress={() => onSelect(selectedLevel)}
+          onPress={() => {
+            if (!isSelectedLocked) {
+              triggerHapticSelection();
+              gameSfx.tap();
+            }
+            onSelect(selectedLevel);
+          }}
           style={({ pressed }) => [
             styles.launchButton,
             isSelectedLocked && styles.launchButtonLocked,

@@ -18,6 +18,7 @@ import { MatchResultModal } from "../modals/match-result-modal";
 import { LeaveDuelModal } from "../friends/leave-duel-modal";
 import { GameModeInfoModal } from "../modals/game-mode-info-modal";
 import { GameCountdownOverlay } from "../game/game-countdown-overlay";
+import { VersusClashOverlay } from "./versus-clash-overlay";
 import { UserProfileModal, type InspectableUser } from "../profile/user-profile-modal";
 import { APP_WORD_PALETTE } from "@/shared/solo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -268,6 +269,21 @@ export function PvpMatchScreen({
   }, [opponentWordCount, room.status, opponentFlashAnim]);
 
   const [hapticsOn, setHapticsOn] = React.useState(() => getHapticsEnabled());
+  const [showClash, setShowClash] = React.useState(false);
+  const prevStartedAtClashRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (room.status === "playing" && room.startedAt && room.startedAt !== prevStartedAtClashRef.current) {
+      prevStartedAtClashRef.current = room.startedAt;
+      setShowClash(true);
+      const timer = setTimeout(() => {
+        setShowClash(false);
+      }, 1400);
+      return () => clearTimeout(timer);
+    } else if (room.status !== "playing") {
+      setShowClash(false);
+    }
+  }, [room.status, room.startedAt]);
 
   return (
     <ScreenContainer style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20 }}>
@@ -283,10 +299,27 @@ export function PvpMatchScreen({
           <Pressable onPress={() => { triggerHapticSelection(); onLiveGameExitPress(); }} style={styles.exitButton}>
             <Text style={styles.exitText}>×</Text>
           </Pressable>
-          <View>
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              if (room?.code) {
+                import("react-native").then(({ Clipboard }) => {
+                  if (Clipboard?.setString) Clipboard.setString(room.code);
+                }).catch(() => undefined);
+                onSetGlobalToast?.({
+                  id: `code-${Date.now()}`,
+                  title: "ODA KODU KOPYALANDI",
+                  subtitle: `Oda Kodu "${room.code}" panoya kopyalandı. Arkadaşına gönder!`,
+                  icon: "📋",
+                  accentColor: "#3EE8B5",
+                });
+              }
+            }}
+            hitSlop={8}
+          >
             <Text style={styles.gameMode}>CANLI KELİME DÜELLOSU</Text>
-            <Text style={styles.gameCode}>ODA {room.code}</Text>
-          </View>
+            <Text style={styles.gameCode}>ODA {room.code} 📋</Text>
+          </Pressable>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Pressable
               onPress={() => {
@@ -791,6 +824,18 @@ export function PvpMatchScreen({
         visible={selectedModeInfo !== null}
         mode={selectedModeInfo}
         onClose={() => setSelectedModeInfo(null)}
+      />
+
+      {/* VS Çarpışma İntro Animasyonu */}
+      <VersusClashOverlay
+        visible={showClash}
+        playerName={me?.name || safeName}
+        playerAvatar={me?.avatar || "🎮"}
+        playerTier={me?.tier || "BRONZ"}
+        opponentName={opponent?.name || "RAKİP"}
+        opponentAvatar={opponent?.avatar || "⚡"}
+        opponentTier={opponent?.tier || "BRONZ"}
+        isBot={Boolean(!room.isRanked && (opponent?.isBot || room.players.some((p) => p.isBot)))}
       />
 
       <GameCountdownOverlay

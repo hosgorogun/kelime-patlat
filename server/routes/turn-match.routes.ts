@@ -11,9 +11,8 @@ import {
 import {
   createInitialTurnBoard,
   calculateTurnWordScore,
-  type TurnMatch,
 } from "../../shared/turn-match";
-import { normalizeTr, normalizeTrUpper, isEqualTr } from "../../shared/tr-utils";
+import { normalizeTrUpper, isEqualTr } from "../../shared/tr-utils";
 import { isValidTurkishWord } from "../../shared/dictionary";
 
 export const turnMatchRouter = Router();

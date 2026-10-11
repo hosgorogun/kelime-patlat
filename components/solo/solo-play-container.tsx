@@ -51,7 +51,13 @@ export function SoloPlayContainer(props: SoloPlayContainerProps) {
       onExit={() => {
         setScreen("levels");
       }}
-      onComplete={props.completeSoloLevel}
+      onComplete={(level, foundWords, won) => {
+        if (props.dailySession && props.completeDailyChallenge) {
+          props.completeDailyChallenge(level, foundWords, won);
+        } else if (props.completeSoloLevel) {
+          props.completeSoloLevel(level, foundWords, won);
+        }
+      }}
       onNext={() => setScreen("levels")}
       openSoloLevel={props.openSoloLevel}
       onNavigate={setScreen}

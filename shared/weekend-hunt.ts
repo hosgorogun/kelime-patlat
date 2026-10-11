@@ -243,3 +243,33 @@ export function claimWeekendHuntReward(
     reward: tier,
   };
 }
+
+/**
+ * Returns the number of ready-to-claim milestone rewards in Weekend Hunt event.
+ */
+export function getWeekendHuntUnclaimedCount(
+  progress: PlayerProgress,
+  event?: WeekendHuntEvent
+): number {
+  if (!progress) return 0;
+  const currentEvent = event || getWeekendHuntEvent();
+  const currentEventId = currentEvent.eventId;
+
+  const hunt = progress.weekendHunt?.eventId === currentEventId
+    ? progress.weekendHunt
+    : null;
+
+  if (!hunt) return 0;
+
+  const foundCount = hunt.foundWords?.length ?? 0;
+  const claimedTiers = hunt.claimedTiers ?? [];
+
+  let unclaimed = 0;
+  currentEvent.tierRewards.forEach((tier, index) => {
+    if (foundCount >= tier.count && !claimedTiers.includes(index)) {
+      unclaimed++;
+    }
+  });
+
+  return unclaimed;
+}

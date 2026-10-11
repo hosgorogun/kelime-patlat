@@ -9,6 +9,7 @@ import {
   type PlayerProgress,
   type DailyChallenge,
 } from "../shared/progression";
+import { getWeekendHuntUnclaimedCount } from "../shared/weekend-hunt";
 
 export interface UseProgressionStatsParams {
   progress: PlayerProgress;
@@ -38,14 +39,25 @@ export function useProgressionStats({
     return () => clearInterval(timer);
   }, []);
 
-  const daily = useMemo(() => getDailyChallenge(), [ticker]);
-  const livesCalc = useMemo(() => getCalculatedLives(progress), [progress, ticker]);
-  const unclaimedMissions = useMemo(() => getUnclaimedMissionsCount(progress), [progress]);
+  const daily = useMemo(() => {
+    void ticker;
+    return getDailyChallenge();
+  }, [ticker]);
+  const livesCalc = useMemo(() => {
+    void ticker;
+    return getCalculatedLives(progress);
+  }, [progress, ticker]);
+  const unclaimedMissions = useMemo(() => {
+    const regularMissions = getUnclaimedMissionsCount(progress);
+    const huntUnclaimed = getWeekendHuntUnclaimedCount(progress);
+    return regularMissions + huntUnclaimed;
+  }, [progress]);
   const unclaimedMilestones = useMemo(
     () => getUnclaimedMilestonesCount(progress, soloUnlockedLevel),
     [progress, soloUnlockedLevel]
   );
   const hasClaimableDailyReward = useMemo(() => {
+    void ticker;
     const todayId = getDayId();
     return progress.lastLoginDay !== todayId;
   }, [progress.lastLoginDay, ticker]);

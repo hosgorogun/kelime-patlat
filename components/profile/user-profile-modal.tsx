@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Alert,
   Modal,
   View,
   Text,
@@ -247,24 +248,22 @@ export function UserProfileModal({
               <Pressable
                 onPress={() => {
                   triggerHapticSelection();
-                  import("react-native").then(({ Alert }) => {
-                    Alert.alert(
-                      "Oyuncuyu Bildir / Engelle",
-                      `"${displayName}" isimli oyuncuyu bildirmek veya engellemek istiyor musunuz?`,
-                      [
-                        { text: "İptal", style: "cancel" },
-                        {
-                          text: "🚫 Engelle",
-                          style: "destructive",
-                          onPress: () => Alert.alert("Engellendi", `"${displayName}" engellendi.`),
-                        },
-                        {
-                          text: "⚠️ Bildir (Report)",
-                          onPress: () => Alert.alert("Bildirildi", "Şikayetiniz modaretörlerimize iletildi."),
-                        },
-                      ]
-                    );
-                  });
+                  Alert.alert(
+                    "Oyuncuyu Bildir / Engelle",
+                    `"${displayName}" isimli oyuncuyu bildirmek veya engellemek istiyor musunuz?`,
+                    [
+                      { text: "İptal", style: "cancel" },
+                      {
+                        text: "🚫 Engelle",
+                        style: "destructive",
+                        onPress: () => Alert.alert("Engellendi", `"${displayName}" engellendi.`),
+                      },
+                      {
+                        text: "⚠️ Bildir (Report)",
+                        onPress: () => Alert.alert("Bildirildi", "Şikayetiniz modaretörlerimize iletildi."),
+                      },
+                    ]
+                  );
                 }}
                 style={{ marginTop: 12, alignItems: "center", paddingVertical: 6 }}
               >

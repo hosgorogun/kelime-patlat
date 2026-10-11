@@ -158,6 +158,12 @@ export function VintagePuzzle({
 
   useEffect(() => {
     const onBackPress = () => {
+      if (showVictoryModal) {
+        setShowVictoryModal(false);
+        setIsLevelComplete(false);
+        setViewMode("map");
+        return true;
+      }
       if (showResetModal) {
         setShowResetModal(false);
         return true;
@@ -181,7 +187,7 @@ export function VintagePuzzle({
 
     const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => sub.remove();
-  }, [showResetModal, showExitModal, viewMode, isLevelComplete, onBack]);
+  }, [showVictoryModal, showResetModal, showExitModal, viewMode, isLevelComplete, onBack]);
 
   const gridContainerRef = useRef<View>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;

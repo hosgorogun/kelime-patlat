@@ -16,8 +16,8 @@ export type SeasonLeaderboardTabProps = {
   scoreDiffToLeader: number;
   rankingType: RankingType;
   setRankingType: (type: RankingType) => void;
-  leaderboardFilter: "global" | "friends" | "division";
-  setLeaderboardFilter: (filter: "global" | "friends" | "division") => void;
+  leaderboardFilter: "global" | "friends";
+  setLeaderboardFilter: (filter: "global" | "friends") => void;
   displayedLeaderboard: LeaderboardEntry[];
   weeklyCohort?: WeeklyDivisionCohort;
   top1?: LeaderboardEntry;
@@ -89,7 +89,7 @@ export const SeasonLeaderboardTab = React.memo(({
           ) : scoreDiffToLeader > 0 ? (
             <View style={styles.diffBadge}>
               <Text style={styles.diffKicker}>ZİRVEYE KALAN</Text>
-              <Text style={styles.diffScore}>-{scoreDiffToLeader} P</Text>
+              <Text style={styles.diffScore}>-{Math.abs(scoreDiffToLeader)} P</Text>
             </View>
           ) : (
             <View style={styles.diffBadge}>
@@ -140,122 +140,11 @@ export const SeasonLeaderboardTab = React.memo(({
               👥 ARKADAŞLAR
             </Text>
           </Pressable>
-          <Pressable
-            onPress={() => { triggerHapticSelection(); setLeaderboardFilter("division"); }}
-            style={[styles.toolbarPill, leaderboardFilter === "division" && styles.toolbarPillActiveScope]}
-          >
-            <Text style={[styles.toolbarPillText, leaderboardFilter === "division" && styles.toolbarPillTextActive]}>
-              🏆 20'Lİ LİG
-            </Text>
-          </Pressable>
         </View>
       </View>
 
-      {leaderboardFilter === "division" ? (
-        <View style={{ marginTop: 12 }}>
-          {/* Division Header Card */}
-          <View style={{ backgroundColor: "#FAFDF7", borderRadius: 20, padding: 16, borderWidth: 1.5, borderColor: "#DCE1D7", marginBottom: 12 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <View>
-                <Text style={{ fontSize: 10, fontWeight: "900", color: "#718096", letterSpacing: 0.8 }}>
-                  20 KİŞİLİK HAFTALIK LİG
-                </Text>
-                <Text style={{ fontSize: 18, fontWeight: "900", color: "#293541" }}>
-                  {weeklyCohort?.tier || rank} LİGİ · GRUP #{weeklyCohort?.divisionNumber || 1}
-                </Text>
-              </View>
-              <View style={{ backgroundColor: "#F0F5ED", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: "#DCE1D7" }}>
-                <Text style={{ fontSize: 11, fontWeight: "800", color: "#293541" }}>
-                  ⏱️ {Math.floor((weeklyCohort?.secondsUntilReset || 0) / 3600)}s {Math.floor(((weeklyCohort?.secondsUntilReset || 0) % 3600) / 60)}d
-                </Text>
-              </View>
-            </View>
-
-            {/* Zone Rules Legend */}
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-              <View style={{ flex: 1, backgroundColor: "rgba(16, 185, 129, 0.12)", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#10B981" }}>
-                <Text style={{ fontSize: 9, fontWeight: "900", color: "#065F46" }}>🟢 İLK 3 (TERFİ)</Text>
-                <Text style={{ fontSize: 8, color: "#065F46", marginTop: 2 }}>+1 Üst Lig & +150 Çip</Text>
-              </View>
-              <View style={{ flex: 1, backgroundColor: "#F0F5ED", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#DCE1D7" }}>
-                <Text style={{ fontSize: 9, fontWeight: "900", color: "#4A5568" }}>⚪ 4-17 (GÜVENLİ)</Text>
-                <Text style={{ fontSize: 8, color: "#4A5568", marginTop: 2 }}>Ligde Kalır</Text>
-              </View>
-              <View style={{ flex: 1, backgroundColor: "rgba(239, 68, 68, 0.12)", padding: 8, borderRadius: 10, borderWidth: 1, borderColor: "#EF4444" }}>
-                <Text style={{ fontSize: 9, fontWeight: "900", color: "#991B1B" }}>🔴 SON 3 (DÜŞME)</Text>
-                <Text style={{ fontSize: 8, color: "#991B1B", marginTop: 2 }}>-1 Alt Lig Tehlikesi</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Members List */}
-          <View style={styles.board}>
-            {(weeklyCohort?.members || []).map((member, idx) => {
-              const isUser = member.isCurrentPlayer;
-              const isPromo = member.zone === "promotion";
-              const isReleg = member.zone === "relegation";
-              return (
-                <View
-                  key={member.id}
-                  style={[
-                    styles.row,
-                    isUser && styles.rowUser,
-                    isPromo && { borderLeftColor: "#10B981", borderLeftWidth: 3.5 },
-                    isReleg && { borderLeftColor: "#EF4444", borderLeftWidth: 3.5 },
-                  ]}
-                >
-                  <View style={styles.position}>
-                    <Text style={[styles.positionText, isPromo && { color: "#10B981", fontWeight: "900" }, isReleg && { color: "#EF4444" }]}>
-                      {idx + 1}
-                    </Text>
-                  </View>
-                  <View style={styles.playerMark}>
-                    <Text style={styles.playerMarkText}>{normalizeTrUpper(member.name.slice(0, 1))}</Text>
-                  </View>
-                  <View style={styles.playerCopy}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#2a9c7a" }]}>
-                        {member.name}
-                      </Text>
-                      {isUser && (
-                        <View style={styles.userSelfTag}>
-                          <Text style={styles.userSelfTagText}>SEN</Text>
-                        </View>
-                      )}
-                      <View style={{
-                        backgroundColor: isPromo ? "rgba(16, 185, 129, 0.15)" : isReleg ? "rgba(239, 68, 68, 0.15)" : "rgba(148, 163, 184, 0.15)",
-                        paddingHorizontal: 6,
-                        paddingVertical: 2,
-                        borderRadius: 6,
-                      }}>
-                        <Text style={{
-                          fontSize: 8,
-                          fontWeight: "900",
-                          color: isPromo ? "#059669" : isReleg ? "#DC2626" : "#64748B",
-                        }}>
-                          {isPromo ? "TERFİ" : isReleg ? "DÜŞME" : "GÜVENLİ"}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.playerMeta, { marginTop: 2 }]}>
-                      {member.tier} · {member.lp} LP
-                    </Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end" }}>
-                    <Text style={{ fontSize: 13, fontWeight: "900", color: "#293541" }}>
-                      {member.weeklyPoints} P
-                    </Text>
-                    <Text style={{ fontSize: 9, color: "#64748B", fontWeight: "700" }}>HAFTALIK</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      ) : (
-        <>
-          {/* Vitrin Podium Showcase (Top 3) */}
-          {displayedLeaderboard.length >= 2 && (
+      {/* Vitrin Podium Showcase (Top 3) */}
+      {displayedLeaderboard.length >= 2 && (
             <View style={styles.podiumContainer}>
               <View style={styles.podiumVitrinHeader}>
                 <View style={styles.podiumVitrinTag}>
@@ -287,13 +176,13 @@ export const SeasonLeaderboardTab = React.memo(({
                 </View>
                 <Text numberOfLines={1} style={styles.podiumName}>{top2.name}</Text>
                 {top2.tier ? (
-                  <View style={[styles.tierBadge, { borderColor: getTierColor(top2.tier) }]}>
+                  <View style={[styles.tierBadge, { borderColor: getTierColor(top2.tier), backgroundColor: `${getTierColor(top2.tier)}18` }]}>
                     <Text style={[styles.tierBadgeText, { color: getTierColor(top2.tier) }]}>{top2.tier}</Text>
                   </View>
                 ) : null}
                 <Text style={styles.podiumScore}>
                   {rankingType === "level"
-                    ? `Lv.${top2.level ?? getPlayerLevel(top2.score)} (${top2.score} XP)`
+                    ? `Lv.${top2.level ?? getPlayerLevel(top2.score)}`
                     : `${top2.lp ?? (top2.tier ? getMinLpForTier(top2.tier) : 0)} LP`}
                 </Text>
                 <View style={styles.podiumBar2}>
@@ -314,7 +203,7 @@ export const SeasonLeaderboardTab = React.memo(({
                 <Text style={styles.crownIcon}>👑</Text>
                 <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap1]}>
                   {top1.avatarPhoto ? (
-                    <Image source={{ uri: top1.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 28 }} resizeMode="cover" />
+                    <Image source={{ uri: top1.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 32 }} resizeMode="cover" />
                   ) : (
                     <Text style={styles.podiumAvatarText}>{top1.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
                   )}
@@ -324,13 +213,13 @@ export const SeasonLeaderboardTab = React.memo(({
                 </View>
                 <Text numberOfLines={1} style={styles.podiumName}>{top1.name}</Text>
                 {top1.tier ? (
-                  <View style={[styles.tierBadge, { borderColor: getTierColor(top1.tier) }]}>
+                  <View style={[styles.tierBadge, { borderColor: getTierColor(top1.tier), backgroundColor: `${getTierColor(top1.tier)}20` }]}>
                     <Text style={[styles.tierBadgeText, { color: getTierColor(top1.tier) }]}>{top1.tier}</Text>
                   </View>
                 ) : null}
-                <Text style={[styles.podiumScore, { color: "#987c00" }]}>
+                <Text style={[styles.podiumScore, { color: "#B45309" }]}>
                   {rankingType === "level"
-                    ? `Lv.${top1.level ?? getPlayerLevel(top1.score)} (${top1.score} XP)`
+                    ? `Lv.${top1.level ?? getPlayerLevel(top1.score)}`
                     : `${top1.lp ?? (top1.tier ? getMinLpForTier(top1.tier) : 0)} LP`}
                 </Text>
                 <View style={styles.podiumBar1}>
@@ -350,7 +239,7 @@ export const SeasonLeaderboardTab = React.memo(({
               >
                 <View style={[styles.podiumAvatarWrap, styles.podiumAvatarWrap3]}>
                   {top3.avatarPhoto ? (
-                    <Image source={{ uri: top3.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 24 }} resizeMode="cover" />
+                    <Image source={{ uri: top3.avatarPhoto }} style={{ width: "100%", height: "100%", borderRadius: 26 }} resizeMode="cover" />
                   ) : (
                     <Text style={styles.podiumAvatarText}>{top3.name.slice(0, 1).toLocaleUpperCase("tr-TR")}</Text>
                   )}
@@ -360,13 +249,13 @@ export const SeasonLeaderboardTab = React.memo(({
                 </View>
                 <Text numberOfLines={1} style={styles.podiumName}>{top3.name}</Text>
                 {top3.tier ? (
-                  <View style={[styles.tierBadge, { borderColor: getTierColor(top3.tier) }]}>
+                  <View style={[styles.tierBadge, { borderColor: getTierColor(top3.tier), backgroundColor: `${getTierColor(top3.tier)}18` }]}>
                     <Text style={[styles.tierBadgeText, { color: getTierColor(top3.tier) }]}>{top3.tier}</Text>
                   </View>
                 ) : null}
                 <Text style={styles.podiumScore}>
                   {rankingType === "level"
-                    ? `Lv.${top3.level ?? getPlayerLevel(top3.score)} (${top3.score} XP)`
+                    ? `Lv.${top3.level ?? getPlayerLevel(top3.score)}`
                     : `${top3.lp ?? (top3.tier ? getMinLpForTier(top3.tier) : 0)} LP`}
                 </Text>
                 <View style={styles.podiumBar3}>
@@ -440,8 +329,8 @@ export const SeasonLeaderboardTab = React.memo(({
                       )}
                     </View>
                     <View style={styles.playerCopy}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                        <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#2a9c7a" }]}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text numberOfLines={1} style={[styles.playerName, isUser && { color: "#059669" }]}>
                           {entry.name}
                         </Text>
                         {isUser && (
@@ -450,12 +339,12 @@ export const SeasonLeaderboardTab = React.memo(({
                           </View>
                         )}
                         {entry.tier && (
-                          <View style={[styles.rowTierBadge, { borderColor: tierColor }]}>
+                          <View style={[styles.rowTierBadge, { borderColor: tierColor, backgroundColor: `${tierColor}18` }]}>
                             <Text style={[styles.rowTierText, { color: tierColor }]}>{entry.tier}</Text>
                           </View>
                         )}
                       </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
                         <Text style={styles.playerMeta}>
                           {entry.wins}/{entry.matches} Galibiyet
                         </Text>
@@ -467,13 +356,13 @@ export const SeasonLeaderboardTab = React.memo(({
                         <Text style={styles.playerMeta}>· En İyi: {entry.bestRound}</Text>
                       </View>
                     </View>
-                    <View style={{ alignItems: "flex-end" }}>
+                    <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
                       {rankingType === "level" ? (
                         <View style={{ alignItems: "flex-end" }}>
-                          <View style={{ backgroundColor: "#38BDF820", borderWidth: 1, borderColor: "#DCE1D7", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
-                            <Text style={{ color: "#2a8fbc", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? getPlayerLevel(entry.score)}</Text>
+                          <View style={{ backgroundColor: "#E0F2FE", borderWidth: 1, borderColor: "#BAE6FD", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginBottom: 2 }}>
+                            <Text style={{ color: "#0369A1", fontSize: 11, fontWeight: "900" }}>SEVİYE {entry.level ?? getPlayerLevel(entry.score)}</Text>
                           </View>
-                          <Text style={{ color: "#293541", fontSize: 10, fontWeight: "700" }}>{entry.score} XP</Text>
+                          <Text style={{ color: "#64748B", fontSize: 10, fontWeight: "800" }}>{entry.score} XP</Text>
                         </View>
                       ) : (
                         <View style={{ alignItems: "flex-end" }}>
@@ -517,8 +406,6 @@ export const SeasonLeaderboardTab = React.memo(({
           );
         })()}
       </View>
-        </>
-      )}
     </View>
   );
 });

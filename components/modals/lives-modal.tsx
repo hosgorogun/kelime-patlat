@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { getCalculatedLives, MAX_LIVES, COST_PER_LIFE, COST_REFILL_ALL, type PlayerProgress } from "@/shared/progression";
+import { ICONS } from "@/components/game/game-ui";
 import { haptics } from "@/lib/haptics";
 import { gameSfx } from "@/lib/game-sfx";
 
@@ -52,7 +53,7 @@ export function LivesModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconCircle}>
-              <Text style={styles.iconCircleText}>💚</Text>
+              <Image source={ICONS.heart} style={{ width: 34, height: 34 }} resizeMode="contain" />
             </View>
 
             <Text style={styles.title}>CAN MERKEZİ</Text>
@@ -71,7 +72,11 @@ export function LivesModal({
               const active = calc.isInfinite || index < calc.lives;
               return (
                 <View key={index} style={[styles.heartBadge, active && styles.heartBadgeActive]}>
-                  <Text style={styles.heartText}>{active ? "💚" : "🖤"}</Text>
+                  {active ? (
+                    <Image source={ICONS.heart} style={{ width: 22, height: 22 }} resizeMode="contain" />
+                  ) : (
+                    <Image source={ICONS.heart} style={{ width: 22, height: 22, opacity: 0.22, tintColor: "#94A3B8" }} resizeMode="contain" />
+                  )}
                 </View>
               );
             })}
@@ -127,7 +132,7 @@ export function LivesModal({
               </View>
             </Pressable>
 
-            {/* 2. Buy 1 Life (25 Coins) */}
+            {/* 2. Buy 1 Life (COST_PER_LIFE = 20 Çip) */}
             <Pressable
               onPress={() => {
                 if (currentCoins < COST_PER_LIFE) {
@@ -156,7 +161,7 @@ export function LivesModal({
               </View>
             </Pressable>
 
-            {/* 3. Refill All (125 Coins) */}
+            {/* 3. Refill All (COST_REFILL_ALL = 75 Çip) */}
             <Pressable
               onPress={() => {
                 if (currentCoins < COST_REFILL_ALL) {

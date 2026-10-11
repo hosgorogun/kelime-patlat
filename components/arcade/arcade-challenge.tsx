@@ -654,6 +654,7 @@ export function ArcadeChallenge({
   };
 
   const finish = () => {
+    lastTouchedIndexRef.current = -1;
     const wasPointerActive = pointerActive.current;
     pointerActive.current = false;
     setIsSelecting(false);
@@ -719,6 +720,7 @@ export function ArcadeChallenge({
 
   const handleGestureStart = (event: any) => {
     if (status !== "playing") return;
+    lastTouchedIndexRef.current = -1;
     event.preventDefault?.();
     event.stopPropagation?.();
     measureBoard();
