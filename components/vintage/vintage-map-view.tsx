@@ -101,7 +101,7 @@ export function VintageMapView({
             const isCompleted = completedLevels.has(lvl);
             const isUnlocked = lvl <= maxUnlockedLevel;
             const diffTag = lvl <= 5 ? "KOLAY" : lvl <= 10 ? "ORTA" : lvl <= 15 ? "ZOR" : "ULTRA ZOR";
-            const diffColor = lvl <= 5 ? "#F0F5ED" : lvl <= 10 ? "#F59E0B" : lvl <= 15 ? "#F97316" : "#8B5CF6";
+            const diffColor = lvl <= 5 ? "#F8FAFC" : lvl <= 10 ? "#F59E0B" : lvl <= 15 ? "#F97316" : "#8B5CF6";
 
             return (
               <Pressable

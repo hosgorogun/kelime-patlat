@@ -33,7 +33,7 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#F7F5EE",
+      backgroundColor: "#F8FAFC",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
@@ -63,6 +63,13 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-font",
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/icon.png",
+        color: "#38BDF8",
+      },
+    ],
     [
       "expo-audio",
       {

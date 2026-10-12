@@ -334,7 +334,7 @@ export function MissionsScreen({
       </View>
 
       {toast && (
-        <LinearGradient colors={["#F0F5ED", "#F0F5ED"]} style={styles.toastCard}>
+        <LinearGradient colors={["#F8FAFC", "#F8FAFC"]} style={styles.toastCard}>
           <GameIcon emoji="🎉" size={42} glow={palette.gold} />
           <View style={{ flex: 1 }}>
             <Text style={styles.toastTitle}>{toast.title}</Text>
@@ -377,7 +377,7 @@ export function MissionsScreen({
       </OrnatePanel>
 
       <View style={styles.tabFrame}>
-        <LinearGradient colors={["#F0F5ED", "#F0F5ED"]} style={styles.tabContainer}>
+        <LinearGradient colors={["#F8FAFC", "#F8FAFC"]} style={styles.tabContainer}>
           <Pressable
             onPress={() => {
               haptics.select();

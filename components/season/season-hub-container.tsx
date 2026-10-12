@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { MainShell } from "../shell/main-shell";
 import { SeasonHub, type SeasonTab } from "./season-hub";
 import { UserProfileModal, type InspectableUser } from "../profile/user-profile-modal";
+import { CoinCascadeOverlay } from "../game/coin-cascade";
 import { socialManager, type FriendRequest } from "@/shared/social";
 import { isEqualTr } from "@/shared/tr-utils";
 import type { BoardSize, LeaderboardEntry } from "@/shared/game";
@@ -56,6 +57,9 @@ export function SeasonHubContainer(props: SeasonHubContainerProps) {
   const hasClaimableDailyReward = props.hasClaimableDailyReward ?? progression.hasClaimableDailyReward;
   const onNavigate = props.onNavigate ?? navigation.setScreen;
 
+  const [coinCascadeTrigger, setCoinCascadeTrigger] = useState(false);
+  const [shieldCascadeTrigger, setShieldCascadeTrigger] = useState(false);
+
   const pendingRequests = props.pendingRequests ?? pvp.pendingRequests;
   const onAcceptFriendRequest = props.onAcceptFriendRequest ?? pvp.handleAcceptFriendRequest;
   const onRejectFriendRequest = props.onRejectFriendRequest ?? pvp.handleRejectFriendRequest;
@@ -87,6 +91,36 @@ export function SeasonHubContainer(props: SeasonHubContainerProps) {
         onBack={() => onNavigate("home")}
         onOpenLeagueHub={() => onNavigate("league")}
         onPlayRanked={() => onNavigate("online")}
+        onClaimReward={(tier, chips, shields) => {
+          setProgress((prev) => {
+            const nextClaimed = { ...(prev.claimedLeagueTiers || {}), [tier]: true };
+            const next = {
+              ...prev,
+              coins: (prev.coins || 0) + chips,
+              streakShields: (prev.streakShields || 0) + shields,
+              claimedLeagueTiers: nextClaimed,
+            };
+            progression.syncProgressToCloud?.(next).catch(console.error);
+            return next;
+          });
+
+          // Uçuşan paralar ve kalkan parçacıkları efekti
+          setCoinCascadeTrigger(true);
+          if (shields > 0) {
+            setShieldCascadeTrigger(true);
+          }
+          setTimeout(() => {
+            setCoinCascadeTrigger(false);
+            setShieldCascadeTrigger(false);
+          }, 1600);
+
+          uiFeedback.showToast?.(
+            "KADEME ÖDÜLÜ ALINDI! 🏆",
+            `+${chips} Çip ${shields > 0 ? `ve +${shields} Kalkan ` : ""}hesabına aktarıldı. Rozetin profiline eklendi!`,
+            "🎁",
+            "#F59E0B"
+          );
+        }}
         pendingRequests={pendingRequests}
         onAcceptRequest={onAcceptFriendRequest}
         onRejectRequest={onRejectFriendRequest}
@@ -123,6 +157,8 @@ export function SeasonHubContainer(props: SeasonHubContainerProps) {
         onAddFriend={handleAddFriendTarget}
         onChallenge={handleChallengeTarget}
       />
+      <CoinCascadeOverlay trigger={coinCascadeTrigger} count={12} icon="🪙" />
+      <CoinCascadeOverlay trigger={shieldCascadeTrigger} count={6} icon="🛡️" />
     </MainShell>
   );
 }

@@ -11,19 +11,12 @@ export type DockDestination =
   | "season"
   | "profile";
 
-const tabs: {
-  id: DockDestination;
-  label: string;
-  icon: ImageSourcePropType;
-  accent: string;
-  bgLight: string;
-  borderLight: string;
-}[] = [
-  { id: "store", label: "Mağaza", icon: ICONS.store, accent: "#E67E22", bgLight: "#FFF4E8", borderLight: "#F8C291" },
-  { id: "missions", label: "Görevler", icon: ICONS.missions, accent: "#27AE60", bgLight: "#E8F8F0", borderLight: "#A3E4D7" },
-  { id: "home", label: "Oyna", icon: ICONS.play, accent: "#3498DB", bgLight: "#EBF5FB", borderLight: "#AED6F1" },
-  { id: "season", label: "Lig", icon: ICONS.trophy, accent: "#D4AC0D", bgLight: "#FEF9E7", borderLight: "#F9E79F" },
-  { id: "profile", label: "Profil", icon: ICONS.profile, accent: "#8E44AD", bgLight: "#F4ECF7", borderLight: "#D7BDE2" },
+const tabs: { id: DockDestination; label: string; icon: ImageSourcePropType }[] = [
+  { id: "store", label: "Mağaza", icon: ICONS.store },
+  { id: "missions", label: "Görevler", icon: ICONS.missions },
+  { id: "home", label: "Oyna", icon: ICONS.play },
+  { id: "season", label: "Lig", icon: ICONS.trophy },
+  { id: "profile", label: "Profil", icon: ICONS.profile },
 ];
 
 function DockTabItem({
@@ -32,7 +25,7 @@ function DockTabItem({
   count,
   onPress,
 }: {
-  tab: typeof tabs[number];
+  tab: { id: DockDestination; label: string; icon: ImageSourcePropType };
   selected: boolean;
   count?: number;
   onPress: () => void;
@@ -77,14 +70,13 @@ function DockTabItem({
       onPress={handlePress}
       style={({ pressed }) => [
         styles.tab,
-        selected && [styles.active, { backgroundColor: tab.bgLight, borderColor: tab.borderLight }],
+        selected && styles.active,
         pressed && { opacity: 0.8 },
       ]}
     >
       <Animated.View
         style={[
           styles.iconContainer,
-          selected && { backgroundColor: "rgba(255, 255, 255, 0.9)", borderRadius: 18 },
           { transform: [{ scale: bounceAnim }] },
         ]}
       >
@@ -101,13 +93,13 @@ function DockTabItem({
       <Text
         style={[
           styles.label,
-          selected && [styles.labelActive, { color: tab.accent }],
+          selected && styles.labelActive,
         ]}
         numberOfLines={1}
       >
         {tab.label}
       </Text>
-      {selected && <View style={[styles.activeDot, { backgroundColor: tab.accent }]} />}
+      {selected && <View style={styles.activeDot} />}
       {!!count && count > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{count > 9 ? "9+" : count}</Text>
@@ -129,107 +121,101 @@ export function PremiumDock({
   storeBadgeCount?: number;
 }) {
   return (
-    <View style={styles.dockFrame}>
-      <View style={styles.dock} accessibilityRole="tablist">
-        {tabs.map((tab) => {
-          const selected = active === tab.id;
-          const count =
-            tab.id === "missions"
-              ? missionsBadgeCount
-              : tab.id === "store"
-                ? storeBadgeCount
-                : 0;
-          return (
-            <DockTabItem
-              key={tab.id}
-              tab={tab}
-              selected={selected}
-              count={count}
-              onPress={() => onNavigate(tab.id)}
-            />
-          );
-        })}
-      </View>
+    <View style={styles.dock} accessibilityRole="tablist">
+      {tabs.map((tab) => {
+        const selected = active === tab.id;
+        const count =
+          tab.id === "missions"
+            ? missionsBadgeCount
+            : tab.id === "store"
+              ? storeBadgeCount
+              : 0;
+        return (
+          <DockTabItem
+            key={tab.id}
+            tab={tab}
+            selected={selected}
+            count={count}
+            onPress={() => onNavigate(tab.id)}
+          />
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  dockFrame: {
-    padding: 3,
-    backgroundColor: "#F4EDE0",
-    borderRadius: 27,
-    borderWidth: 2,
-    borderBottomWidth: 4,
-    borderColor: "#D9C7AC",
-    shadowColor: "#293541",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    elevation: 6,
-  },
   dock: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
-    borderRadius: 22,
+    borderRadius: 24,
     borderWidth: 1.5,
-    borderBottomWidth: 2,
-    borderColor: "#EAE5D9",
-    padding: 4,
+    borderBottomWidth: 3,
+    borderColor: "#E2E8F0",
+    padding: 6,
     gap: 4,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   tab: {
     flex: 1,
-    minHeight: 66,
+    minHeight: 62,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 5,
+    paddingVertical: 4,
     gap: 3,
   },
   active: {
+    backgroundColor: "#FFFBEB",
     borderWidth: 1.5,
     borderBottomWidth: 2.5,
-    shadowColor: "#293541",
+    borderColor: "#FDE68A",
+    borderBottomColor: "#F59E0B",
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
   activeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D97706",
     marginTop: 1,
   },
   iconContainer: {
-    width: 42,
-    height: 40,
+    width: 36,
+    height: 34,
     alignItems: "center",
     justifyContent: "center",
   },
   iconImage: {
-    width: 34,
-    height: 34,
+    width: 28,
+    height: 28,
   },
   homeIconImage: {
-    width: 36,
-    height: 36,
+    width: 30,
+    height: 30,
   },
   iconActive: {
     opacity: 1,
-    transform: [{ scale: 1.08 }],
+    transform: [{ scale: 1.05 }],
   },
   iconInactive: {
-    opacity: 1,
+    opacity: 0.85,
   },
   label: {
-    color: "#475569",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.2,
+    color: palette.muted,
+    fontSize: 10.5,
+    fontWeight: "700",
   },
   labelActive: {
+    color: palette.text,
     fontWeight: "900",
   },
   badge: {

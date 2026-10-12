@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 20,
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderWidth: 2,
     borderColor: "#DCE1D7",
     alignItems: "center",
@@ -262,14 +262,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#DCE1D7",
     alignItems: "center",
     justifyContent: "center",
   },
   heartBadgeActive: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: "#DCE1D7",
   },
   heartText: {
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     borderColor: "#DCE1D7",
   },
   btnOne: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: "#DCE1D7",
   },
   btnRefill: {
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   priceTag: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,

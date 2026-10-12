@@ -21,6 +21,8 @@ export interface BadgeProgressInput {
   bestTempo?: number;
   coins?: number;
   claimedMilestones?: Record<number, boolean>;
+  claimedLeagueTiers?: Record<string, boolean>;
+  lp?: number;
   matchHistory?: any[];
 }
 
@@ -30,6 +32,7 @@ export function badgesFor(progress: BadgeProgressInput): Badge[] {
   const totalMatchesCount = Math.max(progress.matches, matchHistoryCount, historyBasedMatches);
   const wordsCount = progress.history ? progress.history.length : 0;
   const currentXp = progress.xp ?? 0;
+  const currentLp = progress.lp ?? 0;
   const currentLevel = getPlayerLevel(currentXp);
 
   return [
@@ -51,6 +54,18 @@ export function badgesFor(progress: BadgeProgressInput): Badge[] {
     { id: "tempo-beast", title: "FIRTINA TEMPO", description: "Dakikada en az 4 kelime temposuna ulaş.", icon: "🌪️", accent: "#06B6D4", unlocked: (progress.bestTempo || 0) >= 4 },
     { id: "word-hoarder", title: "SÖZLÜK EFENDİSİ", description: "Toplam 50 kelime çöz.", icon: "📖", accent: "#10B981", unlocked: wordsCount >= 50 },
     { id: "rich-operator", title: "KOZMİK ZENGİN", description: "Kasanı 200 çipe ulaştır.", icon: "🪙", accent: "#F59E0B", unlocked: (progress.coins || 0) >= 200 },
+
+    // Season League Achievement Badges (Dereceli Kademe Rozetleri)
+    { id: "badge-rank-DEMİR", title: "DEMİR ROZET", description: "Demir Ligi'ne katıl ve ilk lig zaferlerini kazan.", icon: "🛡️", accent: "#94A3B8", unlocked: Boolean(progress.claimedLeagueTiers?.["DEMİR"]) || ((progress.lp ?? 0) > 0 || progress.wins > 0) },
+    { id: "badge-rank-BRONZ", title: "BRONZ ROZET", description: "Bronz Ligi'ne yüksel ve yerini sağlamlaştır.", icon: "🥉", accent: "#CD7F32", unlocked: Boolean(progress.claimedLeagueTiers?.["BRONZ"]) || currentLp >= 350 },
+    { id: "badge-rank-GÜMÜŞ", title: "GÜMÜŞ NİŞAN", description: "Gümüş Ligi'ne ulaşarak ustalığını kanıtla.", icon: "🥈", accent: "#94A3B8", unlocked: Boolean(progress.claimedLeagueTiers?.["GÜMÜŞ"]) || currentLp >= 900 },
+    { id: "badge-rank-ALTIN", title: "ALTIN ÇERÇEVE", description: "Altın Ligi'ne adını yazdır.", icon: "🥇", accent: "#F59E0B", unlocked: Boolean(progress.claimedLeagueTiers?.["ALTIN"]) || currentLp >= 1600 },
+    { id: "badge-rank-PLATİN", title: "PLATİN ÇERÇEVE", description: "Platin Ligi'nin seçkin kelime ustaları arasına gir.", icon: "💠", accent: "#06B6D4", unlocked: Boolean(progress.claimedLeagueTiers?.["PLATİN"]) || currentLp >= 2500 },
+    { id: "badge-rank-ELMAS", title: "ELMAS PIRILTISI", description: "Elmas Ligi'ne ulaşarak zirveye yaklaş.", icon: "💎", accent: "#3B82F6", unlocked: Boolean(progress.claimedLeagueTiers?.["ELMAS"]) || currentLp >= 3600 },
+    { id: "badge-rank-KOZMİK", title: "KOZMİK İZ", description: "Kozmik Ligi'nde efsaneler arasına katıl.", icon: "🌌", accent: "#8B5CF6", unlocked: Boolean(progress.claimedLeagueTiers?.["KOZMİK"]) || currentLp >= 5000 },
+    { id: "badge-rank-EBEDİ", title: "EBEDİ ZAFER SÜSÜ", description: "Ebedi Ligi'ne yüksel ve adını tarihe yazdır.", icon: "🔮", accent: "#EC4899", unlocked: Boolean(progress.claimedLeagueTiers?.["EBEDİ"]) || currentLp >= 7000 },
+    { id: "badge-rank-HAKİM", title: "RADYANT TAÇ", description: "Hakim Ligi şampiyonu ol ve en tepede parılda.", icon: "👑", accent: "#EF4444", unlocked: Boolean(progress.claimedLeagueTiers?.["HAKİM"]) || currentLp >= 10000 },
+
     // Level Milestone Achievement Badges (Earned from Level Chests)
     { id: "badge-lvl-15", title: "4×4 BRONZ MİMAR", description: "Seviye 15 Siber Harita Sandığı ödülü.", icon: "🥉", accent: "#CD7F32", unlocked: Boolean(progress.claimedMilestones?.[15]) || currentXp >= 15 * 200 || currentLevel >= 15 || Boolean(progress.missions?.["badge-lvl-15"]) },
     { id: "badge-lvl-30", title: "GÜMÜŞ AĞ UZMANI", description: "Seviye 30 Siber Harita Sandığı ödülü.", icon: "🥈", accent: "#E0E0E0", unlocked: Boolean(progress.claimedMilestones?.[30]) || currentXp >= 30 * 200 || currentLevel >= 30 || Boolean(progress.missions?.["badge-lvl-30"]) },

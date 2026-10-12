@@ -244,12 +244,23 @@ export function CyberStore({
   };
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <StorePurchaseModal
         confirmPurchase={confirmPurchase}
         coins={coins}
         onClose={() => setConfirmPurchase(null)}
       />
+
+      {storeMessage && (
+        <View style={[styles.msgBanner, storeMessage.type === "error" && styles.msgBannerError]}>
+          <Text style={styles.msgBannerIcon}>
+            {storeMessage.type === "error" ? "⚠️" : "✨"}
+          </Text>
+          <Text style={[styles.msgBannerText, storeMessage.type === "error" && styles.msgBannerErrorText]}>
+            {storeMessage.text}
+          </Text>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -266,14 +277,6 @@ export function CyberStore({
             <Text style={styles.coinText}>{coins}</Text>
           </View>
         </View>
-
-        {storeMessage && (
-          <View style={[styles.msgBanner, storeMessage.type === "error" && styles.msgBannerError]}>
-            <Text style={[styles.msgBannerText, storeMessage.type === "error" && styles.msgBannerErrorText]}>
-              {storeMessage.text}
-            </Text>
-          </View>
-        )}
 
         <View style={styles.tabs}>
           {([
@@ -329,6 +332,6 @@ export function CyberStore({
         icon={purchaseCascade.icon}
         badgeText={purchaseCascade.badgeText}
       />
-    </>
+    </View>
   );
 }

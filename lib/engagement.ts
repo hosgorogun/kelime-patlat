@@ -4,8 +4,10 @@ import { Alert, Linking, Platform } from "react-native";
 const REVIEW_PROMPT_KEY = "kelime-patlat:review-prompt-count";
 const TERMS_ACCEPTED_KEY = "kelime-patlat:terms-accepted-v1";
 
+import { notificationsService } from "./notifications";
+
 /**
- * 1. LOCAL NOTIFICATIONS HELPER (Safe In-App / Expo Compatible)
+ * 1. LOCAL NOTIFICATIONS HELPER (Safe In-App & Native Push)
  * Manages engagement local reminders for daily rewards, streaks, and lives regen
  */
 export const notificationManager = {
@@ -20,6 +22,19 @@ export const notificationManager = {
 
       await AsyncStorage.setItem("kelime-patlat:last-reminder-scheduled", today);
       console.log("[NotificationManager] Local engagement reminders active.", { currentLives, nextLifeTimerSeconds });
+
+      if (Platform.OS === "web") return;
+
+      // Temizle ve yeni hatırlatmaları planla
+      await notificationsService.cancelAll();
+
+      if (currentLives < 5) {
+        const missingLives = 5 - currentLives;
+        const totalSeconds = Math.max(60, (missingLives - 1) * 1800 + (nextLifeTimerSeconds || 1800));
+        await notificationsService.scheduleLivesRefillNotification(totalSeconds);
+      }
+
+      await notificationsService.scheduleEveningStreakReminder();
     } catch (e) {
       console.warn("[NotificationManager] Failed to init reminders", e);
     }

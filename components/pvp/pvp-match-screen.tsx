@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -36,7 +37,7 @@ import {
 import { PvpFoundWordsPanel } from "./pvp-found-words-panel";
 import { PvpResultPanel } from "./pvp-result-panel";
 import type { BoardSize, RoomSnapshot } from "@/shared/game";
-import type { PlayerProgress } from "@/shared/progression";
+import { type PlayerProgress, resolveAvatarDisplay } from "@/shared/progression";
 import type { ToastData } from "../common/global-game-toast";
 
 export { type SelectedWordDetail } from "./pvp-route-inspector";
@@ -365,9 +366,13 @@ export function PvpMatchScreen({
           {/* Sol: Benim Oyuncu Kartım */}
           <View style={[styles.duelPlayerBadge, styles.duelPlayerBadgeMe]}>
             <View style={[styles.duelAvatarCircle, { borderColor: "#2DD4BF" }]}>
-              <Text style={styles.duelAvatarEmoji}>
-                {me?.avatar && me.avatar.length <= 3 ? me.avatar : "✨"}
-              </Text>
+              {progress.avatarPhoto ? (
+                <Image source={{ uri: progress.avatarPhoto }} style={styles.duelAvatarPhoto} resizeMode="cover" />
+              ) : (
+                <Text style={styles.duelAvatarEmoji}>
+                  {resolveAvatarDisplay(me?.avatar || progress.selectedAvatar)}
+                </Text>
+              )}
             </View>
             <View style={styles.duelPlayerInfo}>
               <Text numberOfLines={1} style={styles.duelPlayerName}>{me?.name ?? safeName}</Text>
@@ -422,9 +427,13 @@ export function PvpMatchScreen({
               </View>
             </View>
             <View style={[styles.duelAvatarCircle, { borderColor: "#FB7185" }]}>
-              <Text style={styles.duelAvatarEmoji}>
-                {opponent?.avatar && opponent.avatar.length <= 3 ? opponent.avatar : (opponent?.isBot ? "🤖" : "👤")}
-              </Text>
+              {opponent?.avatarPhoto ? (
+                <Image source={{ uri: opponent.avatarPhoto }} style={styles.duelAvatarPhoto} resizeMode="cover" />
+              ) : (
+                <Text style={styles.duelAvatarEmoji}>
+                  {opponent?.isBot ? "🤖" : resolveAvatarDisplay(opponent?.avatar)}
+                </Text>
+              )}
             </View>
           </Pressable>
         </View>
@@ -830,16 +839,18 @@ export function PvpMatchScreen({
       <VersusClashOverlay
         visible={showClash}
         playerName={me?.name || safeName}
-        playerAvatar={me?.avatar || "🎮"}
+        playerAvatar={me?.avatar || progress.selectedAvatar || "✦"}
+        playerAvatarPhoto={progress.avatarPhoto}
         playerTier={me?.tier || "BRONZ"}
         opponentName={opponent?.name || "RAKİP"}
         opponentAvatar={opponent?.avatar || "⚡"}
+        opponentAvatarPhoto={opponent?.avatarPhoto}
         opponentTier={opponent?.tier || "BRONZ"}
         isBot={Boolean(!room.isRanked && (opponent?.isBot || room.players.some((p) => p.isBot)))}
       />
 
       <GameCountdownOverlay
-        countdown={gameCountdown}
+        countdown={!showClash ? gameCountdown : null}
         title="CANLI DÜELLO"
         subtitle="Gizli kelimeleri rakibinden önce bul ve kazan!"
         icon="⚔️"

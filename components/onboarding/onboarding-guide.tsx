@@ -11,10 +11,12 @@ import {
   RewardsVisual,
   MultipliersVisual,
 } from "./onboarding-visuals";
+import { InteractiveTutorialBoard } from "./interactive-tutorial-board";
 
 export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<GuideTabKey>("basics");
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   useEffect(() => {
     if (visible) setActiveTab("basics");
@@ -59,7 +61,7 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
                   </Text>
                 </View>
               </View>
-              <Text style={styles.headerTitle}>SİBER OYUN KILAVUZU & REHBER</Text>
+              <Text style={styles.headerTitle}>OYUN KILAVUZU</Text>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={10}>
               <Text style={styles.closeText}>✕</Text>
@@ -91,7 +93,11 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
           </View>
 
           {/* Main Content Area */}
-          <ScrollView contentContainerStyle={styles.contentScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            scrollEnabled={scrollEnabled}
+            contentContainerStyle={styles.contentScroll}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Title Banner */}
             <View style={[styles.bannerCard, { borderColor: `${currentSection.color}55` }]}>
               <View style={[styles.iconCircle, { borderColor: currentSection.color, backgroundColor: `${currentSection.color}15` }]}>
@@ -104,6 +110,11 @@ export function OnboardingGuide({ visible, onClose }: { visible: boolean; onClos
             </View>
 
             {/* Visual Examples */}
+            {currentSection.key === "basics" && (
+              <InteractiveTutorialBoard
+                onInteractingChange={(interacting) => setScrollEnabled(!interacting)}
+              />
+            )}
             {currentSection.customVisual === "route" && <RouteVisual />}
             {currentSection.customVisual === "modes" && <ModesVisual />}
             {currentSection.customVisual === "leagues" && <LeaguesVisual />}

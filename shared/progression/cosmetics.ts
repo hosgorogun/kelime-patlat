@@ -1,5 +1,5 @@
 import { getPlayerLevel } from "../level-curves";
-import { AvatarId, PlayerProgress, CYBER_TITLES } from "./progression.types";
+import { AvatarId, PlayerProgress, CYBER_TITLES, AVATARS } from "./progression.types";
 
 export function isAvatarUnlocked(avatarId: AvatarId, progress: PlayerProgress): boolean {
   if (progress.purchasedAvatars?.[avatarId]) return true;
@@ -20,3 +20,24 @@ export function getActiveCyberTitle(progress: PlayerProgress): string {
   }
   return available.at(-1)?.badge || "[ÇAYLAK]";
 }
+
+export function getActiveCyberTitleObject(progress: PlayerProgress): (typeof CYBER_TITLES)[number] {
+  const available = CYBER_TITLES.filter((t) => t.unlocked(progress));
+  if (progress.selectedTitle) {
+    const found = available.find((t) => t.badge === progress.selectedTitle);
+    if (found) return found;
+  }
+  return available.at(-1) || CYBER_TITLES[0]!;
+}
+
+export function resolveAvatarDisplay(avatar?: string | null): string {
+  if (!avatar || !avatar.trim()) return "✦";
+  const trimmed = avatar.trim();
+  const matched = AVATARS.find((a) => a.id.toLowerCase() === trimmed.toLowerCase());
+  if (matched) return matched.icon;
+  // If it's a short string (like emoji or symbol <= 2 chars), return it as is
+  if (trimmed.length <= 2) return trimmed;
+  // Default fallback for any unrecognised long string identifier
+  return "✦";
+}
+

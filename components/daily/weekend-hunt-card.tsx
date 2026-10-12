@@ -171,7 +171,7 @@ export const WeekendHuntCard: React.FC<WeekendHuntCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderRadius: 20,
     borderWidth: 1.5,
     padding: 16,

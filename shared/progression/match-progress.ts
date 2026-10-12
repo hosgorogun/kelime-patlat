@@ -22,9 +22,11 @@ export function applyMatchProgress(
     opponentAvatar?: string;
     opponentScore?: number;
     isFriendGame?: boolean;
+    isSurrender?: boolean;
   },
   type: "pvp" | "bot" | "solo" | "daily" = "pvp"
 ) {
+  const isSurrender = Boolean(result.isSurrender);
   const isFriend = Boolean(result.isFriendGame);
   const foundWordsList = result.foundWords || [];
   const wordsCount = foundWordsList.length;
@@ -46,6 +48,9 @@ export function applyMatchProgress(
   const duelProgress = Math.min(2, previousDuels + (type !== "solo" && type !== "daily" && !isFriend && (hasContributed || result.won) ? 1 : 0));
   const hasLongWord = result.longWord || foundWordsList.some((w) => w.length >= 7);
   const wordsmithProgress = Math.min(1, previousWordsmith + (hasLongWord ? 1 : 0));
+  const todayStr = getDayId();
+  const mystery = getDailyMysteryWord();
+  const mysteryFound = foundWordsList.some((w) => isEqualTr(w, mystery.word));
   const newHistory = [...(progress.history || []), ...foundWordsList].slice(-150);
 
   // --- KADEMELİ VE DİNAMİK LİG PUANI (LP) HESAPLAMASI ---
@@ -88,6 +93,18 @@ export function applyMatchProgress(
     // Arkadaş maçları özel dostluk maçıdır; LP, XP ve Çip kazandırmaz
     baseXP = 0;
     lpGain = 0;
+  } else if (isSurrender) {
+    // MAÇI TERK ETME / KAÇMA CEZASI:
+    // Kesinlikle XP verilmez (0 XP), ekstra kaçma cezası uygulanır (-25 LP üst liglerde, -18 alt liglerde)
+    baseXP = 0;
+    if (type === "pvp") {
+      lpGain = isEntryTier ? -15 : isHighTier ? -28 : -22;
+    } else if (type === "bot") {
+      lpGain = isHighTier ? -20 : -14;
+    } else {
+      lpGain = 0;
+    }
+    pvpWinStreak = 0; // Terk eden oyuncunun alev serisi kalkan olsa bile kırılır
   } else if (!hasContributed && !result.won) {
     // SIFIR KELİME & YENİLGİ (AFK / Katkısız maç): Kesinlikle taban EXP verilmez, ancak lig cezası düşülür!
     baseXP = 0;
@@ -169,9 +186,8 @@ export function applyMatchProgress(
       xpGain += 50;
     }
 
-    // Daily Mystery Word bonus (+150 XP)
-    const mystery = getDailyMysteryWord();
-    if (foundWordsList.some((w) => isEqualTr(w, mystery.word))) {
+    // Daily Mystery Word bonus (+150 XP - Günde yalnızca 1 kez alınabilir, farm önleme)
+    if (mysteryFound && progress.dailyMysteryClaimedDate !== todayStr) {
       xpGain += mystery.rewardXp;
     }
   }
@@ -281,7 +297,9 @@ export function applyMatchProgress(
     matches: progress.matches + (type !== "solo" && type !== "daily" && !isFriend ? 1 : 0),
     bestScore: Math.max(progress.bestScore, result.score),
     bestTempo: Math.max(progress.bestTempo, result.tempo),
-    bestArcadeScore: Math.max(progress.bestArcadeScore || 0, result.arcadeScore || 0),
+    dailyMysteryClaimedDate: (mysteryFound && !isFriend && (hasContributed || result.won))
+      ? todayStr
+      : progress.dailyMysteryClaimedDate,
     missions: nextMissions,
     history: newHistory,
     discoveredWords: updatedDiscoveredWords,

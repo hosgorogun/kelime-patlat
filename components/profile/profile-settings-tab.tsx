@@ -12,6 +12,8 @@ export type ProfileSettingsTabProps = {
   toggleSfx: (val: boolean) => void;
   hapticsOn: boolean;
   toggleHaptics: (val: boolean) => void;
+  notificationsOn?: boolean;
+  toggleNotifications?: (val: boolean) => void;
   progress: PlayerProgress;
   onUpdateGender?: (gender: GenderType) => void;
   isGuest?: boolean;
@@ -28,6 +30,8 @@ export const ProfileSettingsTab = React.memo(({
   toggleSfx,
   hapticsOn,
   toggleHaptics,
+  notificationsOn = true,
+  toggleNotifications,
   progress,
   onUpdateGender,
   isGuest,
@@ -68,7 +72,7 @@ export const ProfileSettingsTab = React.memo(({
           />
         </View>
 
-        <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+        <View style={styles.settingRow}>
           <View style={styles.settingLabelWrap}>
             <View style={[styles.settingIconCircle, { backgroundColor: "rgba(167, 139, 250, 0.12)" }]}>
               <Text style={styles.settingRowIcon}>📳</Text>
@@ -85,6 +89,33 @@ export const ProfileSettingsTab = React.memo(({
               toggleHaptics(val);
             }}
             trackColor={{ false: "#EDF4FC", true: "#3EE8B5" }}
+            thumbColor="#FFF"
+          />
+        </View>
+
+        <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+          <View style={styles.settingLabelWrap}>
+            <View style={[styles.settingIconCircle, { backgroundColor: "rgba(56, 189, 248, 0.12)" }]}>
+              <Text style={styles.settingRowIcon}>🔔</Text>
+            </View>
+            <View>
+              <Text style={styles.settingLabel}>HATIRLATICI BİLDİRİMLER</Text>
+              <Text style={styles.settingSubLabel}>Can yenilenmesi ve günlük seri alarmları</Text>
+            </View>
+          </View>
+          <Switch
+            value={notificationsOn}
+            onValueChange={(val) => {
+              triggerHapticSelection();
+              toggleNotifications?.(val);
+              onShowToast?.(
+                val ? "BİLDİRİMLER AÇILDI 🔔" : "BİLDİRİMLER KAPATILDI 🔕",
+                val ? "Canların dolduğunda ve günlük ödüllerde haber vereceğiz." : "Bildirim almayacaksınız.",
+                val ? "🔔" : "🔕",
+                val ? "#38BDF8" : "#94A3B8"
+              );
+            }}
+            trackColor={{ false: "#EDF4FC", true: "#38BDF8" }}
             thumbColor="#FFF"
           />
         </View>

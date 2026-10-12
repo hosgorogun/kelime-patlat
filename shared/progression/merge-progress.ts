@@ -251,6 +251,7 @@ export function mergePlayerProgress(
     dailyRevivesCount: local.dailyRevivesDate === cleanRemote.dailyRevivesDate
       ? Math.max(local.dailyRevivesCount ?? 0, cleanRemote.dailyRevivesCount ?? 0)
       : (local.dailyRevivesCount ?? cleanRemote.dailyRevivesCount ?? 0),
+    dailyMysteryClaimedDate: local.dailyMysteryClaimedDate || cleanRemote.dailyMysteryClaimedDate || undefined,
     history: Array.from(new Set([...(local.history ?? []), ...(cleanRemote.history ?? [])])).slice(-150),
     discoveredWords: Array.from(new Set([...(local.discoveredWords ?? []), ...(cleanRemote.discoveredWords ?? [])])).slice(-2000),
     wordBookClaimedMilestones: {

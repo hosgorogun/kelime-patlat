@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { triggerHapticSuccess, gameSfx } from "@/shared/audio-haptics";
+import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
 
 interface WelcomeRewardModalProps {
   visible: boolean;
@@ -15,6 +16,8 @@ export const WelcomeRewardModal: React.FC<WelcomeRewardModalProps> = ({
   onClaim,
   onClose,
 }) => {
+  const [showCascade, setShowCascade] = useState(false);
+
   if (!visible) return null;
 
   return (
@@ -65,22 +68,27 @@ export const WelcomeRewardModal: React.FC<WelcomeRewardModalProps> = ({
 
           {/* Buton */}
           <Pressable
-            disabled={isClaiming}
+            disabled={isClaiming || showCascade}
             onPress={() => {
               triggerHapticSuccess();
               try { gameSfx.victory(); } catch {}
-              onClaim();
+              setShowCascade(true);
+              setTimeout(() => {
+                setShowCascade(false);
+                onClaim();
+              }, 1200);
             }}
             style={({ pressed }) => [
               styles.actionButton,
-              { opacity: pressed || isClaiming ? 0.7 : 1 },
+              { opacity: pressed || isClaiming || showCascade ? 0.7 : 1 },
             ]}
           >
             <Text style={styles.actionButtonText}>
-              {isClaiming ? "TANIMLANIYOR..." : "HARİKA, BAŞLA! 🚀"}
+              {isClaiming || showCascade ? "TANIMLANIYOR..." : "HARİKA, BAŞLA! 🚀"}
             </Text>
           </Pressable>
         </View>
+        <CoinCascadeOverlay trigger={showCascade} count={14} icon="🪙" />
       </View>
     </Modal>
   );
@@ -97,7 +105,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 360,
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderRadius: 28,
     borderWidth: 2,
     borderColor: "#DCE1D7",

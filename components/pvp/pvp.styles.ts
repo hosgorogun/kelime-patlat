@@ -181,9 +181,17 @@ export const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  duelAvatarPhoto: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 16,
   },
   duelAvatarEmoji: {
     fontSize: 16,
+    includeFontPadding: false,
+    textAlign: "center",
   },
   duelPlayerInfo: {
     flex: 1,

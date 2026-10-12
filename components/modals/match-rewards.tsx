@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     borderColor: "#DCE1D7",
   },
   lpGainBadge: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: "#DCE1D7",
   },
   lpLossBadge: {

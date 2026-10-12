@@ -23,6 +23,7 @@ import { ModernAlertModal } from "../modals/modern-alert-modal";
 import { SeasonResetModal } from "../season/season-reset-modal";
 import { DuelInviteModal } from "../friends/duel-invite-modal";
 import { MatchmakingOverlay } from "../modals/matchmaking-overlay";
+import { OnboardingGuide } from "../onboarding/onboarding-guide";
 import { consentManager } from "@/lib/engagement";
 import { useNavigation, useAuth, useUIFeedback, usePvP } from "@/context";
 
@@ -56,7 +57,9 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
     setGlobalAlert,
     seasonResetModal,
     setSeasonResetModal,
+    showGuide,
     setShowGuide,
+    handleCloseGuide,
     setShowWelcomeModal,
     setShowConsentModal,
   } = useUIFeedback();
@@ -99,6 +102,7 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
       {livesModalElement}
       {celebrationModalElement}
       {luckyWheelModalElement}
+      <OnboardingGuide visible={showGuide} onClose={handleCloseGuide} />
     </>
   );
 
@@ -111,6 +115,19 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
   }
 
   const renderScreen = () => {
+    if (showGuide) {
+      return (
+        <HomeScreenView
+          onAcceptConsent={async () => {
+            await consentManager.acceptConsent();
+            setShowConsentModal(false);
+          }}
+          onOpenLuckyWheel={onOpenLuckyWheel}
+          luckyWheelModalElement={luckyWheelModalElement}
+        />
+      );
+    }
+
     if (screen === "auth" || !authToken) {
       return (
         <AuthScreenContainer
@@ -121,7 +138,6 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
               }, 300);
             } else {
               setShowWelcomeModal(false);
-              setShowGuide(false);
             }
             setScreen("home");
           }}

@@ -37,6 +37,7 @@ export function SeasonHub({
   onInspectUser,
   onOpenLeagueHub,
   onPlayRanked,
+  onClaimReward,
   initialTab,
   pendingRequests,
   onAcceptRequest,
@@ -53,6 +54,7 @@ export function SeasonHub({
   onInspectUser?: (user: Partial<LeaderboardEntry> & { id: string; name: string }) => void;
   onOpenLeagueHub?: () => void;
   onPlayRanked?: () => void;
+  onClaimReward?: (tier: string, chips: number, shields: number) => void;
   initialTab?: SeasonTab;
   pendingRequests?: FriendRequest[];
   onAcceptRequest?: (requestId: string) => void;
@@ -401,6 +403,7 @@ export function SeasonHub({
             progress={progress}
             leaderboard={leaderboard}
             onPlayRanked={onPlayRanked}
+            onClaimReward={onClaimReward}
             embedded={true}
           />
         )}

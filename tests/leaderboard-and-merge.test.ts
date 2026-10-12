@@ -338,16 +338,16 @@ describe("getLeagueTier - Sinir Deger ve Tam Esik Testleri", () => {
     expect(getLeagueTier(1600).tier).toBe("ALTIN");
     expect(getLeagueTier(2500).tier).toBe("PLATİN");
     expect(getLeagueTier(3600).tier).toBe("ELMAS");
-    expect(getLeagueTier(5000).tier).toBe("YÜCELİK");
-    expect(getLeagueTier(7000).tier).toBe("ÖLÜMSÜZLÜK");
-    expect(getLeagueTier(10000).tier).toBe("RADIAN");
+    expect(getLeagueTier(5000).tier).toBe("KOZMİK");
+    expect(getLeagueTier(7000).tier).toBe("EBEDİ");
+    expect(getLeagueTier(10000).tier).toBe("HAKİM");
   });
 
   it("esik altindaki degerler bir asagi kademede kalir", () => {
     expect(getLeagueTier(349).tier).toBe("DEMİR"); // 350 tam bronz
     expect(getLeagueTier(899).tier).toBe("BRONZ");
     expect(getLeagueTier(1599).tier).toBe("GÜMÜŞ");
-    expect(getLeagueTier(9999).tier).toBe("ÖLÜMSÜZLÜK");
+    expect(getLeagueTier(9999).tier).toBe("EBEDİ");
   });
 });
 

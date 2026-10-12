@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { palette } from '@/shared/palette';
 
 export const styles = StyleSheet.create({
 
@@ -781,7 +782,7 @@ export const styles = StyleSheet.create({
   },
 
   appInfoCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: palette.panel,
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: "#DCE1D7",
@@ -803,7 +804,7 @@ export const styles = StyleSheet.create({
   },
 
   dangerZoneCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: palette.panel,
     borderRadius: 20,
     padding: 14,
     borderWidth: 1.5,

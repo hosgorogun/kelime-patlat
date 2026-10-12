@@ -1,14 +1,17 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View, Easing } from "react-native";
+import { Animated, Modal, StyleSheet, Text, View, Image, Easing } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { resolveAvatarDisplay } from "@/shared/progression";
 
 export interface VersusClashOverlayProps {
   visible: boolean;
   playerName: string;
   playerAvatar?: string;
+  playerAvatarPhoto?: string;
   opponentName: string;
   opponentAvatar?: string;
+  opponentAvatarPhoto?: string;
   opponentTier?: string;
   playerTier?: string;
   isBot?: boolean;
@@ -17,9 +20,11 @@ export interface VersusClashOverlayProps {
 export function VersusClashOverlay({
   visible,
   playerName,
-  playerAvatar = "🎮",
+  playerAvatar = "✦",
+  playerAvatarPhoto,
   opponentName,
   opponentAvatar = "⚡",
+  opponentAvatarPhoto,
   opponentTier = "BRONZ",
   playerTier = "BRONZ",
   isBot = false,
@@ -29,6 +34,9 @@ export function VersusClashOverlay({
   const vsScale = useRef(new Animated.Value(0)).current;
   const flashAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const playerGlyph = resolveAvatarDisplay(playerAvatar);
+  const opponentGlyph = isBot ? "🤖" : resolveAvatarDisplay(opponentAvatar);
 
   useEffect(() => {
     if (!visible) return;
@@ -97,100 +105,110 @@ export function VersusClashOverlay({
   if (!visible) return null;
 
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        styles.container,
-        {
-          transform: [{ translateX: shakeAnim }],
-        },
-      ]}
-    >
-      {/* Background Flash on Clash */}
+    <Modal visible transparent animationType="none" statusBarTranslucent>
       <Animated.View
+        pointerEvents="none"
         style={[
-          styles.clashFlash,
+          styles.container,
           {
-            opacity: flashAnim,
+            transform: [{ translateX: shakeAnim }],
           },
         ]}
-      />
-
-      {/* Top Banner Tag */}
-      <View style={styles.headerTag}>
-        <Text style={styles.headerTagText}>⚡ RAKİP BULUNDU · DÜELLO ÇARPIŞMASI ⚡</Text>
-      </View>
-
-      <View style={styles.versusArena}>
-        {/* Left Player (Me) */}
+      >
+        {/* Background Flash on Clash */}
         <Animated.View
           style={[
-            styles.playerSide,
+            styles.clashFlash,
             {
-              transform: [{ translateX: leftSlide }],
+              opacity: flashAnim,
             },
           ]}
-        >
-          <LinearGradient
-            colors={["#0EA5E9", "#0284C7"]}
-            style={styles.avatarGlow}
-          >
-            <Text style={styles.avatarText}>{playerAvatar}</Text>
-          </LinearGradient>
-          <Text style={styles.playerName} numberOfLines={1}>
-            {playerName}
-          </Text>
-          <View style={styles.tierPillLeft}>
-            <Text style={styles.tierText}>{playerTier}</Text>
-          </View>
-        </Animated.View>
+        />
 
-        {/* Center "VS" Clash Badge */}
-        <Animated.View
-          style={[
-            styles.vsBadgeWrap,
-            {
-              transform: [{ scale: vsScale }],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={["#EF4444", "#F59E0B"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.vsBadge}
-          >
-            <Text style={styles.vsText}>VS</Text>
-          </LinearGradient>
-        </Animated.View>
+        {/* Top Banner Tag */}
+        <View style={styles.headerTag}>
+          <Text style={styles.headerTagText}>⚡ RAKİP BULUNDU · DÜELLO ÇARPIŞMASI ⚡</Text>
+        </View>
 
-        {/* Right Player (Opponent / Bot) */}
-        <Animated.View
-          style={[
-            styles.playerSide,
-            styles.opponentSide,
-            {
-              transform: [{ translateX: rightSlide }],
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={isBot ? ["#A855F7", "#7C3AED"] : ["#EC4899", "#BE185D"]}
-            style={styles.avatarGlow}
+        <View style={styles.versusArena}>
+          {/* Left Player (Me) */}
+          <Animated.View
+            style={[
+              styles.playerSide,
+              {
+                transform: [{ translateX: leftSlide }],
+              },
+            ]}
           >
-            <Text style={styles.avatarText}>{opponentAvatar}</Text>
-          </LinearGradient>
-          <Text style={styles.opponentName} numberOfLines={1}>
-            {opponentName}
-          </Text>
-          <View style={styles.tierPillRight}>
-            <Text style={styles.tierText}>{isBot ? "BOT 🤖" : opponentTier}</Text>
-          </View>
-        </Animated.View>
-      </View>
+            <LinearGradient
+              colors={["#0EA5E9", "#0284C7"]}
+              style={styles.avatarGlow}
+            >
+              {playerAvatarPhoto ? (
+                <Image source={{ uri: playerAvatarPhoto }} style={styles.avatarPhoto} resizeMode="cover" />
+              ) : (
+                <Text style={styles.avatarText}>{playerGlyph}</Text>
+              )}
+            </LinearGradient>
+            <Text style={styles.playerName} numberOfLines={1}>
+              {playerName}
+            </Text>
+            <View style={styles.tierPillLeft}>
+              <Text style={styles.tierText}>{playerTier}</Text>
+            </View>
+          </Animated.View>
 
-      <Text style={styles.hintText}>Hazır ol, harfler birazdan açılıyor!</Text>
-    </Animated.View>
+          {/* Center "VS" Clash Badge */}
+          <Animated.View
+            style={[
+              styles.vsBadgeWrap,
+              {
+                transform: [{ scale: vsScale }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={["#EF4444", "#F59E0B"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.vsBadge}
+            >
+              <Text style={styles.vsText}>VS</Text>
+            </LinearGradient>
+          </Animated.View>
+
+          {/* Right Player (Opponent / Bot) */}
+          <Animated.View
+            style={[
+              styles.playerSide,
+              styles.opponentSide,
+              {
+                transform: [{ translateX: rightSlide }],
+              },
+            ]}
+          >
+            <LinearGradient
+              colors={isBot ? ["#A855F7", "#7C3AED"] : ["#EC4899", "#BE185D"]}
+              style={styles.avatarGlow}
+            >
+              {opponentAvatarPhoto ? (
+                <Image source={{ uri: opponentAvatarPhoto }} style={styles.avatarPhoto} resizeMode="cover" />
+              ) : (
+                <Text style={styles.avatarText}>{opponentGlyph}</Text>
+              )}
+            </LinearGradient>
+            <Text style={styles.opponentName} numberOfLines={1}>
+              {opponentName}
+            </Text>
+            <View style={styles.tierPillRight}>
+              <Text style={styles.tierText}>{isBot ? "BOT 🤖" : opponentTier}</Text>
+            </View>
+          </Animated.View>
+        </View>
+
+        <Text style={styles.hintText}>Hazır ol, harfler birazdan açılıyor!</Text>
+      </Animated.View>
+    </Modal>
   );
 }
 
@@ -250,9 +268,17 @@ const styles = StyleSheet.create({
     elevation: 10,
     borderWidth: 3,
     borderColor: "rgba(255, 255, 255, 0.4)",
+    overflow: "hidden",
+  },
+  avatarPhoto: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 43,
   },
   avatarText: {
-    fontSize: 40,
+    fontSize: 38,
+    textAlign: "center",
+    includeFontPadding: false,
   },
   playerName: {
     marginTop: 10,

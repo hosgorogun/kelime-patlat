@@ -71,7 +71,7 @@ describe("Senior QA Edge Case Test Suiti - Derinlikli Sınır Durumları (Compre
 
   it("Lig kademeleri: LP eksi veya aşırı yüksek uç değerlerde çökmeksizin doğru kademeyi vermelidir", () => {
     expect(getLeagueTier(-500).tier).toBe("DEMİR");
-    expect(getLeagueTier(999999).tier).toBe("RADIAN");
+    expect(getLeagueTier(999999).tier).toBe("HAKİM");
   });
 
   it("Kayıt birleştirme (mergePlayerProgress): Bozuk veya null veriler geldiğinde varsayılanları korumalıdır", () => {

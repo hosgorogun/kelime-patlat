@@ -4,13 +4,14 @@ import { Animated, Dimensions, Image, PanResponder, Pressable, ScrollView, Text,
 import { LinearGradient } from "expo-linear-gradient";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, getActiveCyberTitle, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, canSpinLuckyWheel, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, getActiveCyberTitle, getActiveCyberTitleObject, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, canSpinLuckyWheel, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { palette } from "@/shared/palette";
 import { GameButton, GameGlyph, GameIcon, GemChip, ICONS, JewelTitle, OrnatePanel, SectionLabel } from "@/components/game/game-ui";
 import { MatchHistoryModal } from "@/components/match-history/match-history-modal";
 import { DailyTreasureModal } from "@/components/modals/daily-treasure-modal";
+import { NotificationCenterModal } from "@/components/modals/notification-center-modal";
 import { BotPracticeModal } from "./bot-practice-modal";
 import { CommandInfoModal } from "./command-info-modal";
 import { FRAME_IMAGES } from "@/components/profile/profile-constants";
@@ -79,6 +80,7 @@ export function CommandCenter({
 }: CommandCenterProps) {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const hasAutoOpenedDailyRewardRef = useRef(false);
   const [isMysteryExpanded, setIsMysteryExpanded] = useState(false);
   const [livesCalc, setLivesCalc] = useState(() => getCalculatedLives(progress));
@@ -151,6 +153,7 @@ export function CommandCenter({
   const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
   const activeFrameColor = activeFrame ? activeFrame[2] : (activeAvatar.color || palette.emerald);
   const activeTitle = getActiveCyberTitle(progress);
+  const activeTitleObj = getActiveCyberTitleObject(progress);
 
   const [infoModal, setInfoModal] = useState<"shield" | "radar" | "lives" | "rotani" | "mystery" | null>(null);
 
@@ -309,13 +312,58 @@ export function CommandCenter({
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Text numberOfLines={1} style={[styles.name, { flexShrink: 1 }]}>{playerName}</Text>
                 {activeTitle ? (
-                  <View style={styles.titlePill}>
-                    <Text numberOfLines={1} style={styles.cyberBadge}>{activeTitle}</Text>
+                  <View
+                    style={[
+                      styles.titlePill,
+                      activeTitleObj?.accent
+                        ? {
+                            backgroundColor: `${activeTitleObj.accent}14`,
+                            borderColor: `${activeTitleObj.accent}33`,
+                          }
+                        : null,
+                    ]}
+                  >
+                    {activeTitleObj?.icon ? (
+                      <Text style={styles.titleIcon}>{activeTitleObj.icon}</Text>
+                    ) : null}
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.cyberBadge,
+                        activeTitleObj?.accent ? { color: activeTitleObj.accent } : null,
+                      ]}
+                    >
+                      {activeTitle.replace(/^\[|\]$/g, "")}
+                    </Text>
                   </View>
                 ) : null}
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-                <Text numberOfLines={1} style={styles.rank}>Sv. {getPlayerLevel(progress.xp)} · {rank}</Text>
+              <View style={styles.rankRow}>
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelBadgeIcon}>⚡</Text>
+                  <Text style={styles.levelBadgeText}>SV. {getPlayerLevel(progress.xp)}</Text>
+                </View>
+                <View
+                  style={[
+                    styles.tierBadge,
+                    league?.color
+                      ? {
+                          backgroundColor: `${league.color}14`,
+                          borderColor: `${league.color}40`,
+                        }
+                      : null,
+                  ]}
+                >
+                  <Text style={styles.tierBadgeIcon}>{league?.icon || "🛡️"}</Text>
+                  <Text
+                    style={[
+                      styles.tierBadgeText,
+                      league?.color ? { color: league.color } : null,
+                    ]}
+                  >
+                    {rank}
+                  </Text>
+                </View>
                 {(progress.pvpWinStreak ?? 0) >= 2 && (
                   <Pressable
                     onPress={(e) => {
@@ -406,7 +454,8 @@ export function CommandCenter({
             value={progress.streakShields || 0}
             color="#1D4ED8"
             bg="#EFF6FF"
-            borderColor="#93C5FD"
+            borderColor="#BFDBFE"
+            borderBottomColor="#93C5FD"
             onPress={() => { triggerHapticSelection(); setInfoModal("shield"); }}
           />
           <GemChip
@@ -416,7 +465,8 @@ export function CommandCenter({
             value={progress.radarChargesBonus || 0}
             color="#047857"
             bg="#ECFDF5"
-            borderColor="#6EE7B7"
+            borderColor="#A7F3D0"
+            borderBottomColor="#6EE7B7"
             onPress={() => { triggerHapticSelection(); setInfoModal("radar"); }}
           />
           <GemChip
@@ -424,16 +474,17 @@ export function CommandCenter({
             iconSize={26}
             label="ÇİP"
             value={displayCoins}
-            color="#A06300"
-            bg="#FFFDF0"
-            borderColor="#F6DC8A"
+            color="#B45309"
+            bg="#FFFBEB"
+            borderColor="#FDE68A"
+            borderBottomColor="#F59E0B"
             plus
             badge={!isClaimedToday}
             onPress={() => onNavigate("store")}
           />
         </View>
 
-        {/* Daima 2'li yan yana duran Hazine ve Çark kartları */}
+        {/* Daima dengeli duran Hazine, Çark ve Gizemli Kelime kartları */}
         <View style={styles.quickActionsRow}>
           <Pressable
             onPress={() => {
@@ -443,20 +494,21 @@ export function CommandCenter({
             style={({ pressed }) => [
               styles.quickActionCard,
               {
-                backgroundColor: "#FFF8E7",
-                borderColor: "#F4D267",
+                backgroundColor: "#FFFBEB",
+                borderColor: "#FDE68A",
+                borderBottomColor: "#F59E0B",
               },
               pressed && styles.pressed,
             ]}
           >
-            <View style={[styles.quickActionIconWrap, { backgroundColor: "#FEEDBE" }]}>
-              <Image source={ICONS.gift} style={{ width: 22, height: 22 }} resizeMode="contain" />
+            <View style={[styles.quickActionIconWrap, { backgroundColor: "#FEF3C7" }]}>
+              <Image source={ICONS.gift} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </View>
             <View style={styles.quickActionContent}>
-              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#8A5F0B" }]}>
+              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#92400E" }]}>
                 GÜN {displayDayNumber}/7
               </Text>
-              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#B87A00" }]}>
+              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#B45309" }]}>
                 {isClaimedToday ? "Giriş Hediyesi" : "Hazineyi Al"}
               </Text>
             </View>
@@ -472,12 +524,16 @@ export function CommandCenter({
             }}
             style={({ pressed }) => [
               styles.quickActionCard,
-              { backgroundColor: "#F0F7FF", borderColor: "#BAD9FB" },
+              {
+                backgroundColor: "#F0F9FF",
+                borderColor: "#BAE6FD",
+                borderBottomColor: "#60A5FA",
+              },
               pressed && styles.pressed,
             ]}
           >
-            <View style={[styles.quickActionIconWrap, { backgroundColor: "#DBEAFE" }]}>
-              <Image source={ICONS.wheel} style={{ width: 22, height: 22 }} resizeMode="contain" />
+            <View style={[styles.quickActionIconWrap, { backgroundColor: "#E0F2FE" }]}>
+              <Image source={ICONS.wheel} style={{ width: 20, height: 20 }} resizeMode="contain" />
             </View>
             <View style={styles.quickActionContent}>
               <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#1D4ED8" }]}>
@@ -544,19 +600,20 @@ export function CommandCenter({
           <InfoMini color="#176C97" onPress={() => setInfoModal("rotani")} />
         </View>
         <JewelTitle style={{ fontSize: 26, lineHeight: 30, marginTop: 6 }}>Azıcık mola. {"\n"}Bolca kelime.</JewelTitle>
-        <View accessible={false} style={{ flexDirection: "row", gap: 7, marginTop: 14, marginBottom: 4 }}>
+        <View accessible={false} style={{ flexDirection: "row", gap: 7, marginTop: 14, marginBottom: 12 }}>
           {PATLAT_TILES.map((tile, index) => {
             const anim = tileAnims[index];
             const translateY = anim ? anim.interpolate({
               inputRange: [0, 0.45, 1],
-              outputRange: [0, -10, 0],
+              outputRange: [0, -8, 0],
             }) : 0;
             const scale = anim ? anim.interpolate({
               inputRange: [0, 0.45, 1],
-              outputRange: [1, 1.15, 1],
+              outputRange: [1, 1.1, 1],
             }) : 1;
-            const baseRotate = index % 2 === 0 ? -6 : 6;
-            const swingRotate = index % 2 === 0 ? 12 : -12;
+            const gentleAngles = [-3, 2, -2, 3, -1, 2];
+            const baseRotate = gentleAngles[index] ?? 0;
+            const swingRotate = -baseRotate * 1.5;
             const rotate = anim ? anim.interpolate({
               inputRange: [0, 0.5, 1],
               outputRange: [`${baseRotate}deg`, `${swingRotate}deg`, `${baseRotate}deg`],
@@ -580,21 +637,21 @@ export function CommandCenter({
                     height: 48,
                     borderRadius: 13,
                     borderWidth: 1.5,
-                    borderBottomWidth: 4,
+                    borderBottomWidth: 3.5,
                     borderColor: tile.border,
                     backgroundColor: tile.bg,
                     alignItems: "center",
                     justifyContent: "center",
                     shadowColor: tile.border,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.22,
-                    shadowRadius: 4,
-                    elevation: 4,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.18,
+                    shadowRadius: 3,
+                    elevation: 3,
                     transform: [{ translateY }, { scale }, { rotate }],
                   }}
                 >
                   <View style={styles.tileSheen} />
-                  <Text style={{ color: tile.text, fontWeight: "900", fontSize: 23 }}>
+                  <Text style={{ color: tile.text, fontWeight: "900", fontSize: 22 }}>
                     {tile.letter}
                   </Text>
                 </Animated.View>
@@ -645,24 +702,24 @@ export function CommandCenter({
           
           <View style={styles.secondaryHeroRow}>
             <GameButton
-              label="Arkadaşla oyna"
+              label="Arkadaşla Oyna"
               icon="👥"
               variant="friend"
               size="md"
               onPress={() => onNavigate("friends")}
               style={{ flex: 1 }}
             />
-            <Pressable
+            <GameButton
+              label="Pratik Yap"
+              icon="🎯"
+              variant="dark"
+              size="md"
               onPress={() => {
                 triggerHapticSelection();
                 setShowBotPracticeModal(true);
               }}
-              style={({ pressed }) => [styles.botPracticeBtnMini, pressed && styles.pressed]}
-            >
-              <Text style={styles.botPracticeIcon}>🎯</Text>
-              <Text numberOfLines={1} style={styles.botPracticeText}>Pratik Yap</Text>
-              <Text style={styles.botPracticeArrow}>➔</Text>
-            </Pressable>
+              style={{ flex: 1 }}
+            />
           </View>
         </View>
       </OrnatePanel>
@@ -811,8 +868,44 @@ export function CommandCenter({
           onNavigate("online");
         }}
       />
+
+      <NotificationCenterModal
+        visible={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+        progress={progress}
+        unclaimedMissionsCount={unclaimedMissionsCount}
+        isClaimedToday={isClaimedToday}
+        canSpinWheel={canSpinWheel}
+        lives={livesCalc.lives}
+        onNavigate={onNavigate}
+        onOpenDailyReward={() => setShowDailyRewardModal(true)}
+        onOpenLuckyWheel={onOpenLuckyWheel}
+        onOpenLivesModal={onOpenLivesModal}
+      />
     </ScrollView>
 
+    {/* Bildirim Çanı Butonu (Büyüteçin Tam Üstünde) */}
+    <Pressable
+      onPress={() => {
+        triggerHapticSelection();
+        setShowNotificationCenter(true);
+      }}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={({ pressed }) => [styles.notificationFab, pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel="Bildirimler"
+    >
+      <Text style={styles.notificationFabIcon}>🔔</Text>
+      {(unclaimedMissionsCount > 0 || !isClaimedToday || canSpinWheel) && (
+        <View style={styles.mysteryFabNotifyBadge}>
+          <Text style={styles.mysteryFabNotifyText}>
+            {unclaimedMissionsCount > 0 ? unclaimedMissionsCount : "!"}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+
+    {/* Günün Gizemli Kelimesi Büyüteç Butonu */}
     <Pressable
       onPress={() => {
         triggerHapticSelection();

@@ -153,7 +153,7 @@ export function ScoreBadge({
 
 const styles = StyleSheet.create({
   scoreBadge: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#DCE1D7",
     borderRadius: 20,

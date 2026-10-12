@@ -24,7 +24,7 @@ interface SoloCellProps {
   isInspectedStart: boolean;
   isInspectedEnd: boolean;
   inspectedColor?: string | null;
-  feedback: any;
+  feedback: "idle" | "accepted" | "bonus" | "invalid" | null;
   countdown: number | null;
   specialTileType?: "ice" | "bomb" | "gold";
   surface: string;
@@ -132,7 +132,7 @@ const SoloCell = React.memo(function SoloCell({
               size === 6 && styles.letterMedium,
               size === 8 && styles.letterSmall,
               size === 10 && styles.letterExtraSmall,
-              isSelected && { color: "#78350F" },
+              isSelected && { color: "#92400E" },
               feedback === "accepted" && isSelected && { color: "#065F46" },
               feedback === "bonus" && isSelected && { color: "#854D0E" },
               feedback === "invalid" && isSelected && { color: "#991B1B" },

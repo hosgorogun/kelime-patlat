@@ -13,7 +13,7 @@ export type SeasonLeaderboardTabProps = {
   rank: string;
   userRankPosition: number;
   userScore: number;
-  scoreDiffToLeader: number;
+  scoreDiffToLeader?: number;
   rankingType: RankingType;
   setRankingType: (type: RankingType) => void;
   leaderboardFilter: "global" | "friends";
@@ -80,23 +80,6 @@ export const SeasonLeaderboardTab = React.memo(({
               {userRankPosition ? `${userRankPosition}. SIRADASIN` : "SIRALAMA DIŞI"} · {userScore} PUAN
             </Text>
           </View>
-        </View>
-        <View style={styles.userStatusRight}>
-          {userRankPosition === 1 ? (
-            <View style={styles.leaderCrownBadge}>
-              <Text style={styles.leaderCrownText}>👑 LİDERSİN</Text>
-            </View>
-          ) : scoreDiffToLeader > 0 ? (
-            <View style={styles.diffBadge}>
-              <Text style={styles.diffKicker}>ZİRVEYE KALAN</Text>
-              <Text style={styles.diffScore}>-{Math.abs(scoreDiffToLeader)} P</Text>
-            </View>
-          ) : (
-            <View style={styles.diffBadge}>
-              <Text style={styles.diffKicker}>DÜELLO YAP</Text>
-              <Text style={styles.diffScore}>PUAN KAZAN</Text>
-            </View>
-          )}
         </View>
       </View>
 

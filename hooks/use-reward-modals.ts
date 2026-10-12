@@ -21,7 +21,7 @@ export function useRewardModals({
   syncProgressToCloud,
   setGlobalToast,
 }: UseRewardModalsParams) {
-  const [showGuide, setShowGuide] = useState(false);
+  const [showGuide, setShowGuide] = useState(true);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [isClaimingWelcomeReward, setIsClaimingWelcomeReward] = useState(false);
   const isClaimingDailyRewardRef = useRef(false);

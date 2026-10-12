@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Alert,
   Modal,
   View,
   Text,
@@ -11,6 +10,7 @@ import {
 import { AVATARS, getTierColor, getPlayerLevel } from "@/shared/progression";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
+import { ModernAlertModal, type ModernAlertData } from "@/components/modals/modern-alert-modal";
 import { styles } from "./user-profile-modal.styles";
 
 export type InspectableUser = {
@@ -53,6 +53,7 @@ export function UserProfileModal({
 }) {
   const [imgError, setImgError] = React.useState(false);
   const [isSendingFriend, setIsSendingFriend] = React.useState(false);
+  const [alertData, setAlertData] = React.useState<ModernAlertData | null>(null);
   const friendTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -248,22 +249,44 @@ export function UserProfileModal({
               <Pressable
                 onPress={() => {
                   triggerHapticSelection();
-                  Alert.alert(
-                    "Oyuncuyu Bildir / Engelle",
-                    `"${displayName}" isimli oyuncuyu bildirmek veya engellemek istiyor musunuz?`,
-                    [
-                      { text: "İptal", style: "cancel" },
-                      {
-                        text: "🚫 Engelle",
-                        style: "destructive",
-                        onPress: () => Alert.alert("Engellendi", `"${displayName}" engellendi.`),
+                  setAlertData({
+                    icon: "🛡️",
+                    kicker: "GÜVENLİK VE MODERASYON",
+                    title: "Oyuncuyu Bildir / Engelle",
+                    message: `"${displayName}" isimli oyuncuyu uygunsuz davranış, hile veya rahatsızlık nedeniyle bildirmek veya engellemek istiyor musunuz?`,
+                    accentColor: "#EF4444",
+                    primaryButton: {
+                      text: "🚫 Oyuncuyu Engelle",
+                      color: "#EF4444",
+                      onPress: () => {
+                        setAlertData({
+                          icon: "✓",
+                          title: "Oyuncu Engellendi",
+                          message: `"${displayName}" başarıyla engellendi. Artık seninle eşleşmeyecek.`,
+                          accentColor: "#10B981",
+                          primaryButton: {
+                            text: "Tamam",
+                            onPress: () => setAlertData(null),
+                          },
+                        });
                       },
-                      {
-                        text: "⚠️ Bildir (Report)",
-                        onPress: () => Alert.alert("Bildirildi", "Şikayetiniz modaretörlerimize iletildi."),
+                    },
+                    secondaryButton: {
+                      text: "⚠️ Şikayet Et (Report)",
+                      onPress: () => {
+                        setAlertData({
+                          icon: "✉️",
+                          title: "Şikayet İletildi",
+                          message: "Geri bildiriminiz moderasyon ekibimize başarıyla ulaştı. Teşekkür ederiz.",
+                          accentColor: "#F59E0B",
+                          primaryButton: {
+                            text: "Tamam",
+                            onPress: () => setAlertData(null),
+                          },
+                        });
                       },
-                    ]
-                  );
+                    },
+                  });
                 }}
                 style={{ marginTop: 12, alignItems: "center", paddingVertical: 6 }}
               >
@@ -275,6 +298,8 @@ export function UserProfileModal({
           </ScrollView>
         </Pressable>
       </Pressable>
+
+      <ModernAlertModal alert={alertData} onDismiss={() => setAlertData(null)} />
     </Modal>
   );
 }

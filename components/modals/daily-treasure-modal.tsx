@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#DCE1D7",
     borderRadius: 12,
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 82,
     borderRadius: 14,
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1.5,
     borderColor: "#DCE1D7",
     alignItems: "center",
@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.03 }],
   },
   dayCardClaimed: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: palette.emerald,
   },
   dayCardEpic: {

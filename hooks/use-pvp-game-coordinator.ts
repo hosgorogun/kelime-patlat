@@ -141,14 +141,7 @@ export function usePvpGameCoordinator({
       : 356;
 
   const boardWidth = Math.min(
-    width -
-      (roomSocket.room?.size === 10
-        ? 20
-        : roomSocket.room?.size === 8
-        ? 28
-        : roomSocket.room?.size === 6
-        ? 34
-        : 40),
+    width - 24,
     maxBoardByDimension,
     maxBoardFromHeight
   );

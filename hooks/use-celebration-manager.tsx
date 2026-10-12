@@ -5,6 +5,7 @@ import {
   getLevelUpDetails,
 } from "../components/modals/celebration-modal";
 import {
+  badgesFor,
   getCalculatedLives,
   getLeagueTier,
   getPlayerLevel,
@@ -35,6 +36,7 @@ export function useCelebrationManager({
   const prevLevelRef = useRef<number | null>(null);
   const prevTierRef = useRef<string | null>(null);
   const lastAwardedLevelRef = useRef<number | null>(null);
+  const prevUnlockedBadgesRef = useRef<Set<string> | null>(null);
 
   const handleDismissCelebration = useCallback(() => {
     setCelebrationQueue((prev) => prev.slice(1));
@@ -47,7 +49,7 @@ export function useCelebrationManager({
     const currentTier = getLeagueTier(progress).tier;
 
     const didLevelUp = prevLevelRef.current !== null && currentLevel > prevLevelRef.current;
-    const tierOrder = ["DEMİR", "BRONZ", "GÜMÜŞ", "ALTIN", "PLATİN", "ELMAS", "YÜCELİK", "ÖLÜMSÜZLÜK", "RADIAN"];
+    const tierOrder = ["DEMİR", "BRONZ", "GÜMÜŞ", "ALTIN", "PLATİN", "ELMAS", "KOZMİK", "EBEDİ", "HAKİM"];
     const prevTier = prevTierRef.current;
     const isTierPromo =
       prevTier !== null && currentTier !== prevTier && tierOrder.indexOf(currentTier) > tierOrder.indexOf(prevTier);
@@ -127,6 +129,34 @@ export function useCelebrationManager({
 
     prevLevelRef.current = currentLevel;
     prevTierRef.current = currentTier;
+
+    // 🎖️ Yeni Açılan Rozetleri Algıla ve Anında Bildirim (Toast) Göster
+    try {
+      const allCurrentBadges = badgesFor(progress);
+      const currentUnlockedIds = new Set(allCurrentBadges.filter((b) => b.unlocked).map((b) => b.id));
+
+      if (prevUnlockedBadgesRef.current !== null) {
+        const newlyUnlocked = allCurrentBadges.filter(
+          (b) => b.unlocked && !prevUnlockedBadgesRef.current!.has(b.id)
+        );
+        if (newlyUnlocked.length > 0) {
+          const firstNew = newlyUnlocked[0]!;
+          setTimeout(() => {
+            setGlobalToast({
+              id: `badge-${firstNew.id}-${Date.now()}`,
+              title: `YENİ ROZET AÇILDI! 🎖️`,
+              subtitle: `${firstNew.icon} ${firstNew.title}: ${firstNew.description}`,
+              icon: firstNew.icon || "🎖️",
+              accentColor: firstNew.accent || "#FFC24A",
+              badge: "ROZET",
+            });
+          }, didLevelUp || isTierPromo ? 5500 : 800);
+        }
+      }
+      prevUnlockedBadgesRef.current = currentUnlockedIds;
+    } catch (e) {
+      console.warn("[CelebrationManager] Badge unlock check failed:", e);
+    }
 
     // Schedule local push notifications for streak & lives refill
     const livesCalc = getCalculatedLives(progress);

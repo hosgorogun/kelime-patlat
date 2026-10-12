@@ -31,6 +31,7 @@ import {
   ProfilePrivacyModal,
 } from "./profile-modals";
 import { WordBookModal } from "./word-book-modal";
+import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
 
 export function ProfileScreen({
   playerName,
@@ -83,6 +84,7 @@ export function ProfileScreen({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showWordBookModal, setShowWordBookModal] = useState(false);
+  const [wordRewardCascade, setWordRewardCascade] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [imgError, setImgError] = useState(false);
 
@@ -380,6 +382,16 @@ export function ProfileScreen({
           toggleSfx={toggleSfx}
           hapticsOn={hapticsOn}
           toggleHaptics={toggleHaptics}
+          notificationsOn={progress.notificationsEnabled !== false}
+          toggleNotifications={(val) => {
+            if (setProgress) {
+              setProgress((prev) => {
+                const next = { ...prev, notificationsEnabled: val };
+                void syncProgressToCloud?.(next);
+                return next;
+              });
+            }
+          }}
           progress={progress}
           onUpdateGender={onUpdateGender}
           isGuest={isGuest}
@@ -421,6 +433,8 @@ export function ProfileScreen({
         progress={progress}
         setProgress={setProgress || (() => {})}
         onClaimMilestone={(m) => {
+          setWordRewardCascade(true);
+          setTimeout(() => setWordRewardCascade(false), 1600);
           onShowToast?.("LÜGAT ÖDÜLÜ ALINDI", `${m.count} kelime başarısı: +${m.rewardCoins} Çip!`, "📖", "#10B981");
           if (syncProgressToCloud && setProgress) {
             setProgress((curr) => {
@@ -438,6 +452,7 @@ export function ProfileScreen({
           }
         }}
       />
+      <CoinCascadeOverlay trigger={wordRewardCascade} count={10} icon="🪙" />
     </ScrollView>
   );
 }

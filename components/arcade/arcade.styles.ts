@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#F0F5ED" },
+  content: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28, backgroundColor: "#F8FAFC" },
   header: { height: 52, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   exit: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#FFFFFF", borderWidth: 1.5, borderColor: "#E2E8F0", alignItems: "center", justifyContent: "center", shadowColor: "#293541", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
   exitText: { color: "#293541", fontSize: 23, lineHeight: 23 },

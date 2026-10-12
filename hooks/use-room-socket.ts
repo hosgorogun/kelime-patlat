@@ -324,6 +324,7 @@ export function useRoomSocket({
               opponentAvatar: opponent?.avatar,
               opponentScore: opponentScore,
               isFriendGame: isFriend,
+              isSurrender: true,
             },
             isBotMatch && !room.isRanked ? "bot" : "pvp"
           );

@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { type MatchHistoryEntry, type PlayerProgress } from "@/shared/progression";
+import {
+  backfillMatchHistoryIfEmpty,
+  type MatchHistoryEntry,
+  type PlayerProgress,
+} from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { ICONS } from "@/components/game/game-ui";
 import { styles } from "./match-history.styles";
@@ -45,7 +49,9 @@ export function MatchHistoryModal({
 
   if (!visible) return null;
 
-  const history: MatchHistoryEntry[] = progress.matchHistory ?? [];
+  const rawHistory = progress.matchHistory ?? [];
+  const history: MatchHistoryEntry[] =
+    rawHistory.length > 0 ? rawHistory : backfillMatchHistoryIfEmpty(progress);
 
   // Filter items
   const filteredMatches = history.filter((item) => {

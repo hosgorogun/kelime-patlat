@@ -783,7 +783,7 @@ export function ArcadeChallenge({
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F0F5ED" }}>
+    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
       {/* Pulsing Red Vignette for Urgent Time (seconds <= 8) */}
       {isUrgent && status === "playing" && (
         <View

@@ -13,6 +13,7 @@ import { normalizeTr, normalizeTrUpper, isEqualTr } from "@/shared/tr-utils";
 import { WORD_BOOK_MILESTONES, type PlayerProgress, type WordBookMilestone } from "@/shared/progression";
 import { fetchWordDetail } from "@/shared/dictionary";
 import { haptics } from "@/lib/haptics";
+import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
 
 export interface WordBookModalProps {
   visible: boolean;
@@ -33,6 +34,7 @@ export const WordBookModal = React.memo(({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [definitionLoading, setDefinitionLoading] = useState(false);
+  const [cascadeTrigger, setCascadeTrigger] = useState(false);
   const [currentDefinition, setCurrentDefinition] = useState<{
     word: string;
     definition: string;
@@ -89,6 +91,8 @@ export const WordBookModal = React.memo(({
 
   const handleClaimReward = useCallback((milestone: WordBookMilestone) => {
     haptics.success();
+    setCascadeTrigger(true);
+    setTimeout(() => setCascadeTrigger(false), 1600);
     setProgress((curr) => ({
       ...curr,
       coins: (curr.coins ?? 0) + milestone.rewardCoins,
@@ -284,6 +288,7 @@ export const WordBookModal = React.memo(({
             )}
           </ScrollView>
         </View>
+        <CoinCascadeOverlay trigger={cascadeTrigger} count={12} icon="🪙" />
       </View>
     </Modal>
   );

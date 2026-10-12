@@ -127,7 +127,7 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
         >
           {/* Icon Circle */}
           {alert.icon && (
-            <View style={[styles.iconCircle, { borderColor: accentColor, backgroundColor: "#F0F5ED" }]}>
+            <View style={[styles.iconCircle, { borderColor: accentColor, backgroundColor: "#F8FAFC" }]}>
               <Text style={styles.iconText}>{alert.icon}</Text>
             </View>
           )}
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#F7F5EE",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1.5,
     borderBottomWidth: 2.5,
     borderColor: "#DCE1D7",

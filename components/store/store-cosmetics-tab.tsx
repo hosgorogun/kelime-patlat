@@ -91,7 +91,7 @@ export function StoreCosmeticsTab({
                 isSelected ? { backgroundColor: color } :
                 owned ? styles.badgeOwned : styles.badgeCost
               ]}>
-                <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#293541" }]}>
+                <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#FFFFFF", fontWeight: "900" }]}>
                   {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : `🪙 ${cost}`}
                 </Text>
               </View>
@@ -155,7 +155,7 @@ export function StoreCosmeticsTab({
                 isSelected ? { backgroundColor: themeColor } :
                 owned ? styles.badgeOwned : styles.badgeCost
               ]}>
-                <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#293541" }]}>
+                <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#FFFFFF", fontWeight: "900" }]}>
                   {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : `🪙 ${cost}`}
                 </Text>
               </View>
@@ -211,7 +211,7 @@ export function StoreCosmeticsTab({
 
               <Text numberOfLines={1} style={[styles.cosmeticCardName, { color }]}>{label}</Text>
               <View style={[styles.cosmeticCardBadge, isSelected ? { backgroundColor: color } : owned ? styles.badgeOwned : styles.badgeCost]}>
-                <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#293541" }]}>
+                <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#FFFFFF", fontWeight: "900" }]}>
                   {isSelected ? "✓ SEÇİLİ" : owned ? "KULLAN" : `🪙 ${cost}`}
                 </Text>
               </View>

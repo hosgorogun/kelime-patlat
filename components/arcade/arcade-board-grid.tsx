@@ -22,7 +22,7 @@ interface ArcadeCellProps {
   isInspectedStart: boolean;
   isInspectedEnd: boolean;
   inspectedColor?: string | null;
-  feedback: any;
+  feedback: "idle" | "accepted" | "bonus" | "invalid" | null;
   countdown: number | null;
 }
 
@@ -137,7 +137,7 @@ const ArcadeCell = React.memo(function ArcadeCell({
                 position: "absolute",
                 top: size >= 8 ? 1 : 2,
                 right: size >= 8 ? 1 : 2,
-                backgroundColor: isInspectedStart ? "#F0F5ED" : isInspectedEnd ? "#f0a4a4" : "#F0F5ED",
+                backgroundColor: isInspectedStart ? "#F8FAFC" : isInspectedEnd ? "#f0a4a4" : "#F8FAFC",
                 borderRadius: size >= 8 ? 4 : 6,
                 minWidth: size >= 8 ? 12 : 16,
                 height: size >= 8 ? 12 : 16,

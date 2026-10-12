@@ -770,7 +770,7 @@ export const vintageStyles = StyleSheet.create({
   },
   levelMapGridContainer: {
     paddingHorizontal: 12,
-    paddingBottom: 24,
+    paddingBottom: 180,
   },
   mapGridRow: {
     flexDirection: "row",

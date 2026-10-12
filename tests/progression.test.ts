@@ -101,9 +101,9 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
       [1600, "ALTIN"],
       [2500, "PLATİN"],
       [3600, "ELMAS"],
-      [5000, "YÜCELİK"],
-      [7000, "ÖLÜMSÜZLÜK"],
-      [10000, "RADIAN"],
+      [5000, "KOZMİK"],
+      [7000, "EBEDİ"],
+      [10000, "HAKİM"],
     ] as const;
     expected.forEach(([points, tier]) => expect(getLeagueTier(points).tier).toBe(tier));
     expect(getLeagueTier(349).tier).toBe("DEMİR");
@@ -113,7 +113,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
   it("başarı rozetlerinin kilit açılma şartlarını doğru değerlendirir", () => {
     const fresh = badgesFor(DEFAULT_PROGRESS);
     expect(fresh.every((b) => !b.unlocked)).toBe(true);
-    expect(fresh.length).toBe(24);
+    expect(fresh.length).toBe(33);
 
     const advanced = badgesFor({
       ...DEFAULT_PROGRESS,
@@ -122,6 +122,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
       streak: 14,
       bestArcadeScore: 1000,
       xp: 20000,
+      lp: 10000,
       bestTempo: 4.2,
       coins: 250,
       history: new Array(50).fill("TEST"),
@@ -148,6 +149,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const seasoned = {
       ...DEFAULT_PROGRESS,
       xp: 20000,
+      lp: 10000,
       bestArcadeScore: 1000,
       matches: 25,
       wins: 25,
@@ -541,7 +543,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const topRank = { ...DEFAULT_PROGRESS, lp: 5000, lastSeasonResetId: "2026-S04" };
     const topRes = reconcileSeasonReset(topRank, new Date("2026-09-01"));
     expect(topRes.resetResult.seasonResetPerformed).toBe(true);
-    expect(topRes.resetResult.previousRank).toBe("YÜCELİK");
+    expect(topRes.resetResult.previousRank).toBe("KOZMİK");
     expect(topRes.resetResult.newLp).toBe(2500);
 
     // 4. Aynı 2 aylık periyot içinde tekrar çalıştırıldığında sıfırlama yapılmaz

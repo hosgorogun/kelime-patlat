@@ -48,14 +48,24 @@ export function StorePurchaseModal({
           <Text style={styles.confirmDesc}>{confirmPurchase.description}</Text>
 
           <View style={styles.confirmBalanceInfo}>
-            <Text style={styles.confirmBalanceText}>
-              Mevcut Bakiye:{" "}
-              <Text style={{ color: "#98732c", fontWeight: "900" }}>{coins} Çip</Text> →
-              Kalan:{" "}
-              <Text style={{ color: "#2a9c7a", fontWeight: "900" }}>
-                {Math.max(0, coins - confirmPurchase.cost)} Çip
+            {coins < confirmPurchase.cost ? (
+              <Text style={styles.confirmBalanceText}>
+                Mevcut Bakiye:{" "}
+                <Text style={{ color: "#DC2626", fontWeight: "900" }}>{coins} Çip</Text> •{" "}
+                <Text style={{ color: "#DC2626", fontWeight: "900" }}>
+                  {confirmPurchase.cost - coins} Çip Eksik!
+                </Text>
               </Text>
-            </Text>
+            ) : (
+              <Text style={styles.confirmBalanceText}>
+                Mevcut Bakiye:{" "}
+                <Text style={{ color: "#98732c", fontWeight: "900" }}>{coins} Çip</Text> →{" "}
+                Kalan:{" "}
+                <Text style={{ color: "#2a9c7a", fontWeight: "900" }}>
+                  {Math.max(0, coins - confirmPurchase.cost)} Çip
+                </Text>
+              </Text>
+            )}
           </View>
 
           <View style={styles.confirmActionsRow}>
@@ -67,15 +77,27 @@ export function StorePurchaseModal({
             </Pressable>
 
             <Pressable
+              disabled={coins < confirmPurchase.cost}
               onPress={() => {
                 triggerHapticSuccess();
                 const action = confirmPurchase.onConfirm;
                 onClose();
                 action();
               }}
-              style={({ pressed }) => [styles.confirmAcceptBtn, pressed && { opacity: 0.85 }]}
+              style={({ pressed }) => [
+                styles.confirmAcceptBtn,
+                coins < confirmPurchase.cost && { backgroundColor: "#F1F5F9", shadowOpacity: 0, elevation: 0 },
+                pressed && { opacity: 0.85 },
+              ]}
             >
-              <Text style={styles.confirmAcceptText}>✓ SATIN AL</Text>
+              <Text
+                style={[
+                  styles.confirmAcceptText,
+                  coins < confirmPurchase.cost && { color: "#94A3B8" },
+                ]}
+              >
+                {coins < confirmPurchase.cost ? "Yetersiz Çip" : "✓ SATIN AL"}
+              </Text>
             </Pressable>
           </View>
         </Pressable>

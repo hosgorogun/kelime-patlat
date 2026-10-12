@@ -68,23 +68,23 @@ export type OrnatePanelAccent =
   | "purple";
 
 const panelColors: Record<OrnatePanelAccent, string> = {
-  gold: "#FFFFFF",
-  emerald: "#E8F7EE",
-  ruby: "#FFF0EB",
-  cyan: "#E4F3FA",
-  amber: "#FFF5DA",
-  sapphire: "#E7F2FC",
-  purple: "#F3EDFA",
+  gold: "#FFFBEB",
+  emerald: "#ECFDF5",
+  ruby: "#FFF1F2",
+  cyan: "#F0F9FF",
+  amber: "#FFFBEB",
+  sapphire: "#F0F9FF",
+  purple: "#FAF5FF",
 };
 
 const panelBorders: Record<OrnatePanelAccent, string> = {
-  gold: "#DFD7CA",
-  emerald: "#B2DEBE",
-  ruby: "#F3BFB3",
-  cyan: "#B4DBEE",
-  amber: "#EDCD8A",
-  sapphire: "#BCD8F0",
-  purple: "#D3BFE8",
+  gold: "#FDE68A",
+  emerald: "#A7F3D0",
+  ruby: "#FECDD3",
+  cyan: "#BAE6FD",
+  amber: "#FDE68A",
+  sapphire: "#BAE6FD",
+  purple: "#E9D5FF",
 };
 
 export function OrnatePanel({
@@ -123,13 +123,13 @@ export function OrnatePanel({
 type GameButtonVariant = "gold" | "emerald" | "ruby" | "sapphire" | "dark" | "primary" | "friend";
 
 const buttons: Record<GameButtonVariant, readonly [string, string, string]> = {
-  gold: ["#FFD66E", "#D3A63D", "#293541"],
-  emerald: ["#2ECC71", "#219653", "#FFFFFF"],
-  primary: ["#2ECC71", "#219653", "#FFFFFF"],
-  ruby: ["#FFAA99", "#CE796B", "#293541"],
-  sapphire: ["#4FA3E3", "#2C7CB9", "#FFFFFF"],
-  friend: ["#4FA3E3", "#2C7CB9", "#FFFFFF"],
-  dark: ["#E9EDE7", "#BFC8BD", "#293541"],
+  gold: ["#F59E0B", "#B45309", "#FFFFFF"],
+  emerald: ["#10B981", "#047857", "#FFFFFF"],
+  primary: ["#10B981", "#047857", "#FFFFFF"],
+  ruby: ["#F43F5E", "#BE123C", "#FFFFFF"],
+  sapphire: ["#0284C7", "#0369A1", "#FFFFFF"],
+  friend: ["#0284C7", "#0369A1", "#FFFFFF"],
+  dark: ["#F1F5F9", "#94A3B8", "#0F172A"],
 };
 
 export function GameButton({
@@ -255,6 +255,7 @@ export function GemChip({
   color,
   bg,
   borderColor,
+  borderBottomColor,
   onPress,
   plus,
   badge,
@@ -267,6 +268,7 @@ export function GemChip({
   color: string;
   bg?: string;
   borderColor?: string;
+  borderBottomColor?: string;
   onPress?: () => void;
   plus?: boolean;
   badge?: boolean;
@@ -281,6 +283,7 @@ export function GemChip({
         styles.chip,
         bg ? { backgroundColor: bg } : null,
         borderColor ? { borderColor } : null,
+        borderBottomColor ? { borderBottomColor } : null,
         pressed && { opacity: 0.75, transform: [{ scale: 0.98 }] },
       ]}
     >
@@ -297,7 +300,7 @@ export function GemChip({
             {label}
           </Text>
         ) : null}
-        <Text style={styles.chipValue}>{value}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={styles.chipValue}>{value}</Text>
       </View>
       {plus ? (
         <View style={styles.plusPill}>
@@ -461,61 +464,15 @@ export function BoardCountdownShield({
         StyleSheet.absoluteFill,
         {
           borderRadius: 22,
-          backgroundColor: isDark ? "rgba(15, 23, 42, 0.94)" : "rgba(248, 250, 252, 0.94)",
+          backgroundColor: isDark ? "rgba(15, 23, 42, 0.85)" : "rgba(240, 245, 237, 0.88)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           zIndex: 80,
-          alignItems: "center",
-          justifyContent: "center",
           opacity: fadeAnim,
           overflow: "hidden",
         } as any,
       ]}
-    >
-      <View
-        style={{
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: 22,
-          paddingVertical: 18,
-          borderRadius: 22,
-          backgroundColor: isDark ? "rgba(30, 41, 59, 0.88)" : "rgba(255, 255, 255, 0.92)",
-          borderWidth: 1.5,
-          borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(226, 232, 240, 0.95)",
-          shadowColor: "#0F172A",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.12,
-          shadowRadius: 12,
-          elevation: 6,
-        }}
-      >
-        <Text style={{ fontSize: 32, marginBottom: 8 }}>🔒</Text>
-        <Text
-          style={{
-            color: isDark ? "#F8FAFC" : "#1E293B",
-            fontSize: 14,
-            fontWeight: "900",
-            letterSpacing: 0.8,
-            textTransform: "uppercase",
-          }}
-        >
-          HARFLER GİZLENDİ
-        </Text>
-        <Text
-          style={{
-            color: isDark ? "#94A3B8" : "#64748B",
-            fontSize: 11,
-            fontWeight: "700",
-            marginTop: 4,
-            textAlign: "center",
-          }}
-        >
-          {countdown > 0
-            ? `${countdown} saniye sonra açılacak`
-            : "Hazırlan, başlıyor!"}
-        </Text>
-      </View>
-    </Animated.View>
+    />
   );
 }
 
@@ -573,34 +530,35 @@ const styles = StyleSheet.create({
   chip: {
     flex: 1,
     minHeight: 48,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 6,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: palette.panel,
     borderWidth: 1.5,
     borderBottomWidth: 3,
-    borderColor: "#D2DAD0",
-    shadowColor: "#293541",
+    borderColor: "#E2E8F0",
+    borderBottomColor: "#CBD5E1",
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 3,
     elevation: 2,
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: 5,
   },
   chipIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
   },
-  chipLabel: { color: "#54646B", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.3 },
-  chipValue: { color: palette.text, fontSize: 16, fontWeight: "900" },
+  chipLabel: { color: "#54646B", fontSize: 9, fontWeight: "900", letterSpacing: 0.2 },
+  chipValue: { color: palette.text, fontSize: 14.5, fontWeight: "900", letterSpacing: -0.2 },
   plusPill: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     borderRadius: 7,
     backgroundColor: "#FCE7A6",
     borderWidth: 1,
@@ -608,7 +566,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  plusText: { color: "#8E5E04", fontSize: 14, fontWeight: "900", lineHeight: 16 },
+  plusText: { color: "#8E5E04", fontSize: 13, fontWeight: "900", lineHeight: 15 },
   badge: {
     position: "absolute",
     right: 5,

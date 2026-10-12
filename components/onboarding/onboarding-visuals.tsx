@@ -5,7 +5,7 @@ import { onboardingStyles as styles } from "./onboarding.styles";
 export const RouteVisual = React.memo(() => {
   return (
     <View style={styles.visualCard}>
-      <Text style={styles.visualLabel}>ÖRNEK GEÇERLİ VE GEÇERSİZ ROTALAR:</Text>
+      <Text style={styles.visualLabel}>BAĞLANTI ÖRNEKLERİ</Text>
       <View style={styles.routeExampleRow}>
         <View style={styles.exampleCol}>
           <View style={styles.miniBoardRow}>
@@ -17,7 +17,7 @@ export const RouteVisual = React.memo(() => {
             <Text style={styles.miniArrow}>➔</Text>
             <View style={[styles.miniCell, styles.miniCellActive]}><Text style={styles.miniLetter}>I</Text></View>
           </View>
-          <Text style={styles.validStatusText}>✓ GEÇERLİ (90° Dik / Yatay)</Text>
+          <Text style={styles.validStatusText}>✓ Doğru (Dik veya Yatay)</Text>
         </View>
         <View style={styles.exampleDivider} />
         <View style={styles.exampleCol}>
@@ -26,7 +26,7 @@ export const RouteVisual = React.memo(() => {
             <Text style={[styles.miniArrow, { color: "#ca4f62" }]}>⤨</Text>
             <View style={[styles.miniCell, styles.miniCellInvalid]}><Text style={[styles.miniLetter, { color: "#ca4f62" }]}>L</Text></View>
           </View>
-          <Text style={styles.invalidStatusText}>✗ YASAK (Çapraz Bağlantı)</Text>
+          <Text style={styles.invalidStatusText}>✗ Çapraz Bağlanamaz</Text>
         </View>
       </View>
     </View>

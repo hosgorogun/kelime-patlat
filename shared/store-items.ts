@@ -5,7 +5,7 @@ export type ChipEquipmentItem = {
   cost: number;
   icon: string;
   imageKey?: string;
-  rewardType: "radar" | "shield" | "lives";
+  rewardType: "radar" | "shield" | "lives" | "xp";
 };
 
 
@@ -36,6 +36,15 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
     icon: "🛡️",
     imageKey: "shield",
     rewardType: "shield",
+  },
+  {
+    id: "xp_250",
+    name: "250 XP Kapsülü",
+    description: "Seviye ilerlemeni hızlandıran yüksek enerjili bilgi kapsülü.",
+    cost: 150,
+    icon: "🧪",
+    imageKey: "radar",
+    rewardType: "xp",
   },
 ];
 

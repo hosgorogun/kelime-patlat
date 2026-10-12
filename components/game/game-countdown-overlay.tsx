@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Modal, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
@@ -103,91 +103,93 @@ export function GameCountdownOverlay({
   const isStart = countdown === 0;
 
   return (
-    <View style={styles.countdownOverlay} pointerEvents="none">
-      {/* Central Glassmorphic Halo HUD */}
-      <View style={styles.contentWrap}>
-        {/* Mode Tag */}
-        <View style={[styles.modeTag, { borderColor: `${currentStage.accentColor}55`, backgroundColor: "rgba(255, 255, 255, 0.95)" }]}>
-          <Text style={styles.modeTagIcon}>{icon}</Text>
-          <Text style={[styles.modeTagText, { color: "#1E293B" }]}>{title}</Text>
-        </View>
+    <Modal visible transparent animationType="fade" statusBarTranslucent>
+      <View style={styles.countdownOverlay} pointerEvents="none">
+        {/* Central Glassmorphic Halo HUD */}
+        <View style={styles.contentWrap}>
+          {/* Mode Tag */}
+          <View style={[styles.modeTag, { borderColor: `${currentStage.accentColor}55`, backgroundColor: "rgba(255, 255, 255, 0.95)" }]}>
+            <Text style={styles.modeTagIcon}>{icon}</Text>
+            <Text style={[styles.modeTagText, { color: "#1E293B" }]}>{title}</Text>
+          </View>
 
-        {/* Central Glowing Orb with Dynamic Counter */}
-        <View style={styles.orbArea}>
-          {/* Animated Halo Ring */}
-          <Animated.View
-            style={[
-              styles.expandingRing,
-              {
-                borderColor: currentStage.accentColor,
-                transform: [{ scale: ringScale }],
-                opacity: ringOpacity,
-              },
-            ]}
-          />
+          {/* Central Glowing Orb with Dynamic Counter */}
+          <View style={styles.orbArea}>
+            {/* Animated Halo Ring */}
+            <Animated.View
+              style={[
+                styles.expandingRing,
+                {
+                  borderColor: currentStage.accentColor,
+                  transform: [{ scale: ringScale }],
+                  opacity: ringOpacity,
+                },
+              ]}
+            />
 
-          {/* Central Pulsing Sphere */}
-          <Animated.View
-            style={[
-              styles.centerOrbWrap,
-              {
-                transform: [{ scale: pulseScale }],
-                opacity: pulseOpacity,
-                shadowColor: currentStage.accentColor,
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={currentStage.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.orbGradient}
+            {/* Central Pulsing Sphere */}
+            <Animated.View
+              style={[
+                styles.centerOrbWrap,
+                {
+                  transform: [{ scale: pulseScale }],
+                  opacity: pulseOpacity,
+                  shadowColor: currentStage.accentColor,
+                },
+              ]}
             >
-              {isStart ? (
-                <View style={styles.startWrap}>
-                  <Text style={styles.startText}>BAŞLA!</Text>
-                </View>
-              ) : (
-                <Text style={styles.numberText}>{countdown}</Text>
-              )}
-            </LinearGradient>
-          </Animated.View>
-        </View>
+              <LinearGradient
+                colors={currentStage.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.orbGradient}
+              >
+                {isStart ? (
+                  <View style={styles.startWrap}>
+                    <Text style={styles.startText}>BAŞLA!</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.numberText}>{countdown}</Text>
+                )}
+              </LinearGradient>
+            </Animated.View>
+          </View>
 
-        {/* Dynamic Stage Prompt Banner */}
-        <View style={[styles.promptBadge, { backgroundColor: "rgba(255, 255, 255, 0.96)", borderColor: `${currentStage.accentColor}66` }]}>
-          <Text style={[styles.statusLabel, { color: currentStage.accentColor }]}>
-            {currentStage.statusLabel}
-          </Text>
-          <Text style={styles.subtitleText}>{subtitle}</Text>
-        </View>
+          {/* Dynamic Stage Prompt Banner */}
+          <View style={[styles.promptBadge, { backgroundColor: "rgba(255, 255, 255, 0.96)", borderColor: `${currentStage.accentColor}66` }]}>
+            <Text style={[styles.statusLabel, { color: currentStage.accentColor }]}>
+              {currentStage.statusLabel}
+            </Text>
+            <Text style={styles.subtitleText}>{subtitle}</Text>
+          </View>
 
-        {/* Step Indicator Progress Dots */}
-        <View style={styles.stepDotsRow}>
-          {[3, 2, 1].map((step) => {
-            const isFilled = countdown <= step;
-            return (
-              <View
-                key={step}
-                style={[
-                  styles.stepDot,
-                  isFilled
-                    ? {
-                        backgroundColor: currentStage.accentColor,
-                        shadowColor: currentStage.accentColor,
-                        shadowOpacity: 0.9,
-                        shadowRadius: 6,
-                        elevation: 4,
-                        width: 24,
-                      }
-                    : { backgroundColor: "rgba(255, 255, 255, 0.45)" },
-                ]}
-              />
-            );
-          })}
+          {/* Step Indicator Progress Dots */}
+          <View style={styles.stepDotsRow}>
+            {[3, 2, 1].map((step) => {
+              const isFilled = countdown <= step;
+              return (
+                <View
+                  key={step}
+                  style={[
+                    styles.stepDot,
+                    isFilled
+                      ? {
+                          backgroundColor: currentStage.accentColor,
+                          shadowColor: currentStage.accentColor,
+                          shadowOpacity: 0.9,
+                          shadowRadius: 6,
+                          elevation: 4,
+                          width: 24,
+                        }
+                      : { backgroundColor: "rgba(255, 255, 255, 0.45)" },
+                  ]}
+                />
+              );
+            })}
+          </View>
         </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 

@@ -22,6 +22,7 @@ import { useRewardModals } from "@/hooks/use-reward-modals";
 import { useSocialState } from "@/hooks/use-social-state";
 import { useProgressionStats } from "@/hooks/use-progression-stats";
 import { useEngagementLifecycle } from "@/hooks/use-engagement-lifecycle";
+import { useLocalNotificationEngine } from "@/hooks/use-local-notifications";
 import { useMatchConfirmation } from "@/hooks/use-match-confirmation";
 import { usePvpGameCoordinator } from "@/hooks/use-pvp-game-coordinator";
 import { useLuckyWheel } from "@/hooks/use-lucky-wheel";
@@ -285,6 +286,7 @@ export function AppRoot() {
   });
 
   const { showConsentModal, setShowConsentModal } = useEngagementLifecycle();
+  useLocalNotificationEngine(progress);
 
   const navigationValue = {
     screen,

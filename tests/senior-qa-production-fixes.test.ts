@@ -409,5 +409,43 @@ describe("Senior QA Production Fixes & Regression Suite", () => {
       expect(cohort2.members.length).toBe(20);
     });
   });
+
+  describe("8. Latest League Roadmap, Tier Rewards & Badge Integration (Son Sürüm)", () => {
+    it("Tüm 9 lig kademesi (DEMİR -> HAKİM) dengeli ödül ve kalkan tanımlarına sahip olmalıdır", async () => {
+      const { LEAGUE_TIERS, LEAGUE_REWARDS, getLeagueTier } = await import("../shared/leagues");
+      expect(LEAGUE_TIERS).toHaveLength(9);
+      expect(Object.keys(LEAGUE_REWARDS)).toHaveLength(9);
+
+      for (const tier of LEAGUE_TIERS) {
+        const reward = LEAGUE_REWARDS[tier.tier];
+        expect(reward.chips).toBeGreaterThanOrEqual(30);
+        expect(reward.chips).toBeLessThanOrEqual(750);
+        expect(reward.shields).toBeGreaterThanOrEqual(1);
+        expect(reward.badgeId).toBe(`badge-rank-${tier.tier}`);
+
+        const resolved = getLeagueTier(tier.minPoints);
+        expect(resolved.tier).toBe(tier.tier);
+      }
+    });
+
+    it("Ödül talebi yapıldığında claimedLeagueTiers güncellenir ve rozet profilde açılır", async () => {
+      const { badgesFor } = await import("../shared/badges");
+
+      const beforeClaim = badgesFor({
+        ...DEFAULT_PROGRESS,
+        lp: 0,
+        wins: 0,
+        claimedLeagueTiers: {},
+      });
+      expect(beforeClaim.find((b) => b.id === "badge-rank-ALTIN")?.unlocked).toBe(false);
+
+      const afterClaim = badgesFor({
+        ...DEFAULT_PROGRESS,
+        lp: 1600,
+        claimedLeagueTiers: { ALTIN: true },
+      });
+      expect(afterClaim.find((b) => b.id === "badge-rank-ALTIN")?.unlocked).toBe(true);
+    });
+  });
 });
 

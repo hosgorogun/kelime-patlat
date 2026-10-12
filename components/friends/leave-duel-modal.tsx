@@ -27,7 +27,7 @@ export const LeaveDuelModal: React.FC<LeaveDuelModalProps> = ({
           <Text style={styles.iconText}>⚔️</Text>
           <Text style={styles.titleText}>DÜELLODAN AYRIL?</Text>
           <Text style={styles.descriptionText}>
-            Canlı düello henüz devam ediyor! Şimdi ayrılırsan maç mağlubiyet sayılabilir ve lig puanı kaybedebilirsin.
+            Canlı düello devam ediyor! Şimdi ayrılırsan maç mağlubiyet sayılır, ekstra lig puanı (LP) cezası uygulanır ve galibiyet serin sıfırlanır.
           </Text>
 
           <View style={styles.buttonList}>
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "90%",
     maxWidth: 360,
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: "#DCE1D7",
     borderWidth: 2,
     borderRadius: 28,

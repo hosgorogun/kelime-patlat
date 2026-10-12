@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 40,
+    paddingBottom: 180,
   },
   subHeader: {
     flexDirection: "row",
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   arcadeHeroCard: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderRadius: 24,
     borderWidth: 1.5,
     borderColor: "#DCE1D7",
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   arcadeRuleTile: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "#DCE1D7",

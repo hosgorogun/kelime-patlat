@@ -65,8 +65,8 @@ describe("Senior QA Edge Case Test Suiti - Sosyal Sistem & Tarih Tutarlılığı
     expect(getLeagueTier(3599).tier).toBe("PLATİN");
     expect(getLeagueTier(3600).tier).toBe("ELMAS");
     expect(getLeagueTier(4999).tier).toBe("ELMAS");
-    expect(getLeagueTier(5000).tier).toBe("YÜCELİK");
-    expect(getLeagueTier(99999).tier).toBe("RADIAN");
+    expect(getLeagueTier(5000).tier).toBe("KOZMİK");
+    expect(getLeagueTier(99999).tier).toBe("HAKİM");
   });
 
   it("Arkadaş listesindeki tüm arkadaşlar silindiğinde liste boş [] kalmalı ve mock veriler geri gelmemelidir", async () => {

@@ -36,6 +36,19 @@ export const LEAGUE_TIERS: readonly LeagueTierConfig[] = [
   { tier: "HAKİM", name: "HAKİM LİGİ", icon: "👑", image: "https://raw.githubusercontent.com/hosgorogun/kelime-patlat/main/assets/ranks/radian.jpg", color: "#FDE047", minPoints: 10000, maxPoints: Number.POSITIVE_INFINITY },
 ] as const;
 
+// Dengeli ve mütevazı kademe ödülleri (aşırı yüksek olmayan, tatmin edici değerler)
+export const LEAGUE_REWARDS: Record<LeagueTierName, { chips: number; shields: number; badgeId: string; badgeName: string; perk: string }> = {
+  DEMİR: { chips: 30, shields: 1, badgeId: "badge-rank-DEMİR", badgeName: "Demir Rozet", perk: "1x Kalkan" },
+  BRONZ: { chips: 50, shields: 1, badgeId: "badge-rank-BRONZ", badgeName: "Bronz Rozet", perk: "1x Kalkan" },
+  GÜMÜŞ: { chips: 100, shields: 2, badgeId: "badge-rank-GÜMÜŞ", badgeName: "Gümüş Nişan", perk: "2x Kalkan" },
+  ALTIN: { chips: 175, shields: 2, badgeId: "badge-rank-ALTIN", badgeName: "Altın Çerçeve", perk: "1x Harf Radarı" },
+  PLATİN: { chips: 250, shields: 2, badgeId: "badge-rank-PLATİN", badgeName: "Platin Çerçeve", perk: "1x Harf Radarı" },
+  ELMAS: { chips: 350, shields: 3, badgeId: "badge-rank-ELMAS", badgeName: "Elmas Pırıltısı", perk: "Özel Profil Halesi" },
+  KOZMİK: { chips: 500, shields: 3, badgeId: "badge-rank-KOZMİK", badgeName: "Kozmik İz", perk: "Özel İsim Rengi" },
+  EBEDİ: { chips: 650, shields: 3, badgeId: "badge-rank-EBEDİ", badgeName: "Ebedi Zafer Süsü", perk: "Efsanevi Efekt" },
+  HAKİM: { chips: 750, shields: 4, badgeId: "badge-rank-HAKİM", badgeName: "Radyant Taç", perk: "Şampiyonlar Listesi" },
+};
+
 export function getTierColor(tier?: string): string {
   if (!tier) return "#94A3B8";
   const found = LEAGUE_TIERS.find((t) => t.tier === tier);

@@ -15,50 +15,50 @@ export const VISUAL_THEMES: Record<string, VisualTheme> = {
   standard: {
     id: "standard",
     name: "Kelime Bahçesi",
-    background: "#F7F5EE",
+    background: "#F4F7F2",
     surface: "#FFFFFF",
-    surfaceSelected: "#B9EDD0",
-    cellBorder: "#CED8C9",
-    text: "#293541",
-    trayBackground: "#E9EFE3",
-    headerText: "#626F73",
-    accentColor: "#167653"
+    surfaceSelected: "#A7F3D0",
+    cellBorder: "#CBD5E1",
+    text: "#0F172A",
+    trayBackground: "#E2EBE0",
+    headerText: "#475569",
+    accentColor: "#059669"
   },
   space: {
     id: "space",
     name: "Gökyüzü",
-    background: "#F0F6FD",
+    background: "#F0F7FF",
     surface: "#FFFFFF",
-    surfaceSelected: "#B6DCFF",
-    cellBorder: "#C9DAE8",
-    text: "#293541",
-    trayBackground: "#E2EEFA",
-    headerText: "#526C81",
-    accentColor: "#216A9F"
+    surfaceSelected: "#BAE6FD",
+    cellBorder: "#CBD5E1",
+    text: "#0F172A",
+    trayBackground: "#E0EDFB",
+    headerText: "#475569",
+    accentColor: "#0284C7"
   },
   cyber: {
     id: "cyber",
     name: "Şeker Molası",
-    background: "#FBF2F6",
+    background: "#FDF2F8",
     surface: "#FFFFFF",
-    surfaceSelected: "#F4BED4",
-    cellBorder: "#E3CED8",
-    text: "#293541",
-    trayBackground: "#F5E3EC",
-    headerText: "#78596B",
-    accentColor: "#A3396A"
+    surfaceSelected: "#FBCFE8",
+    cellBorder: "#CBD5E1",
+    text: "#0F172A",
+    trayBackground: "#FCE7F3",
+    headerText: "#475569",
+    accentColor: "#DB2777"
   },
   retro: {
     id: "retro",
     name: "Gün Işığı",
-    background: "#FFF8E8",
+    background: "#FFFBEB",
     surface: "#FFFFFF",
-    surfaceSelected: "#FFD66E",
-    cellBorder: "#E1D5B8",
-    text: "#293541",
-    trayBackground: "#F4EBD0",
-    headerText: "#786941",
-    accentColor: "#996000"
+    surfaceSelected: "#FDE68A",
+    cellBorder: "#CBD5E1",
+    text: "#0F172A",
+    trayBackground: "#FEF3C7",
+    headerText: "#475569",
+    accentColor: "#D97706"
   }
 };
 

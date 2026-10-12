@@ -185,7 +185,7 @@ export const BoardCell = React.memo(({
               position: "absolute",
               top: size >= 8 ? 1 : 2,
               right: size >= 8 ? 1 : 2,
-              backgroundColor: "#F0F5ED",
+              backgroundColor: "#F8FAFC",
               borderRadius: size >= 8 ? 4 : 6,
               minWidth: size >= 8 ? 12 : 16,
               height: size >= 8 ? 12 : 16,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
   },
   cellFinished: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
   },
   cellLetter: {
     color: "#293541",
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     borderColor: "#DCE1D7",
   },
   cellAccepted: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: "#DCE1D7",
   },
   cellBonus: {
@@ -323,11 +323,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cellFound: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: "#DCE1D7",
   },
   cellFoundMine: {
-    backgroundColor: "#F0F5ED",
+    backgroundColor: "#F8FAFC",
     borderColor: "#DCE1D7",
     shadowColor: "#293541",
     shadowOpacity: 0.08,

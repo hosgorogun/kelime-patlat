@@ -162,10 +162,12 @@ export type PlayerProgress = {
   missionsDate?: string;
   dailyRevivesDate?: string;
   dailyRevivesCount?: number;
+  dailyMysteryClaimedDate?: string;
   dailyClaimed?: Record<string, boolean>;
   weeklyMissionsWeek?: string;
   weeklyClaimed?: Record<string, boolean>;
   claimedMilestones?: Record<number, boolean>;
+  claimedLeagueTiers?: Record<string, boolean>;
   purchasedAvatars?: Record<string, boolean>;
   selectedTitle?: string;
   gender?: GenderType;
@@ -182,6 +184,7 @@ export type PlayerProgress = {
   vintageProgress?: VintageProgress;
   sfxEnabled?: boolean;
   hapticsEnabled?: boolean;
+  notificationsEnabled?: boolean;
   lives?: number;
   lastLifeRegenTimestamp?: number;
   infiniteLivesUntil?: number;
@@ -236,6 +239,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   coins: 0,
   radarChargesBonus: 0,
   claimedMilestones: {},
+  claimedLeagueTiers: {},
   dailyClaimed: {},
   gender: "unspecified",
   avatarPhoto: undefined,
@@ -253,6 +257,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   },
   sfxEnabled: true,
   hapticsEnabled: true,
+  notificationsEnabled: true,
   lives: MAX_LIVES,
   lastLifeRegenTimestamp: Date.now(),
   infiniteLivesUntil: 0,
