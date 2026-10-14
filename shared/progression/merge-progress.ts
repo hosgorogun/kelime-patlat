@@ -235,6 +235,10 @@ export function mergePlayerProgress(
       ...(cleanRemote.claimedMilestones ?? {}),
       ...(local.claimedMilestones ?? {}),
     },
+    claimedLeagueTiers: {
+      ...(cleanRemote.claimedLeagueTiers ?? {}),
+      ...(local.claimedLeagueTiers ?? {}),
+    },
     purchasedAvatars: {
       ...(cleanRemote.purchasedAvatars ?? {}),
       ...(local.purchasedAvatars ?? {}),
@@ -296,7 +300,11 @@ export function mergePlayerProgress(
     },
     sfxEnabled: cleanRemote?.sfxEnabled ?? local.sfxEnabled ?? true,
     hapticsEnabled: cleanRemote?.hapticsEnabled ?? local.hapticsEnabled ?? true,
-    lastLoginDay: local.lastLoginDay || cleanRemote?.lastLoginDay,
+    lastLoginDay: (() => {
+      if (!local.lastLoginDay) return cleanRemote?.lastLoginDay;
+      if (!cleanRemote?.lastLoginDay) return local.lastLoginDay;
+      return local.lastLoginDay > cleanRemote.lastLoginDay ? local.lastLoginDay : cleanRemote.lastLoginDay;
+    })(),
     loginDaysCount: safeNum(Math.max(local.loginDaysCount ?? 0, cleanRemote?.loginDaysCount ?? 0), 0),
     lastStreakCheckDate: local.lastStreakCheckDate || cleanRemote?.lastStreakCheckDate,
     missionsDate: local.missionsDate || cleanRemote?.missionsDate,

@@ -145,6 +145,7 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
     });
 
     it("ödüllü reklam kullanılamadığında onError callback'ini tetikler", async () => {
+      monetizationManager.setAdAvailable(false);
       let errorReceived = "";
       await monetizationManager.showRewardedAd(
         "radar_charge",
@@ -152,6 +153,7 @@ describe("Sosyal ve Mağaza Sistemi Testleri", () => {
         (err) => { errorReceived = err; }
       );
       expect(errorReceived).toBe("Ödüllü reklam şu anda kullanılamıyor.");
+      monetizationManager.setAdAvailable(true);
     });
 
     it("interstitial (geçiş) reklam motorunun her 3 maçta bir doğru tetiklendiğini doğrular", async () => {

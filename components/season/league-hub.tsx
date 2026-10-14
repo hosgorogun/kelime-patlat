@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, FlatList, Animated } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import {
   LEAGUE_TIERS,
+  LEAGUE_REWARDS,
   getLeagueTier,
   getSeasonRemainingTime,
   getMinLpForTier,
@@ -12,7 +13,6 @@ import {
 } from "@/shared/progression";
 import { type LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
-import { palette } from "@/shared/palette";
 
 const RANK_IMAGES: Record<string, any> = {
   DEMİR: require("../../assets/ranks/iron.png"),
@@ -24,19 +24,6 @@ const RANK_IMAGES: Record<string, any> = {
   KOZMİK: require("../../assets/ranks/ascendant.png"),
   EBEDİ: require("../../assets/ranks/immortal.png"),
   HAKİM: require("../../assets/ranks/radian.png"),
-};
-
-// Dengeli ve mütevazı kademe ödülleri (aşırı yüksek olmayan, tatmin edici değerler)
-const TIER_REWARDS: Record<string, { chips: number; badgeName: string; perk: string }> = {
-  DEMİR: { chips: 30, badgeName: "Demir Rozet", perk: "1x Kalkan" },
-  BRONZ: { chips: 50, badgeName: "Bronz Rozet", perk: "1x Kalkan" },
-  GÜMÜŞ: { chips: 100, badgeName: "Gümüş Nişan", perk: "2x Kalkan" },
-  ALTIN: { chips: 175, badgeName: "Altın Çerçeve", perk: "1x Harf Radarı" },
-  PLATİN: { chips: 250, badgeName: "Platin Çerçeve", perk: "1x Harf Radarı" },
-  ELMAS: { chips: 350, badgeName: "Elmas Pırıltısı", perk: "Özel Profil Halesi" },
-  KOZMİK: { chips: 500, badgeName: "Kozmik İz", perk: "Özel İsim Rengi" },
-  EBEDİ: { chips: 650, badgeName: "Ebedi Zafer Süsü", perk: "Efsanevi Efekt" },
-  HAKİM: { chips: 750, badgeName: "Radyant Taç", perk: "Şampiyonlar Listesi" },
 };
 
 const LEAGUES: LeagueTierInfo[] = LEAGUE_TIERS.map((tier, idx) => {
@@ -51,7 +38,7 @@ const LEAGUES: LeagueTierInfo[] = LEAGUE_TIERS.map((tier, idx) => {
     minPoints: tier.minPoints,
     maxPoints: tier.maxPoints,
     currentTierPoints: 0,
-    targetTierPoints: next ? next.minPoints - tier.minPoints : 1000,
+    targetTierPoints: next ? next.minPoints - tier.minPoints : 0,
     totalPoints: tier.minPoints,
   };
 });
@@ -79,11 +66,6 @@ export function LeagueHub({
   onClaimReward?: (tier: string, chips: number, shields: number) => void;
   embedded?: boolean;
 }) {
-  const { width } = useWindowDimensions();
-  const availableWidth = Math.min(width - 28, 560);
-  const CARD_WIDTH = Math.min(300, Math.round(availableWidth * 0.82));
-  const SNAP_INTERVAL = CARD_WIDTH + 14;
-  const HORIZONTAL_PADDING = Math.max(0, (availableWidth - CARD_WIDTH) / 2);
   const current = getLeagueTier(progress);
   const playerRank = leaderboard.findIndex((entry) => entry.id === playerId) + 1;
   const currentIndex = LEAGUES.findIndex((league) => league.tier === current.tier);
@@ -127,13 +109,24 @@ export function LeagueHub({
   const isSelectedCurrent = selectedLeague.tier === current.tier;
   const isSelectedUnlocked = selectedLeagueIndex <= currentIndex;
 
-  const flatListRef = useRef<FlatList>(null);
   const effectiveStandings = useMemo(() => {
-    if (!leaderboard || leaderboard.length === 0) return MOCK_STANDINGS;
-    if (leaderboard.length >= 3) return leaderboard;
-    const existingIds = new Set(leaderboard.map((e) => e.id));
-    const mocks = MOCK_STANDINGS.filter((m) => !existingIds.has(m.id));
-    return [...leaderboard, ...mocks].slice(0, 3);
+    let list: LeaderboardEntry[] = [];
+    if (!leaderboard || leaderboard.length === 0) {
+      list = [...MOCK_STANDINGS];
+    } else if (leaderboard.length >= 3) {
+      list = [...leaderboard];
+    } else {
+      const existingIds = new Set(leaderboard.map((e) => e.id));
+      const mocks = MOCK_STANDINGS.filter((m) => !existingIds.has(m.id));
+      list = [...leaderboard, ...mocks];
+    }
+    return list
+      .sort((a, b) => {
+        const lpA = a.lp ?? (a.tier ? getMinLpForTier(a.tier) : 0);
+        const lpB = b.lp ?? (b.tier ? getMinLpForTier(b.tier) : 0);
+        return lpB - lpA;
+      })
+      .slice(0, 3);
   }, [leaderboard]);
 
   const content = (
@@ -229,7 +222,9 @@ export function LeagueHub({
             <View style={styles.heroProgressInfo}>
               <Text style={styles.heroProgressLabel}>Kademendeki LP:</Text>
               <Text style={styles.heroProgressValue}>
-                {current.currentTierPoints} / {current.targetTierPoints} LP
+                {current.targetTierPoints > 0
+                  ? `${current.currentTierPoints} / ${current.targetTierPoints} LP`
+                  : `${current.totalPoints} LP (Zirve Kademe)`}
               </Text>
             </View>
             <View style={styles.heroTrack}>
@@ -240,9 +235,13 @@ export function LeagueHub({
                 ]}
               />
             </View>
-            {current.targetTierPoints > 0 && (
+            {current.targetTierPoints > 0 ? (
               <Text style={styles.heroNextTierHint}>
                 🚀 Sonraki kademeye <Text style={{ fontWeight: "900", color: "#0F172A" }}>{current.targetTierPoints - current.currentTierPoints} LP</Text> kaldı (~{Math.ceil((current.targetTierPoints - current.currentTierPoints) / 35)} zafer)
+              </Text>
+            ) : (
+              <Text style={[styles.heroNextTierHint, { color: "#D97706" }]}>
+                👑 Zirve kademedesin! Liderlik tablosunda en üst sıraya tırman.
               </Text>
             )}
           </View>
@@ -260,15 +259,15 @@ export function LeagueHub({
         <View style={styles.heroRewardsRow}>
           <View style={styles.heroRewardPill}>
             <Text style={styles.heroRewardIcon}>🪙</Text>
-            <Text style={styles.heroRewardText}>+{TIER_REWARDS[selectedLeague.tier]?.chips ?? 50} Çip</Text>
+            <Text style={styles.heroRewardText}>+{LEAGUE_REWARDS[selectedLeague.tier]?.chips ?? 50} Çip</Text>
           </View>
           <View style={styles.heroRewardPill}>
             <Text style={styles.heroRewardIcon}>🎖️</Text>
-            <Text style={styles.heroRewardText}>{TIER_REWARDS[selectedLeague.tier]?.badgeName ?? "Rozet"}</Text>
+            <Text style={styles.heroRewardText}>{LEAGUE_REWARDS[selectedLeague.tier]?.badgeName ?? "Rozet"}</Text>
           </View>
           <View style={styles.heroRewardPill}>
             <Text style={styles.heroRewardIcon}>🎁</Text>
-            <Text style={styles.heroRewardText}>{TIER_REWARDS[selectedLeague.tier]?.perk ?? "Ödül"}</Text>
+            <Text style={styles.heroRewardText}>{LEAGUE_REWARDS[selectedLeague.tier]?.perk ?? "Ödül"}</Text>
           </View>
         </View>
 
@@ -283,14 +282,13 @@ export function LeagueHub({
               <Pressable
                 onPress={() => {
                   triggerHapticSuccess();
-                  const rewardData = TIER_REWARDS[selectedLeague.tier] ?? { chips: 50 };
-                  const shieldsAward = selectedLeagueIndex >= 2 ? 1 : 0;
-                  onClaimReward?.(selectedLeague.tier, rewardData.chips, shieldsAward);
+                  const rewardData = LEAGUE_REWARDS[selectedLeague.tier] ?? { chips: 50, shields: 1 };
+                  onClaimReward?.(selectedLeague.tier, rewardData.chips, rewardData.shields);
                 }}
                 style={({ pressed }) => [styles.claimBtn, pressed && styles.pressed]}
               >
                 <Text style={styles.claimBtnText}>
-                  🎁 ÖDÜLLERİ AL (+{TIER_REWARDS[selectedLeague.tier]?.chips ?? 50} 🪙 & ROZET)
+                  🎁 ÖDÜLLERİ AL (+{LEAGUE_REWARDS[selectedLeague.tier]?.chips ?? 50} 🪙 & ROZET)
                 </Text>
               </Pressable>
             )}
@@ -368,7 +366,18 @@ export function LeagueHub({
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 14 }}>{league.icon}</Text>
+                  {RANK_IMAGES[league.tier] ? (
+                    <Image
+                      source={RANK_IMAGES[league.tier]}
+                      style={[
+                        styles.roadmapRankImage,
+                        !isUnlocked && { opacity: 0.35 },
+                      ]}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 16 }}>{league.icon}</Text>
+                  )}
                   {isCur && <View style={[styles.roadmapLivePin, { backgroundColor: league.color }]} />}
                 </View>
                 <Text
@@ -749,14 +758,19 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   roadmapIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
     marginBottom: 4,
+    padding: 3,
+  },
+  roadmapRankImage: {
+    width: 28,
+    height: 28,
   },
   roadmapLivePin: {
     position: "absolute",

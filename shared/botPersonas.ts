@@ -26,7 +26,7 @@ export const BOT_USERNAMES = [
 ] as const;
 
 export const BOT_AVATARS = [
-  "🤖", "👾", "⚡", "🔥", "🔮", "👑", "🛡️", "🎯", "🚀", "💻", "🕶️", "🌟"
+  "🦊", "🦁", "⚡", "🔥", "🔮", "👑", "🛡️", "🎯", "🚀", "🦅", "🕶️", "🌟", "🐺", "🐼", "🍀"
 ] as const;
 
 export function getRandomBotPersona(hostPlayer?: Partial<GamePlayer>): GamePlayer {
@@ -43,7 +43,7 @@ export function getRandomBotPersona(hostPlayer?: Partial<GamePlayer>): GamePlaye
   const levelOffset = Math.floor(Math.random() * 10) - 5;
   const level = Math.max(1, hostLevel + levelOffset);
 
-  const avatar = BOT_AVATARS[Math.floor(Math.random() * BOT_AVATARS.length)] || "🤖";
+  const avatar = BOT_AVATARS[Math.floor(Math.random() * BOT_AVATARS.length)] || "🦊";
   
   // Pick a title from CYBER_TITLES array or default
   const titleObj = CYBER_TITLES[Math.floor(Math.random() * CYBER_TITLES.length)];

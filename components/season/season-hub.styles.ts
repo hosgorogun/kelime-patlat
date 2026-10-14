@@ -1,5 +1,4 @@
 import { StyleSheet } from "react-native";
-import { palette } from "@/shared/palette";
 
 export const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingBottom: 185 },

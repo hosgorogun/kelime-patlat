@@ -17,6 +17,7 @@ import { SOLO_UNLOCK_KEY } from "./use-player-progression";
 
 export interface UseSoloGameParams {
   progress: PlayerProgress;
+  progressRef?: React.MutableRefObject<PlayerProgress> | React.RefObject<PlayerProgress>;
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   soloUnlockedLevel: number;
   setSoloUnlockedLevel: (level: number) => void;
@@ -33,6 +34,7 @@ export interface UseSoloGameParams {
 
 export function useSoloGame({
   progress,
+  progressRef,
   setProgress,
   soloUnlockedLevel,
   setSoloUnlockedLevel,
@@ -49,7 +51,8 @@ export function useSoloGame({
 
   const openSoloLevel = useCallback(
     (level: number) => {
-      const calc = getCalculatedLives(progress);
+      const activeProgress = progressRef?.current ?? progress;
+      const calc = getCalculatedLives(activeProgress);
       if (calc.lives <= 0) {
         setGlobalToast({
           id: `no-lives-${Date.now()}`,

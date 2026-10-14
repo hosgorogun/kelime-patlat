@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { PlayerProgress } from "../shared/progression";
 import { getDayId, checkDailyLoginReward } from "../shared/progression";
@@ -21,13 +21,36 @@ export function useRewardModals({
   syncProgressToCloud,
   setGlobalToast,
 }: UseRewardModalsParams) {
-  const [showGuide, setShowGuide] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [isClaimingWelcomeReward, setIsClaimingWelcomeReward] = useState(false);
   const isClaimingDailyRewardRef = useRef(false);
 
   const progressRef = useRef(progress);
   progressRef.current = progress;
+
+  // Sadece kılavuz daha önce hiç görülmemişse ve ilk kurulumsa aç
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const openId = await AsyncStorage.getItem("kelime-patlat:player-id");
+        const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
+        const [seenSpecific, seenGeneral] = await Promise.all([
+          AsyncStorage.getItem(key),
+          AsyncStorage.getItem("kelime-patlat:guide-seen"),
+        ]);
+        if (!seenSpecific && !seenGeneral && isMounted) {
+          setShowGuide(true);
+        }
+      } catch {
+        // Hata durumunda açılış ekranını engelleme
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleClaimWelcomeReward = async () => {
     if (isClaimingWelcomeReward) return;
@@ -138,7 +161,17 @@ export function useRewardModals({
 
   const handleCloseGuide = () => {
     setShowGuide(false);
-    AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
+    void (async () => {
+      try {
+        const openId = await AsyncStorage.getItem("kelime-patlat:player-id");
+        if (openId) {
+          await AsyncStorage.setItem(`kelime-patlat:guide-seen:${openId}`, "true").catch(() => undefined);
+        }
+        await AsyncStorage.setItem("kelime-patlat:guide-seen", "true").catch(() => undefined);
+      } catch {
+        // ignore
+      }
+    })();
   };
 
   return {

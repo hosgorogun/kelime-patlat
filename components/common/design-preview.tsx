@@ -14,7 +14,6 @@ import { VintagePuzzle } from "../vintage/vintage-puzzle";
 import { ArcadeChallenge } from "../arcade/arcade-challenge";
 import {
   DEFAULT_PROGRESS,
-  getDailyChallenge,
   getDayId,
 } from "@/shared/progression";
 import { palette } from "@/shared/palette";

@@ -226,7 +226,7 @@ export function registerFriendSocketHandlers(
           try {
             await UserModel.findOneAndUpdate(
               { openId: playerId },
-              { $pull: { "progress.friends": { $or: [{ id: friendForAcceptor.id }, { username: friendForAcceptor.username }] } } }
+              { $pull: { "progress.friends": { id: friendForAcceptor.id } } }
             );
             await UserModel.findOneAndUpdate(
               { openId: playerId },
@@ -234,7 +234,7 @@ export function registerFriendSocketHandlers(
             );
             await UserModel.findOneAndUpdate(
               { openId: req.fromUserId },
-              { $pull: { "progress.friends": { $or: [{ id: friendForRequester.id }, { username: friendForRequester.username }] } } }
+              { $pull: { "progress.friends": { id: friendForRequester.id } } }
             );
             await UserModel.findOneAndUpdate(
               { openId: req.fromUserId },
@@ -276,9 +276,19 @@ export function registerFriendSocketHandlers(
         return socket.emit("friend:error", { message: "Oyuncu kimliği bu oturuma ait değil." });
       }
       try {
+        const friendUser = await UserModel.findOne({
+          $or: [{ openId: friendId }, { username: normalizeTr(friendId) }],
+        }).lean();
+        const targetOpenId = friendUser?.openId || friendId;
+        const targetUsername = friendUser?.username || friendId;
+
         await UserModel.findOneAndUpdate(
           { openId: playerId },
-          { $pull: { "progress.friends": { $or: [{ id: friendId }, { username: friendId }] } } }
+          { $pull: { "progress.friends": { $or: [{ id: friendId }, { id: targetOpenId }, { username: targetUsername }] } as any } }
+        );
+        await UserModel.findOneAndUpdate(
+          { openId: targetOpenId },
+          { $pull: { "progress.friends": { $or: [{ id: playerId }] } as any } }
         );
       } catch (e) {
         console.warn("[Friend] DB remove friend error:", e);

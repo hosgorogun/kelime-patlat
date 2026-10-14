@@ -10,8 +10,9 @@ import { StorePurchaseModal, type ConfirmPurchaseData } from "./store-purchase-m
 import { StoreEquipmentTab } from "./store-equipment-tab";
 import { StoreCosmeticsTab } from "./store-cosmetics-tab";
 import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
+import { MysteryRewardModal, type MysteryReward } from "@/components/modals/mystery-reward-modal";
 
-const DAILY_AD_LIMIT = 3;
+const DAILY_AD_LIMIT = 5;
 
 export type { ChipEquipmentItem };
 export { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS };
@@ -30,6 +31,8 @@ export function CyberStore({
   onSelectVictoryEffect,
   onBuyCosmetic,
   onSelectBoardSkin,
+  onSelectTitle,
+  onOpenMysteryChest,
   onBack,
 }: {
   coins: number;
@@ -41,8 +44,10 @@ export function CyberStore({
   onSpendCoins?: (item: ChipEquipmentItem) => boolean | Promise<boolean>;
   onSelectFrame?: (frameId: string) => void;
   onSelectVictoryEffect?: (effectId: string) => void;
-  onBuyCosmetic?: (kind: "avatar" | "frame" | "effect" | "board", id: string, cost: number) => boolean | Promise<boolean>;
+  onBuyCosmetic?: (kind: "avatar" | "frame" | "effect" | "board" | "title", id: string, cost: number) => boolean | Promise<boolean>;
   onSelectBoardSkin?: (skinId: string) => void;
+  onSelectTitle?: (titleBadge: string) => void;
+  onOpenMysteryChest?: () => Promise<MysteryReward | null>;
   onBack: () => void;
 }) {
   const [todayId, setTodayId] = useState(() => getDayId());
@@ -98,6 +103,7 @@ export function CyberStore({
     trigger: false,
     icon: "✨",
   });
+  const [mysteryReward, setMysteryReward] = useState<MysteryReward | null>(null);
 
   const isProcessingSpendRef = useRef(false);
 
@@ -162,7 +168,7 @@ export function CyberStore({
   };
 
   const handleCosmeticPress = async (
-    kind: "frame" | "effect" | "board",
+    kind: "frame" | "effect" | "board" | "title",
     id: string,
     label: string,
     color: string,
@@ -186,9 +192,9 @@ export function CyberStore({
 
     setConfirmPurchase({
       title: label,
-      description: `Bu kozmetik kilidi açıldıktan sonra istediğin zaman profiline donanabilirsin.`,
+      description: `Bu ürün açıldıktan sonra istediğin zaman profiline donanabilirsin.`,
       cost,
-      icon: kind === "frame" ? "✨" : kind === "effect" ? "💥" : "🌌",
+      icon: kind === "frame" ? "✨" : kind === "effect" ? "💥" : kind === "title" ? "👑" : "🌌",
       onConfirm: async () => {
         const success = await onBuyCosmetic?.(kind, id, cost);
         if (success !== false) {
@@ -197,7 +203,7 @@ export function CyberStore({
           onEquip?.(id);
           setPurchaseCascade({
             trigger: true,
-            icon: kind === "frame" ? "✨" : kind === "effect" ? "💥" : "🌌",
+            icon: kind === "frame" ? "✨" : kind === "effect" ? "💥" : kind === "title" ? "👑" : "🌌",
             badgeText: label,
           });
           setTimeout(() => setPurchaseCascade({ trigger: false, icon: "✨" }), 1500);
@@ -230,9 +236,9 @@ export function CyberStore({
         setAdLoading(false);
         triggerHapticSuccess();
         gameSfx.victory();
-        onBuyCoins(15);
+        onBuyCoins(10);
         const left = Math.max(0, DAILY_AD_LIMIT - nextCount);
-        showFeedbackMessage(`Ödül alındı: +15 Çip kazandın! 🪙 (Bugün Kalan Hak: ${left}/${DAILY_AD_LIMIT})`);
+        showFeedbackMessage(`Ödül alındı: +10 Çip kazandın! 🪙 (Bugün Kalan Hak: ${left}/${DAILY_AD_LIMIT})`);
       },
       () => {
         setAdLoading(false);
@@ -317,14 +323,57 @@ export function CyberStore({
           {activeTab === "cosmetics" && (
             <StoreCosmeticsTab
               progress={progress}
+              coins={coins}
               onCosmeticPress={handleCosmeticPress}
               onSelectFrame={onSelectFrame}
               onSelectVictoryEffect={onSelectVictoryEffect}
               onSelectBoardSkin={onSelectBoardSkin}
+              onSelectTitle={onSelectTitle}
+              onOpenMysteryChest={async () => {
+                if (coins < 100) {
+                  triggerHapticError();
+                  gameSfx.rejected();
+                  showFeedbackMessage("Yetersiz Çip! Gizemli Sandık için 100 çip gerekiyor.", "error");
+                  return;
+                }
+                setConfirmPurchase({
+                  title: "GİZEMLİ ŞANS SANDIĞI",
+                  description: "100 Çip vererek şansını dene! Büyük ikramiyeler, teselli ödülleri ve sürprizler içerir.",
+                  cost: 100,
+                  icon: "🎁",
+                  onConfirm: async () => {
+                    if (onOpenMysteryChest) {
+                      const reward = await onOpenMysteryChest();
+                      if (reward) {
+                        setMysteryReward(reward);
+                      }
+                      return;
+                    }
+
+                    // Fallback to local roll if no prop provided
+                    onBuyCoins(-100);
+                    const reward: MysteryReward = {
+                      type: "coins",
+                      label: "50 Çip İadesi 🪙",
+                      icon: "🪙",
+                      category: "consolation",
+                      detail: "Sandık maliyetinin yarısı (50 çip) iade edildi.",
+                    };
+                    onBuyCoins(50);
+                    setMysteryReward(reward);
+                  },
+                });
+              }}
             />
           )}
         </View>
       </ScrollView>
+
+      <MysteryRewardModal
+        visible={Boolean(mysteryReward)}
+        reward={mysteryReward}
+        onClose={() => setMysteryReward(null)}
+      />
 
       <CoinCascadeOverlay
         trigger={purchaseCascade.trigger}

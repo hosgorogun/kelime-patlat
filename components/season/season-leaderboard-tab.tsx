@@ -3,7 +3,6 @@ import { View, Text, Pressable, Image } from "react-native";
 import type { LeaderboardEntry } from "@/shared/game";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { getTierColor, getMinLpForTier, getPlayerLevel, AVATARS, type AvatarId } from "@/shared/progression";
-import { normalizeTrUpper } from "@/shared/tr-utils";
 import type { WeeklyDivisionCohort } from "@/shared/leagues";
 import { styles } from "./season-hub.styles";
 import type { RankingType } from "./season-mock-data";
@@ -75,6 +74,11 @@ export const SeasonLeaderboardTab = React.memo(({
               <View style={styles.userRankBadge}>
                 <Text style={styles.userRankBadgeText}>{rank}</Text>
               </View>
+              {userRankPosition === 1 && (
+                <View style={[styles.userRankBadge, { backgroundColor: "#F59E0B" }]}>
+                  <Text style={[styles.userRankBadgeText, { color: "#FFF" }]}>👑 LİDERSİN</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.userStatusSub}>
               {userRankPosition ? `${userRankPosition}. SIRADASIN` : "SIRALAMA DIŞI"} · {userScore} PUAN

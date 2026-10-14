@@ -1,10 +1,8 @@
 import React from "react";
 import { View, Text, Pressable } from "react-native";
 import { VictoryBanner } from "../game/victory-effect-overlay";
-import { CoinCascadeOverlay } from "../game/coin-cascade";
 import { MAX_SOLO_LEVEL, APP_WORD_PALETTE } from "@/shared/solo";
-import { gameSfx } from "@/lib/game-sfx";
-import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
+import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { styles } from "./solo-challenge.styles";
 
 const DIFFICULTY_LABEL = { easy: "KOLAY", medium: "ORTA", hard: "ZOR" } as const;
@@ -104,7 +102,7 @@ export function SoloWonView({
       </View>
 
       <View style={{ width: "100%", gap: 8, marginTop: 10 }}>
-        {level < MAX_SOLO_LEVEL && (
+        {!daily && level < MAX_SOLO_LEVEL && (
           <Pressable
             onPress={() => {
               triggerHapticSelection();

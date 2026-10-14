@@ -10,7 +10,7 @@ export const INTERSTITIAL_MATCH_INTERVAL = 3;
 
 class MonetizationManager {
   private completedMatchesCount = 0;
-  private adAvailable = false;
+  private adAvailable = true;
 
   setAdAvailable(available: boolean) {
     this.adAvailable = available;

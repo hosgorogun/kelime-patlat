@@ -5,7 +5,7 @@ export type ChipEquipmentItem = {
   cost: number;
   icon: string;
   imageKey?: string;
-  rewardType: "radar" | "shield" | "lives" | "xp";
+  rewardType: "radar" | "shield" | "lives";
 };
 
 
@@ -37,15 +37,6 @@ export const CHIP_EQUIPMENT_ITEMS: ChipEquipmentItem[] = [
     imageKey: "shield",
     rewardType: "shield",
   },
-  {
-    id: "xp_250",
-    name: "250 XP Kapsülü",
-    description: "Seviye ilerlemeni hızlandıran yüksek enerjili bilgi kapsülü.",
-    cost: 150,
-    icon: "🧪",
-    imageKey: "radar",
-    rewardType: "xp",
-  },
 ];
 
 export const PROFILE_FRAMES = [
@@ -71,3 +62,13 @@ export const BOARD_SKINS = [
   ["gold_grid", "ALTIN IZGARA", "#FFC24A", 300, "skin_gold_grid"],
   ["cyber_pink", "NEON PEMBE", "#FF2A85", 420, "skin_grid"],
 ] as const;
+
+export const STORE_TITLES = [
+  ["speedster", "HIZLI PARMAK", "[HIZLI PARMAK]", "⚡", "#38BDF8", 150, "Kelimeleri ışık hızında çözen usta."],
+  ["word_hunter", "SÖZCÜK AVCISI", "[SÖZCÜK AVCISI]", "🎯", "#F43F5E", 250, "Gizli ve uzun kelimelerin korkulu rüyası."],
+  ["lexicon_lord", "LÜGAT LORDU", "[LÜGAT LORDU]", "👑", "#FFC24A", 400, "Türkçe kelime hazinesinin mutlak efendisi."],
+  ["invincible", "YENİLMEZ", "[YENİLMEZ]", "🛡️", "#A855F7", 650, "Arenada mağlubiyet tanımayan efsane gladyatör."],
+] as const;
+
+export const MYSTERY_CHEST_COST = 100;
+

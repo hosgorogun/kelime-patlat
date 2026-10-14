@@ -19,7 +19,7 @@ import { isEqualTr } from "@/shared/tr-utils";
 interface WeekendHuntCardProps {
   progress: PlayerProgress;
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
-  onRewardClaimed?: (reward: WeekendHuntTierReward) => void;
+  onRewardClaimed?: (reward: WeekendHuntTierReward, updatedProgress?: PlayerProgress) => void;
 }
 
 export const WeekendHuntCard: React.FC<WeekendHuntCardProps> = ({
@@ -38,12 +38,16 @@ export const WeekendHuntCard: React.FC<WeekendHuntCardProps> = ({
   const foundCount = huntData.foundWords.length;
   const totalCount = event.targetWords.length;
 
+  const claimingTiersRef = React.useRef<Set<number>>(new Set());
+
   const handleClaim = (tierIdx: number) => {
+    if (claimingTiersRef.current.has(tierIdx)) return;
+    claimingTiersRef.current.add(tierIdx);
     haptics.success();
     const result = claimWeekendHuntReward(progress, tierIdx, event);
     if (result) {
       setProgress(result.updatedProgress);
-      onRewardClaimed?.(result.reward);
+      onRewardClaimed?.(result.reward, result.updatedProgress);
     }
   };
 
@@ -80,7 +84,6 @@ export const WeekendHuntCard: React.FC<WeekendHuntCardProps> = ({
           {event.targetWords.map((target) => {
             const isFound = huntData.foundWords.some((w) => isEqualTr(w, target));
             const isInspected = inspectedWord ? isEqualTr(inspectedWord, target) : false;
-            const hint = event.hints[target] || "Temaya uygun özel kelime.";
 
             return (
               <Pressable

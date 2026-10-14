@@ -277,5 +277,35 @@ describe("Arkadaşlık ve Sosyal Sistem Testleri", () => {
       expect(invitePayload.botProfile?.selectedTitle).toBe("[ÜSTAD]");
       expect(invitePayload.botProfile?.level).toBe(18);
     });
+
+    it("arkadaş çıkarma (removeFriend) listeyi günceller ve hedef kullanıcıyı siler", () => {
+      const friend1: FriendUser = {
+        id: "f_1",
+        name: "Test Arkadaş 1",
+        username: "test_arkadas_1",
+        avatar: "⚡",
+        isOnline: true,
+        xp: 1000,
+      };
+      const friend2: FriendUser = {
+        id: "f_2",
+        name: "Test Arkadaş 2",
+        username: "test_arkadas_2",
+        avatar: "🔥",
+        isOnline: false,
+        xp: 500,
+      };
+
+      const initialCount = socialManager.getFriends().length;
+      socialManager.addFriend(friend1);
+      socialManager.addFriend(friend2);
+      expect(socialManager.getFriends().length).toBe(initialCount + 2);
+
+      const removeResult = socialManager.removeFriend("f_1");
+      expect(removeResult.success).toBe(true);
+      expect(socialManager.getFriends().length).toBe(initialCount + 1);
+      expect(socialManager.getFriends().some((f) => f.id === "f_1")).toBe(false);
+      expect(socialManager.getFriends().some((f) => f.id === "f_2")).toBe(true);
+    });
   });
 });

@@ -53,7 +53,6 @@ export function HomeScreenView(props: HomeScreenViewProps) {
 
   const safeName = props.safeName ?? auth.safeName;
   const progress = props.progress ?? progression.progress;
-  const daily = props.daily ?? progression.daily;
   const leaderboard = props.leaderboard ?? progression.leaderboard;
   const unclaimedMissions = props.unclaimedMissions ?? progression.unclaimedMissions;
   const unclaimedMilestones = props.unclaimedMilestones ?? progression.unclaimedMilestones;

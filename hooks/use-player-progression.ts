@@ -271,14 +271,17 @@ export function usePlayerProgression({
             soloUnlockedLevel: Math.max(localSolo, parsed.soloUnlockedLevel ?? 1),
             missions: { ...DEFAULT_PROGRESS.missions, ...parsed.missions },
           });
-          setProgress(merged);
-          setSoloUnlockedLevel(merged.soloUnlockedLevel ?? 1);
+          const reconciled = reconcilePlayerProgress(merged).progress;
+          setProgress(reconciled);
+          setSoloUnlockedLevel(reconciled.soloUnlockedLevel ?? 1);
         } catch {
-          setProgress({ ...DEFAULT_PROGRESS, soloUnlockedLevel: localSolo });
+          const fallback = reconcilePlayerProgress({ ...DEFAULT_PROGRESS, soloUnlockedLevel: localSolo }).progress;
+          setProgress(fallback);
           setSoloUnlockedLevel(localSolo);
         }
       } else {
-        setProgress((curr) => ({ ...curr, soloUnlockedLevel: localSolo }));
+        const fallback = reconcilePlayerProgress({ ...DEFAULT_PROGRESS, soloUnlockedLevel: localSolo }).progress;
+        setProgress(fallback);
         setSoloUnlockedLevel(localSolo);
       }
       setProgressReady(true);
@@ -295,7 +298,10 @@ export function usePlayerProgression({
           .then((res) => (res.ok ? res.json() : null))
           .then((data) => {
             if (active && data?.progress) {
-              setProgress((current) => mergePlayerProgress(current, data.progress, { preferRemoteBalances: true }));
+              setProgress((current) => {
+                const merged = mergePlayerProgress(current, data.progress, { preferRemoteBalances: true });
+                return reconcilePlayerProgress(merged).progress;
+              });
             }
           })
           .catch(() => undefined);
@@ -351,21 +357,30 @@ export function usePlayerProgression({
     }
   }, [progress.friends, progressReady]);
 
-  // Daily reconciliation and streak check
+  // Welcome modal check for brand new players
   useEffect(() => {
     if (!progressReady || !authToken || screen === "auth") return;
     if (progress.welcomeRewardClaimed) return;
     void (async () => {
-      const openId = await AsyncStorage.getItem("kelime-patlat:player-id");
-      const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
-      const [seenSpecific, seenGeneral] = await Promise.all([
-        AsyncStorage.getItem(key),
-        AsyncStorage.getItem("kelime-patlat:guide-seen"),
-      ]);
-      if (!seenSpecific && !seenGeneral) {
-        setShowWelcomeModal(true);
+      try {
+        const openId = await AsyncStorage.getItem("kelime-patlat:player-id");
+        const key = openId ? `kelime-patlat:guide-seen:${openId}` : "kelime-patlat:guide-seen";
+        const [seenSpecific, seenGeneral] = await Promise.all([
+          AsyncStorage.getItem(key),
+          AsyncStorage.getItem("kelime-patlat:guide-seen"),
+        ]);
+        if (!seenSpecific && !seenGeneral) {
+          setShowWelcomeModal(true);
+        }
+      } catch {
+        // ignore
       }
     })();
+  }, [progressReady, authToken, screen, progress.welcomeRewardClaimed, setShowWelcomeModal]);
+
+  // Daily reconciliation, mission reset, and streak check
+  useEffect(() => {
+    if (!progressReady || !authToken || screen === "auth") return;
 
     const reconciliation = reconcilePlayerProgress(progress);
     if (
@@ -417,13 +432,13 @@ export function usePlayerProgression({
     progressReady,
     authToken,
     screen,
-    progress.welcomeRewardClaimed,
+    progress.missionsDate,
+    progress.weeklyMissionsWeek,
     progress.matches,
     progress.lp,
     progress.lastLoginDay,
     setGlobalAlert,
     setSeasonResetModal,
-    setShowWelcomeModal,
   ]);
 
   // App resuming from background: socket liveness recovery and day reconciliation

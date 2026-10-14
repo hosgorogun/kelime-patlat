@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, Pressable } from "react-native";
 import { getLeagueTier, type PlayerProgress } from "@/shared/progression";
 
 function useAnimatedCounter(targetValue: number, duration: number = 700) {
@@ -42,6 +42,8 @@ export function MatchRewardsCard({
   streakBonus,
   isCrushingWin,
   shieldUsed,
+  onDoubleCoins,
+  isDoubled = false,
 }: {
   progress?: PlayerProgress;
   xpEarned: number;
@@ -53,6 +55,8 @@ export function MatchRewardsCard({
   streakBonus?: number;
   isCrushingWin?: boolean;
   shieldUsed?: boolean;
+  onDoubleCoins?: () => void;
+  isDoubled?: boolean;
 }) {
   const league = getLeagueTier(progress ?? currentLp ?? 0);
   const isLpGain = lpEarned > 0;
@@ -73,8 +77,26 @@ export function MatchRewardsCard({
       <View style={styles.header}>
         <Text style={styles.title}>{isCustom ? "🤝 DOSTLUK MAÇI" : "🎖️ MAÇ SONU KAZANIMLARI"}</Text>
         {!isCustom && coinsEarned !== undefined && coinsEarned > 0 && (
-          <View style={styles.coinsBadge}>
-            <Text style={styles.coinsText}>🪙 +{animatedCoins} ÇİP</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={styles.coinsBadge}>
+              <Text style={styles.coinsText}>🪙 +{animatedCoins} ÇİP</Text>
+            </View>
+            {!isDoubled && onDoubleCoins && (
+              <Pressable
+                onPress={onDoubleCoins}
+                style={({ pressed }) => [
+                  styles.doubleCoinsBtn,
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text style={styles.doubleCoinsText}>🎬 2X KATLA</Text>
+              </Pressable>
+            )}
+            {isDoubled && (
+              <View style={[styles.coinsBadge, { backgroundColor: "rgba(16, 185, 129, 0.15)", borderColor: "#10B981" }]}>
+                <Text style={[styles.coinsText, { color: "#10B981" }]}>✓ 2X KATLANDI</Text>
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -242,6 +264,17 @@ const styles = StyleSheet.create({
   },
   coinsText: {
     color: "#9b7616",
+    fontSize: 9.5,
+    fontWeight: "900",
+  },
+  doubleCoinsBtn: {
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  doubleCoinsText: {
+    color: "#FFFFFF",
     fontSize: 9.5,
     fontWeight: "900",
   },

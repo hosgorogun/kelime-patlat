@@ -228,6 +228,7 @@ export function AppRoot() {
     setProgress,
     syncProgressToCloud,
     setGlobalToast,
+    onGoToPvP: () => setScreen("online"),
   });
 
   const {
@@ -241,6 +242,7 @@ export function AppRoot() {
     completeDailyChallenge,
   } = useSoloGame({
     progress,
+    progressRef,
     setProgress,
     soloUnlockedLevel,
     setSoloUnlockedLevel,

@@ -12,6 +12,7 @@ export interface UseLivesManagerParams {
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   syncProgressToCloud: (progress: PlayerProgress) => Promise<void>;
   setGlobalToast: (toast: ToastData | null) => void;
+  onGoToPvP?: () => void;
 }
 
 export function useLivesManager({
@@ -20,6 +21,7 @@ export function useLivesManager({
   setProgress,
   syncProgressToCloud,
   setGlobalToast,
+  onGoToPvP,
 }: UseLivesManagerParams) {
   const [showLivesModal, setShowLivesModal] = useState(false);
   const [buyingLivesLoading, setBuyingLivesLoading] = useState(false);
@@ -284,6 +286,7 @@ export function useLivesManager({
       onBuyOne={handleBuyOneLife}
       onRefillAll={handleRefillAllLives}
       onWatchAd={handleWatchAdForLife}
+      onGoToPvP={onGoToPvP}
       loading={buyingLivesLoading}
     />
   );

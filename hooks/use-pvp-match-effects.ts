@@ -8,6 +8,7 @@ import { haptics } from "../lib/haptics";
 import { getApiBaseUrl } from "../constants/oauth";
 import { fetchWordDetail, getCachedWordDetail, getWordDefinition } from "../shared/dictionary";
 import { APP_WORD_PALETTE } from "../shared/solo";
+import { isEqualTr } from "../shared/tr-utils";
 
 interface UsePvpMatchEffectsParams {
   room: RoomSnapshot | null;
@@ -90,7 +91,7 @@ export function usePvpMatchEffects({
     fetchWordDetail(word, getApiBaseUrl())
       .then((detail: any) => {
         setSelectedWordInfo((prev) => {
-          if (!prev || prev.word !== word) return prev;
+          if (!prev || !isEqualTr(prev.word, word)) return prev;
           return {
             word,
             definition: detail.definition,
@@ -102,7 +103,7 @@ export function usePvpMatchEffects({
         });
       })
       .catch(() => {
-        setSelectedWordInfo((prev) => (prev && prev.word === word ? { ...prev, loading: false } : prev));
+        setSelectedWordInfo((prev) => (prev && isEqualTr(prev.word, word) ? { ...prev, loading: false } : prev));
       });
   }, []);
 

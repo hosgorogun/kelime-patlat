@@ -10,6 +10,7 @@ import {
 import { AVATARS, getTierColor, getPlayerLevel } from "@/shared/progression";
 import { triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
+import { FRAME_IMAGES } from "./profile-constants";
 import { ModernAlertModal, type ModernAlertData } from "@/components/modals/modern-alert-modal";
 import { styles } from "./user-profile-modal.styles";
 
@@ -41,6 +42,7 @@ export function UserProfileModal({
   isSelf,
   onClose,
   onAddFriend,
+  onRemoveFriend,
   onChallenge,
 }: {
   visible: boolean;
@@ -49,6 +51,7 @@ export function UserProfileModal({
   isSelf?: boolean;
   onClose: () => void;
   onAddFriend?: (user: InspectableUser) => void;
+  onRemoveFriend?: (user: InspectableUser) => void;
   onChallenge?: (user: InspectableUser) => void;
 }) {
   const [imgError, setImgError] = React.useState(false);
@@ -102,8 +105,22 @@ export function UserProfileModal({
             {/* Top Identity Block */}
             <View style={styles.identityRow}>
               <View style={[styles.avatarBox, { borderColor: frameBorderColor, backgroundColor: avatarSurface }]}>
+                {user.selectedFrame && FRAME_IMAGES[user.selectedFrame] ? (
+                  <Image
+                    source={FRAME_IMAGES[user.selectedFrame]}
+                    style={{ position: "absolute", width: "100%", height: "100%", borderRadius: 36, zIndex: 1 }}
+                    resizeMode="cover"
+                  />
+                ) : null}
                 {user.avatarPhoto && !imgError ? (
-                  <Image source={{ uri: user.avatarPhoto }} style={styles.avatarImage} onError={() => setImgError(true)} />
+                  <Image
+                    source={{ uri: user.avatarPhoto }}
+                    style={[
+                      styles.avatarImage,
+                      user.selectedFrame && FRAME_IMAGES[user.selectedFrame] && { width: "84%", height: "84%", borderRadius: 30, zIndex: 0 },
+                    ]}
+                    onError={() => setImgError(true)}
+                  />
                 ) : (
                   <Text style={[styles.avatarIconText, { color: avatarColor }]}>{avatarIcon}</Text>
                 )}
@@ -130,7 +147,7 @@ export function UserProfileModal({
                       <Text style={[styles.tierTagText, { color: tierColor }]}>{displayTier} LİGİ</Text>
                     </View>
                   )}
-                  {user.lp !== undefined && user.lp > 0 && (
+                  {user.lp !== undefined && user.lp >= 0 && (
                     <Text style={styles.lpText}>{user.lp} LP</Text>
                   )}
                 </View>
@@ -206,9 +223,33 @@ export function UserProfileModal({
                   <Text style={[styles.alreadyFriendText, { color: "#2a9c7a" }]}>⭐ SENİN HESABIN</Text>
                 </View>
               ) : isFriend ? (
-                <View style={styles.alreadyFriendBadge}>
-                  <Text style={styles.alreadyFriendText}>✓ ARKADAŞINIZ</Text>
-                </View>
+                <Pressable
+                  onPress={() => {
+                    triggerHapticSelection();
+                    setAlertData({
+                      icon: "👥",
+                      kicker: "ARKADAŞLIK YÖNETİMİ",
+                      title: "Arkadaşı Çıkar",
+                      message: `"${displayName}" adlı kullanıcıyı arkadaş listenden çıkarmak istediğine emin misin?`,
+                      accentColor: "#EF4444",
+                      primaryButton: {
+                        text: "Çıkar",
+                        color: "#EF4444",
+                        onPress: () => {
+                          onRemoveFriend?.(user);
+                          setAlertData(null);
+                        },
+                      },
+                      secondaryButton: {
+                        text: "Vazgeç",
+                        onPress: () => setAlertData(null),
+                      },
+                    });
+                  }}
+                  style={({ pressed }) => [styles.alreadyFriendBadge, pressed && styles.pressed]}
+                >
+                  <Text style={styles.alreadyFriendText}>✓ ARKADAŞINIZ (ÇIKAR)</Text>
+                </Pressable>
               ) : (
                 <Pressable
                   disabled={isSendingFriend}

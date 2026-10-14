@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, BackHandler, ScrollView, StyleSheet, useWindowDimensions, View, Animated, Share } from "react-native";
+import { AppState, BackHandler, ScrollView, StyleSheet, useWindowDimensions, View, Animated } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
 import { isEqualTr } from "@/shared/tr-utils";
-import { createSoloBoard, solutionColorByCell, APP_WORD_PALETTE } from "@/shared/solo";
+import { createSoloBoard, solutionColorByCell, APP_WORD_PALETTE, MAX_SOLO_LEVEL } from "@/shared/solo";
 import { type WordTheme } from "@/shared/word-catalog";
 import { getWordDefinition, fetchWordDetail, getCachedWordDetail, isValidTurkishWord } from "@/shared/dictionary";
 import { getThemeForLevel } from "@/shared/themes";
@@ -39,7 +39,6 @@ import { SoloFoundWords } from "./solo-found-words";
 import { SoloExitModal } from "./solo-exit-modal";
 import { SoloBoardGrid } from "./solo-board-grid";
 import { ModernAlertModal } from "../modals/modern-alert-modal";
-import { MAX_SOLO_LEVEL } from "@/shared/solo";
 
 type Feedback = "idle" | "invalid" | "accepted" | "bonus";
 
@@ -88,6 +87,8 @@ export function SoloChallenge({
   syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
 }) {
   const { width, height } = useWindowDimensions();
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
   const safeWatchAd = useMemo(() => watchAd ?? ((onReward: () => void) => onReward()), [watchAd]);
   const activeTheme = useMemo(() => getThemeForLevel(level), [level]);
   const [variation, setVariation] = useState(() => variationSeed ?? Math.floor(Math.random() * 1_000_000));
@@ -158,7 +159,7 @@ export function SoloChallenge({
     fetchWordDetail(word).then((detail) => {
       if (!isMountedRef.current) return;
       setSelectedWordInfo((prev) => {
-        if (!prev || prev.word !== word) return prev;
+        if (!prev || !isEqualTr(prev.word, word)) return prev;
         return {
           word,
           definition: detail.definition,
@@ -170,7 +171,7 @@ export function SoloChallenge({
       });
     }).catch(() => {
       if (!isMountedRef.current) return;
-      setSelectedWordInfo((prev) => prev && prev.word === word ? { ...prev, loading: false } : prev);
+      setSelectedWordInfo((prev) => prev && isEqualTr(prev.word, word) ? { ...prev, loading: false } : prev);
     });
   };
   const [countdown, setCountdown] = useState<number | null>(3);
@@ -212,7 +213,7 @@ export function SoloChallenge({
 
   // Günlük en fazla 3 kez reklamla kurtarma hakkı sınırı (Anti-abuse kotası)
   const todayId = getDayId();
-  const currentDailyRevives = (progress?.dailyRevivesDate === todayId ? progress.dailyRevivesCount : 0) ?? 0;
+  const currentDailyRevives = ((progressRef.current ?? progress)?.dailyRevivesDate === todayId ? (progressRef.current ?? progress)?.dailyRevivesCount : 0) ?? 0;
   const remainingDailyRevives = Math.max(0, 3 - currentDailyRevives);
 
   const handleReviveWithAd = () => {
@@ -999,6 +1000,7 @@ export function SoloChallenge({
     />
     {status === "won" && (
       <SoloWonView
+        daily={daily}
         level={level}
         foundCount={found.length}
         seconds={seconds}
@@ -1089,11 +1091,13 @@ export function SoloChallenge({
           showVictoryModal
             ? {
                 icon: "🎉",
-                kicker: `SEVİYE ${level} TAMAMLANDI`,
+                kicker: daily ? "GÜNÜN ROTASI TAMAMLANDI" : `SEVİYE ${level} TAMAMLANDI`,
                 title: "Tüm Kelimeler Çözüldü!",
-                message: "Harika iş çıkardın! Bir sonraki seviyeye geçebilir ya da tahtadaki kelime rotalarını incelemek için burada kalabilirsin.",
+                message: daily
+                  ? "Tebrikler! Günlük meydan okumayı başarıyla bitirdin ve ödüllerini kazandın."
+                  : "Harika iş çıkardın! Bir sonraki seviyeye geçebilir ya da tahtadaki kelime rotalarını incelemek için burada kalabilirsin.",
                 accentColor: activeTheme.accentColor || "#3EE8B5",
-                primaryButton: level < MAX_SOLO_LEVEL
+                primaryButton: !daily && level < MAX_SOLO_LEVEL
                   ? {
                       text: "SONRAKİ SEVİYE ➔",
                       color: activeTheme.accentColor || "#3EE8B5",
@@ -1105,7 +1109,7 @@ export function SoloChallenge({
                       },
                     }
                   : {
-                      text: "ANA MENÜYE DÖN",
+                      text: daily ? "KOMUTA MERKEZİNE DÖN" : "ANA MENÜYE DÖN",
                       color: activeTheme.accentColor || "#3EE8B5",
                       onPress: () => {
                         setShowVictoryModal(false);

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, View, Text } from "react-native";
+import { Animated, Text } from "react-native";
 import { styles } from "./solo-challenge.styles";
 
 export type SoloWordTrayProps = {

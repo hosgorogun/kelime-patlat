@@ -11,8 +11,7 @@ import {
 } from "react-native";
 import { type TurnMatch, calculateTurnWordScore } from "@/shared/turn-match";
 import { type FriendUser } from "@/shared/social";
-import { wordFromSelection, advanceSelection, TURKISH_LETTERS } from "@/shared/game";
-import { normalizeTr, normalizeTrUpper, isEqualTr } from "@/shared/tr-utils";
+import { advanceSelection } from "@/shared/game";
 import { isValidTurkishWord } from "@/shared/dictionary";
 import { haptics } from "@/lib/haptics";
 import { getApiBaseUrl } from "@/constants/oauth";

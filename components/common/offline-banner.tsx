@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 export interface OfflineBannerProps {
   isOffline: boolean;

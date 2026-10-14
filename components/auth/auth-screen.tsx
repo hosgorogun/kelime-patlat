@@ -496,21 +496,27 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                   </View>
 
                   <View style={styles.socialRow}>
-                    <Pressable
-                      onPress={() => handleThirdPartyPress("Google")}
-                      style={({ pressed }) => [styles.socialCard, pressed && styles.pressedCard]}
-                    >
-                      <GoogleLogo size={20} />
-                      <Text style={styles.socialCardLabel}>Google</Text>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => handleThirdPartyPress("Apple")}
-                      style={({ pressed }) => [styles.socialCard, pressed && styles.pressedCard]}
-                    >
-                      <AppleLogo size={20} />
-                      <Text style={styles.socialCardLabel}>Apple</Text>
-                    </Pressable>
+                    {Platform.OS === "ios" ? (
+                      <Pressable
+                        onPress={() => handleThirdPartyPress("Apple")}
+                        style={({ pressed }) => [styles.socialCard, styles.socialCardApple, pressed && styles.pressedCardApple]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Apple ile Giriş Yap"
+                      >
+                        <AppleLogo size={19} color="#FFFFFF" />
+                        <Text style={styles.socialCardLabelApple}>Apple ile Giriş Yap</Text>
+                      </Pressable>
+                    ) : (
+                      <Pressable
+                        onPress={() => handleThirdPartyPress("Google")}
+                        style={({ pressed }) => [styles.socialCard, styles.socialCardGoogle, pressed && styles.pressedCardGoogle]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Google ile Giriş Yap"
+                      >
+                        <GoogleLogo size={20} />
+                        <Text style={styles.socialCardLabelGoogle}>Google ile Giriş Yap</Text>
+                      </Pressable>
+                    )}
                   </View>
                 </>
               )}
@@ -906,28 +912,58 @@ const styles = StyleSheet.create({
   /* Social Login Buttons */
   socialRow: {
     flexDirection: "row",
-    gap: 10,
+    width: "100%",
   },
   socialCard: {
     flex: 1,
     flexDirection: "row",
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E0E7DC",
-    backgroundColor: "#FAFBF8",
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 10,
+    paddingHorizontal: 16,
   },
-  socialCardLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#2C3E4C",
+  socialCardGoogle: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#DCE3D6",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  pressedCard: {
+  pressedCardGoogle: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: "#EEF3E9",
+    backgroundColor: "#F8FAF6",
+    borderColor: "#CBD5C5",
+  },
+  socialCardLabelGoogle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#1E293B",
+    letterSpacing: 0.2,
+  },
+  socialCardApple: {
+    backgroundColor: "#000000",
+    borderWidth: 1.5,
+    borderColor: "#1E293B",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  pressedCardApple: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: "#18181B",
+  },
+  socialCardLabelApple: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.2,
   },
 
   /* Guest Footer */

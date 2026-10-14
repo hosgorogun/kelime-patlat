@@ -7,6 +7,16 @@ import { DailyChallenge, MatchHistoryEntry, PlayerProgress } from "./progression
 import { isEqualTr, normalizeTrUpper } from "../tr-utils";
 import { isWeekendActive, recordWeekendHuntWords } from "../weekend-hunt";
 
+export function getSurrenderLpPenalty(progressOrLp: PlayerProgress | number): number {
+  const currentLp = typeof progressOrLp === "number" ? progressOrLp : (progressOrLp.lp ?? 0);
+  const tierInfo = getLeagueTier(currentLp);
+  const isHighTier = tierInfo.tier === "ELMAS" || tierInfo.tier === "KOZMİK" || tierInfo.tier === "EBEDİ" || tierInfo.tier === "HAKİM";
+  const isEntryTier = tierInfo.tier === "DEMİR" || tierInfo.tier === "BRONZ";
+  const isDemir = tierInfo.tier === "DEMİR";
+  const penalty = isDemir ? 5 : isEntryTier ? 10 : isHighTier ? 28 : 22;
+  return penalty;
+}
+
 export function applyMatchProgress(
   progress: PlayerProgress,
   result: {
@@ -75,9 +85,11 @@ export function applyMatchProgress(
         streakBonus = 3;
       }
     } else if (!result.isDraw) {
-      // Mağlubiyet durumunda: Eğer oyuncunun galibiyet serisi varsa (pvpWinStreak > 0)
-      // ve Seri Koruma Kalkanı varsa (streakShields > 0), 1 kalkan harcanarak alevli seri korunur!
-      if (pvpWinStreak > 0 && streakShields > 0) {
+      if (isSurrender) {
+        // Maçı terk eden oyuncunun serisi direkt söner, kalkanı harcanmaz
+        pvpWinStreak = 0;
+      } else if (pvpWinStreak > 0 && streakShields > 0) {
+        // Normal mağlubiyet durumunda: 1 kalkan harcanarak alevli seri korunur!
         streakShields -= 1;
         shieldUsed = true;
         // pvpWinStreak sıfırlanmaz, korunur!
@@ -98,20 +110,19 @@ export function applyMatchProgress(
     // Kesinlikle XP verilmez (0 XP), ekstra kaçma cezası uygulanır (-25 LP üst liglerde, -18 alt liglerde)
     baseXP = 0;
     if (type === "pvp") {
-      lpGain = isEntryTier ? -15 : isHighTier ? -28 : -22;
-    } else if (type === "bot") {
-      lpGain = isHighTier ? -20 : -14;
+      // Başlangıç ligi (Demir / Bronz) koruması: Yeni oyuncular erken mağlubiyetlerde sıfır/hafif ceza alır
+      const isDemir = tierInfo.tier === "DEMİR";
+      lpGain = isDemir ? -5 : isEntryTier ? -10 : isHighTier ? -28 : -22;
+      pvpWinStreak = 0; // Terk eden oyuncunun alev serisi kalkan olsa bile kırılır
     } else {
       lpGain = 0;
     }
-    pvpWinStreak = 0; // Terk eden oyuncunun alev serisi kalkan olsa bile kırılır
   } else if (!hasContributed && !result.won) {
-    // SIFIR KELİME & YENİLGİ (AFK / Katkısız maç): Kesinlikle taban EXP verilmez, ancak lig cezası düşülür!
+    // SIFIR KELİME & YENİLGİ (AFK / Katkısız maç): Kesinlikle taban EXP verilmez, ancak derecelide lig cezası düşülür!
     baseXP = 0;
     if (type === "pvp") {
-      lpGain = isEntryTier ? -10 : isHighTier ? -22 : -18;
-    } else if (type === "bot") {
-      lpGain = isHighTier ? -15 : -10;
+      const isDemir = tierInfo.tier === "DEMİR";
+      lpGain = isDemir ? 0 : isEntryTier ? -6 : isHighTier ? -22 : -18;
     } else {
       lpGain = 0;
     }
@@ -129,19 +140,23 @@ export function applyMatchProgress(
     } else {
       // Kaybetti ama en az 1 kelime bildi veya puan üretti (çaba/teselli ödülü)
       baseXP = 5;
-      lpGain = isEntryTier ? -10 : isHighTier ? -22 : -18;
+      const isDemir = tierInfo.tier === "DEMİR";
+      // Demir ligde yeni oyuncu puan kaybetmez (0 LP), Bronzda -5 LP, üst liglerde standart
+      lpGain = isDemir ? 0 : isEntryTier ? -5 : isHighTier ? -22 : -18;
     }
   } else if (type === "bot") {
+    // PRATİK / ALIŞTIRMA MODU (Bot İle Alıştırma):
+    // Rütbe/Lig puanı (LP) kesinlikle etkilenmez (0 LP). Lig puanı kazanılmaz ve düşülmez.
     if (result.won) {
       baseXP = 15;
-      lpGain = isHighTier ? 0 : isEntryTier ? 12 : 8; // Yüksek liglerde bot maçı LP vermez
+      lpGain = 0;
     } else if (result.isDraw) {
       baseXP = 8;
       lpGain = 0;
     } else {
-      // Kaybetti ama kelime bildi
+      // Kaybetti ama kelime bildi (Antrenmanda LP kaybı yok)
       baseXP = 3;
-      lpGain = isHighTier ? -15 : -10;
+      lpGain = 0;
     }
   } else if (type === "solo") {
     // Solo modunda seviye ilerledikçe (1-100) taban XP seviyeye göre dengelenir (10 ila 35 XP)
@@ -396,6 +411,14 @@ export function applyArcadeProgress(
     ? [...(progress.history || []), ...foundWords].slice(-150)
     : (progress.history || []);
 
+  const arcadeDiscovered = (foundWords || [])
+    .filter((w) => typeof w === "string" && w.trim().length >= 3)
+    .map((w) => normalizeTrUpper(w));
+  const updatedArcadeDiscovered = Array.from(new Set([
+    ...(progress.discoveredWords || []),
+    ...arcadeDiscovered,
+  ])).slice(-2000);
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
@@ -403,6 +426,7 @@ export function applyArcadeProgress(
     bestArcadeScore: newBest,
     missions: nextMissions,
     history: newHistory,
+    discoveredWords: updatedArcadeDiscovered,
     weekendHunt: isWeekendActive() && foundWords && foundWords.length > 0
       ? recordWeekendHuntWords(progress, foundWords).weekendHunt
       : progress.weekendHunt,
@@ -452,12 +476,21 @@ export function applyVintageProgress(
     ? [...(progress.history || []), ...foundWords].slice(-150)
     : (progress.history || []);
 
+  const vintageDiscovered = (foundWords || [])
+    .filter((w) => typeof w === "string" && w.trim().length >= 3)
+    .map((w) => normalizeTrUpper(w));
+  const updatedVintageDiscovered = Array.from(new Set([
+    ...(progress.discoveredWords || []),
+    ...vintageDiscovered,
+  ])).slice(-2000);
+
   return {
     ...progress,
     xp: progress.xp + xpGain,
     coins: (progress.coins ?? 0) + coinsGain,
     missions: nextMissions,
     history: newHistory,
+    discoveredWords: updatedVintageDiscovered,
     vintageProgress: {
       maxUnlockedLevel: nextMaxUnlocked,
       completedLevels: nextCompleted,

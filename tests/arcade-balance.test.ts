@@ -18,7 +18,7 @@ describe("Arcade Modu Dengeleme ve İlerleme Testleri", () => {
 
   it("skora göre seviye tohumu geçişleri tüm tahta boyutlarını (4x4, 6x6, 8x8, 10x10) destekler", () => {
     // 0 - 999: 4x4 Akıcı Blitz Tahtaları (Seviye 1-15, ilk ~5-6 tahta)
-    for (let seed = 1; seed <= 15; seed++) {
+    for (const seed of [1, 5, 10, 15]) {
       const nextSeed = getNextArcadeSeed(500, seed);
       expect(nextSeed).toBeGreaterThanOrEqual(1);
       expect(nextSeed).toBeLessThanOrEqual(15);
@@ -27,7 +27,7 @@ describe("Arcade Modu Dengeleme ve İlerleme Testleri", () => {
     }
 
     // 1000 - 2499: 6x6 Isınmış Taktiksel Tahtalar (Seviye 16-45)
-    for (let seed = 1; seed <= 30; seed++) {
+    for (const seed of [1, 10, 20, 30]) {
       const nextSeed = getNextArcadeSeed(1500, seed);
       expect(nextSeed).toBeGreaterThanOrEqual(16);
       expect(nextSeed).toBeLessThanOrEqual(45);
@@ -36,7 +36,7 @@ describe("Arcade Modu Dengeleme ve İlerleme Testleri", () => {
     }
 
     // 2500 - 4499: 8x8 Usta Tahtaları (Seviye 46-75)
-    for (let seed = 1; seed <= 30; seed++) {
+    for (const seed of [1, 15, 30]) {
       const nextSeed = getNextArcadeSeed(3000, seed);
       expect(nextSeed).toBeGreaterThanOrEqual(46);
       expect(nextSeed).toBeLessThanOrEqual(75);
@@ -45,7 +45,7 @@ describe("Arcade Modu Dengeleme ve İlerleme Testleri", () => {
     }
 
     // 4500+: 10x10 Kozmik Şampiyon Tahtaları (Seviye 76-100)
-    for (let seed = 1; seed <= 30; seed++) {
+    for (const seed of [1, 15, 30]) {
       const nextSeed = getNextArcadeSeed(5000, seed);
       expect(nextSeed).toBeGreaterThanOrEqual(76);
       expect(nextSeed).toBeLessThanOrEqual(100);

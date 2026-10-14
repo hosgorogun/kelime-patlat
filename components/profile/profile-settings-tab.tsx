@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, ScrollView, Switch } from "react-native";
+import { View, Text, Pressable, Switch } from "react-native";
 import {
   type PlayerProgress,
   type GenderType,

@@ -43,6 +43,7 @@ export interface PvPContextValue {
   handleRejectFriendRequest: (reqId: string) => void;
   handleSendFriendRequest: (toUsername: string) => Promise<{ success: boolean; message: string }> | any;
   handleAddFriendTarget: (target: InspectableUser) => void;
+  handleRemoveFriendTarget?: (target: InspectableUser) => void;
   handleChallengeTarget: (target: InspectableUser, size?: BoardSize) => Promise<void>;
   // Live Gameplay Interactions
   boardSelection: any;

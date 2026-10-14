@@ -100,7 +100,7 @@ export function CoinCascadeOverlay({
       timeoutIdsRef.current.forEach(clearTimeout);
       timeoutIdsRef.current = [];
     };
-  }, [trigger, count, icon, targetX, targetY, animValues, onComplete, screenWidth, screenHeight]);
+  }, [trigger, count, icon, targetX, targetY, animValues, onComplete, screenWidth, screenHeight, badgeText]);
 
   if (!particles.length) return null;
 

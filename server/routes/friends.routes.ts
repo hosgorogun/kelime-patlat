@@ -183,7 +183,7 @@ friendsRouter.post("/respond", async (req, res) => {
 
     await UserModel.findOneAndUpdate(
       { openId: playerId },
-      { $pull: { "progress.friends": { $or: [{ id: friendForAcceptor.id }, { username: friendForAcceptor.username }] } } }
+      { $pull: { "progress.friends": { id: friendForAcceptor.id } } }
     );
     await UserModel.findOneAndUpdate(
       { openId: playerId },
@@ -192,7 +192,7 @@ friendsRouter.post("/respond", async (req, res) => {
 
     await UserModel.findOneAndUpdate(
       { openId: reqDoc.fromUserId },
-      { $pull: { "progress.friends": { $or: [{ id: friendForRequester.id }, { username: friendForRequester.username }] } } }
+      { $pull: { "progress.friends": { id: friendForRequester.id } } }
     );
     await UserModel.findOneAndUpdate(
       { openId: reqDoc.fromUserId },
@@ -206,5 +206,37 @@ friendsRouter.post("/respond", async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "İşlem gerçekleştirilemedi." });
+  }
+});
+
+friendsRouter.post("/remove", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    const payload = z.object({
+      friendId: z.string().trim().min(1),
+    }).safeParse(req.body);
+
+    if (!payload.success) return res.status(400).json({ error: "Geçersiz arkadaş kimliği." });
+    const { friendId } = payload.data;
+
+    await connectDb();
+    const friendUser = await UserModel.findOne({
+      $or: [{ openId: friendId }, { username: normalizeTr(friendId) }],
+    }).lean();
+    const targetOpenId = friendUser?.openId || friendId;
+    const targetUsername = friendUser?.username || friendId;
+
+    await UserModel.findOneAndUpdate(
+      { openId: user.openId },
+      { $pull: { "progress.friends": { $or: [{ id: friendId }, { id: targetOpenId }, { username: targetUsername }] } as any } }
+    );
+    await UserModel.findOneAndUpdate(
+      { openId: targetOpenId },
+      { $pull: { "progress.friends": { $or: [{ id: user.openId }] } as any } }
+    );
+
+    res.json({ success: true, message: "Arkadaş başarıyla listeden çıkarıldı." });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Arkadaş silinemedi." });
   }
 });

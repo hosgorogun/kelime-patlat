@@ -1,9 +1,12 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { ICONS } from "@/components/game/game-ui";
 import {
   PROFILE_FRAMES,
   VICTORY_EFFECTS,
   BOARD_SKINS,
+  STORE_TITLES,
+  MYSTERY_CHEST_COST,
 } from "@/shared/store-items";
 import type { PlayerProgress } from "@/shared/progression";
 import { STORE_ASSETS } from "./store-assets";
@@ -19,14 +22,18 @@ const FRAME_IMAGES: Record<string, any> = {
 
 export function StoreCosmeticsTab({
   progress,
+  coins = 0,
   onCosmeticPress,
   onSelectFrame,
   onSelectVictoryEffect,
   onSelectBoardSkin,
+  onSelectTitle,
+  onOpenMysteryChest,
 }: {
   progress?: PlayerProgress;
+  coins?: number;
   onCosmeticPress: (
-    kind: "frame" | "effect" | "board",
+    kind: "frame" | "effect" | "board" | "title",
     id: string,
     label: string,
     color: string,
@@ -37,14 +44,101 @@ export function StoreCosmeticsTab({
   onSelectFrame?: (frameId: string) => void;
   onSelectVictoryEffect?: (effectId: string) => void;
   onSelectBoardSkin?: (skinId: string) => void;
+  onSelectTitle?: (titleBadge: string) => void;
+  onOpenMysteryChest?: () => void;
 }) {
   return (
     <>
       <View style={styles.tabIntro}>
-        <Text style={styles.tabIntroTitle}>PROFİL SİNYALİNİ KUR</Text>
+        <Text style={styles.tabIntroTitle}>PROFİL SİNYALİNİ KUR & PRESTİJ</Text>
         <Text style={styles.tabIntroText}>
-          Özel avatar çerçevesi, zafer efekti ve neon tahta görünümlerini donan. Arenada tarzını yansıt!
+          Özel unvanlar, avatar çerçeveleri, zafer efektleri ve gizemli sandıklar. Arenada farkını ortaya koy!
         </Text>
+      </View>
+
+      {/* 🎁 GİZEMLİ ŞANS SANDIĞI BANNER */}
+      {onOpenMysteryChest && (
+        <View style={localStyles.mysteryBanner}>
+          <View style={localStyles.mysteryIconWrap}>
+            <Image source={ICONS.gift} style={{ width: 34, height: 34 }} resizeMode="contain" />
+          </View>
+          <View style={{ flex: 1, marginRight: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+              <Text style={localStyles.mysteryKicker}>ŞANS KUTUSU</Text>
+              <View style={localStyles.mysteryBadge}>
+                <Text style={localStyles.mysteryBadgeText}>SÜRPRİZ ÖDÜL</Text>
+              </View>
+            </View>
+            <Text style={localStyles.mysteryTitle}>Gizemli Kozmetik Sandığı</Text>
+            <Text style={localStyles.mysteryDesc}>
+              100 Çip ver, şansını dene! Büyük ikramiye (250 Çip), özel unvan veya sürpriz teselli ödülleri!
+            </Text>
+          </View>
+          <Pressable
+            disabled={coins < MYSTERY_CHEST_COST}
+            onPress={onOpenMysteryChest}
+            style={({ pressed }) => [
+              localStyles.mysteryBtn,
+              coins < MYSTERY_CHEST_COST && localStyles.mysteryBtnDisabled,
+              pressed && coins >= MYSTERY_CHEST_COST && { opacity: 0.8 },
+            ]}
+          >
+            <Text style={localStyles.mysteryBtnText}>
+              {coins < MYSTERY_CHEST_COST ? "🪙 100" : "AÇ (🪙100)"}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* 👑 PRESTİJ UNVANLARI */}
+      <View style={[styles.sectionHead, { marginTop: 14 }]}>
+        <Text style={styles.sectionTitleHeader}>👑 PRESTİJ OYUNCU UNVANLARI</Text>
+        <Text style={styles.sectionSubHeader}>LOBİDE VE PROFİLDE PARLA</Text>
+      </View>
+      <View style={styles.cosmeticGrid}>
+        {STORE_TITLES.map(([id, label, badge, _emoji, color, cost, _desc]) => {
+          const owned = Boolean(progress?.ownedTitles?.[id]);
+          const isSelected = progress?.selectedTitle === badge;
+
+          // Profesyonel yüksek çözünürlüklü vektörel UI ikon eşleşmesi
+          const titleIconSource =
+            id === "speedster" ? ICONS.play :
+            id === "word_hunter" ? ICONS.radar :
+            id === "lexicon_lord" ? ICONS.trophy :
+            ICONS.shield;
+
+          return (
+            <Pressable
+              key={id}
+              onPress={() => onCosmeticPress("title", id, label, color, cost, owned, () => onSelectTitle?.(badge))}
+              style={({ pressed }) => [
+                styles.cosmeticCard,
+                isSelected && styles.cosmeticCardSelected,
+                { borderColor: isSelected ? color : "#DCE1D7" },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <View style={[localStyles.titleIconWrap, { borderColor: `${color}70`, backgroundColor: `${color}15` }]}>
+                <Image
+                  source={titleIconSource}
+                  style={{ width: 28, height: 28 }}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <Text numberOfLines={1} style={[styles.cosmeticCardName, { color, fontSize: 9.5 }]}>{label}</Text>
+
+              <View style={[styles.cosmeticCardBadge,
+                isSelected ? { backgroundColor: color } :
+                owned ? styles.badgeOwned : styles.badgeCost
+              ]}>
+                <Text style={[styles.cosmeticBadgeText, isSelected && { color: "#FFFFFF", fontWeight: "900" }]}>
+                  {isSelected ? "✓ SEÇİLİ" : owned ? "KUŞAN" : `🪙 ${cost}`}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
 
       {/* 1. Profil Çerçeveleri */}
@@ -222,3 +316,87 @@ export function StoreCosmeticsTab({
     </>
   );
 }
+
+const localStyles = StyleSheet.create({
+  mysteryBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAF5FF",
+    borderWidth: 1.5,
+    borderColor: "#D8B4FE",
+    padding: 12,
+    borderRadius: 18,
+    marginBottom: 4,
+    shadowColor: "#9333EA",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  mysteryIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: "#F3E8FF",
+    borderWidth: 1.5,
+    borderColor: "#C084FC",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  mysteryKicker: {
+    color: "#9333EA",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  mysteryBadge: {
+    backgroundColor: "#E9D5FF",
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  mysteryBadgeText: {
+    color: "#7E22CE",
+    fontSize: 8.5,
+    fontWeight: "900",
+  },
+  mysteryTitle: {
+    color: "#293541",
+    fontSize: 13,
+    fontWeight: "900",
+    marginBottom: 1,
+  },
+  mysteryDesc: {
+    color: "#64748B",
+    fontSize: 10.5,
+    lineHeight: 14,
+  },
+  mysteryBtn: {
+    backgroundColor: "#9333EA",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 70,
+  },
+  mysteryBtnDisabled: {
+    backgroundColor: "#E2E8F0",
+  },
+  mysteryBtnText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  titleIconWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+});
+

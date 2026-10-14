@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { normalizeTr, normalizeTrUpper, isEqualTr } from "@/shared/tr-utils";
+import { normalizeTr, isEqualTr } from "@/shared/tr-utils";
 import { WORD_BOOK_MILESTONES, type PlayerProgress, type WordBookMilestone } from "@/shared/progression";
 import { fetchWordDetail } from "@/shared/dictionary";
 import { haptics } from "@/lib/haptics";
@@ -93,16 +93,17 @@ export const WordBookModal = React.memo(({
     haptics.success();
     setCascadeTrigger(true);
     setTimeout(() => setCascadeTrigger(false), 1600);
-    setProgress((curr) => ({
-      ...curr,
-      coins: (curr.coins ?? 0) + milestone.rewardCoins,
-      wordBookClaimedMilestones: {
-        ...(curr.wordBookClaimedMilestones || {}),
-        [milestone.count]: true,
-      },
-    }));
     if (onClaimMilestone) {
       onClaimMilestone(milestone);
+    } else {
+      setProgress((curr) => ({
+        ...curr,
+        coins: (curr.coins ?? 0) + milestone.rewardCoins,
+        wordBookClaimedMilestones: {
+          ...(curr.wordBookClaimedMilestones || {}),
+          [milestone.count]: true,
+        },
+      }));
     }
   }, [setProgress, onClaimMilestone]);
 
@@ -135,7 +136,7 @@ export const WordBookModal = React.memo(({
               <Text style={styles.statsLabel}>KEŞFEDİLEN KELİME</Text>
             </View>
             <Text style={styles.statsHint}>
-              Solo, PvP ve Günlük modlarda bulduğun geçerli kelimeler buraya eklenir.
+              Solo, PvP, Günlük, Arcade ve Gazete modlarında bulduğun tüm geçerli kelimeler buraya eklenir.
             </Text>
           </View>
 
@@ -238,7 +239,7 @@ export const WordBookModal = React.memo(({
                   </Text>
                   {currentDefinition?.example ? (
                     <Text style={styles.detailExample}>
-                      "{currentDefinition.example}"
+                      &ldquo;{currentDefinition.example}&rdquo;
                     </Text>
                   ) : null}
                 </>

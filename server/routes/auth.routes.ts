@@ -346,6 +346,10 @@ authRouter.post("/sync-progress", async (req, res) => {
           ...(currentProg.claimedMilestones || {}),
           ...(progress.claimedMilestones || {}),
         },
+        claimedLeagueTiers: {
+          ...(currentProg.claimedLeagueTiers || {}),
+          ...(progress.claimedLeagueTiers || {}),
+        },
         coins: Math.max(0, Math.min(2_000_000, nextCoins + missingWelcomeCoins)),
         streakShields: Math.max(0, Math.min(99, nextShields + missingWelcomeShields)),
         radarChargesBonus: Math.max(0, Math.min(99, nextRadar + missingWelcomeRadar)),

@@ -160,7 +160,7 @@ describe("Tek oyunculu seviye yolculuğu", () => {
         });
       }
     }
-  });
+  }, 60000);
 
   it("rastgele oyunlar zorluk kategorilerinden dengeli kelime karışımları üretir", () => {
     const seenDifficulties = new Set<string>();

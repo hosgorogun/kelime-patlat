@@ -82,7 +82,6 @@ export const styles = StyleSheet.create({
     textTransform: "uppercase",
     includeFontPadding: false,
   },
-  rankRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 },
   levelBadge: {
     flexDirection: "row",
     alignItems: "center",

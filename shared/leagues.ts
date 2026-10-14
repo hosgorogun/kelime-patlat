@@ -87,7 +87,7 @@ export function getLeagueTier(progressOrPoints: LeagueProgressState | number): L
     minPoints: current.minPoints,
     maxPoints: current.maxPoints,
     currentTierPoints: Math.max(0, points - current.minPoints),
-    targetTierPoints: next ? next.minPoints - current.minPoints : 1000,
+    targetTierPoints: next ? next.minPoints - current.minPoints : 0,
     totalPoints: points,
   };
 }

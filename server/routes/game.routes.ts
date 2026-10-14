@@ -24,7 +24,7 @@ import {
   type PlayerProgress,
   type AvatarId,
 } from "../../shared/progression";
-import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
+import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS, STORE_TITLES } from "../../shared/store-items";
 import type { LeaderboardEntry } from "../../shared/game";
 
 export const gameRouter = Router();
@@ -300,8 +300,6 @@ gameRouter.post("/shop-buy", async (req, res) => {
       next.radarChargesBonus = (current.radarChargesBonus || 0) + 5;
     } else if (item.rewardType === "shield") {
       next.streakShields = (current.streakShields || 0) + 1;
-    } else if (item.rewardType === "xp") {
-      next.xp = current.xp + 250;
     }
     dbUser.progress = next;
     dbUser.updatedAt = new Date();
@@ -355,9 +353,100 @@ gameRouter.post("/spend-coins", async (req, res) => {
   }
 });
 
+gameRouter.post("/mystery-chest", async (req, res) => {
+  try {
+    await connectDb();
+    const user = await sdk.authenticateRequest(req);
+    const dbUser = await UserModel.findOne({ openId: user.openId });
+    if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
+    const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+    const currentCoins = current.coins ?? 0;
+    if (currentCoins < 100) {
+      return res.status(400).json({ error: "Yetersiz çip! Gizemli Sandık için 100 altın çip gerekiyor." });
+    }
+
+    // Ağırlıklı Gacha Havuzu (Weighted Loot Table)
+    const weightedPool: Array<{
+      type: "coins" | "lives" | "radar" | "shield" | "title";
+      weight: number;
+      val: number | string;
+      label: string;
+      icon: string;
+      category: "consolation" | "common" | "rare" | "jackpot";
+      detail?: string;
+    }> = [
+      // %35 İhtimal: Küçük Teselli Çipi (15 veya 25 Çip)
+      { type: "coins", weight: 20, val: 15, label: "15 Teselli Çipi 🪙", icon: "🪙", category: "consolation", detail: "Sandıktan 15 çip teselli ödülü çıktı." },
+      { type: "coins", weight: 15, val: 25, label: "25 Teselli Çipi 🪙", icon: "🪙", category: "consolation", detail: "Sandıktan 25 çip teselli ödülü çıktı." },
+      // %30 İhtimal: 1x Can veya 1x Mini Radar
+      { type: "lives", weight: 15, val: 1, label: "1x Can Takviyesi 💚", icon: "💚", category: "common", detail: "1 canın anında yenilendi!" },
+      { type: "radar", weight: 15, val: 1, label: "1x Radar Şifresi 👁", icon: "👁", category: "common", detail: "1 adet radar ipucu envanterine eklendi." },
+      // %15 İhtimal: 50 Çip Teselli
+      { type: "coins", weight: 15, val: 50, label: "50 Çip İadesi 🪙", icon: "🪙", category: "consolation", detail: "Sandık maliyetinin yarısı (50 çip) iade edildi." },
+      // %18 İhtimal: Nadir Ödüller
+      { type: "shield", weight: 8, val: 1, label: "1x Seri Kalkanı! 🛡️", icon: "🛡️", category: "rare", detail: "Galibiyet serilerini yenilgilere karşı korur." },
+      { type: "radar", weight: 6, val: 5, label: "5x Büyük Radar Paketi! 👁", icon: "👁", category: "rare", detail: "5 adet radar ipucu envanterine eklendi." },
+      { type: "title", weight: 4, val: "speedster", label: "[HIZLI PARMAK] Unvanı! ⚡", icon: "⚡", category: "rare", detail: "Nadir mağaza unvanı profilinize tanımlandı." },
+      // %2 İhtimal: Efsanevi Büyük İkramiye (250 Çip)
+      { type: "coins", weight: 2, val: 250, label: "250 ÇİP BÜYÜK İKRAMİYE! 🏆", icon: "👑", category: "jackpot", detail: "Büyük ikramiyeyi vurdun! 250 altın çip hesabına yüklendi." },
+    ];
+
+    const totalWeight = weightedPool.reduce((acc, it) => acc + it.weight, 0);
+    let randomVal = Math.random() * totalWeight;
+    let picked = weightedPool[0]!;
+    for (const item of weightedPool) {
+      if (randomVal < item.weight) {
+        picked = item;
+        break;
+      }
+      randomVal -= item.weight;
+    }
+
+    let nextCoins = currentCoins - 100;
+    let next: PlayerProgress = { ...current, coins: nextCoins };
+
+    if (picked.type === "coins") {
+      next.coins = (next.coins ?? 0) + (picked.val as number);
+    } else if (picked.type === "lives") {
+      const calc = getCalculatedLives(current);
+      if (!calc.isInfinite) {
+        next.lives = Math.min(MAX_LIVES, calc.lives + (picked.val as number));
+        next.lastLifeRegenTimestamp = Date.now();
+      }
+    } else if (picked.type === "radar") {
+      next.radarChargesBonus = (current.radarChargesBonus || 0) + (picked.val as number);
+    } else if (picked.type === "shield") {
+      next.streakShields = (current.streakShields || 0) + (picked.val as number);
+    } else if (picked.type === "title") {
+      const titleId = picked.val as string;
+      const titleEntry = STORE_TITLES.find((t) => t[0] === titleId);
+      if (titleEntry) next.selectedTitle = titleEntry[2];
+      next.ownedTitles = { ...(current.ownedTitles ?? {}), [titleId]: true };
+    }
+
+    dbUser.progress = next;
+    dbUser.updatedAt = new Date();
+    await dbUser.save();
+
+    res.json({
+      success: true,
+      progress: next,
+      reward: {
+        type: picked.type,
+        label: picked.label,
+        icon: picked.icon,
+        category: picked.category,
+        detail: picked.detail,
+      },
+    });
+  } catch (err: any) {
+    res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Sandık açılamadı." });
+  }
+});
+
 gameRouter.post("/cosmetic-buy", async (req, res) => {
   const payload = z.object({
-    kind: z.enum(["avatar", "frame", "effect", "board"]),
+    kind: z.enum(["avatar", "frame", "effect", "board", "title"]),
     id: z.string().max(32),
   }).safeParse(req.body);
   if (!payload.success) return res.status(400).json({ error: "Geçersiz kozmetik isteği." });
@@ -382,6 +471,10 @@ gameRouter.post("/cosmetic-buy", async (req, res) => {
       const entry = BOARD_SKINS.find((b) => b[0] === id);
       if (!entry) return res.status(400).json({ error: "Geçersiz tahta görünümü." });
       cost = entry[3];
+    } else if (kind === "title") {
+      const entry = STORE_TITLES.find((t) => t[0] === id);
+      if (!entry) return res.status(400).json({ error: "Geçersiz unvan." });
+      cost = entry[5];
     } else if (kind === "avatar") {
       const entry = AVATARS.find((a) => a.id === id);
       if (!entry) return res.status(400).json({ error: "Geçersiz avatar." });
@@ -392,6 +485,7 @@ gameRouter.post("/cosmetic-buy", async (req, res) => {
       kind === "frame" ? Boolean(current.ownedFrames?.[id]) :
       kind === "effect" ? Boolean(current.ownedVictoryEffects?.[id]) :
       kind === "board" ? Boolean(current.ownedBoardSkins?.[id]) :
+      kind === "title" ? Boolean(current.ownedTitles?.[id]) :
       Boolean(current.purchasedAvatars?.[id]);
 
     const effectiveCost = isAlreadyOwned ? 0 : cost;
@@ -412,6 +506,10 @@ gameRouter.post("/cosmetic-buy", async (req, res) => {
     } else if (kind === "board") {
       next.selectedBoardSkin = id;
       next.ownedBoardSkins = { ...(current.ownedBoardSkins ?? {}), [id]: true };
+    } else if (kind === "title") {
+      const titleEntry = STORE_TITLES.find((t) => t[0] === id);
+      if (titleEntry) next.selectedTitle = titleEntry[2];
+      next.ownedTitles = { ...(current.ownedTitles ?? {}), [id]: true };
     } else if (kind === "avatar") {
       next.selectedAvatar = id as AvatarId;
       next.purchasedAvatars = { ...(current.purchasedAvatars ?? {}), [id]: true };

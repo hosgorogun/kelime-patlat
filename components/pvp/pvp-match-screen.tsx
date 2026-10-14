@@ -13,7 +13,6 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { ScreenContainer } from "../common/screen-container";
 import { BoardCell, type CellColorConfig } from "../game/board-cell";
-import { ScoreBadge } from "../game/score-badge";
 import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { MatchResultModal } from "../modals/match-result-modal";
 import { LeaveDuelModal } from "../friends/leave-duel-modal";
@@ -119,6 +118,7 @@ export interface PvpMatchScreenProps {
   inspectedUser: InspectableUser | null;
   setInspectedUser: (user: InspectableUser | null) => void;
   onAddFriendTarget: (target: InspectableUser) => void;
+  onRemoveFriendTarget?: (target: InspectableUser) => void;
   onChallengeTarget: (userOrSize?: any, size?: BoardSize) => void;
   livesModalElement?: React.ReactNode;
   celebrationModalElement?: React.ReactNode;
@@ -196,6 +196,7 @@ export function PvpMatchScreen({
   inspectedUser,
   setInspectedUser,
   onAddFriendTarget,
+  onRemoveFriendTarget,
   onChallengeTarget,
   livesModalElement,
   celebrationModalElement,
@@ -431,7 +432,7 @@ export function PvpMatchScreen({
                 <Image source={{ uri: opponent.avatarPhoto }} style={styles.duelAvatarPhoto} resizeMode="cover" />
               ) : (
                 <Text style={styles.duelAvatarEmoji}>
-                  {opponent?.isBot ? "🤖" : resolveAvatarDisplay(opponent?.avatar)}
+                  {resolveAvatarDisplay(opponent?.avatar || "🦊")}
                 </Text>
               )}
             </View>
@@ -821,6 +822,8 @@ export function PvpMatchScreen({
       {/* Düellodan Ayrılma Siber Modalı */}
       <LeaveDuelModal
         visible={showLeaveDuelModal}
+        progress={progress}
+        isRanked={Boolean(room.isRanked || (!room.isCustom && !room.players.some((p) => p.isBot)))}
         onStay={() => setShowLeaveDuelModal(false)}
         onLeave={() => {
           setShowLeaveDuelModal(false);
@@ -877,6 +880,7 @@ export function PvpMatchScreen({
         }
         onClose={() => setInspectedUser(null)}
         onAddFriend={onAddFriendTarget}
+        onRemoveFriend={onRemoveFriendTarget}
         onChallenge={onChallengeTarget}
       />
 

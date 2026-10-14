@@ -169,7 +169,7 @@ describe("Component Tests: Profile, Store, Shell & Common Views", () => {
           onClose: vi.fn(),
         })
       );
-      expect(html).toContain("SİBER OYUN KILAVUZU");
+      expect(html).toContain("OYUN KILAVUZU");
       expect(html).toContain("SONRAKİ BÖLÜM");
     });
   });
@@ -238,6 +238,17 @@ describe("Component Tests: Profile, Store, Shell & Common Views", () => {
       expect(html).toContain("KELİME PATLAT");
       expect(html).toContain("Giriş Yap");
       expect(html).toContain("Kayıt Ol");
+    });
+
+    it("platforma göre uygun sosyal giriş butonunu (Android/Web -> Google, iOS -> Apple) render etmelidir", () => {
+      const html = renderToStaticMarkup(
+        React.createElement(AuthScreen, {
+          onSuccess: vi.fn(),
+          onCancel: vi.fn(),
+        })
+      );
+      // Test ortamında varsayılan Platform.OS web veya android olarak çalışır (Google ile Giriş Yap)
+      expect(html).toMatch(/Google ile Giriş Yap|Apple ile Giriş Yap/);
     });
   });
 

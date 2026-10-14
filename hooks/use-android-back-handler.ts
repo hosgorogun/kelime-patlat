@@ -138,29 +138,15 @@ export function useAndroidBackHandler({
         return true;
       }
       if (screen === "solo") {
-        setGlobalAlert({
-          icon: "⚠️",
-          kicker: "TEK OYUNCULU MOD",
-          title: "Bölümden Ayrıl (-1 Can)",
-          message: "Mevcut seviyeden ayrılmak istediğinize emin misiniz? Oyunu terk ederseniz 1 Can kaybedersiniz.",
-          accentColor: "#FF647C",
-          primaryButton: {
-            text: "AYRIL (-1 CAN)",
-            color: "#ca4f62",
-            onPress: () => {
-              completeSoloLevel(soloLevel, [], false);
-              setDailySession(null);
-              setScreen("levels");
-            },
-          },
-          secondaryButton: {
-            text: "DEVAM ET",
-          },
-        });
+        // SoloChallenge kendi donanım geri tuşu dinleyicisini (BackHandler) barındırır;
+        // duraklatma, süre kilitleri ve özel onay modalını yönetmesi için ekranın kendi kontrolüne bırakılır.
+        return true;
+      }
+      if (screen === "arcade" || screen === "vintage") {
+        // ArcadeChallenge ve VintagePuzzle kendi iç BackHandler'larını ve çıkış onay diyaloglarını yönetir.
         return true;
       }
       if (
-        screen === "arcade" ||
         screen === "levels" ||
         screen === "season" ||
         screen === "league" ||
@@ -169,8 +155,7 @@ export function useAndroidBackHandler({
         screen === "online" ||
         screen === "friends" ||
         screen === "auth" ||
-        screen === "store" ||
-        screen === "vintage"
+        screen === "store"
       ) {
         setScreen("home");
         return true;

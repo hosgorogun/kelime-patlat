@@ -139,7 +139,7 @@ export function ArcadeChallenge({
       .then((detail) => {
         if (!isMountedRef.current) return;
         setSelectedWordInfo((prev) => {
-          if (!prev || prev.word !== word) return prev;
+          if (!prev || !isEqualTr(prev.word, word)) return prev;
           return {
             word,
             definition: detail.definition,
@@ -621,6 +621,8 @@ export function ArcadeChallenge({
     savedRef.current = false;
     setDoubled(false);
     totalWordsFoundRef.current = 0;
+    totalCombosRef.current = 0;
+    allFoundWordsRef.current = [];
     setLevelSeed(() => Math.floor(Math.random() * 15) + 1);
     setVariation((v) => v + 1);
     setSelected([]);

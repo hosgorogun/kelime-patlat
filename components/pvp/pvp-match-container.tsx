@@ -108,7 +108,12 @@ export function PvpMatchContainer(props: PvpMatchContainerProps) {
   const [clockNow, setClockNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (room?.status !== "playing" || !room.startedAt) return;
+    if (room?.status !== "playing" || !room.startedAt) {
+      setPvpCombo(0);
+      lastFoundTimeRef.current = 0;
+      prevWordCountRef.current = 0;
+      return;
+    }
     setClockNow(Date.now());
     const timer = setInterval(() => setClockNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -126,7 +131,11 @@ export function PvpMatchContainer(props: PvpMatchContainerProps) {
   const prevWordCountRef = useRef(myWordCount);
 
   useEffect(() => {
-    if (myWordCount > prevWordCountRef.current) {
+    if (myWordCount < prevWordCountRef.current) {
+      // New round or words reset
+      setPvpCombo(0);
+      lastFoundTimeRef.current = 0;
+    } else if (myWordCount > prevWordCountRef.current) {
       const now = Date.now();
       const diff = now - lastFoundTimeRef.current;
       lastFoundTimeRef.current = now;
@@ -242,6 +251,7 @@ export function PvpMatchContainer(props: PvpMatchContainerProps) {
       inspectedUser={inspectedUser}
       setInspectedUser={setInspectedUser}
       onAddFriendTarget={handleAddFriendTarget}
+      onRemoveFriendTarget={pvp.handleRemoveFriendTarget}
       onChallengeTarget={handleChallengeTarget}
       livesModalElement={props.livesModalElement}
       celebrationModalElement={props.celebrationModalElement}

@@ -12,6 +12,7 @@ export type LivesModalProps = {
   onBuyOne: () => void;
   onRefillAll: () => void;
   onWatchAd: () => void;
+  onGoToPvP?: () => void;
   loading?: boolean;
 };
 
@@ -22,6 +23,7 @@ export function LivesModal({
   onBuyOne,
   onRefillAll,
   onWatchAd,
+  onGoToPvP,
   loading = false,
 }: LivesModalProps) {
   const [calc, setCalc] = useState(() => getCalculatedLives(progress));
@@ -117,17 +119,17 @@ export function LivesModal({
                   console.error(e);
                 }
               }}
-              disabled={isFull || calc.isInfinite}
+              disabled={loading || isFull || calc.isInfinite}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnAd,
-                (isFull || calc.isInfinite) && styles.btnDisabled,
-                pressed && !(isFull || calc.isInfinite) && styles.pressed,
+                (loading || isFull || calc.isInfinite) && styles.btnDisabled,
+                pressed && !loading && !(isFull || calc.isInfinite) && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>📺</Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.btnTitle}>SPONSORLU REKLAM İZLE</Text>
+                <Text style={styles.btnTitle}>{loading ? "İŞLENİYOR..." : "SPONSORLU REKLAM İZLE"}</Text>
                 <Text style={styles.btnSub}>+1 Can Kazan (ÜCRETSİZ)</Text>
               </View>
             </Pressable>
@@ -137,23 +139,23 @@ export function LivesModal({
               onPress={() => {
                 if (currentCoins < COST_PER_LIFE) {
                   haptics.error();
-                } else {
-                  haptics.success();
-                  gameSfx.victory();
+                  return;
                 }
+                haptics.success();
+                gameSfx.victory();
                 onBuyOne();
               }}
-              disabled={isFull || calc.isInfinite}
+              disabled={loading || isFull || calc.isInfinite || currentCoins < COST_PER_LIFE}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnOne,
-                (isFull || calc.isInfinite || currentCoins < COST_PER_LIFE) && styles.btnDisabled,
-                pressed && !(isFull || calc.isInfinite) && styles.pressed,
+                (loading || isFull || calc.isInfinite || currentCoins < COST_PER_LIFE) && styles.btnDisabled,
+                pressed && !loading && !(isFull || calc.isInfinite || currentCoins < COST_PER_LIFE) && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>💚</Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.btnTitle}>1 CAN SATIN AL</Text>
+                <Text style={styles.btnTitle}>{loading ? "İŞLENİYOR..." : "1 CAN SATIN AL"}</Text>
                 <Text style={styles.btnSub}>+1 Can Yükle</Text>
               </View>
               <View style={styles.priceTag}>
@@ -166,23 +168,23 @@ export function LivesModal({
               onPress={() => {
                 if (currentCoins < COST_REFILL_ALL) {
                   haptics.error();
-                } else {
-                  haptics.success();
-                  gameSfx.victory();
+                  return;
                 }
+                haptics.success();
+                gameSfx.victory();
                 onRefillAll();
               }}
-              disabled={isFull || calc.isInfinite}
+              disabled={loading || isFull || calc.isInfinite || currentCoins < COST_REFILL_ALL}
               style={({ pressed }) => [
                 styles.btn,
                 styles.btnRefill,
-                (isFull || calc.isInfinite || currentCoins < COST_REFILL_ALL) && styles.btnDisabled,
-                pressed && !(isFull || calc.isInfinite) && styles.pressed,
+                (loading || isFull || calc.isInfinite || currentCoins < COST_REFILL_ALL) && styles.btnDisabled,
+                pressed && !loading && !(isFull || calc.isInfinite || currentCoins < COST_REFILL_ALL) && styles.pressed,
               ]}
             >
               <Text style={styles.btnIcon}>👑</Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.btnTitle}>TÜM CANLARI DOLDUR</Text>
+                <Text style={styles.btnTitle}>{loading ? "İŞLENİYOR..." : "TÜM CANLARI DOLDUR"}</Text>
                 <Text style={styles.btnSub}>Tam Kapasite 5/5 Can</Text>
               </View>
               <View style={styles.priceTagGold}>
@@ -190,6 +192,25 @@ export function LivesModal({
               </View>
             </Pressable>
           </View>
+
+          {/* Canı 0 Olan Oyuncu İçin Ücretsiz Düello Yönlendirmesi */}
+          {calc.lives <= 0 && !calc.isInfinite && onGoToPvP && (
+            <Pressable
+              onPress={() => {
+                haptics.select();
+                onClose();
+                onGoToPvP();
+              }}
+              style={({ pressed }) => [styles.pvpRetentionBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.pvpRetentionIcon}>⚔️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pvpRetentionTitle}>CAN BEKLEME, DÜELLOYA KATIL!</Text>
+                <Text style={styles.pvpRetentionSub}>Canlı düellolar can harcamaz, lig puanı kazandırır.</Text>
+              </View>
+              <Text style={styles.pvpRetentionArrow}>➔</Text>
+            </Pressable>
+          )}
 
           {/* Close button */}
           <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -395,6 +416,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 0.5,
+  },
+  pvpRetentionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1.5,
+    borderColor: "#86EFAC",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 10,
+    width: "100%",
+    gap: 8,
+  },
+  pvpRetentionIcon: {
+    fontSize: 20,
+  },
+  pvpRetentionTitle: {
+    color: "#166534",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+  pvpRetentionSub: {
+    color: "#15803D",
+    fontSize: 9.5,
+    fontWeight: "600",
+    marginTop: 1,
+  },
+  pvpRetentionArrow: {
+    color: "#166534",
+    fontSize: 14,
+    fontWeight: "900",
   },
   pressed: {
     opacity: 0.8,

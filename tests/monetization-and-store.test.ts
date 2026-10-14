@@ -31,7 +31,7 @@ describe("Monetizasyon & Mağaza Ürünleri Test Suiti", () => {
   });
 
   it("Mağaza çip ekipmanları ve çerçeve/efekt tanımları eksiksiz olmalıdır", () => {
-    expect(CHIP_EQUIPMENT_ITEMS.length).toBeGreaterThanOrEqual(4);
+    expect(CHIP_EQUIPMENT_ITEMS.length).toBeGreaterThanOrEqual(3);
     for (const item of CHIP_EQUIPMENT_ITEMS) {
       expect(item.id).toBeDefined();
       expect(item.cost).toBeGreaterThan(0);

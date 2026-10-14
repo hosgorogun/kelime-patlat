@@ -3,7 +3,7 @@ import { palette } from '@/shared/palette';
 
 export const styles = StyleSheet.create({
 
-  container: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 185 },
+  container: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 220 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   backButton: { width: 38, height: 38, borderRadius: 12, backgroundColor: "#F8FAFC", alignItems: "center", justifyContent: "center" },
   backText: { color: "#1E293B", fontSize: 24, lineHeight: 26 },

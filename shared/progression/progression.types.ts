@@ -178,6 +178,7 @@ export type PlayerProgress = {
   ownedVictoryEffects?: Record<string, boolean>;
   selectedBoardSkin?: string;
   ownedBoardSkins?: Record<string, boolean>;
+  ownedTitles?: Record<string, boolean>;
   seasonHistory?: Array<{ seasonId: string; rank: string; lp: number; date: string }>;
   lastSeasonResetId?: string;
   soloUnlockedLevel?: number;
@@ -249,6 +250,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   ownedVictoryEffects: { pulse: true },
   selectedBoardSkin: "grid",
   ownedBoardSkins: { grid: true },
+  ownedTitles: { novice: true },
   soloUnlockedLevel: 1,
   vintageProgress: {
     maxUnlockedLevel: 1,
@@ -296,6 +298,10 @@ export const CYBER_TITLES: CyberTitle[] = [
   { id: "mastermind", name: "BİLGE MATRİS", badge: "[KOD BİLGE]", icon: "🔮", accent: "#C084FC", unlockHint: "Seviye 6'ya ulaş.", unlocked: (p) => getPlayerLevel(p.xp) >= 6 },
   { id: "legend", name: "MATRİS EFSANESİ", badge: "[MATRİS EFSANESİ]", icon: "👑", accent: "#FFC24A", unlockHint: "Seviye 10'a ulaş veya 500 Arcade puanı yap.", unlocked: (p) => getPlayerLevel(p.xp) >= 10 || (p.bestArcadeScore || 0) >= 500 },
   { id: "overlord", name: "SİBER OVERLORD", badge: "[SİBER HAKİM]", icon: "🪐", accent: "#E879F9", unlockHint: "Seviye 15'e ulaş veya 2000 XP biriktir.", unlocked: (p) => getPlayerLevel(p.xp) >= 15 || p.xp >= 2000 },
+  { id: "speedster", name: "HIZLI PARMAK", badge: "[HIZLI PARMAK]", icon: "⚡", accent: "#38BDF8", unlockHint: "Mağazadan çip ile alınır.", unlocked: (p) => Boolean(p.ownedTitles?.speedster) },
+  { id: "word_hunter", name: "SÖZCÜK AVCISI", badge: "[SÖZCÜK AVCISI]", icon: "🎯", accent: "#F43F5E", unlockHint: "Mağazadan çip ile alınır.", unlocked: (p) => Boolean(p.ownedTitles?.word_hunter) },
+  { id: "lexicon_lord", name: "LÜGAT LORDU", badge: "[LÜGAT LORDU]", icon: "👑", accent: "#FFC24A", unlockHint: "Mağazadan çip ile alınır.", unlocked: (p) => Boolean(p.ownedTitles?.lexicon_lord) },
+  { id: "invincible", name: "YENİLMEZ", badge: "[YENİLMEZ]", icon: "🛡️", accent: "#A855F7", unlockHint: "Mağazadan çip ile alınır.", unlocked: (p) => Boolean(p.ownedTitles?.invincible) },
 ];
 
 export type DailyMystery = {

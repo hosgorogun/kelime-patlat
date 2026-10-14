@@ -1,10 +1,10 @@
 import { styles } from './command-center.styles';
 import { useEffect, useRef, useState } from "react";
-import { Animated, Dimensions, Image, PanResponder, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { type LeaderboardEntry } from "@/shared/game";
-import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, getActiveCyberTitle, getActiveCyberTitleObject, THEME_PACKS, AVATARS, getDayId, getCalculatedLives, canSpinLuckyWheel, type DailyChallenge, type PlayerProgress, type ThemePackId } from "@/shared/progression";
+import { getLeagueTier, getRank, getPlayerLevel, getDailyMysteryWord, getActiveCyberTitle, getActiveCyberTitleObject, AVATARS, getDayId, getCalculatedLives, canSpinLuckyWheel, type PlayerProgress } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { PROFILE_FRAMES } from "@/shared/store-items";
 import { palette } from "@/shared/palette";
@@ -82,16 +82,18 @@ export function CommandCenter({
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const hasAutoOpenedDailyRewardRef = useRef(false);
-  const [isMysteryExpanded, setIsMysteryExpanded] = useState(false);
   const [livesCalc, setLivesCalc] = useState(() => getCalculatedLives(progress));
   const [imgError, setImgError] = useState(false);
   const [displayCoins, setDisplayCoins] = useState(() => progress.coins ?? 0);
   const targetCoinsRef = useRef(progress.coins ?? 0);
 
+  const displayCoinsRef = useRef(displayCoins);
+  displayCoinsRef.current = displayCoins;
+
   useEffect(() => {
     const target = progress.coins ?? 0;
     targetCoinsRef.current = target;
-    const start = displayCoins;
+    const start = displayCoinsRef.current;
     if (start === target) return;
 
     const diff = target - start;
@@ -129,7 +131,6 @@ export function CommandCenter({
   const leagueProgressPercent = league.tier === "HAKİM"
     ? 100
     : Math.min(100, Math.round((league.currentTierPoints / league.targetTierPoints) * 100));
-  const activeTheme = THEME_PACKS.find((pack) => pack.id === progress.selectedTheme) ?? THEME_PACKS[0]!;
   const mystery = getDailyMysteryWord();
 
   const todayId = getDayId();

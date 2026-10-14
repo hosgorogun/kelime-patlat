@@ -7,7 +7,6 @@ import {
 import {
   getCalculatedLives,
   MAX_LIVES,
-  getPlayerLevel,
   type PlayerProgress,
 } from "@/shared/progression";
 import { STORE_ASSETS } from "./store-assets";
@@ -53,8 +52,8 @@ export function StoreEquipmentTab({
           </Text>
           <Text style={styles.adBannerDesc}>
             {remainingAds <= 0
-              ? "Günün 3 sponsorlu reklam hakkını tamamladın. Yarın saat 00:00'da yenilenecek!"
-              : "Her izlemede anında +15 Çip kazan! (Günde 3 reklam hakkı)"}
+              ? `Günün ${dailyAdLimit} sponsorlu reklam hakkını tamamladın. Yarın saat 00:00'da yenilenecek!`
+              : `Her izlemede anında +10 Çip kazan! (Günde ${dailyAdLimit} reklam hakkı)`}
           </Text>
         </View>
         <Pressable
@@ -67,7 +66,7 @@ export function StoreEquipmentTab({
           ]}
         >
           <Text style={[styles.adButtonText, remainingAds <= 0 && { color: "#293541", fontSize: 10 }]}>
-            {adLoading ? "..." : remainingAds <= 0 ? "✓ TAMAM" : "İZLE (+15)"}
+            {adLoading ? "..." : remainingAds <= 0 ? "✓ TAMAM" : "İZLE (+10)"}
           </Text>
         </Pressable>
       </View>
@@ -87,7 +86,7 @@ export function StoreEquipmentTab({
         const currentLives = livesCalc ? livesCalc.lives : 5;
         const isLivesFull = isLives && Boolean(livesCalc?.isInfinite || currentLives >= MAX_LIVES);
         const canAfford = coins >= item.cost;
-        const isDisabled = !canAfford && !isLivesFull;
+        const isDisabled = isLivesFull || !canAfford;
 
         const accentColor = isLives ? "#F43F5E" : isRadar ? "#10B981" : isShield ? "#3B82F6" : "#EC4899";
 

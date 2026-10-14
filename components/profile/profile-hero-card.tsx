@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, Image, TextInput } from "react-native";
-import type { PlayerProgress, AvatarDefinition, LeagueTier } from "@/shared/progression";
+import { type PlayerProgress, type AvatarDefinition, type LeagueTier, getActiveCyberTitleObject } from "@/shared/progression";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { FRAME_IMAGES } from "./profile-constants";
 import { styles } from "./profile.styles";
@@ -50,13 +50,9 @@ export const ProfileHeroCard = React.memo(({
   activeTitle,
   currentLeague,
 }: ProfileHeroCardProps) => {
+  const activeTitleObj = getActiveCyberTitleObject(progress);
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.heroCard,
-        pressed && { transform: [{ rotateX: "-3deg" }, { scale: 0.985 }] },
-      ]}
-    >
+    <View style={styles.heroCard}>
       <View style={styles.heroTopRow}>
         {/* Avatar Ring with Camera & Level Badge */}
         <View style={styles.avatarWrapper}>
@@ -160,17 +156,23 @@ export const ProfileHeroCard = React.memo(({
                   onSubmitEditing={handleSaveName}
                   style={styles.nameTextInput}
                 />
-                <Pressable onPress={handleSaveName} style={styles.saveNameBtn}>
+                <Pressable
+                  onPress={handleSaveName}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={({ pressed }) => [styles.saveNameBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] }]}
+                >
                   <Text style={styles.saveNameBtnText}>✓</Text>
                 </Pressable>
               </View>
             ) : (
               <Pressable
                 onPress={() => {
+                  triggerHapticSelection();
                   setNameInput(safeName);
                   setIsEditingName(true);
                 }}
-                style={styles.namePressable}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+                style={({ pressed }) => [styles.namePressable, pressed && { opacity: 0.75 }]}
               >
                 <Text numberOfLines={1} style={styles.heroName}>
                   {safeName}
@@ -185,9 +187,25 @@ export const ProfileHeroCard = React.memo(({
           {/* Title & League Badges Row */}
           <View style={styles.metaBadgesRow}>
             {/* Active Cyber Hologram Title */}
-            <View style={styles.titleBadge}>
-              <Text style={styles.titleBadgeIcon}>🎖️</Text>
-              <Text numberOfLines={1} style={styles.titleBadgeText}>{activeTitle}</Text>
+            <View
+              style={[
+                styles.titleBadge,
+                {
+                  borderColor: activeTitleObj.accent ? `${activeTitleObj.accent}60` : "#FDE68A",
+                  backgroundColor: activeTitleObj.accent ? `${activeTitleObj.accent}14` : "#FFFBEB",
+                },
+              ]}
+            >
+              <Text style={styles.titleBadgeIcon}>{activeTitleObj.icon || "🎖️"}</Text>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.titleBadgeText,
+                  activeTitleObj.accent && { color: activeTitleObj.accent },
+                ]}
+              >
+                {activeTitle}
+              </Text>
             </View>
 
             {/* League Tier Badge */}
@@ -197,16 +215,6 @@ export const ProfileHeroCard = React.memo(({
                 {currentLeague.name} · {progress.lp ?? 0} LP
               </Text>
             </View>
-
-            {/* Alevli Zafer Serisi Rozeti */}
-            {(progress.pvpWinStreak ?? 0) >= 2 && (
-              <View style={[styles.leagueBadge, { borderColor: "#F97316", backgroundColor: "#FFF7ED" }]}>
-                <Text style={{ fontSize: 11, marginRight: 2 }}>🔥</Text>
-                <Text style={[styles.leagueBadgeText, { color: "#C2410C" }]}>
-                  {progress.pvpWinStreak} Zafer{(progress.streakShields ?? 0) > 0 ? " · 🛡️ Korumalı" : ""}
-                </Text>
-              </View>
-            )}
           </View>
         </View>
       </View>
@@ -233,7 +241,7 @@ export const ProfileHeroCard = React.memo(({
           </Text>
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 });
 

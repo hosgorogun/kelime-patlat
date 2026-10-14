@@ -1,6 +1,7 @@
 import { TURKISH_LETTERS, type BoardSize, type WordDifficulty, type WordEntry, type SpecialTile, type SpecialTileType } from "./game";
 import { catalogWordsForTheme, type WordTheme } from "./word-catalog";
 import { getDifficultyProfile } from "./difficulty";
+import { isEqualTr } from "./tr-utils";
 
 export type { SpecialTile, SpecialTileType };
 
@@ -280,7 +281,7 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
       let currentSum = 0;
       const shuffledEntries = weightedShuffled(pool, random, (entry) => profile.mix[entry.difficulty] ?? 0.1);
       for (const entry of shuffledEntries) {
-        if (selected.some((e) => e.word === entry.word)) continue;
+        if (selected.some((e) => isEqualTr(e.word, entry.word))) continue;
         const len = entry.word.length;
         if (currentSum + len <= targetSum) {
           const remaining = targetSum - (currentSum + len);
@@ -326,14 +327,14 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
     let rem = targetSum - sum;
     let guard = 0;
     while (rem > 0 && guard++ < 50) {
-      const exact = allWords.find((e) => e.word.length === rem && !fallbackList.some((f) => f.word === e.word));
+      const exact = allWords.find((e) => e.word.length === rem && !fallbackList.some((f) => isEqualTr(f.word, e.word)));
       if (exact) {
         fallbackList.push(exact);
         sum += exact.word.length;
         rem = 0;
         break;
       }
-      const smaller = allWords.filter((e) => e.word.length <= rem && e.word.length >= 2 && !fallbackList.some((f) => f.word === e.word));
+      const smaller = allWords.filter((e) => e.word.length <= rem && e.word.length >= 2 && !fallbackList.some((f) => isEqualTr(f.word, e.word)));
       if (smaller.length > 0) {
         const picked = shuffled(smaller, random)[0];
         if (picked) {

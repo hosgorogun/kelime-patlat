@@ -91,11 +91,10 @@ describe("Magaza Cip Ekipman Satin Alma Is Mantigi (shop-buy)", () => {
     expect(result.next!.streakShields).toBe(2);
   });
 
-  it("XP kapsulu satin alinir ve XP 250 artar", () => {
-    const result = simulateShopBuy({ ...DEFAULT_PROGRESS, coins: 300, xp: 500 }, "xp_250");
-    expect(result.ok).toBe(true);
-    expect(result.next!.xp).toBe(750);
-    expect(result.next!.coins).toBe(150);
+  it("kaldirilan veya gecersiz urun satin aliminda hata doner", () => {
+    const result = simulateShopBuy({ ...DEFAULT_PROGRESS, coins: 300, xp: 500 }, "xp_250" as any);
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Bilinmeyen|Geçersiz/);
   });
 
   it("can doldurma basarili olur ve lives = MAX_LIVES olarak ayarlanir", () => {

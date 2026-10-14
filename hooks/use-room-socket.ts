@@ -79,6 +79,8 @@ export function useRoomSocket({
   const pendingDuelInviteRef = useRef<{ targetId: string; targetUsername?: string; size: BoardSize; botProfile?: any } | null>(null);
   const prevOpponentWordCountRef = useRef(0);
   const prevRoomStatusRef = useRef<string | null>(null);
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
 
   const setRoomFromServer = useCallback(
     (next: RoomSnapshot) => {
@@ -329,6 +331,18 @@ export function useRoomSocket({
             isBotMatch && !room.isRanked ? "bot" : "pvp"
           );
           void syncProgressToCloud(updated);
+
+          const lpLost = Math.abs(updated.lastMatchReward?.lp || 0);
+          if (lpLost > 0) {
+            setGlobalToast({
+              id: `surrender-${Date.now()}`,
+              title: "MAÇ TERK EDİLDİ 📉",
+              subtitle: `Kaçış cezası uygulandı: -${lpLost} LP lig puanı kesildi.`,
+              icon: "🏃‍♂️",
+              accentColor: "#EF4444",
+            });
+          }
+
           return updated;
         });
       } else if (room.status === "finished") {
@@ -565,7 +579,7 @@ export function useRoomSocket({
       if (res.success) {
         const updated = [...socialManager.getFriends()];
         setProgress((curr) => ({ ...curr, friends: updated }));
-        void syncProgressToCloud({ ...progress, friends: updated });
+        void syncProgressToCloud({ ...progressRef.current, friends: updated });
         triggerHapticSuccess();
         gameSfx.victory();
         setGlobalToast({
@@ -601,19 +615,20 @@ export function useRoomSocket({
   const handleAcceptFriendRequest = async (requestId: string) => {
     const socket = await ensureConnectedSocket();
     if (socket && socket.connected) {
+      const currentProg = progressRef.current;
       socket.emit("friend:request:respond", {
         requestId,
         action: "accept",
         playerId,
         playerName: safeName,
         profile: {
-          avatar: progress.selectedAvatar,
-          avatarPhoto: progress.avatarPhoto,
-          selectedTitle: progress.selectedTitle,
-          level: getPlayerLevel(progress.xp),
-          tier: getLeagueTier(progress).tier,
-          lp: progress.lp || 0,
-          xp: progress.xp || 0,
+          avatar: currentProg.selectedAvatar,
+          avatarPhoto: currentProg.avatarPhoto,
+          selectedTitle: currentProg.selectedTitle,
+          level: getPlayerLevel(currentProg.xp),
+          tier: getLeagueTier(currentProg).tier,
+          lp: currentProg.lp || 0,
+          xp: currentProg.xp || 0,
         },
       });
     }
@@ -630,6 +645,31 @@ export function useRoomSocket({
         playerId,
       });
     }
+  };
+
+  const handleRemoveFriendTarget = async (target: InspectableUser | FriendUser) => {
+    const friendId = target.id;
+    socialManager.removeFriend(friendId);
+    const updated = [...socialManager.getFriends()];
+    setProgress((curr) => ({ ...curr, friends: updated }));
+    void syncProgressToCloud({ ...progressRef.current, friends: updated });
+
+    const socket = await ensureConnectedSocket();
+    if (socket && socket.connected) {
+      socket.emit("friend:remove", {
+        friendId,
+        playerId,
+      });
+    }
+
+    triggerHapticSuccess();
+    setGlobalToast({
+      id: `friend-removed-${Date.now()}`,
+      title: "ARKADAŞ ÇIKARILDI",
+      subtitle: `${target.name} arkadaş listenden çıkarıldı.`,
+      icon: "ℹ️",
+      accentColor: "#EF4444",
+    });
   };
 
   const callbacksRef = useRef({
@@ -910,6 +950,7 @@ export function useRoomSocket({
     shareRoomInvite,
     handleSendFriendRequest,
     handleAddFriendTarget,
+    handleRemoveFriendTarget,
     handleAcceptFriendRequest,
     handleRejectFriendRequest,
   };

@@ -148,8 +148,6 @@ export function CyberStoreScreenContainer(props: CyberStoreScreenContainerProps)
               next = { ...next, radarChargesBonus: (current.radarChargesBonus || 0) + 5 };
             } else if (item.rewardType === "shield") {
               next = { ...next, streakShields: (current.streakShields || 0) + 1 };
-            } else if (item.rewardType === "xp") {
-              next = { ...next, xp: current.xp + 250 };
             }
             void syncProgressToCloud(next);
             return next;
@@ -204,6 +202,122 @@ export function CyberStoreScreenContainer(props: CyberStoreScreenContainerProps)
             icon: "🎨",
             accentColor: "#FFC24A",
           });
+        }}
+        onSelectTitle={(selectedTitle) => {
+          setProgress((current) => {
+            const next = { ...current, selectedTitle };
+            void syncProgressToCloud(next);
+            return next;
+          });
+          setGlobalToast({
+            id: `title-${Date.now()}`,
+            title: "UNVAN KUŞANILDI",
+            subtitle: `${selectedTitle} unvanı aktif edildi.`,
+            icon: "👑",
+            accentColor: "#FFC24A",
+          });
+        }}
+        onOpenMysteryChest={async () => {
+          const currentCoins = progressRef.current.coins ?? 0;
+          if (currentCoins < 100) {
+            setGlobalToast({
+              id: `chest-err-${Date.now()}`,
+              title: "YETERSİZ ÇİP",
+              subtitle: "Gizemli Sandık için 100 altın çip gerekiyor.",
+              icon: "⚠️",
+              accentColor: "#FF647C",
+            });
+            return null;
+          }
+
+          const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+          if (token && token !== "guest") {
+            try {
+              const res = await fetch(`${getApiBaseUrl()}/api/game/mystery-chest`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              });
+              const data = await res.json();
+              if (res.ok && data.progress && data.reward) {
+                setProgress(data.progress);
+                return data.reward;
+              } else if (res.status === 400) {
+                setGlobalToast({
+                  id: `chest-err-${Date.now()}`,
+                  title: "AÇILAMADI",
+                  subtitle: data.error || "Sandık açılamadı.",
+                  icon: "⚠️",
+                  accentColor: "#FF647C",
+                });
+                return null;
+              }
+            } catch {
+              // Fallback to local
+            }
+          }
+
+          // Local fallback (offline or guest)
+          const pool: {
+            type: "coins" | "lives" | "radar" | "shield" | "title";
+            weight: number;
+            val: number | string;
+            label: string;
+            icon: string;
+            category: "consolation" | "common" | "rare" | "jackpot";
+            detail?: string;
+          }[] = [
+            { type: "coins", weight: 20, val: 15, label: "15 Teselli Çipi 🪙", icon: "🪙", category: "consolation", detail: "Sandıktan 15 çip teselli ödülü çıktı." },
+            { type: "coins", weight: 15, val: 25, label: "25 Teselli Çipi 🪙", icon: "🪙", category: "consolation", detail: "Sandıktan 25 çip teselli ödülü çıktı." },
+            { type: "lives", weight: 15, val: 1, label: "1x Can Takviyesi 💚", icon: "💚", category: "common", detail: "1 canın anında yenilendi!" },
+            { type: "radar", weight: 15, val: 1, label: "1x Radar Şifresi 👁", icon: "👁", category: "common", detail: "1 adet radar ipucu envanterine eklendi." },
+            { type: "coins", weight: 15, val: 50, label: "50 Çip İadesi 🪙", icon: "🪙", category: "consolation", detail: "Sandık maliyetinin yarısı (50 çip) iade edildi." },
+            { type: "shield", weight: 8, val: 1, label: "1x Seri Kalkanı! 🛡️", icon: "🛡️", category: "rare", detail: "Galibiyet serilerini yenilgilere karşı korur." },
+            { type: "radar", weight: 6, val: 5, label: "5x Büyük Radar Paketi! 👁", icon: "👁", category: "rare", detail: "5 adet radar ipucu envanterine eklendi." },
+            { type: "title", weight: 4, val: "speedster", label: "[HIZLI PARMAK] Unvanı! ⚡", icon: "⚡", category: "rare", detail: "Nadir mağaza unvanı profilinize tanımlandı." },
+            { type: "coins", weight: 2, val: 250, label: "250 ÇİP BÜYÜK İKRAMİYE! 🏆", icon: "👑", category: "jackpot", detail: "Büyük ikramiyeyi vurdun! 250 altın çip hesabına yüklendi." },
+          ];
+
+          const totalWeight = pool.reduce((acc, it) => acc + it.weight, 0);
+          let randomVal = Math.random() * totalWeight;
+          let picked = pool[0]!;
+          for (const item of pool) {
+            if (randomVal < item.weight) {
+              picked = item;
+              break;
+            }
+            randomVal -= item.weight;
+          }
+
+          setProgress((current) => {
+            let nextCoins = (current.coins ?? 0) - 100;
+            let next = { ...current, coins: nextCoins };
+            if (picked.type === "coins") {
+              next.coins = (next.coins ?? 0) + (picked.val as number);
+            } else if (picked.type === "lives") {
+              const calc = getCalculatedLives(current);
+              if (!calc.isInfinite) {
+                next.lives = Math.min(MAX_LIVES, calc.lives + (picked.val as number));
+                next.lastLifeRegenTimestamp = Date.now();
+              }
+            } else if (picked.type === "radar") {
+              next.radarChargesBonus = (current.radarChargesBonus || 0) + (picked.val as number);
+            } else if (picked.type === "shield") {
+              next.streakShields = (current.streakShields || 0) + (picked.val as number);
+            } else if (picked.type === "title") {
+              next.selectedTitle = "[HIZLI PARMAK]";
+              next.ownedTitles = { ...(current.ownedTitles ?? {}), [picked.val as string]: true };
+            }
+            void syncProgressToCloud(next);
+            return next;
+          });
+
+          return {
+            type: picked.type,
+            label: picked.label,
+            icon: picked.icon,
+            category: picked.category,
+            detail: picked.detail,
+          };
         }}
         onBuyCosmetic={async (kind, id, cost) => {
           // Bayat closure yerine ref üzerinden güncel bakiye okunur
@@ -270,6 +384,12 @@ export function CyberStoreScreenContainer(props: CyberStoreScreenContainerProps)
                 ...next,
                 selectedBoardSkin: id,
                 ownedBoardSkins: { ...(next.ownedBoardSkins ?? {}), [id]: true },
+              };
+            } else if (kind === "title") {
+              next = {
+                ...next,
+                selectedTitle: id,
+                ownedTitles: { ...(next.ownedTitles ?? {}), [id]: true },
               };
             } else {
               next = {

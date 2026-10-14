@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -14,6 +14,7 @@ import { MatchInsight } from "./match-insight";
 import { MatchRewardsCard } from "./match-rewards";
 import { VictoryBanner, VictoryEffectOverlay } from "../game/victory-effect-overlay";
 import { isEqualTr } from "@/shared/tr-utils";
+import { monetizationManager } from "@/shared/monetization";
 import { gameSfx } from "@/lib/game-sfx";
 import { haptics } from "@/lib/haptics";
 
@@ -68,6 +69,7 @@ export interface MatchResultModalProps {
   onOpenUserProfile?: (opponent: any) => void;
   onAddFriend?: (opponent: any) => void;
   onWatchAdStreakSave?: () => void;
+  onDoubleMatchCoins?: (bonusCoins: number) => void;
   onRequestRematch: () => void;
   onLeaveRoom: () => void;
   onClose: () => void;
@@ -103,10 +105,14 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
   onOpenUserProfile,
   onAddFriend,
   onWatchAdStreakSave,
+  onDoubleMatchCoins,
   onRequestRematch,
   onLeaveRoom,
   onClose,
 }) => {
+  const [isCoinsDoubled, setIsCoinsDoubled] = useState(false);
+  const [isAdLoading, setIsAdLoading] = useState(false);
+
   useEffect(() => {
     if (visible && iWon) {
       gameSfx.victory();
@@ -115,6 +121,26 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
   }, [visible, iWon]);
 
   if (!visible) return null;
+
+  const handleDoubleCoins = async () => {
+    if (isCoinsDoubled || isAdLoading || !matchCoinsEarned) return;
+    setIsAdLoading(true);
+    haptics.select();
+    await monetizationManager.showRewardedAd(
+      "double_xp",
+      () => {
+        setIsCoinsDoubled(true);
+        setIsAdLoading(false);
+        haptics.success();
+        gameSfx.victory();
+        onDoubleMatchCoins?.(matchCoinsEarned);
+      },
+      () => {
+        setIsAdLoading(false);
+        haptics.error();
+      }
+    );
+  };
 
   const handleShareResult = async () => {
     try {
@@ -225,6 +251,8 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
               pvpWinStreak={progress.lastMatchReward?.pvpWinStreak ?? progress.pvpWinStreak}
               isCrushingWin={progress.lastMatchReward?.isCrushingWin}
               shieldUsed={progress.lastMatchReward?.shieldUsed}
+              onDoubleCoins={handleDoubleCoins}
+              isDoubled={isCoinsDoubled}
             />
 
             {/* 2. Ayrılmış Rota ve Performans Analizi Kartı */}
@@ -522,35 +550,44 @@ const styles = StyleSheet.create({
   },
   opponentActionsRow: {
     flexDirection: "row",
-    gap: 4,
-    marginTop: 4,
+    gap: 6,
+    marginTop: 6,
     justifyContent: "center",
+    alignItems: "center",
   },
   opponentActionBtn: {
-    backgroundColor: "rgba(212, 180, 90, 0.2)",
-    borderColor: "#DCE1D7",
+    backgroundColor: "#F1F5F9",
+    borderColor: "#CBD5E1",
     borderWidth: 1,
-    borderRadius: 5,
-    paddingVertical: 2,
-    paddingHorizontal: 5,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    minHeight: 26,
+    justifyContent: "center",
+    alignItems: "center",
   },
   opponentActionText: {
-    color: "#293541",
-    fontSize: 8.5,
+    color: "#334155",
+    fontSize: 9.5,
     fontWeight: "900",
+    letterSpacing: 0.3,
   },
   opponentActionAddBtn: {
-    backgroundColor: "rgba(62, 232, 181, 0.2)",
-    borderColor: "#DCE1D7",
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
+    borderColor: "#86EFAC",
     borderWidth: 1,
-    borderRadius: 5,
-    paddingVertical: 2,
-    paddingHorizontal: 5,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    minHeight: 26,
+    justifyContent: "center",
+    alignItems: "center",
   },
   opponentActionAddText: {
-    color: "#2a9c7a",
-    fontSize: 8.5,
+    color: "#16A34A",
+    fontSize: 9.5,
     fontWeight: "900",
+    letterSpacing: 0.3,
   },
   tdkCard: {
     width: "100%",

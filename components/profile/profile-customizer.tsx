@@ -56,92 +56,113 @@ export const ProfileCustomizer = React.memo(({
       </View>
 
       {/* Customizer Sub-Tabs */}
-      <View
-        style={{
-          flexDirection: "row",
-          backgroundColor: "#FFFFFF",
-          padding: 4,
-          borderRadius: 14,
-          borderWidth: 1.5,
-          borderColor: "#DCE1D7",
-          marginBottom: 14,
-        }}
-      >
+      <View style={styles.customizerTabBar}>
         <Pressable
           onPress={() => {
             triggerHapticSelection();
             setCustomizerTab("frames");
           }}
-          style={[
-            { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 },
-            customizerTab === "frames" && { backgroundColor: "#FFD66E", borderWidth: 1, borderColor: "#F0C855" },
+          style={({ pressed }) => [
+            styles.customizerTabBtn,
+            customizerTab === "frames" && styles.customizerTabBtnActive,
+            pressed && { opacity: 0.8 },
           ]}
         >
+          <Text style={[styles.customizerTabEmoji]}>🖼️</Text>
           <Text
             style={[
-              { fontSize: 10, fontWeight: "800", color: "#64748B" },
-              customizerTab === "frames" && { color: "#293541", fontWeight: "900" },
+              styles.customizerTabText,
+              customizerTab === "frames" && styles.customizerTabTextActive,
             ]}
           >
-            🖼️ ÇERÇEVE ({unlockedFramesCount})
+            ÇERÇEVE
           </Text>
+          <View style={[styles.customizerTabBadge, customizerTab === "frames" && styles.customizerTabBadgeActive]}>
+            <Text style={[styles.customizerTabBadgeText, customizerTab === "frames" && styles.customizerTabBadgeTextActive]}>
+              {unlockedFramesCount}
+            </Text>
+          </View>
         </Pressable>
+
         <Pressable
           onPress={() => {
             triggerHapticSelection();
             setCustomizerTab("avatars");
           }}
-          style={[
-            { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 },
-            customizerTab === "avatars" && { backgroundColor: "#FFD66E", borderWidth: 1, borderColor: "#F0C855" },
+          style={({ pressed }) => [
+            styles.customizerTabBtn,
+            customizerTab === "avatars" && styles.customizerTabBtnActive,
+            pressed && { opacity: 0.8 },
           ]}
         >
+          <Text style={[styles.customizerTabEmoji]}>🎭</Text>
           <Text
             style={[
-              { fontSize: 10, fontWeight: "800", color: "#64748B" },
-              customizerTab === "avatars" && { color: "#293541", fontWeight: "900" },
+              styles.customizerTabText,
+              customizerTab === "avatars" && styles.customizerTabTextActive,
             ]}
           >
-            🤖 AVATAR ({unlockedAvatarsCount})
+            AVATAR
           </Text>
+          <View style={[styles.customizerTabBadge, customizerTab === "avatars" && styles.customizerTabBadgeActive]}>
+            <Text style={[styles.customizerTabBadgeText, customizerTab === "avatars" && styles.customizerTabBadgeTextActive]}>
+              {unlockedAvatarsCount}
+            </Text>
+          </View>
         </Pressable>
+
         <Pressable
           onPress={() => {
             triggerHapticSelection();
             setCustomizerTab("titles");
           }}
-          style={[
-            { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 },
-            customizerTab === "titles" && { backgroundColor: "#FFD66E", borderWidth: 1, borderColor: "#F0C855" },
+          style={({ pressed }) => [
+            styles.customizerTabBtn,
+            customizerTab === "titles" && styles.customizerTabBtnActive,
+            pressed && { opacity: 0.8 },
           ]}
         >
+          <Text style={[styles.customizerTabEmoji]}>🎖️</Text>
           <Text
             style={[
-              { fontSize: 10, fontWeight: "800", color: "#64748B" },
-              customizerTab === "titles" && { color: "#293541", fontWeight: "900" },
+              styles.customizerTabText,
+              customizerTab === "titles" && styles.customizerTabTextActive,
             ]}
           >
-            🎖️ UNVAN ({unlockedTitlesCount})
+            UNVAN
           </Text>
+          <View style={[styles.customizerTabBadge, customizerTab === "titles" && styles.customizerTabBadgeActive]}>
+            <Text style={[styles.customizerTabBadgeText, customizerTab === "titles" && styles.customizerTabBadgeTextActive]}>
+              {unlockedTitlesCount}
+            </Text>
+          </View>
         </Pressable>
+
         <Pressable
           onPress={() => {
             triggerHapticSelection();
             setCustomizerTab("badges");
           }}
-          style={[
-            { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 10 },
-            customizerTab === "badges" && { backgroundColor: "#FFD66E", borderWidth: 1, borderColor: "#F0C855" },
+          style={({ pressed }) => [
+            styles.customizerTabBtn,
+            customizerTab === "badges" && styles.customizerTabBtnActive,
+            pressed && { opacity: 0.8 },
           ]}
         >
+          <Text style={[styles.customizerTabEmoji]}>🏆</Text>
           <Text
             style={[
-              { fontSize: 10, fontWeight: "800", color: "#64748B" },
-              customizerTab === "badges" && { color: "#293541", fontWeight: "900" },
+              styles.customizerTabText,
+              customizerTab === "badges" && styles.customizerTabTextActive,
             ]}
           >
-            🏆 ROZET ({unlockedBadgesCount})
+            ROZET
           </Text>
+          <View style={[styles.customizerTabBadge, customizerTab === "badges" && styles.customizerTabBadgeActive]}>
+            <Text style={[styles.customizerTabBadgeText, customizerTab === "badges" && styles.customizerTabBadgeTextActive]}>
+              {unlockedBadgesCount}
+            </Text>
+          </View>
         </Pressable>
       </View>
 
@@ -448,9 +469,27 @@ export const ProfileCustomizer = React.memo(({
                     {unlocked ? badge.icon : "🔒"}
                   </Text>
                 </View>
-                <Text numberOfLines={1} style={[styles.badgeTileTitle, !unlocked && { color: "#64748B" }]}>
+                <Text numberOfLines={1} style={[styles.badgeTileTitle, unlocked && { color: badge.accent || "#0F172A" }, !unlocked && { color: "#64748B" }]}>
                   {badge.title}
                 </Text>
+
+                <View
+                  style={[
+                    styles.titleMiniStatusPill,
+                    unlocked && styles.titleMiniStatusUnlocked,
+                    !unlocked && styles.titleMiniStatusLocked,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.titleMiniStatusText,
+                      unlocked && { color: "#059669" },
+                      !unlocked && { color: "#64748B" },
+                    ]}
+                  >
+                    {unlocked ? "KAZANILDI" : "KİLİTLİ"}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}

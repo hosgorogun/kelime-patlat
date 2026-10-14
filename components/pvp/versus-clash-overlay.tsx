@@ -36,7 +36,7 @@ export function VersusClashOverlay({
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   const playerGlyph = resolveAvatarDisplay(playerAvatar);
-  const opponentGlyph = isBot ? "🤖" : resolveAvatarDisplay(opponentAvatar);
+  const opponentGlyph = resolveAvatarDisplay(opponentAvatar || "🦊");
 
   useEffect(() => {
     if (!visible) return;
@@ -201,7 +201,7 @@ export function VersusClashOverlay({
               {opponentName}
             </Text>
             <View style={styles.tierPillRight}>
-              <Text style={styles.tierText}>{isBot ? "BOT 🤖" : opponentTier}</Text>
+              <Text style={styles.tierText}>{opponentTier}</Text>
             </View>
           </Animated.View>
         </View>

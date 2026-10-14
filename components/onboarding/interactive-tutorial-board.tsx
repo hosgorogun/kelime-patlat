@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Animated,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,

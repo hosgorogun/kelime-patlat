@@ -90,7 +90,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
   it("mağaza ekipman fiyatları ödül değerine göre dengeli kalır", () => {
     expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "radar_5")?.cost).toBe(75);
     expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "shield_1")?.cost).toBe(120);
-    expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "xp_250")?.cost).toBe(150);
+    expect(CHIP_EQUIPMENT_ITEMS.find((item) => item.id === "lives_refill")?.cost).toBe(75);
   });
 
   it("dokuz lig kademesini LP eşiklerine göre seçer", () => {
@@ -868,9 +868,9 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(p4.lastMatchReward?.isCrushingWin).toBe(true);
     expect(p4.lastMatchReward?.coins).toBe(15);
 
-    // 5. Mağlubiyet: seriyi sıfırlar, demir liginde -10 LP, 2 çip teselli ödülü
+    // 5. Mağlubiyet: seriyi sıfırlar, demir liginde 0 LP kaybı (koruma), 2 çip teselli ödülü
     const p5 = applyMatchProgress(p4, { score: 40, tempo: 1, won: false }, "pvp");
-    expect(p5.lp).toBe(132);
+    expect(p5.lp).toBe(142);
     expect(p5.pvpWinStreak).toBe(0);
     expect(p5.lastMatchReward?.coins).toBe(2);
 
@@ -888,10 +888,14 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const diamondLoss = applyMatchProgress(diamondBase, { score: 40, tempo: 1, won: false }, "pvp");
     expect(diamondLoss.lp).toBe(3978);
 
-    // 8. 0 LP taban sınırı (Demotion Floor): 5 LP'deki oyuncu kaybettiğinde 0'ın altına inemez
-    const lowLp = { ...DEFAULT_PROGRESS, lp: 5, pvpWinStreak: 0 };
+    // 8. 0 LP taban sınırı (Demotion Floor): Bronz ligdeki (352 LP) oyuncu -5 LP aldığında tabanın altına inemez
+    const lowLp = { ...DEFAULT_PROGRESS, lp: 3, pvpWinStreak: 0 };
     const floorLoss = applyMatchProgress(lowLp, { score: 20, tempo: 1, won: false }, "pvp");
-    expect(floorLoss.lp).toBe(0);
+    expect(floorLoss.lp).toBe(3); // Demir liginde puan düşmez, korunur
+
+    const bronzLow = { ...DEFAULT_PROGRESS, lp: 352, pvpWinStreak: 0 };
+    const bronzFloorLoss = applyMatchProgress(bronzLow, { score: 20, tempo: 1, won: false }, "pvp");
+    expect(bronzFloorLoss.lp).toBe(347);
   });
 
   it("görevler sistemi: Günlük rota, Arcade ve Vintage modlarında kelime, kombo ve çip takibini eksiksiz yapar", () => {
@@ -983,7 +987,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(zeroLossBot.coins).toBe(20); // 0 Çip eklendi
     expect(zeroLossBot.lastMatchReward?.xp).toBe(0);
     expect(zeroLossBot.lastMatchReward?.coins).toBe(0);
-    expect(zeroLossBot.lp).toBeLessThan(40); // LP cezası normal şekilde kesildi
+    expect(zeroLossBot.lp).toBe(40); // Bot antrenmanında LP değişmez (0 LP)
 
     const zeroLossPvp = applyMatchProgress(base, {
       score: 0,
@@ -997,6 +1001,7 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(zeroLossPvp.coins).toBe(20); // 0 Çip
     expect(zeroLossPvp.lastMatchReward?.xp).toBe(0);
     expect(zeroLossPvp.lastMatchReward?.coins).toBe(0);
+    expect(zeroLossPvp.lp).toBe(40); // Demir liginde sıfır katkı yenilgisinde de 0 LP koruması geçerlidir
 
     // 2. Kaybetti ama kelimeler bildi (Çaba ve kelime ödülü)
     const effortLoss = applyMatchProgress(base, {

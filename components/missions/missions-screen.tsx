@@ -477,7 +477,7 @@ export function MissionsScreen({
             <WeekendHuntCard
               progress={progress}
               setProgress={setProgress}
-              onRewardClaimed={(reward) => {
+              onRewardClaimed={(reward, updatedProgress) => {
                 setToast({
                   title: "🎁 HAFTA SONU ÖDÜLÜ ALINDI!",
                   desc: "Kademe ödülleri hesabına başarıyla eklendi!",
@@ -495,7 +495,7 @@ export function MissionsScreen({
                   setXpCascadeTrigger(false);
                 }, 1800);
                 if (syncProgressToCloud) {
-                  void syncProgressToCloud(progress);
+                  void syncProgressToCloud(updatedProgress || progress);
                 }
               }}
             />

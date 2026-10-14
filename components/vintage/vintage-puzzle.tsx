@@ -1001,6 +1001,14 @@ export function VintagePuzzle({
           setShowVictoryModal(false);
         }}
         onNextLevel={() => {
+          if (!isInfiniteLives && typeof lives === "number" && lives <= 0) {
+            triggerHapticError();
+            playErrorSound();
+            onOpenLivesModal?.();
+            return;
+          }
+          triggerHapticSelection();
+          playSuccessSound();
           setIsLevelComplete(false);
           setShowVictoryModal(false);
           const nextLvl = levelIndex + 1;
