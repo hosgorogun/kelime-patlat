@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { gameSfx } from "@/lib/game-sfx";
 import { haptics } from "@/lib/haptics";
 
@@ -22,18 +23,37 @@ export const ArcadeLobbyScreen: React.FC<ArcadeLobbyScreenProps> = ({
   onOpenInfo,
   onStart,
 }) => {
+  const getRankBadge = (score: number) => {
+    if (score >= 1000) return { title: "MATRİS EFSANESİ", color: "#8B5CF6", bg: "#F3E8FF", border: "#DDD6FE" };
+    if (score >= 500) return { title: "HIZ ŞAMPİYONU", color: "#DC2626", bg: "#FEE2E2", border: "#FECACA" };
+    if (score >= 300) return { title: "UZMAN AVCI", color: "#D97706", bg: "#FEF3C7", border: "#FDE68A" };
+    return { title: "ACEMİ ŞİMŞEK", color: "#059669", bg: "#D1FAE5", border: "#A7F3D0" };
+  };
+
+  const rank = getRankBadge(bestScore);
+
   return (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* Üst Navigasyon Çubuğu */}
       <View style={styles.subHeader}>
-        <Pressable onPress={onBack} style={styles.backButton}>
+        <Pressable
+          onPress={() => {
+            haptics.light();
+            onBack();
+          }}
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
+        >
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <View style={styles.headerTitles}>
-          <Text style={styles.subHeaderKicker}>ARCADE MODU</Text>
+          <Text style={styles.subHeaderKicker}>HIZ VE REFLEKS MODU</Text>
           <Text style={styles.subHeaderTitle}>ZAMANA KARŞI HÜCUM</Text>
         </View>
         <Pressable
-          onPress={onOpenInfo}
+          onPress={() => {
+            haptics.light();
+            onOpenInfo();
+          }}
           style={({ pressed }) => [
             styles.infoButton,
             pressed && { opacity: 0.7 },
@@ -43,32 +63,52 @@ export const ArcadeLobbyScreen: React.FC<ArcadeLobbyScreenProps> = ({
         </Pressable>
       </View>
 
-      <View style={styles.arcadeHeroCard}>
-        <View style={styles.arcadeHeroTop}>
-          <View style={styles.arcadeIconCircle}>
-            <Text style={{ fontSize: 32 }}>⚡</Text>
-          </View>
-          <View style={{ flex: 1, marginLeft: 14 }}>
-            <Text style={styles.arcadeHeroKicker}>EN YÜKSEK SKORUN</Text>
-            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
-              <Text style={styles.arcadeHeroScore}>{bestScore}</Text>
-              <Text style={styles.arcadeHeroUnit}>PUAN</Text>
+      {/* Hero Skor Kartı - Degrade Arka Plan ve Modern Tipografi */}
+      <View style={styles.arcadeHeroWrapper}>
+        <LinearGradient
+          colors={["#FFFFFF", "#FFFBEB", "#FEF3C7"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.arcadeHeroCard}
+        >
+          <View style={styles.arcadeHeroTop}>
+            <View style={styles.arcadeIconCircle}>
+              <Text style={styles.boltIcon}>⚡</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <View style={styles.scoreHeaderRow}>
+                <Text style={styles.arcadeHeroKicker}>EN YÜKSEK SKORUN</Text>
+                <View style={[styles.rankBadge, { backgroundColor: rank.bg, borderColor: rank.border }]}>
+                  <Text style={[styles.rankBadgeText, { color: rank.color }]}>{rank.title}</Text>
+                </View>
+              </View>
+              <View style={styles.scoreRow}>
+                <Text style={styles.arcadeHeroScore}>{bestScore}</Text>
+                <Text style={styles.arcadeHeroUnit}>PUAN</Text>
+              </View>
             </View>
           </View>
-        </View>
-        <Text style={styles.arcadeHeroSub}>
-          {bestScore >= 500
-            ? "🔥 Efsanevi Seviye! Skorunu daha da yukarı taşımaya hazır mısın?"
-            : bestScore >= 400
-            ? "⭐ Usta Seviyesi! 500 puana ulaşıp Matris Efsanesi unvanını kap!"
-            : "⏱️ Hızlı olan kazanır! Kelimeleri buldukça süren uzar, puanın katlanır."}
-        </Text>
+
+          <View style={styles.heroDivider} />
+
+          <Text style={styles.arcadeHeroSub}>
+            {bestScore >= 500
+              ? "🔥 Efsanevi Seviye! Skorunu daha da yukarı taşımaya hazır mısın?"
+              : bestScore >= 400
+              ? "⭐ Usta Seviyesi! 500 puana ulaşıp Matris Efsanesi unvanını kap!"
+              : "⏱️ Hızlı olan kazanır! Kelimeleri buldukça süren uzar, puanın katlanır."}
+          </Text>
+        </LinearGradient>
       </View>
 
+      {/* Kurallar ve Dinamikler */}
       <View style={styles.arcadeInfoSection}>
         <Text style={styles.sectionLabel}>YARIŞMA KURALLARI VE DİNAMİKLER</Text>
+
         <View style={styles.arcadeRuleTile}>
-          <Text style={styles.arcadeRuleIcon}>⏱️</Text>
+          <View style={[styles.ruleIconContainer, { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE" }]}>
+            <Text style={styles.arcadeRuleIcon}>⏱️</Text>
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.arcadeRuleTitle}>45 Saniyelik Hızlı Başlangıç</Text>
             <Text style={styles.arcadeRuleDesc}>
@@ -76,8 +116,11 @@ export const ArcadeLobbyScreen: React.FC<ArcadeLobbyScreenProps> = ({
             </Text>
           </View>
         </View>
+
         <View style={styles.arcadeRuleTile}>
-          <Text style={styles.arcadeRuleIcon}>⏳</Text>
+          <View style={[styles.ruleIconContainer, { backgroundColor: "#FEF2F2", borderColor: "#FECACA" }]}>
+            <Text style={styles.arcadeRuleIcon}>🔥</Text>
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.arcadeRuleTitle}>Zaman & Ateşli Kombo</Text>
             <Text style={styles.arcadeRuleDesc}>
@@ -85,8 +128,11 @@ export const ArcadeLobbyScreen: React.FC<ArcadeLobbyScreenProps> = ({
             </Text>
           </View>
         </View>
+
         <View style={styles.arcadeRuleTile}>
-          <Text style={styles.arcadeRuleIcon}>🏆</Text>
+          <View style={[styles.ruleIconContainer, { backgroundColor: "#FEFCE8", borderColor: "#FDE047" }]}>
+            <Text style={styles.arcadeRuleIcon}>🏆</Text>
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.arcadeRuleTitle}>Büyüyen Matris Seviyeleri</Text>
             <Text style={styles.arcadeRuleDesc}>
@@ -96,16 +142,25 @@ export const ArcadeLobbyScreen: React.FC<ArcadeLobbyScreenProps> = ({
         </View>
       </View>
 
+      {/* Büyük Harekete Geçirici Başla Butonu */}
       <Pressable
         onPress={() => {
-          haptics.light();
+          haptics.select();
           gameSfx.tap();
           onStart();
         }}
         style={({ pressed }) => [styles.arcadeStartButton, pressed && styles.pressed]}
       >
-        <Text style={styles.arcadeStartButtonText}>⚡ ARCADE YARIŞINI BAŞLAT</Text>
-        <Text style={styles.arcadeStartButtonIcon}>→</Text>
+        <LinearGradient
+          colors={["#F59E0B", "#D97706"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.arcadeStartButtonGradient}
+        >
+          <Text style={styles.startBolt}>⚡</Text>
+          <Text style={styles.arcadeStartButtonText}>ARCADE YARIŞINI BAŞLAT</Text>
+          <Text style={styles.arcadeStartButtonIcon}>➔</Text>
+        </LinearGradient>
       </Pressable>
     </ScrollView>
   );
@@ -114,172 +169,247 @@ export const ArcadeLobbyScreen: React.FC<ArcadeLobbyScreenProps> = ({
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 180,
+    paddingTop: 10,
+    paddingBottom: 230,
   },
   subHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
     gap: 12,
   },
   backButton: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   backText: {
-    color: "#293541",
-    fontSize: 24,
-    fontWeight: "600",
-    lineHeight: 28,
+    color: "#0F172A",
+    fontSize: 26,
+    fontWeight: "700",
+    lineHeight: 30,
+    marginTop: -2,
   },
   headerTitles: {
     flex: 1,
   },
   subHeaderKicker: {
-    color: "#293541",
-    fontSize: 9,
+    color: "#D97706",
+    fontSize: 9.5,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   subHeaderTitle: {
-    color: "#293541",
+    color: "#0F172A",
     fontSize: 20,
     fontWeight: "900",
     marginTop: 2,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   infoButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 208, 0, 0.12)",
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    borderColor: "#E2E8F0",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   infoIcon: {
     fontSize: 16,
-    color: "#987c00",
-    fontWeight: "900",
+  },
+  arcadeHeroWrapper: {
+    marginTop: 10,
+    borderRadius: 22,
+    shadowColor: "#D97706",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   arcadeHeroCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-    padding: 20,
-    marginTop: 14,
-    shadowColor: "#293541",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    borderColor: "#FDE68A",
+    padding: 18,
   },
   arcadeHeroTop: {
     flexDirection: "row",
     alignItems: "center",
   },
   arcadeIconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "rgba(255, 208, 0, 0.15)",
-    borderWidth: 1.5,
-    borderColor: "#DCE1D7",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 2,
+    borderColor: "#FDE047",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  boltIcon: {
+    fontSize: 30,
+  },
+  scoreHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   arcadeHeroKicker: {
-    color: "#293541",
+    color: "#78350F",
     fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
+  },
+  rankBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  rankBadgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  scoreRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 6,
+    marginTop: 2,
   },
   arcadeHeroScore: {
-    color: "#293541",
-    fontSize: 32,
+    color: "#0F172A",
+    fontSize: 34,
     fontWeight: "900",
+    fontVariant: ["tabular-nums"],
   },
   arcadeHeroUnit: {
-    color: "#987c00",
-    fontSize: 12,
+    color: "#D97706",
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
+  heroDivider: {
+    height: 1,
+    backgroundColor: "#FDE68A",
+    opacity: 0.7,
+    marginTop: 14,
+    marginBottom: 10,
+  },
   arcadeHeroSub: {
-    color: "#718096",
+    color: "#78350F",
     fontSize: 12,
-    marginTop: 12,
     lineHeight: 18,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   arcadeInfoSection: {
     marginTop: 20,
     gap: 10,
   },
   sectionLabel: {
-    color: "#293541",
+    color: "#334155",
     fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    letterSpacing: 0.6,
+    marginBottom: 2,
   },
   arcadeRuleTile: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#DCE1D7",
-    padding: 14,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    padding: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  ruleIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   arcadeRuleIcon: {
-    fontSize: 22,
+    fontSize: 20,
   },
   arcadeRuleTitle: {
-    color: "#293541",
-    fontSize: 12,
+    color: "#0F172A",
+    fontSize: 12.5,
     fontWeight: "800",
   },
   arcadeRuleDesc: {
-    color: "#718096",
+    color: "#64748B",
     fontSize: 11,
     marginTop: 2,
-    lineHeight: 15,
+    lineHeight: 16,
+    fontWeight: "600",
   },
   arcadeStartButton: {
-    backgroundColor: "#ffeb94",
+    marginTop: 22,
+    borderRadius: 18,
+    shadowColor: "#D97706",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  arcadeStartButtonGradient: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 16,
-    paddingVertical: 14,
-    marginTop: 20,
-    shadowColor: "#293541",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 18,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderWidth: 1.5,
+    borderColor: "#FBBF24",
+  },
+  startBolt: {
+    fontSize: 18,
   },
   arcadeStartButtonText: {
-    color: "#293541",
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 14,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   arcadeStartButtonIcon: {
-    color: "#293541",
-    fontSize: 14,
+    color: "#FFFFFF",
+    fontSize: 15,
     fontWeight: "900",
   },
   pressed: {
-    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
 });
+

@@ -14,6 +14,8 @@ export type VintageVictoryModalProps = {
   visible: boolean;
   selectedVictoryEffect?: string;
   levelIndex: number;
+  earnedStars?: number;
+  elapsedSeconds?: number;
   isInfiniteLives?: boolean;
   lives?: number;
   onOpenLivesModal?: () => void;
@@ -26,6 +28,8 @@ export const VintageVictoryModal = React.memo(({
   visible,
   selectedVictoryEffect,
   levelIndex,
+  earnedStars = 3,
+  elapsedSeconds = 0,
   isInfiniteLives,
   lives,
   onOpenLivesModal,
@@ -34,6 +38,10 @@ export const VintageVictoryModal = React.memo(({
   onInspectBoard,
 }: VintageVictoryModalProps) => {
   if (!visible) return null;
+
+  const min = Math.floor(elapsedSeconds / 60);
+  const sec = elapsedSeconds % 60;
+  const timeFormatted = `${min} dk ${sec} sn`;
 
   return (
     <>
@@ -49,6 +57,20 @@ export const VintageVictoryModal = React.memo(({
             title="Bulmaca tamam!"
             subtitle={`${levelIndex}. bölümde bütün kelimeleri yerleştirdin.`}
           />
+
+          {/* Kazanılan Yıldızlar & Süre Rozeti */}
+          <View style={styles.winStarsRow}>
+            <Text style={styles.winStarsText}>{"⭐".repeat(earnedStars)}</Text>
+            <Text style={styles.winStarsSub}>
+              {earnedStars === 3 ? "🏆 Kusursuz Hız! (3 Yıldız)" : earnedStars === 2 ? "⚡ Harika Performans! (2 Yıldız)" : "👍 Başarılı Çözüm! (1 Yıldız)"}
+            </Text>
+          </View>
+
+          <View style={styles.winTimeContainer}>
+            <Text style={styles.winTimeLabel}>Çözüm Süresi: </Text>
+            <Text style={styles.winTimeValue}>{timeFormatted}</Text>
+          </View>
+
           <Text style={styles.winReward}>
             +{levelIndex <= 3 ? 30 : levelIndex <= 7 ? 50 : levelIndex <= 12 ? 75 : 100} XP KAZANILDI
           </Text>
@@ -192,3 +214,60 @@ export const VintageResetModal = React.memo(({
 });
 
 VintageResetModal.displayName = "VintageResetModal";
+
+export type VintageLevelPreviewModalProps = {
+  visible: boolean;
+  levelIndex: number | null;
+  bestStars?: number;
+  onDismiss: () => void;
+  onStartLevel: (level: number) => void;
+};
+
+export const VintageLevelPreviewModal = React.memo(({
+  visible,
+  levelIndex,
+  bestStars = 0,
+  onDismiss,
+  onStartLevel,
+}: VintageLevelPreviewModalProps) => {
+  if (!visible || !levelIndex) return null;
+
+  const difficultyText =
+    levelIndex <= 5
+      ? "KOLAY (1.5 dk Hedef)"
+      : levelIndex <= 10
+      ? "ORTA (2 dk Hedef)"
+      : levelIndex <= 15
+      ? "ZOR (2.6 dk Hedef)"
+      : "USTA (3.5 dk Hedef)";
+
+  const starsBadge = bestStars > 0 ? "⭐".repeat(bestStars) : "Henüz Yıldız Yok";
+
+  return (
+    <ModernAlertModal
+      alert={{
+        icon: "📰",
+        kicker: `NOSTALJİ GAZETE • SEVİYE ${levelIndex}`,
+        title: `Bölüm ${levelIndex}`,
+        message: `Zorluk: ${difficultyText}\nEn İyi Derece: ${starsBadge}\n\n10x10 Gazete bulmacasını çözmeye başlamak istiyor musunuz?`,
+        accentColor: "#0F766E",
+        primaryButton: {
+          text: "BAŞLA ➔",
+          color: "#0F766E",
+          onPress: () => {
+            onDismiss();
+            onStartLevel(levelIndex);
+          },
+        },
+        secondaryButton: {
+          text: "KAPAT",
+          onPress: onDismiss,
+        },
+      }}
+      onDismiss={onDismiss}
+    />
+  );
+});
+
+VintageLevelPreviewModal.displayName = "VintageLevelPreviewModal";
+

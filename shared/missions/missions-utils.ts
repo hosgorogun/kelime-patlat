@@ -10,13 +10,12 @@ export const ALL_MISSIONS: CatalogMission[] = [
 ];
 
 export function stringToSeed(str: string): number {
-  let hash = 0;
+  let hash = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
   }
-  return Math.abs(hash);
+  return hash >>> 0;
 }
 
 export function seededRandom(seed: number): () => number {

@@ -7,12 +7,14 @@ interface GameModeInfoModalProps {
   visible: boolean;
   mode: GameModeInfoType;
   onClose: () => void;
+  onStart?: () => void;
 }
 
 export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
   visible,
   mode,
   onClose,
+  onStart,
 }) => {
   if (!visible || !mode) return null;
 
@@ -26,6 +28,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "#2a8fbc";
       case "daily":
         return "#8c7540";
+      case "kelimematik":
+        return "#0284C7";
       default:
         return "#2a9c7a";
     }
@@ -41,6 +45,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "#abe3fc";
       case "daily":
         return "#f5e6c0";
+      case "kelimematik":
+        return "#BAE6FD";
       default:
         return "#aef5e0";
     }
@@ -56,6 +62,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "rgba(56, 189, 248, 0.15)";
       case "daily":
         return "rgba(167, 139, 250, 0.15)";
+      case "kelimematik":
+        return "rgba(2, 132, 199, 0.15)";
       default:
         return "rgba(62, 232, 181, 0.15)";
     }
@@ -71,6 +79,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "🏆";
       case "vintage":
         return "🗞️";
+      case "kelimematik":
+        return "⚡";
       default:
         return "⚡";
     }
@@ -86,6 +96,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "KLASİK TEK OYUNCU";
       case "vintage":
         return "NOSTALJİ MİNİ OYUN";
+      case "kelimematik":
+        return "SURVIVAL TETRİS AKIŞI";
       default:
         return "ZAMANA KARŞI YARIŞ";
     }
@@ -101,6 +113,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "Seviye Yolculuğu";
       case "vintage":
         return "Gazete Kare Bulmacası";
+      case "kelimematik":
+        return "Kelimematik Hayatta Kalma";
       default:
         return "Zamanda Yarış Arcade";
     }
@@ -116,6 +130,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "Bölüm İlerleme Sistemi";
       case "vintage":
         return "10×10 Gazete Matrisi";
+      case "kelimematik":
+        return "Dikey Tetris Akışı & Kombolar";
       default:
         return "Süreli Rekor Modu";
     }
@@ -131,6 +147,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "1. seviyeden başlayarak Seviye Yolculuğu'nda ilerle! Izgaradaki hedef kelimeleri bularak seviyeleri tamamla, ustalık kazan ve kilitli ızgara boyutlarını aç.";
       case "vintage":
         return "Nostaljik gazete bulmacası keyfi! İpuçlarını çözerek harf taşlarını 10×10 matrise yerleştir, kare bulmacayı tamamla ve nostalji bonus XP'lerini topla.";
+      case "kelimematik":
+        return "Harfler yukarıdan dikey sütunlara akar! Gerçek Türkçe sözlük kelimeleri kurarak harfleri patlat. Harfler en üstteki tavan sınırına ulaşmadan olabildiğince çok dalga (wave) atla ve hayatta kal.";
       default:
         return "Zamansız akış! Belirlenen süre bitmeden olabildiğince çok kelime bul, kombo puanlarını katla ve liderlik tablosundaki rekorunu kır.";
     }
@@ -146,6 +164,8 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
         return "• Seviye atladıkça 6×6, 8×8 ve 10×10 düello modları açılır.\n• Belirli seviyelerde sürpriz ödül sandıkları kazanırsın.\n• Sıkıştığın anlarda Siber Radar jokeri kullan.";
       case "vintage":
         return "• 20 özel nostaljik bulmaca bölümü içerir.\n• Kesişen harfler doğru kelimeleri bulmayı kolaylaştırır.\n• Günlük girişlerde ekstra ipucu hakkı kazanabilirsin.";
+      case "kelimematik":
+        return "• 💣 Bomba harfleri kullanarak yüksek sütunları temizle.\n• ❄️ Dondurucu harfler düşüşü 5 saniye durdurur.\n• Tıkandığında 🌪️ Süpürge veya 💧 Sesli Harf güçlendiricilerini kullan.";
       default:
         return "• Hızlı kombolar süre bonusu kazandırır.\n• Sıkıştığında Siber Radar jokeri ile gizli rotaları aç.";
     }
@@ -186,15 +206,44 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
             <Text style={styles.tipsContent}>{getModeTips()}</Text>
           </View>
 
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.actionButton,
-              { backgroundColor: getButtonBgColor(), opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <Text style={styles.actionButtonText}>ANLADIM</Text>
-          </Pressable>
+          <View style={{ width: "100%", gap: 8, marginTop: 4 }}>
+            {onStart ? (
+              <Pressable
+                onPress={() => {
+                  onClose();
+                  onStart();
+                }}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  { backgroundColor: getButtonBgColor(), opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Text style={styles.actionButtonText}>BAŞLA ▶</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  { backgroundColor: getButtonBgColor(), opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Text style={styles.actionButtonText}>ANLADIM</Text>
+              </Pressable>
+            )}
+
+            {onStart && (
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  { backgroundColor: "#F1F5F9", borderColor: "#CBD5E1", borderBottomColor: "#94A3B8", opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Text style={[styles.actionButtonText, { color: "#475569" }]}>KAPAT</Text>
+              </Pressable>
+            )}
+          </View>
         </Pressable>
       </Pressable>
     </Modal>

@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   AppState,
   BackHandler,
+  Platform,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
-  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -186,6 +187,15 @@ export function ArcadeChallenge({
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  // Safety fallback: countdown must NEVER stay stuck on screen for more than 4.5 seconds
+  useEffect(() => {
+    if (countdown === null) return;
+    const safetyTimer = setTimeout(() => {
+      setCountdown(null);
+    }, 4500);
+    return () => clearTimeout(safetyTimer);
+  }, [challenge]);
+
   // FX states
   const [particles, setParticles] = useState<{ id: number; x: number; y: number; color: string; anim: Animated.ValueXY }[]>([]);
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -210,11 +220,26 @@ export function ArcadeChallenge({
   }, []);
 
   const measureBoard = () => {
-    boardRef.current?.measure((x: any, y: any, width: any, height: any, pageX: any, pageY: any) => {
-      if (pageX !== undefined && !isNaN(pageX)) boardPageX.current = pageX;
-      if (pageY !== undefined && !isNaN(pageY)) boardPageY.current = pageY;
-    });
+    if (!boardRef.current) return;
+    if ((boardRef.current as any)?.measureInWindow) {
+      (boardRef.current as any).measureInWindow((x: number, y: number) => {
+        if (x !== undefined && !isNaN(x)) boardPageX.current = x;
+        if (y !== undefined && !isNaN(y)) boardPageY.current = y;
+      });
+    } else {
+      boardRef.current.measure((x: any, y: any, width: any, height: any, pageX: any, pageY: any) => {
+        if (pageX !== undefined && !isNaN(pageX)) boardPageX.current = pageX;
+        if (pageY !== undefined && !isNaN(pageY)) boardPageY.current = pageY;
+      });
+    }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      measureBoard();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [challenge]);
 
   const getEventPageCoords = (event: any) => {
     const ne = event.nativeEvent ?? event;
@@ -302,8 +327,13 @@ export function ArcadeChallenge({
     setSelected([]);
     setStatus("lost");
     setShowResultModal(true);
-    triggerHapticError();
-    playErrorSound();
+    if (scoreRef.current > 0) {
+      triggerHapticSuccess();
+      gameSfx.victory();
+    } else {
+      triggerHapticError();
+      playErrorSound();
+    }
     onCompleteRef.current(scoreRef.current, totalWordsFoundRef.current, false, totalCombosRef.current, allFoundWordsRef.current);
   }, [seconds, status, countdown, isPaused, showExitModal]);
 
@@ -699,24 +729,36 @@ export function ArcadeChallenge({
 
   const getEventBoardCoords = (event: any) => {
     const ne = event.nativeEvent ?? event;
+
+    if (Platform.OS === "web" || (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function")) {
+      if (event.currentTarget?.getBoundingClientRect) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+        const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top,
+        };
+      }
+    }
+
+    const { pageX, pageY } = getEventPageCoords(event);
+    if ((boardPageX.current > 0 || boardPageY.current > 0) && pageX !== undefined && pageY !== undefined && (pageX > 0 || pageY > 0)) {
+      return {
+        x: pageX - boardPageX.current,
+        y: pageY - boardPageY.current,
+      };
+    }
+
     const x = ne.locationX ?? ne.offsetX;
     const y = ne.locationY ?? ne.offsetY;
     if (x !== undefined && y !== undefined) {
       return { x, y };
     }
-    if (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function") {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
-      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top,
-      };
-    }
-    const { pageX, pageY } = getEventPageCoords(event);
+
     return {
-      x: pageX - boardPageX.current,
-      y: pageY - boardPageY.current,
+      x: (pageX || 0) - boardPageX.current,
+      y: (pageY || 0) - boardPageY.current,
     };
   };
 

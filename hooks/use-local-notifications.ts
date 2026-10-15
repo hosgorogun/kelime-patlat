@@ -28,7 +28,8 @@ export function useLocalNotificationEngine(progress?: PlayerProgress) {
       const liveInfo = getCalculatedLives(progress);
       void notificationManager.initAndScheduleReminders(
         liveInfo.lives,
-        liveInfo.nextLifeTimerSeconds
+        liveInfo.nextLifeTimerSeconds,
+        progress.streak || 1
       );
     };
 
@@ -42,5 +43,5 @@ export function useLocalNotificationEngine(progress?: PlayerProgress) {
     return () => {
       sub.remove();
     };
-  }, [progress?.lives, progress?.lastLifeRegenTimestamp, progress?.notificationsEnabled]);
+  }, [progress?.lives, progress?.lastLifeRegenTimestamp, progress?.notificationsEnabled, progress?.streak]);
 }

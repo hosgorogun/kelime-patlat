@@ -355,7 +355,7 @@ authRouter.post("/sync-progress", async (req, res) => {
         radarChargesBonus: Math.max(0, Math.min(99, nextRadar + missingWelcomeRadar)),
         lives: (() => {
           if (typeof progress.lives !== "number") return currentProg.lives;
-          return Math.min(MAX_LIVES, Math.max(0, progress.lives));
+          return Math.min(99, Math.max(0, progress.lives));
         })(),
         lastLifeRegenTimestamp: typeof progress.lastLifeRegenTimestamp === "number" ? progress.lastLifeRegenTimestamp : currentProg.lastLifeRegenTimestamp,
         dailyCompletedId: progress.dailyCompletedId || currentProg.dailyCompletedId,
@@ -364,8 +364,24 @@ authRouter.post("/sync-progress", async (req, res) => {
         loginDaysCount: typeof progress.loginDaysCount === "number"
           ? Math.max(currentProg.loginDaysCount || 0, progress.loginDaysCount)
           : currentProg.loginDaysCount,
-        dailyClaimed: { ...(currentProg.dailyClaimed || {}), ...(progress.dailyClaimed || {}) },
-        weeklyClaimed: { ...(currentProg.weeklyClaimed || {}), ...(progress.weeklyClaimed || {}) },
+        dailyClaimed: (() => {
+          const clientDate = progress.missionsDate;
+          const serverDate = currentProg.missionsDate;
+          if (clientDate && serverDate) {
+            if (clientDate > serverDate) return { ...(progress.dailyClaimed || {}) };
+            if (serverDate > clientDate) return { ...(currentProg.dailyClaimed || {}) };
+          }
+          return { ...(currentProg.dailyClaimed || {}), ...(progress.dailyClaimed || {}) };
+        })(),
+        weeklyClaimed: (() => {
+          const clientWeek = progress.weeklyMissionsWeek;
+          const serverWeek = currentProg.weeklyMissionsWeek;
+          if (clientWeek && serverWeek) {
+            if (clientWeek > serverWeek) return { ...(progress.weeklyClaimed || {}) };
+            if (serverWeek > clientWeek) return { ...(currentProg.weeklyClaimed || {}) };
+          }
+          return { ...(currentProg.weeklyClaimed || {}), ...(progress.weeklyClaimed || {}) };
+        })(),
         missions: (() => {
           const merged = { ...(currentProg.missions || {}) };
           const incoming = progress.missions || {};

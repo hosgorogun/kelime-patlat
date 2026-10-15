@@ -206,13 +206,13 @@ export function usePvpMatchEffects({
       setSelectedWordInfo(null);
       if (room.startedAt && room.startedAt !== prevStartedAtRef.current) {
         prevStartedAtRef.current = room.startedAt;
-        if (room.startedAt > Date.now() - 2500) {
-          // Allow Versus Clash entrance animation to play first (1400ms), then cleanly start countdown HUD
+        if (room.startedAt > Date.now() - 4000) {
+          // Allow Versus Clash entrance animation to play first (2800ms), then cleanly start countdown HUD
           const delayTimer = setTimeout(() => {
             setGameCountdown(3);
             gameSfx.tap();
             haptics.select();
-          }, 1400);
+          }, 2800);
           return () => clearTimeout(delayTimer);
         } else {
           setGameCountdown(null);

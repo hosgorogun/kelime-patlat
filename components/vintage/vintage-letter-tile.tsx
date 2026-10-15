@@ -20,6 +20,7 @@ export const LetterTileItem = React.memo(
     return (
       <Pressable
         onPress={() => onPressTile(tile)}
+        hitSlop={4}
         style={({ pressed }) => [styles.letterTile, pressed && styles.letterTilePressed]}
       >
         <Text style={styles.letterTileText}>{tile.letter}</Text>

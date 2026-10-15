@@ -8,8 +8,9 @@ import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { LootBoxRevealModal } from "@/components/modals/loot-box-reveal-modal";
 import { styles } from "./solo-levels.styles";
 
-// 10'lu Seviye Dünyaları (Biyomlar)
+// 10'lu Seviye Dünyaları (Bölgeler)
 interface WorldChapter {
+  id: number;
   startLevel: number;
   endLevel: number;
   title: string;
@@ -21,16 +22,16 @@ interface WorldChapter {
 }
 
 const WORLD_CHAPTERS: WorldChapter[] = [
-  { startLevel: 1, endLevel: 10, title: "Çaylak Bahçesi", subtitle: "BÖLÜM 1", icon: "🌱", bg: "#F0FDF4", accent: "#16A34A", borderColor: "#BBF7D0" },
-  { startLevel: 11, endLevel: 20, title: "Gizemli Labirent", subtitle: "BÖLÜM 2", icon: "🧭", bg: "#EFF6FF", accent: "#2563EB", borderColor: "#BFDBFE" },
-  { startLevel: 21, endLevel: 30, title: "Kozmik Rota", subtitle: "BÖLÜM 3", icon: "🌌", bg: "#FAF5FF", accent: "#9333EA", borderColor: "#E9D5FF" },
-  { startLevel: 31, endLevel: 40, title: "Antik Yazıtlar", subtitle: "BÖLÜM 4", icon: "🏛️", bg: "#FFFBEB", accent: "#D97706", borderColor: "#FDE68A" },
-  { startLevel: 41, endLevel: 50, title: "Sözcük Dağı", subtitle: "BÖLÜM 5", icon: "🏔️", bg: "#F8FAFC", accent: "#475569", borderColor: "#CBD5E1" },
-  { startLevel: 51, endLevel: 60, title: "Ateş Çemberi", subtitle: "BÖLÜM 6", icon: "🔥", bg: "#FFF7ED", accent: "#EA580C", borderColor: "#FED7AA" },
-  { startLevel: 61, endLevel: 70, title: "Zümrüt Vadi", subtitle: "BÖLÜM 7", icon: "💎", bg: "#ECFDF5", accent: "#059669", borderColor: "#A7F3D0" },
-  { startLevel: 71, endLevel: 80, title: "Kutup Fırtınası", subtitle: "BÖLÜM 8", icon: "❄️", bg: "#F0F9FF", accent: "#0284C7", borderColor: "#BAE6FD" },
-  { startLevel: 81, endLevel: 90, title: "Gökkuşağı Geçidi", subtitle: "BÖLÜM 9", icon: "🌈", bg: "#FDF4FF", accent: "#C026D3", borderColor: "#F5D0FE" },
-  { startLevel: 91, endLevel: 100, title: "Mutlak Zirve", subtitle: "BÖLÜM 10", icon: "👑", bg: "#FEF2F2", accent: "#DC2626", borderColor: "#FECACA" },
+  { id: 1, startLevel: 1, endLevel: 10, title: "Çaylak Bahçesi", subtitle: "1. BÖLGE", icon: "🌱", bg: "#F0FDF4", accent: "#16A34A", borderColor: "#BBF7D0" },
+  { id: 2, startLevel: 11, endLevel: 20, title: "Gizemli Labirent", subtitle: "2. BÖLGE", icon: "🧭", bg: "#EFF6FF", accent: "#2563EB", borderColor: "#BFDBFE" },
+  { id: 3, startLevel: 21, endLevel: 30, title: "Kozmik Rota", subtitle: "3. BÖLGE", icon: "🌌", bg: "#FAF5FF", accent: "#9333EA", borderColor: "#E9D5FF" },
+  { id: 4, startLevel: 31, endLevel: 40, title: "Antik Yazıtlar", subtitle: "4. BÖLGE", icon: "🏛️", bg: "#FFFBEB", accent: "#D97706", borderColor: "#FDE68A" },
+  { id: 5, startLevel: 41, endLevel: 50, title: "Sözcük Dağı", subtitle: "5. BÖLGE", icon: "🏔️", bg: "#F8FAFC", accent: "#475569", borderColor: "#CBD5E1" },
+  { id: 6, startLevel: 51, endLevel: 60, title: "Ateş Çemberi", subtitle: "6. BÖLGE", icon: "🔥", bg: "#FFF7ED", accent: "#EA580C", borderColor: "#FED7AA" },
+  { id: 7, startLevel: 61, endLevel: 70, title: "Zümrüt Vadi", subtitle: "7. BÖLGE", icon: "💎", bg: "#ECFDF5", accent: "#059669", borderColor: "#A7F3D0" },
+  { id: 8, startLevel: 71, endLevel: 80, title: "Kutup Fırtınası", subtitle: "8. BÖLGE", icon: "❄️", bg: "#F0F9FF", accent: "#0284C7", borderColor: "#BAE6FD" },
+  { id: 9, startLevel: 81, endLevel: 90, title: "Gökkuşağı Geçidi", subtitle: "9. BÖLGE", icon: "🌈", bg: "#FDF4FF", accent: "#C026D3", borderColor: "#F5D0FE" },
+  { id: 10, startLevel: 91, endLevel: 100, title: "Mutlak Zirve", subtitle: "10. BÖLGE", icon: "👑", bg: "#FEF2F2", accent: "#DC2626", borderColor: "#FECACA" },
 ];
 
 export function SoloLevels({
@@ -52,7 +53,6 @@ export function SoloLevels({
   lives?: number;
   onOpenLivesModal?: () => void;
 }) {
-  const levels = Array.from({ length: MAX_SOLO_LEVEL }, (_, index) => index + 1);
   const [selectedLevel, setSelectedLevel] = useState<number>(Math.min(unlockedLevel, MAX_SOLO_LEVEL));
   const [activeLootBox, setActiveLootBox] = useState<MilestoneReward | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -63,33 +63,44 @@ export function SoloLevels({
   const avatarObj = AVATARS.find((a) => a.id === currentAvatarId);
   const playerAvatarIcon = avatarObj?.icon || "✦";
 
+  // 10'lu Bölgelere göre seviyeleri ve zikzak sıralarını oluştur
+  const worldGroups = WORLD_CHAPTERS.map((chapter) => {
+    const chapterLevels: number[] = [];
+    for (let l = chapter.startLevel; l <= chapter.endLevel; l++) {
+      chapterLevels.push(l);
+    }
+    const rows: number[][] = [];
+    for (let i = 0; i < chapterLevels.length; i += 3) {
+      const chunk = chapterLevels.slice(i, i + 3);
+      const rIdx = i / 3;
+      // Zikzak yol: tek satırlarda sağdan sola, çift satırlarda soldan sağa
+      if (rIdx % 2 !== 0) {
+        chunk.reverse();
+      }
+      rows.push(chunk);
+    }
+    return { chapter, rows };
+  });
+
   useEffect(() => {
     const current = Math.min(unlockedLevel, MAX_SOLO_LEVEL);
     setSelectedLevel(current);
 
     // Auto-scroll to unlocked level position in grid map
-    const targetRow = Math.floor((current - 1) / 3);
-    const targetY = Math.max(0, targetRow * 95 - 120);
+    const chapterIdx = Math.floor((current - 1) / 10);
+    const inChapterLevel = (current - 1) % 10;
+    const inChapterRow = Math.floor(inChapterLevel / 3);
+    const targetY = Math.max(0, chapterIdx * 540 + inChapterRow * 115 - 100);
     const timer = setTimeout(() => {
       scrollViewRef.current?.scrollTo({ y: targetY, animated: true });
     }, 150);
     return () => clearTimeout(timer);
   }, [unlockedLevel]);
 
-  // Group levels into rows of 3 to build a serpentine grid path
-  const gridRows: number[][] = [];
-  for (let i = 0; i < MAX_SOLO_LEVEL; i += 3) {
-    const chunk = levels.slice(i, i + 3);
-    const rowIndex = i / 3;
-    // serpentine path: reverse order on odd rows
-    if (rowIndex % 2 !== 0) {
-      chunk.reverse();
-    }
-    gridRows.push(chunk);
-  }
-
   const selectedData = getSoloLevel(selectedLevel);
   const isSelectedLocked = selectedLevel > unlockedLevel;
+
+  const totalStars = Object.values(progress?.soloLevelStars ?? {}).reduce((acc, s) => acc + s, 0);
 
   return (
     <View style={styles.container}>
@@ -100,211 +111,244 @@ export function SoloLevels({
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={styles.overline}>HER BÖLÜMDE YENİ KELİMELER</Text>
-          <Text style={styles.title}>Seviyeler</Text>
+          <Text style={styles.overline}>HER BÖLÜMDE FARKLI KELİME MACERASI</Text>
+          <Text style={styles.title}>Bölümler ve Harita</Text>
         </View>
-        <Pressable
-          onPress={() => {
-            triggerHapticSelection();
-            onOpenLivesModal?.();
-          }}
-          style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
-        >
-          <Text style={styles.livesIcon}>💚</Text>
-          <Text style={styles.livesText}>{lives}/5</Text>
-          <View style={styles.livesInfoBadge}>
-            <Text style={styles.livesInfoText}>+</Text>
-          </View>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          {totalStars > 0 && (
+            <View style={[styles.livesPill, { borderColor: "#FBBF24", backgroundColor: "#FEF3C7" }]}>
+              <Text style={{ fontSize: 13 }}>⭐</Text>
+              <Text style={[styles.livesText, { color: "#B45309", fontWeight: "900" }]}>{totalStars}</Text>
+            </View>
+          )}
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              onOpenLivesModal?.();
+            }}
+            style={({ pressed }) => [styles.livesPill, pressed && { opacity: 0.8 }]}
+          >
+            <Text style={styles.livesIcon}>💚</Text>
+            <Text style={styles.livesText}>{lives}/5</Text>
+            <View style={styles.livesInfoBadge}>
+              <Text style={styles.livesInfoText}>+</Text>
+            </View>
+          </Pressable>
+        </View>
       </View>
 
-      {/* Cyber Grid Map */}
+      {/* Cyber Grid Map - Bölge Bölge Düzenli Akış */}
       <View style={styles.gridContainer}>
-        {gridRows.map((row, rowIndex) => {
-          const isRowEven = rowIndex % 2 === 0;
-          const minLevelInRow = Math.min(...row);
-
-          // Check if this row starts a new world chapter
-          const chapter = WORLD_CHAPTERS.find((c) => minLevelInRow === c.startLevel || (minLevelInRow - 1) % 10 === 0 && row.includes(c.startLevel));
+        {worldGroups.map(({ chapter, rows }) => {
+          const chapterCompleted = unlockedLevel > chapter.endLevel;
+          const chapterProgress = Math.min(10, Math.max(0, unlockedLevel - chapter.startLevel + 1));
 
           return (
-            <View key={rowIndex}>
+            <View key={chapter.id} style={styles.chapterSection}>
               {/* World Chapter Header Banner */}
-              {chapter && (
-                <View style={[styles.chapterCard, { backgroundColor: chapter.bg, borderColor: chapter.borderColor }]}>
-                  <View style={styles.chapterTopRow}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <View style={[styles.chapterIconWrap, { backgroundColor: chapter.borderColor }]}>
-                        <Text style={styles.chapterIcon}>{chapter.icon}</Text>
-                      </View>
-                      <View>
-                        <Text style={[styles.chapterSubtitle, { color: chapter.accent }]}>{chapter.subtitle}</Text>
-                        <Text style={[styles.chapterTitle, { color: "#1E293B" }]}>{chapter.title}</Text>
-                      </View>
+              <View style={[styles.chapterCard, { backgroundColor: chapter.bg, borderColor: chapter.borderColor }]}>
+                <View style={styles.chapterTopRow}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <View style={[styles.chapterIconWrap, { backgroundColor: chapter.borderColor }]}>
+                      <Text style={styles.chapterIcon}>{chapter.icon}</Text>
                     </View>
-                    <View style={[styles.chapterProgressPill, { backgroundColor: `${chapter.accent}18`, borderColor: `${chapter.accent}44` }]}>
-                      <Text style={[styles.chapterProgressText, { color: chapter.accent }]}>
-                        {Math.min(chapter.endLevel, Math.max(0, unlockedLevel - chapter.startLevel + 1))}/10
-                      </Text>
+                    <View>
+                      <Text style={[styles.chapterSubtitle, { color: chapter.accent }]}>{chapter.subtitle}</Text>
+                      <Text style={[styles.chapterTitle, { color: "#1E293B" }]}>{chapter.title}</Text>
                     </View>
                   </View>
-                </View>
-              )}
-
-              <View style={styles.gridRowWrap}>
-                {/* Row connector line */}
-                <View style={[styles.rowConnector, row.some((l) => l <= unlockedLevel) && styles.rowConnectorActive]} />
-
-                <View style={styles.gridRow}>
-                  {row.map((level, colIndex) => {
-                    const locked = level > unlockedLevel;
-                    const current = level === unlockedLevel;
-                    const completed = level < unlockedLevel;
-                    const isChosen = level === selectedLevel;
-                    const isTurnNode = isRowEven ? colIndex === row.length - 1 : colIndex === 0;
-
-                    // Yıldız mantığı: Tamamlanan bölümler için 3 yıldız
-                    const starsCount = completed ? (level % 3 === 0 ? 3 : level % 2 === 0 ? 3 : 2) : 0;
-
-                    return (
-                      <View key={level} style={styles.nodeWrapper}>
-                        {/* Pixel-perfect vertical connector from turning node down to next row */}
-                        {isTurnNode && rowIndex < gridRows.length - 1 && (
-                          <View
-                            style={[
-                              styles.verticalConnector,
-                              level < unlockedLevel && styles.verticalConnectorActive,
-                            ]}
-                            pointerEvents="none"
-                          />
-                        )}
-
-                        {/* Aktif Seviyede Zıplayan Oyuncu Avatarı Pini */}
-                        {current && (
-                          <View style={styles.playerPinWrapper} pointerEvents="none">
-                            <View style={styles.playerPinBadge}>
-                              <Text style={styles.playerPinAvatar}>{playerAvatarIcon}</Text>
-                              <Text style={styles.playerPinText}>BURADASIN</Text>
-                            </View>
-                            <View style={styles.playerPinPointer} />
-                          </View>
-                        )}
-
-                        <Pressable
-                          onPress={() => {
-                            if (locked) {
-                              gameSfx.rejected();
-                            } else {
-                              triggerHapticSelection();
-                            }
-                            if (isChosen && !locked) {
-                              onSelect(level);
-                            } else {
-                              setSelectedLevel(level);
-                            }
-                          }}
-                          style={({ pressed }) => [
-                            styles.nodeBaseShadow,
-                            pressed && styles.pressed,
-                          ]}
-                        >
-                          <View
-                            style={[
-                              styles.nodeCircle,
-                              completed && styles.nodeCompleted,
-                              current && styles.nodeCurrent,
-                              locked && styles.nodeLocked,
-                              isChosen && styles.nodeSelected,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.nodeText,
-                                completed && styles.nodeTextCompleted,
-                                current && styles.nodeTextCurrent,
-                                locked && styles.nodeTextLocked,
-                                isChosen && styles.nodeTextSelected,
-                              ]}
-                            >
-                              {locked ? "🔒" : level}
-                            </Text>
-                          </View>
-                        </Pressable>
-
-                        {/* Tamamlanan Seviyeler İçin 3 Yıldız Rozeti */}
-                        {completed ? (
-                          <View style={styles.starsRow}>
-                            <Text style={styles.starText}>{starsCount >= 1 ? "⭐" : "☆"}</Text>
-                            <Text style={[styles.starText, { marginTop: -2 }]}>{starsCount >= 2 ? "⭐" : "☆"}</Text>
-                            <Text style={styles.starText}>{starsCount >= 3 ? "⭐" : "☆"}</Text>
-                          </View>
-                        ) : (
-                          <Text style={[styles.nodeLabel, isChosen && styles.nodeLabelSelected, locked && styles.nodeLabelLocked]}>
-                            {current ? "BAŞLA" : `BÖLÜM ${level}`}
-                          </Text>
-                        )}
-                      </View>
-                    );
-                  })}
+                  <View style={[styles.chapterProgressPill, { backgroundColor: `${chapter.accent}18`, borderColor: `${chapter.accent}44` }]}>
+                    <Text style={[styles.chapterProgressText, { color: chapter.accent }]}>
+                      {chapterCompleted ? "TAMAMLANDI ✓" : `${chapterProgress}/10`}
+                    </Text>
+                  </View>
                 </View>
 
-                {/* Milestone Chest Banner if this row contains a milestone */}
+                {/* Chapter Milestone Chest if this chapter has one (clean, non-intrusive) */}
                 {(() => {
-                  const milestone = MILESTONE_REWARDS.find((m) => row.includes(m.level));
-                  if (!milestone) return null;
-                  const isClaimed = Boolean(claimedMilestones[milestone.level]);
-                  const isUnlocked = unlockedLevel > milestone.level;
+                  const chapterMilestone = MILESTONE_REWARDS.find(
+                    (m) => m.level >= chapter.startLevel && m.level <= chapter.endLevel
+                  );
+                  if (!chapterMilestone) return null;
+                  const isClaimed = Boolean(claimedMilestones[chapterMilestone.level]);
+                  const isUnlocked = unlockedLevel > chapterMilestone.level;
+                  const remainingLevels = chapterMilestone.level - unlockedLevel + 1;
+                  const lockLabel =
+                    remainingLevels <= 5 && remainingLevels > 0
+                      ? `🎁 ${remainingLevels} BÖLÜM KALDI!`
+                      : `🔒 BÖLÜM ${chapterMilestone.level}`;
 
                   return (
-                    <View style={styles.milestoneWrap}>
-                      <View
-                        style={[
-                          styles.milestoneBox,
-                          { borderColor: milestone.accent },
-                          isUnlocked && !isClaimed && { backgroundColor: "#FFFBEB", borderColor: "#F59E0B" },
-                          isClaimed && styles.milestoneBoxClaimed,
-                        ]}
-                      >
-                        <View style={[styles.milestoneIconWrap, { borderColor: milestone.accent }]}>
-                          <Text style={styles.milestoneIcon}>{milestone.icon}</Text>
+                    <View
+                      style={[
+                        styles.chapterMilestoneBox,
+                        isUnlocked && !isClaimed && styles.chapterMilestoneBoxReady,
+                        isClaimed && styles.chapterMilestoneBoxClaimed,
+                      ]}
+                    >
+                      <View style={styles.chapterMilestoneLeft}>
+                        <View style={[styles.chapterMilestoneIconWrap, { borderColor: chapterMilestone.accent }]}>
+                          <Text style={styles.chapterMilestoneIcon}>{chapterMilestone.icon}</Text>
                         </View>
                         <View style={{ flex: 1 }}>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                            <Text style={styles.milestoneTitle}>{milestone.title}</Text>
-                            <View style={{ backgroundColor: `${milestone.accent}22`, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: `${milestone.accent}66` }}>
-                              <Text style={{ fontSize: 9, fontWeight: "900", color: milestone.accent }}>{milestone.badge}</Text>
+                            <Text style={styles.chapterMilestoneTitle}>{chapterMilestone.title}</Text>
+                            <View style={{ backgroundColor: `${chapterMilestone.accent}18`, paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6 }}>
+                              <Text style={{ fontSize: 9, fontWeight: "900", color: chapterMilestone.accent }}>{chapterMilestone.badgeTitle}</Text>
                             </View>
-                            {isClaimed && <Text style={styles.milestoneBadge}>AÇILDI ✓</Text>}
                           </View>
-                          <Text style={styles.milestoneDesc}>{milestone.desc}</Text>
-                          <Text style={[styles.milestoneRewardText, { color: milestone.accent }]}>
-                            {milestone.badgeIcon} {milestone.badgeTitle} · +{milestone.coins} ÇİP · +{milestone.shields} KALKAN · +{milestone.xp} XP
+                          <Text style={styles.chapterMilestoneRewardText}>
+                            +{chapterMilestone.coins} Çip · +{chapterMilestone.shields} Kalkan · +{chapterMilestone.xp} XP
                           </Text>
                         </View>
-                        <Pressable
-                          onPress={() => {
-                            if (!isUnlocked || isClaimed || claimingRef.current.has(milestone.level)) return;
-                            claimingRef.current.add(milestone.level);
-                            setActiveLootBox(milestone);
-                            onClaimMilestone?.(milestone);
-                          }}
-                          disabled={!isUnlocked || isClaimed}
-                          style={({ pressed }) => [
-                            styles.milestoneBtn,
-                            isUnlocked && !isClaimed && { backgroundColor: "#F59E0B", borderColor: "#D97706" },
-                            isClaimed && styles.milestoneBtnClaimed,
-                            pressed && isUnlocked && !isClaimed && styles.pressed,
+                      </View>
+
+                      <Pressable
+                        onPress={() => {
+                          if (!isUnlocked || isClaimed || claimingRef.current.has(chapterMilestone.level)) return;
+                          claimingRef.current.add(chapterMilestone.level);
+                          setActiveLootBox(chapterMilestone);
+                          onClaimMilestone?.(chapterMilestone);
+                        }}
+                        disabled={!isUnlocked || isClaimed}
+                        style={({ pressed }) => [
+                          styles.chapterMilestoneBtn,
+                          isUnlocked && !isClaimed && styles.chapterMilestoneBtnReady,
+                          isClaimed && styles.chapterMilestoneBtnClaimed,
+                          pressed && isUnlocked && !isClaimed && styles.pressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.chapterMilestoneBtnText,
+                            isUnlocked && !isClaimed && styles.chapterMilestoneBtnTextReady,
+                            isClaimed && styles.chapterMilestoneBtnTextClaimed,
                           ]}
                         >
-                          <Text style={[styles.milestoneBtnText, isUnlocked && !isClaimed && { color: "#FFFFFF", fontWeight: "900" }]}>
-                            {isClaimed ? "ALINDI" : isUnlocked ? `AÇ! ${milestone.icon}` : "🔒 KİLİTLİ"}
-                          </Text>
-                        </Pressable>
-                      </View>
+                          {isClaimed ? "ALINDI ✓" : isUnlocked ? `AÇ! ${chapterMilestone.icon}` : lockLabel}
+                        </Text>
+                      </Pressable>
                     </View>
                   );
                 })()}
               </View>
+
+              {/* Rows inside Chapter - Uninterrupted serpentine flow */}
+              {rows.map((row, rowIndex) => {
+                const isRowEven = rowIndex % 2 === 0;
+
+                return (
+                  <View key={rowIndex}>
+                    <View style={styles.gridRowWrap}>
+                      {/* Row connector line */}
+                      <View style={[styles.rowConnector, row.some((l) => l <= unlockedLevel) && styles.rowConnectorActive]} />
+
+                      <View style={styles.gridRow}>
+                        {row.map((level, colIndex) => {
+                          const locked = level > unlockedLevel;
+                          const current = level === unlockedLevel;
+                          const completed = level < unlockedLevel;
+                          const isChosen = level === selectedLevel;
+                          const isTurnNode = isRowEven ? colIndex === row.length - 1 : colIndex === 0;
+                          const levelData = getSoloLevel(level);
+
+                          // Gerçek kazanılan yıldız sayısı (Varsayılan olarak en az 1, kayıtlı varsa tam değeri)
+                          const starsCount = completed ? (progress?.soloLevelStars?.[level] ?? 3) : 0;
+
+                          return (
+                            <View key={level} style={styles.nodeWrapper}>
+                              {/* Pixel-perfect vertical connector from turning node down to next row */}
+                              {isTurnNode && rowIndex < rows.length - 1 && (
+                                <View
+                                  style={[
+                                    styles.verticalConnector,
+                                    level < unlockedLevel && styles.verticalConnectorActive,
+                                  ]}
+                                  pointerEvents="none"
+                                />
+                              )}
+
+                              {/* Aktif Seviyede Zıplayan Oyuncu Avatarı Pini */}
+                              {current && (
+                                <View style={styles.playerPinWrapper} pointerEvents="none">
+                                  <View style={styles.playerPinBadge}>
+                                    <Text style={styles.playerPinAvatar}>{playerAvatarIcon}</Text>
+                                    <Text style={styles.playerPinText}>BURADASIN</Text>
+                                  </View>
+                                  <View style={styles.playerPinPointer} />
+                                </View>
+                              )}
+
+                              <Pressable
+                                onPress={() => {
+                                  if (locked) {
+                                    gameSfx.rejected();
+                                  } else {
+                                    triggerHapticSelection();
+                                  }
+                                  if (isChosen && !locked) {
+                                    onSelect(level);
+                                  } else {
+                                    setSelectedLevel(level);
+                                  }
+                                }}
+                                style={({ pressed }) => [
+                                  styles.nodeBaseShadow,
+                                  pressed && styles.pressed,
+                                ]}
+                              >
+                                <View
+                                  style={[
+                                    styles.nodeCircle,
+                                    completed && styles.nodeCompleted,
+                                    current && styles.nodeCurrent,
+                                    locked && styles.nodeLocked,
+                                    isChosen && styles.nodeSelected,
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.nodeText,
+                                      completed && styles.nodeTextCompleted,
+                                      current && styles.nodeTextCurrent,
+                                      locked && styles.nodeTextLocked,
+                                      isChosen && styles.nodeTextSelected,
+                                    ]}
+                                  >
+                                    {locked ? "🔒" : level}
+                                  </Text>
+                                </View>
+                              </Pressable>
+
+                              {/* Bölüm Başlığı & Yıldız Rozeti */}
+                              {completed ? (
+                                <View style={styles.starsRow}>
+                                  <Text style={styles.starText}>{starsCount >= 1 ? "⭐" : "☆"}</Text>
+                                  <Text style={[styles.starText, { marginTop: -2 }]}>{starsCount >= 2 ? "⭐" : "☆"}</Text>
+                                  <Text style={styles.starText}>{starsCount >= 3 ? "⭐" : "☆"}</Text>
+                                </View>
+                              ) : null}
+
+                              {/* Her seviyenin tematik ismi */}
+                              <Text
+                                numberOfLines={1}
+                                style={[
+                                  styles.nodeLabel,
+                                  isChosen && styles.nodeLabelSelected,
+                                  locked && styles.nodeLabelLocked,
+                                  current && styles.nodeLabelCurrent,
+                                ]}
+                              >
+                                {levelData.title}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           );
         })}
@@ -315,7 +359,9 @@ export function SoloLevels({
       <View style={styles.dockedDeck}>
         <View style={styles.deckHead}>
           <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.deckKicker}>SIRADAKİ HEDEFİN</Text>
+            <Text style={styles.deckKicker}>
+              {selectedLevel === unlockedLevel ? "SIRADAKİ HEDEFİN" : selectedLevel < unlockedLevel ? "TAMAMLANAN BÖLÜM" : "KİLİTLİ BÖLÜM"}
+            </Text>
             <Text numberOfLines={1} style={styles.deckTitle}>SEVİYE {selectedLevel}: {selectedData.title.toLocaleUpperCase("tr-TR")}</Text>
           </View>
           <View style={[styles.statusBadge, isSelectedLocked ? styles.badgeLocked : selectedLevel === unlockedLevel ? styles.badgeActive : styles.badgeCompleted]}>

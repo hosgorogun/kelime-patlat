@@ -134,13 +134,20 @@ export function FloatingScoreBurst({ text }: { text: string | null }) {
     outputRange: [0, 1, 1, 0],
   });
 
+  const isPraise =
+    text.includes("EFSANEVİ") ||
+    text.includes("HARİKA") ||
+    text.includes("SÜPER") ||
+    text.includes("GÜZEL") ||
+    text.includes("ATEŞLİ");
+
   return (
     <Animated.View
       pointerEvents="none"
       style={{
         position: "absolute",
         alignSelf: "center",
-        top: "40%",
+        top: "36%",
         transform: [{ translateY }, { scale }],
         opacity,
         zIndex: 200,
@@ -151,19 +158,29 @@ export function FloatingScoreBurst({ text }: { text: string | null }) {
           flexDirection: "row",
           alignItems: "center",
           gap: 6,
-          backgroundColor: "#FEF3C7",
-          borderWidth: 2,
-          borderColor: "#F59E0B",
-          borderRadius: 20,
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          shadowColor: "#F59E0B",
-          shadowOpacity: 0.45,
-          shadowRadius: 10,
-          elevation: 8,
+          backgroundColor: isPraise ? "#F59E0B" : "#FEF3C7",
+          borderWidth: 2.5,
+          borderColor: isPraise ? "#FFFBEB" : "#F59E0B",
+          borderRadius: 22,
+          paddingHorizontal: 18,
+          paddingVertical: 9,
+          shadowColor: isPraise ? "#F59E0B" : "#0F172A",
+          shadowOpacity: 0.6,
+          shadowRadius: 12,
+          elevation: 10,
         }}
       >
-        <Text style={{ color: "#B45309", fontSize: 18, fontWeight: "900", letterSpacing: 0.5 }}>
+        <Text
+          style={{
+            color: isPraise ? "#FFFFFF" : "#B45309",
+            fontSize: isPraise ? 20 : 18,
+            fontWeight: "900",
+            letterSpacing: 0.6,
+            textShadowColor: isPraise ? "rgba(0, 0, 0, 0.3)" : "transparent",
+            textShadowOffset: { width: 0, height: 1.5 },
+            textShadowRadius: 3,
+          }}
+        >
           {text}
         </Text>
       </View>

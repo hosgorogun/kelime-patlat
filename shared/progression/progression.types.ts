@@ -37,7 +37,7 @@ export type DailyChallenge = {
 
 export type MatchHistoryEntry = {
   id: string;
-  mode: "ranked" | "friend" | "bot" | "solo" | "arcade" | "vintage" | "daily";
+  mode: "ranked" | "friend" | "bot" | "solo" | "arcade" | "vintage" | "daily" | "kelimematik";
   size?: number;
   opponentName?: string;
   opponentAvatar?: string;
@@ -56,6 +56,7 @@ export type VintageProgress = {
   maxUnlockedLevel: number;
   completedLevels: number[];
   score: number;
+  levelStars?: Record<number, number>;
 };
 
 export type GenderType = "male" | "female" | "unspecified";
@@ -182,8 +183,10 @@ export type PlayerProgress = {
   seasonHistory?: Array<{ seasonId: string; rank: string; lp: number; date: string }>;
   lastSeasonResetId?: string;
   soloUnlockedLevel?: number;
+  soloLevelStars?: Record<number, number>;
   vintageProgress?: VintageProgress;
   sfxEnabled?: boolean;
+  bgmEnabled?: boolean;
   hapticsEnabled?: boolean;
   notificationsEnabled?: boolean;
   lives?: number;
@@ -191,9 +194,9 @@ export type PlayerProgress = {
   infiniteLivesUntil?: number;
   lastSpinTimestamp?: number;
   boosters?: {
-    hint: number;
-    freeze: number;
-    shuffle: number;
+    hint?: number;
+    freeze?: number;
+    shuffle?: number;
   };
   friends?: Array<{
     id: string;
@@ -216,6 +219,12 @@ export type PlayerProgress = {
     foundWords: string[];
     claimedTiers: number[];
   };
+  cardAlbum?: {
+    ownedCardIds: string[];
+    completedSets: string[];
+  };
+  activeStreakBoost?: boolean; // 3+ seride ilk kelime harfi parlar
+  bestKelimematikScore?: number;
 };
 
 export const DEFAULT_PROGRESS: PlayerProgress = {
@@ -229,6 +238,7 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   bestScore: 0,
   bestTempo: 0,
   bestArcadeScore: 0,
+  bestKelimematikScore: 0,
   missions: { daily: 0, duels: 0, wordsmith: 0 },
   selectedTheme: "nature",
   selectedAvatar: "spark",
@@ -252,12 +262,14 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   ownedBoardSkins: { grid: true },
   ownedTitles: { novice: true },
   soloUnlockedLevel: 1,
+  soloLevelStars: {},
   vintageProgress: {
     maxUnlockedLevel: 1,
     completedLevels: [],
     score: 0,
   },
   sfxEnabled: true,
+  bgmEnabled: true,
   hapticsEnabled: true,
   notificationsEnabled: true,
   lives: MAX_LIVES,
@@ -302,6 +314,14 @@ export const CYBER_TITLES: CyberTitle[] = [
   { id: "word_hunter", name: "SÖZCÜK AVCISI", badge: "[SÖZCÜK AVCISI]", icon: "🎯", accent: "#F43F5E", unlockHint: "Mağazadan çip ile alınır.", unlocked: (p) => Boolean(p.ownedTitles?.word_hunter) },
   { id: "lexicon_lord", name: "LÜGAT LORDU", badge: "[LÜGAT LORDU]", icon: "👑", accent: "#FFC24A", unlockHint: "Mağazadan çip ile alınır.", unlocked: (p) => Boolean(p.ownedTitles?.lexicon_lord) },
   { id: "invincible", name: "YENİLMEZ", badge: "[YENİLMEZ]", icon: "🛡️", accent: "#A855F7", unlockHint: "Mağazadan çip ile alınır.", unlocked: (p) => Boolean(p.ownedTitles?.invincible) },
+
+  // Solo Seviye Harita Sandık Unvanları
+  { id: "badge-lvl-15", name: "4×4 BRONZ MİMAR", badge: "[BRONZ MİMAR]", icon: "🥉", accent: "#CD7F32", unlockHint: "Solo Bölüm 15 Bronz Sandığı'ndan açılır.", unlocked: (p) => Boolean(p.claimedMilestones?.[15]) || Boolean(p.ownedTitles?.["badge-lvl-15"]) },
+  { id: "badge-lvl-30", name: "GÜMÜŞ AĞ UZMANI", badge: "[GÜMÜŞ UZMAN]", icon: "🥈", accent: "#E0E0E0", unlockHint: "Solo Bölüm 30 Gümüş Sandığı'ndan açılır.", unlocked: (p) => Boolean(p.claimedMilestones?.[30]) || Boolean(p.ownedTitles?.["badge-lvl-30"]) },
+  { id: "badge-lvl-45", name: "6×6 ALTIN USTA", badge: "[ALTIN USTA]", icon: "🥇", accent: "#FFD700", unlockHint: "Solo Bölüm 45 Altın Sandığı'ndan açılır.", unlocked: (p) => Boolean(p.claimedMilestones?.[45]) || Boolean(p.ownedTitles?.["badge-lvl-45"]) },
+  { id: "badge-lvl-60", name: "DERİN TAHTA KRİSTALİ", badge: "[KRİSTAL HÂKİM]", icon: "💎", accent: "#00E5FF", unlockHint: "Solo Bölüm 60 Kristal Sandığı'ndan açılır.", unlocked: (p) => Boolean(p.claimedMilestones?.[60]) || Boolean(p.ownedTitles?.["badge-lvl-60"]) },
+  { id: "badge-lvl-75", name: "EFSANEVİ HÂKİM", badge: "[EFSANEVİ HÂKİM]", icon: "🔮", accent: "#A855F7", unlockHint: "Solo Bölüm 75 Efsanevi Sandığı'ndan açılır.", unlocked: (p) => Boolean(p.claimedMilestones?.[75]) || Boolean(p.ownedTitles?.["badge-lvl-75"]) },
+  { id: "badge-lvl-100", name: "KOZMİK İMPARATOR", badge: "[KOZMİK İMPARATOR]", icon: "👑", accent: "#FF1493", unlockHint: "Solo Bölüm 100 Kozmik Sandığı'ndan açılır.", unlocked: (p) => Boolean(p.claimedMilestones?.[100]) || Boolean(p.ownedTitles?.["badge-lvl-100"]) },
 ];
 
 export type DailyMystery = {

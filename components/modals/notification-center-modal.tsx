@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { ICONS } from "@/components/game/game-ui";
-import type { PlayerProgress } from "@/shared/progression";
+import { type PlayerProgress, getDayId } from "@/shared/progression";
+
+const DISMISSED_NOTIFICATIONS_KEY = "kelime-patlat:dismissed-notifications";
 
 export type NotificationItem = {
   id: string;
@@ -46,13 +49,46 @@ export function NotificationCenterModal({
   onOpenLuckyWheel,
   onOpenLivesModal,
 }: NotificationCenterModalProps) {
+  const [dismissedIds, setDismissedIds] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!visible) return;
+    AsyncStorage.getItem(DISMISSED_NOTIFICATIONS_KEY)
+      .then((data) => {
+        if (data) {
+          try {
+            const parsed = JSON.parse(data);
+            const today = getDayId();
+            // Yalnızca bugüne ait kapatılanları koru, eski günleri temizle
+            const validToday: Record<string, string> = {};
+            for (const [id, day] of Object.entries(parsed)) {
+              if (day === today) validToday[id] = day as string;
+            }
+            setDismissedIds(validToday);
+          } catch {
+            setDismissedIds({});
+          }
+        }
+      })
+      .catch(() => undefined);
+  }, [visible]);
+
+  const handleDismissNotification = (id: string) => {
+    const today = getDayId();
+    setDismissedIds((prev) => {
+      const updated = { ...prev, [id]: today };
+      AsyncStorage.setItem(DISMISSED_NOTIFICATIONS_KEY, JSON.stringify(updated)).catch(() => undefined);
+      return updated;
+    });
+  };
+
   if (!visible) return null;
 
-  const notifications: NotificationItem[] = [];
+  const rawNotifications: NotificationItem[] = [];
 
-  // 1. Günlük Giriş Ödülü Bildirimi
+  // 1. Günlük Giriş Ödülü Bildirimi (Ödül bekliyorsa)
   if (!isClaimedToday) {
-    notifications.push({
+    rawNotifications.push({
       id: "daily_reward",
       icon: ICONS.gift,
       kicker: "GÜNLÜK HEDİYE",
@@ -69,9 +105,9 @@ export function NotificationCenterModal({
     });
   }
 
-  // 2. Tamamlanan Görev Bildirimi
+  // 2. Tamamlanan Görev Bildirimi (Alınmamış görev ödülü varsa)
   if (unclaimedMissionsCount > 0) {
-    notifications.push({
+    rawNotifications.push({
       id: "missions",
       icon: ICONS.missions,
       kicker: "GÖREV MERKEZİ",
@@ -88,9 +124,9 @@ export function NotificationCenterModal({
     });
   }
 
-  // 3. Şans Çarkı Bildirimi
+  // 3. Şans Çarkı Bildirimi (Ücretsiz hak varsa)
   if (canSpinWheel) {
-    notifications.push({
+    rawNotifications.push({
       id: "lucky_wheel",
       icon: ICONS.wheel,
       kicker: "ŞANS ÇARKI",
@@ -111,9 +147,9 @@ export function NotificationCenterModal({
     });
   }
 
-  // 4. Can Durumu Bildirimi
+  // 4. Can Durumu Bildirimi (Yalnızca canı eksikse uyar)
   if (lives < 5) {
-    notifications.push({
+    rawNotifications.push({
       id: "lives_status",
       icon: ICONS.heart,
       kicker: "ENERJİ DURUMU",
@@ -129,15 +165,60 @@ export function NotificationCenterModal({
         }
       },
     });
-  } else {
-    notifications.push({
-      id: "lives_full",
-      icon: ICONS.heart,
-      kicker: "ENERJİ TAM",
-      title: "Tüm Canların Dolu (5/5)",
-      description: "Arenaya çıkmaya hazırsın. Yeni bir düello maçı başlatabilirsin.",
-      accentColor: "#10B981",
-      actionLabel: "Hemen Oyna",
+  }
+
+  // 5. Günün Gizemli Kelimesi (Henüz çözülmediyse)
+  const todayDateStr = getDayId();
+  if (progress.dailyMysteryClaimedDate !== todayDateStr) {
+    rawNotifications.push({
+      id: "daily_mystery",
+      icon: "🔍",
+      isEmoji: true,
+      kicker: "GÜNÜN BİLMECESİ",
+      title: "Gizemli Kelime Seni Bekliyor!",
+      description: "Bugünün bilmecesini çöz, bonus XP ve ekstra can takviyesi kazan.",
+      badge: "+100 XP",
+      accentColor: "#38BDF8",
+      actionLabel: "Bilmeciyi Gör",
+      onPressAction: () => {
+        onClose();
+        onNavigate("home");
+      },
+    });
+  }
+
+  // 6. Rush Hour (Altın Saat Turnuvası) Bildirimi
+  const now = new Date();
+  const currentHour = now.getHours();
+  if (currentHour >= 20 && currentHour < 21) {
+    const remainingMins = 60 - now.getMinutes();
+    rawNotifications.unshift({
+      id: "rush_hour_active",
+      icon: "⚡",
+      isEmoji: true,
+      kicker: "CANLI ETKİNLİK",
+      title: "Altın Saat Aktif! (2X LP)",
+      description: `Tüm PvP düellolarında 2 kat Lig Puanı! Kalan süre: ${remainingMins} dakika.`,
+      badge: "2X LP CANLI",
+      accentColor: "#F59E0B",
+      actionLabel: "Düelloya Gir",
+      isPriority: true,
+      onPressAction: () => {
+        onClose();
+        onNavigate("online");
+      },
+    });
+  } else if (currentHour >= 18 && currentHour < 20) {
+    rawNotifications.push({
+      id: "rush_hour_upcoming",
+      icon: "⚡",
+      isEmoji: true,
+      kicker: "ALTIN SAAT YAKLAŞIYOR",
+      title: "20:00'de 2X Lig Puanı Başlıyor",
+      description: "20:00 - 21:00 saatleri arasında düellolarda çifte puan fırsatını kaçırma!",
+      badge: "20:00 - 21:00",
+      accentColor: "#EAB308",
+      actionLabel: "Hazırlan",
       onPressAction: () => {
         onClose();
         onNavigate("online");
@@ -145,20 +226,27 @@ export function NotificationCenterModal({
     });
   }
 
-  // 5. Dereceli Sezon Bilgisi
-  notifications.push({
-    id: "ranked_season",
-    icon: ICONS.trophy,
-    kicker: "SEZON LİGLERİ",
-    title: "1. Sezon Dereceli Mücadelesi",
-    description: "Lig kademelerinde yükselerek Demir'den Hakim ligine terfi et.",
-    accentColor: "#0284C7",
-    actionLabel: "Lider Tablosu",
-    onPressAction: () => {
-      onClose();
-      onNavigate("season");
-    },
-  });
+  // 7. Galibiyet Serisi (Streak) Hatırlatması (Günün rotası henüz tamamlanmadıysa)
+  if (progress.streak > 0 && progress.dailyCompletedId !== todayDateStr) {
+    rawNotifications.push({
+      id: "streak_status",
+      icon: "🔥",
+      isEmoji: true,
+      kicker: "SERİ ALEVİ",
+      title: `${progress.streak} Günlük Seri Tehlikede`,
+      description: "Bugünkü serini devam ettirmek için günün rotasını tamamla.",
+      badge: `${progress.streak} GÜN`,
+      accentColor: "#F97316",
+      actionLabel: "Rotayı Oyna",
+      onPressAction: () => {
+        onClose();
+        onNavigate("daily");
+      },
+    });
+  }
+
+  // Kullanıcı tarafından bugünkü oturumda okundu/kapatıldı olarak işaretlenenleri filtrele
+  const notifications = rawNotifications.filter((n) => !dismissedIds[n.id]);
 
   const priorityCount = notifications.filter((n) => n.isPriority).length;
 
@@ -242,18 +330,41 @@ export function NotificationCenterModal({
                     </View>
                   </View>
 
-                  {item.badge && (
-                    <View
-                      style={[
-                        styles.badgePill,
-                        { backgroundColor: `${item.accentColor}18`, borderColor: `${item.accentColor}44` },
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    {item.badge && (
+                      <View
+                        style={[
+                          styles.badgePill,
+                          { backgroundColor: `${item.accentColor}18`, borderColor: `${item.accentColor}44` },
+                        ]}
+                      >
+                        <Text style={[styles.badgeText, { color: item.accentColor }]}>
+                          {item.badge}
+                        </Text>
+                      </View>
+                    )}
+                    <Pressable
+                      onPress={() => {
+                        triggerHapticSelection();
+                        handleDismissNotification(item.id);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={({ pressed }) => [
+                        {
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: "#F1F5F9",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        },
+                        pressed && { opacity: 0.6 },
                       ]}
+                      accessibilityLabel="Bildirimi Kapat"
                     >
-                      <Text style={[styles.badgeText, { color: item.accentColor }]}>
-                        {item.badge}
-                      </Text>
-                    </View>
-                  )}
+                      <Text style={{ fontSize: 11, color: "#94A3B8", fontWeight: "900" }}>✕</Text>
+                    </Pressable>
+                  </View>
                 </View>
 
                 <Text style={styles.itemDescription}>{item.description}</Text>
@@ -279,6 +390,18 @@ export function NotificationCenterModal({
                 )}
               </View>
             ))}
+
+            {notifications.length === 0 && (
+              <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: 10 }}>
+                <Text style={{ fontSize: 36 }}>✨</Text>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: "#0F172A" }}>
+                  Tüm Bildirimler Temizlendi!
+                </Text>
+                <Text style={{ fontSize: 12, color: "#64748B", textAlign: "center", paddingHorizontal: 24 }}>
+                  Şu an için bekleyen acil bir duyuru ya da toplanmamış ödül bulunmuyor.
+                </Text>
+              </View>
+            )}
           </ScrollView>
 
           {/* Bottom Bar */}

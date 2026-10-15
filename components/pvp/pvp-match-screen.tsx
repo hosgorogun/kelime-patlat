@@ -23,6 +23,7 @@ import { UserProfileModal, type InspectableUser } from "../profile/user-profile-
 import { APP_WORD_PALETTE } from "@/shared/solo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { triggerHapticSelection, triggerHapticSuccess, getHapticsEnabled, setHapticsEnabled } from "@/shared/audio-haptics";
+import { isValidTurkishWord } from "@/shared/dictionary";
 import { isEqualTr } from "@/shared/tr-utils";
 import { haptics } from "@/lib/haptics";
 import { gameSfx } from "@/lib/game-sfx";
@@ -96,6 +97,7 @@ export interface PvpMatchScreenProps {
   handleGestureStart: (e: any) => void;
   handleGestureMove: (e: any) => void;
   handleGestureEnd: () => void;
+  handleGestureCancel?: () => void;
   selectionActiveRef: React.MutableRefObject<boolean>;
   clearSelection: () => void;
   submitSelection: () => void;
@@ -174,6 +176,7 @@ export function PvpMatchScreen({
   handleGestureStart,
   handleGestureMove,
   handleGestureEnd,
+  handleGestureCancel,
   selectionActiveRef,
   clearSelection,
   submitSelection,
@@ -280,12 +283,21 @@ export function PvpMatchScreen({
       setShowClash(true);
       const timer = setTimeout(() => {
         setShowClash(false);
-      }, 1400);
+      }, 2800);
       return () => clearTimeout(timer);
     } else if (room.status !== "playing") {
       setShowClash(false);
     }
   }, [room.status, room.startedAt]);
+
+  const isLiveValidWord = useMemo(() => {
+    return (
+      room.status === "playing" &&
+      selectionFeedback === "idle" &&
+      selectedCells.length >= 2 &&
+      isValidTurkishWord(activeWord)
+    );
+  }, [room.status, selectionFeedback, selectedCells.length, activeWord]);
 
   return (
     <ScreenContainer style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 20 }}>
@@ -614,7 +626,13 @@ export function PvpMatchScreen({
             pointerEvents={room.status === "playing" && gameCountdown === null ? "auto" : "none"}
             onStartShouldSetResponder={() => room.status === "playing" && gameCountdown === null}
             onMoveShouldSetResponder={() => room.status === "playing" && gameCountdown === null}
+            onStartShouldSetResponderCapture={() => room.status === "playing" && gameCountdown === null}
+            onMoveShouldSetResponderCapture={() => room.status === "playing" && gameCountdown === null}
             onResponderTerminationRequest={() => false}
+            onResponderGrant={handleGestureStart}
+            onResponderMove={handleGestureMove}
+            onResponderRelease={handleGestureEnd}
+            onResponderTerminate={handleGestureCancel || handleGestureEnd}
             {...(Platform.OS === "web"
               ? {
                   onPointerDown: (e: any) => {
@@ -624,22 +642,9 @@ export function PvpMatchScreen({
                   },
                   onPointerMove: handleGestureMove,
                   onPointerUp: handleGestureEnd,
-                  onPointerCancel: () => {
-                    selectionActiveRef.current = false;
-                    clearSelection();
-                    setIsSelecting(false);
-                  },
+                  onPointerCancel: handleGestureCancel || handleGestureEnd,
                 }
-              : {
-                  onTouchStart: handleGestureStart,
-                  onTouchMove: handleGestureMove,
-                  onTouchEnd: handleGestureEnd,
-                  onTouchCancel: () => {
-                    selectionActiveRef.current = false;
-                    clearSelection();
-                    setIsSelecting(false);
-                  },
-                })}
+              : {})}
             style={StyleSheet.absoluteFill}
           />
         </View>
@@ -648,30 +653,35 @@ export function PvpMatchScreen({
           <View
             style={[
               styles.wordTray,
+              isLiveValidWord && { borderColor: "#10B981", backgroundColor: "rgba(16, 185, 129, 0.08)" },
               selectionFeedback === "invalid" && styles.wordTrayInvalid,
               selectionFeedback === "accepted" && styles.wordTrayAccepted,
               selectionFeedback === "bonus" && styles.wordTrayBonus,
             ]}
           >
-            <Text style={styles.wordLabel}>
+            <Text style={[styles.wordLabel, isLiveValidWord && { color: "#059669", fontWeight: "800" }]}>
               {selectionFeedback === "invalid"
                 ? "GEÇERSİZ KELİME"
                 : selectionFeedback === "bonus"
                 ? "✨ GİZLİ BONUS KELİME BULUNDU!"
                 : selectionFeedback === "accepted"
                 ? "KELİME KABUL EDİLDİ"
+                : isLiveValidWord
+                ? "✓ GEÇERLİ KELİME · GÖNDER"
                 : selectedCells.length >= 2
                 ? "ROTA SEÇİLDİ · DOĞRULAMAK İÇİN GÖNDER"
                 : "SEÇTİĞİN KELİME"}
             </Text>
-            <Text style={[styles.drawnWord, !activeWord && styles.drawnWordEmpty]}>
+            <Text style={[styles.drawnWord, !activeWord && styles.drawnWordEmpty, isLiveValidWord && { color: "#065F46" }]}>
               {activeWord || "HARFLERİ BİRLEŞTİR"}
             </Text>
-            <Text style={styles.routeHint}>
+            <Text style={[styles.routeHint, isLiveValidWord && { color: "#047857" }]}>
               {selectionFeedback === "invalid"
                 ? "Kırmızı rota birazdan temizlenecek."
                 : selectionFeedback === "bonus"
                 ? "+10 Bonus Puan & +2 Çip Kazanıldı!"
+                : isLiveValidWord
+                ? "Sözlükte geçerli! Puanı almak için gönder."
                 : selectedCells.length > 1
                 ? "Mavi önizleme · yeşil yalnız kabul edilince görünür."
                 : "Yalnız yatay ve dikey ilerle"}
@@ -687,6 +697,7 @@ export function PvpMatchScreen({
                 onPress={submitSelection}
                 style={[
                   styles.submitWord,
+                  isLiveValidWord && { backgroundColor: "#10B981", borderColor: "#059669" },
                   (selectedCells.length < 2 || Boolean(pendingWordRef.current)) && styles.disabledButton,
                 ]}
               >
@@ -845,10 +856,14 @@ export function PvpMatchScreen({
         playerAvatar={me?.avatar || progress.selectedAvatar || "✦"}
         playerAvatarPhoto={progress.avatarPhoto}
         playerTier={me?.tier || "BRONZ"}
+        playerTitle={me?.selectedTitle || progress.selectedTitle || "Kelime Avcısı"}
+        playerLevel={progress.level || 1}
         opponentName={opponent?.name || "RAKİP"}
         opponentAvatar={opponent?.avatar || "⚡"}
         opponentAvatarPhoto={opponent?.avatarPhoto}
         opponentTier={opponent?.tier || "BRONZ"}
+        opponentTitle={opponent?.selectedTitle || (opponent?.isBot ? "Yapay Zeka" : "Meydan Okuyan")}
+        opponentLevel={opponent?.level || 1}
         isBot={Boolean(!room.isRanked && (opponent?.isBot || room.players.some((p) => p.isBot)))}
       />
 

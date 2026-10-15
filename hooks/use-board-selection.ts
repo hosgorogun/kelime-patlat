@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Animated, type View } from "react-native";
+import { Animated, Platform, type View } from "react-native";
 import { getGameSocket } from "../lib/game-socket";
 import { haptics } from "../lib/haptics";
 import { gameSfx } from "../lib/game-sfx";
@@ -38,11 +38,26 @@ export function useBoardSelection({
   >([]);
 
   const measureBoard = useCallback(() => {
-    boardRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      if (pageX !== undefined) boardPageX.current = pageX;
-      if (pageY !== undefined) boardPageY.current = pageY;
-    });
+    if (!boardRef.current) return;
+    if ((boardRef.current as any)?.measureInWindow) {
+      (boardRef.current as any).measureInWindow((x: number, y: number) => {
+        if (x !== undefined && !isNaN(x)) boardPageX.current = x;
+        if (y !== undefined && !isNaN(y)) boardPageY.current = y;
+      });
+    } else {
+      boardRef.current.measure((x, y, width, height, pageX, pageY) => {
+        if (pageX !== undefined && !isNaN(pageX)) boardPageX.current = pageX;
+        if (pageY !== undefined && !isNaN(pageY)) boardPageY.current = pageY;
+      });
+    }
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      measureBoard();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [measureBoard, room?.board]);
 
   const getCellCenter = useCallback(
     (cellIndex: number) => {
@@ -231,24 +246,38 @@ export function useBoardSelection({
 
   const getEventBoardCoords = (event: any) => {
     const ne = event.nativeEvent ?? event;
+
+    // Web / DOM ortamı
+    if (Platform.OS === "web" || (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function")) {
+      if (event.currentTarget?.getBoundingClientRect) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+        const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top,
+        };
+      }
+    }
+
+    // Mobil (Android / iOS): Tahta pozisyonu biliniyorsa pageX/pageY kullanımı alt eleman kaymalarından etkilenmez
+    const { pageX, pageY } = getEventPageCoords(event);
+    if ((boardPageX.current > 0 || boardPageY.current > 0) && pageX !== undefined && pageY !== undefined && (pageX > 0 || pageY > 0)) {
+      return {
+        x: pageX - boardPageX.current,
+        y: pageY - boardPageY.current,
+      };
+    }
+
     const x = ne.locationX ?? ne.offsetX;
     const y = ne.locationY ?? ne.offsetY;
     if (x !== undefined && y !== undefined) {
       return { x, y };
     }
-    if (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function") {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
-      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top,
-      };
-    }
-    const { pageX, pageY } = getEventPageCoords(event);
+
     return {
-      x: pageX - boardPageX.current,
-      y: pageY - boardPageY.current,
+      x: (pageX || 0) - boardPageX.current,
+      y: (pageY || 0) - boardPageY.current,
     };
   };
 
@@ -280,6 +309,18 @@ export function useBoardSelection({
     selectionActiveRef.current = false;
     lastGestureStartTimeRef.current = 0;
     submitSelection(true);
+  };
+
+  const handleGestureCancel = () => {
+    setIsSelecting(false);
+    if (!selectionActiveRef.current) return;
+    selectionActiveRef.current = false;
+    lastGestureStartTimeRef.current = 0;
+    if (selectionRef.current.length >= 2) {
+      submitSelection(true);
+    } else {
+      clearSelection();
+    }
   };
 
   useEffect(() => {
@@ -319,5 +360,6 @@ export function useBoardSelection({
     handleGestureStart,
     handleGestureMove,
     handleGestureEnd,
+    handleGestureCancel,
   };
 }

@@ -144,7 +144,7 @@ export const FriendsLobbyScreen: React.FC<FriendsLobbyScreenProps> = ({
             maxLength={5}
             autoCapitalize="characters"
             placeholder="5 HANELİ KOD"
-            placeholderTextColor="#293541"
+            placeholderTextColor="#94A3B8"
             style={styles.codeInput}
           />
           <Pressable

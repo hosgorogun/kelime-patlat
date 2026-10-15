@@ -101,7 +101,7 @@ export function AppRoot() {
   setProgressRef.current = setProgress;
   flushPendingAwardsRef.current = flushPendingAwards;
 
-  const { sfxOn, hapticsOn, toggleSfx, toggleHaptics } = useAudioHapticsSettings({
+  const { sfxOn, bgmOn, hapticsOn, toggleSfx, toggleBgm, toggleHaptics } = useAudioHapticsSettings({
     progress,
     progressReady,
     setProgress,
@@ -366,6 +366,8 @@ export function AppRoot() {
     openUserProfile,
     sfxOn,
     toggleSfx,
+    bgmOn,
+    toggleBgm,
     hapticsOn,
     toggleHaptics,
   };

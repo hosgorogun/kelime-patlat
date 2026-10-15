@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, BackHandler, ScrollView, StyleSheet, useWindowDimensions, View, Animated } from "react-native";
+import { Animated, AppState, BackHandler, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { advanceSelection, wordFromSelection } from "@/shared/game";
@@ -78,7 +78,7 @@ export function SoloChallenge({
   selectedVictoryEffect?: string;
   watchAd?: (onReward: () => void) => void;
   onExit: () => void;
-  onComplete: (level: number, foundWords: string[], won: boolean) => void;
+  onComplete: (level: number, foundWords: string[], won: boolean, stars?: number) => void;
   onNext: () => void;
   onAdvanceLevel?: () => void;
   onBonusReward?: (xp: number, radarBonus: number) => void;
@@ -210,11 +210,41 @@ export function SoloChallenge({
 
   const [revived, setRevived] = useState(false);
   const [doubleXpEarned, setDoubleXpEarned] = useState(false);
+  const [wonStars, setWonStars] = useState(3);
 
   // Günlük en fazla 3 kez reklamla kurtarma hakkı sınırı (Anti-abuse kotası)
   const todayId = getDayId();
   const currentDailyRevives = ((progressRef.current ?? progress)?.dailyRevivesDate === todayId ? (progressRef.current ?? progress)?.dailyRevivesCount : 0) ?? 0;
   const remainingDailyRevives = Math.max(0, 3 - currentDailyRevives);
+  const currentCoins = (progressRef.current ?? progress)?.coins ?? 0;
+
+  const handleReviveWithCoins = () => {
+    if (currentCoins < 50) return;
+    setSeconds(20);
+    setStatus("playing");
+    setRevived(true);
+    hasFinishedRef.current = false;
+    setCountdown(1);
+    triggerHapticSuccess();
+    playSuccessSound();
+    setTimeBonusText("⚡ +20sn SÜRE SATIN ALINDI! (-50 ÇİP) ⚡");
+    const reviveTimer = setTimeout(() => setTimeBonusText(null), 2500);
+    particleTimers.current.push(reviveTimer);
+    if (setProgress) {
+      setProgress((curr) => {
+        const calc = getCalculatedLives(curr);
+        const restoredLives = Math.min(99, calc.lives + 1);
+        const updated = {
+          ...curr,
+          coins: Math.max(0, (curr.coins ?? 0) - 50),
+          lives: restoredLives,
+          lastLifeRegenTimestamp: calc.lives >= 5 ? Date.now() : curr.lastLifeRegenTimestamp,
+        };
+        void syncProgressToCloud?.(updated);
+        return updated;
+      });
+    }
+  };
 
   const handleReviveWithAd = () => {
     if (remainingDailyRevives <= 0) return;
@@ -235,7 +265,7 @@ export function SoloChallenge({
           const nextCount = (isSameDay ? (curr.dailyRevivesCount ?? 0) : 0) + 1;
           // Reklam izleyip süreyi kurtardığı için süre bitiminde düşülen 1 can geri iade edilir
           const calc = getCalculatedLives(curr);
-          const restoredLives = Math.min(5, calc.lives + 1);
+          const restoredLives = Math.min(99, calc.lives + 1);
           const updated = {
             ...curr,
             lives: restoredLives,
@@ -264,6 +294,15 @@ export function SoloChallenge({
     }, 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  // Safety fallback: countdown must NEVER stay stuck on screen for more than 4.5 seconds
+  useEffect(() => {
+    if (countdown === null) return;
+    const safetyTimer = setTimeout(() => {
+      setCountdown(null);
+    }, 4500);
+    return () => clearTimeout(safetyTimer);
+  }, [challenge]);
 
   // Radar cooldown timer
   useEffect(() => {
@@ -340,11 +379,26 @@ export function SoloChallenge({
   }, []);
 
   const measureBoard = () => {
-    boardRef.current?.measure((x: any, y: any, width: any, height: any, pageX: any, pageY: any) => {
-      if (pageX !== undefined && !isNaN(pageX)) boardPageX.current = pageX;
-      if (pageY !== undefined && !isNaN(pageY)) boardPageY.current = pageY;
-    });
+    if (!boardRef.current) return;
+    if ((boardRef.current as any)?.measureInWindow) {
+      (boardRef.current as any).measureInWindow((x: number, y: number) => {
+        if (x !== undefined && !isNaN(x)) boardPageX.current = x;
+        if (y !== undefined && !isNaN(y)) boardPageY.current = y;
+      });
+    } else {
+      boardRef.current.measure((x: any, y: any, width: any, height: any, pageX: any, pageY: any) => {
+        if (pageX !== undefined && !isNaN(pageX)) boardPageX.current = pageX;
+        if (pageY !== undefined && !isNaN(pageY)) boardPageY.current = pageY;
+      });
+    }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      measureBoard();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [challenge]);
 
   const getEventPageCoords = (event: any) => {
     const ne = event.nativeEvent ?? event;
@@ -371,12 +425,12 @@ export function SoloChallenge({
     // bu effect yeniden çalışıp chestState'i "closed"a sıfırlarsa oyuncu aynı kutuyu sonsuz kez açabilir (XP exploit'i).
   }, [challenge]);
 
+  const prevLevelForVariationRef = useRef(level);
   useEffect(() => {
-    if (variationSeed !== undefined) setVariation(variationSeed);
-  }, [variationSeed]);
-
-  useEffect(() => {
-    if (variationSeed === undefined) {
+    if (variationSeed !== undefined) {
+      setVariation(variationSeed);
+    } else if (prevLevelForVariationRef.current !== level) {
+      prevLevelForVariationRef.current = level;
       setVariation(Math.floor(Math.random() * 1_000_000));
     }
   }, [level, variationSeed]);
@@ -702,9 +756,23 @@ export function SoloChallenge({
     particleTimers.current.push(bonusTextTimer);
 
     const scoreVal = word.length * 15 * (isCombo ? nextStreak : 1) + specialScoreBonus;
-    setScoreBurstText(`+${scoreVal} ${isCombo ? "🔥" : bombCount > 0 ? "💣" : goldCount > 0 ? "🪙" : "⭐"}`);
+    const praisePrefix =
+      word.length >= 7
+        ? "⚡ EFSANEVİ! "
+        : word.length === 6
+        ? "🔥 HARİKA! "
+        : word.length === 5
+        ? "⭐ SÜPER! "
+        : isCombo
+        ? "💥 GÜZEL! "
+        : "";
+    setScoreBurstText(`${praisePrefix}+${scoreVal} ${isCombo ? "🔥" : bombCount > 0 ? "💣" : goldCount > 0 ? "🪙" : "⭐"}`);
     const scoreBurstTimer = setTimeout(() => setScoreBurstText(null), 1200);
     particleTimers.current.push(scoreBurstTimer);
+
+    if (word.length >= 6) {
+      triggerShake();
+    }
 
     if (isCombo) {
       playComboSound(nextStreak);
@@ -722,6 +790,9 @@ export function SoloChallenge({
       explodeConfetti();
       gameSfx.victory();
       triggerHapticLongWord();
+      const remainingRatio = challenge.timeLimit > 0 ? seconds / challenge.timeLimit : 0;
+      const earnedStars = Math.max(1, remainingRatio >= 0.4 ? 3 : remainingRatio >= 0.15 ? 2 : 1);
+      setWonStars(earnedStars);
       const winTimer = setTimeout(() => {
         setStatus("won");
         setShowVictoryModal(true);
@@ -729,7 +800,7 @@ export function SoloChallenge({
         setInspectedPath(null);
         setInspectedColor(null);
         const allFound = [...nextFound, ...bonusWordsRef.current];
-        onCompleteRef.current(levelRef.current, allFound, true);
+        onCompleteRef.current(levelRef.current, allFound, true, earnedStars);
       }, 700);
       particleTimers.current.push(winTimer);
     } else {
@@ -857,24 +928,36 @@ export function SoloChallenge({
   };
   const getEventBoardCoords = (event: any) => {
     const ne = event.nativeEvent ?? event;
+
+    if (Platform.OS === "web" || (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function")) {
+      if (event.currentTarget?.getBoundingClientRect) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+        const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+        return {
+          x: clientX - rect.left,
+          y: clientY - rect.top,
+        };
+      }
+    }
+
+    const { pageX, pageY } = getEventPageCoords(event);
+    if ((boardPageX.current > 0 || boardPageY.current > 0) && pageX !== undefined && pageY !== undefined && (pageX > 0 || pageY > 0)) {
+      return {
+        x: pageX - boardPageX.current,
+        y: pageY - boardPageY.current,
+      };
+    }
+
     const x = ne.locationX ?? ne.offsetX;
     const y = ne.locationY ?? ne.offsetY;
     if (x !== undefined && y !== undefined) {
       return { x, y };
     }
-    if (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function") {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
-      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top,
-      };
-    }
-    const { pageX, pageY } = getEventPageCoords(event);
+
     return {
-      x: pageX - boardPageX.current,
-      y: pageY - boardPageY.current,
+      x: (pageX || 0) - boardPageX.current,
+      y: (pageY || 0) - boardPageY.current,
     };
   };
   const handleGestureStart = (event: any) => {
@@ -1004,6 +1087,7 @@ export function SoloChallenge({
         level={level}
         foundCount={found.length}
         seconds={seconds}
+        stars={wonStars}
         boardSkinColor={boardSkinColor}
         accentColor={activeTheme.accentColor}
         chestState={chestState}
@@ -1028,6 +1112,8 @@ export function SoloChallenge({
         revived={revived}
         remainingRevives={remainingDailyRevives}
         onReviveWithAd={handleReviveWithAd}
+        coins={currentCoins}
+        onReviveWithCoins={handleReviveWithCoins}
         accentColor={activeTheme.accentColor}
         onRetry={handleRetry}
         onExit={onExit}

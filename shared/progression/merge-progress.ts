@@ -197,8 +197,16 @@ export function mergePlayerProgress(
     streakShields: nextShields,
     radarChargesBonus: nextRadar,
     lives: useRemoteBalances && cleanRemote.lives !== undefined
-      ? safeNum(cleanRemote.lives, local.lives ?? MAX_LIVES, MAX_LIVES)
-      : safeNum(typeof cleanRemote.lives === "number" && typeof local.lives === "number" ? Math.min(local.lives, cleanRemote.lives) : (cleanRemote.lives ?? local.lives ?? MAX_LIVES), MAX_LIVES, MAX_LIVES),
+      ? safeNum(cleanRemote.lives, local.lives ?? MAX_LIVES, 99)
+      : safeNum(
+          typeof cleanRemote.lives === "number" && typeof local.lives === "number"
+            ? (cleanRemote.lives > MAX_LIVES || local.lives > MAX_LIVES
+                ? Math.max(local.lives, cleanRemote.lives)
+                : Math.min(local.lives, cleanRemote.lives))
+            : (cleanRemote.lives ?? local.lives ?? MAX_LIVES),
+          MAX_LIVES,
+          99
+        ),
     lastLifeRegenTimestamp: typeof cleanRemote.lastLifeRegenTimestamp === "number" ? cleanRemote.lastLifeRegenTimestamp : (typeof local.lastLifeRegenTimestamp === "number" ? local.lastLifeRegenTimestamp : Date.now()),
     infiniteLivesUntil: Math.max(local.infiniteLivesUntil ?? 0, cleanRemote.infiniteLivesUntil ?? 0),
     lastSpinTimestamp: Math.max(local.lastSpinTimestamp ?? 0, cleanRemote.lastSpinTimestamp ?? 0),
@@ -243,14 +251,30 @@ export function mergePlayerProgress(
       ...(cleanRemote.purchasedAvatars ?? {}),
       ...(local.purchasedAvatars ?? {}),
     },
-    weeklyClaimed: {
-      ...(cleanRemote.weeklyClaimed ?? {}),
-      ...(local.weeklyClaimed ?? {}),
-    },
-    dailyClaimed: {
-      ...(cleanRemote.dailyClaimed ?? {}),
-      ...(local.dailyClaimed ?? {}),
-    },
+    weeklyClaimed: (() => {
+      const localWeek = local.weeklyMissionsWeek;
+      const remoteWeek = cleanRemote.weeklyMissionsWeek;
+      if (localWeek && remoteWeek) {
+        if (localWeek > remoteWeek) return { ...(local.weeklyClaimed ?? {}) };
+        if (remoteWeek > localWeek) return { ...(cleanRemote.weeklyClaimed ?? {}) };
+      }
+      return {
+        ...(cleanRemote.weeklyClaimed ?? {}),
+        ...(local.weeklyClaimed ?? {}),
+      };
+    })(),
+    dailyClaimed: (() => {
+      const localDate = local.missionsDate;
+      const remoteDate = cleanRemote.missionsDate;
+      if (localDate && remoteDate) {
+        if (localDate > remoteDate) return { ...(local.dailyClaimed ?? {}) };
+        if (remoteDate > localDate) return { ...(cleanRemote.dailyClaimed ?? {}) };
+      }
+      return {
+        ...(cleanRemote.dailyClaimed ?? {}),
+        ...(local.dailyClaimed ?? {}),
+      };
+    })(),
     dailyRevivesDate: local.dailyRevivesDate || cleanRemote.dailyRevivesDate || undefined,
     dailyRevivesCount: local.dailyRevivesDate === cleanRemote.dailyRevivesDate
       ? Math.max(local.dailyRevivesCount ?? 0, cleanRemote.dailyRevivesCount ?? 0)
@@ -290,6 +314,16 @@ export function mergePlayerProgress(
     selectedBoardSkin: local.selectedBoardSkin || cleanRemote.selectedBoardSkin || "grid",
     ownedBoardSkins: { ...(cleanRemote.ownedBoardSkins ?? {}), ...(local.ownedBoardSkins ?? {}) },
     soloUnlockedLevel: safeNum(Math.max(local.soloUnlockedLevel ?? 1, cleanRemote.soloUnlockedLevel ?? 1), local.soloUnlockedLevel ?? 1, 101),
+    soloLevelStars: (() => {
+      const localStars = local.soloLevelStars ?? {};
+      const remoteStars = cleanRemote.soloLevelStars ?? {};
+      const allKeys = Array.from(new Set([...Object.keys(localStars), ...Object.keys(remoteStars)])).map(Number);
+      const merged: Record<number, number> = {};
+      allKeys.forEach((lvl) => {
+        merged[lvl] = Math.max(localStars[lvl] ?? 0, remoteStars[lvl] ?? 0);
+      });
+      return merged;
+    })(),
     vintageProgress: {
       maxUnlockedLevel: safeNum(Math.max(local.vintageProgress?.maxUnlockedLevel ?? 1, cleanRemote.vintageProgress?.maxUnlockedLevel ?? 1), 1, 20),
       completedLevels: Array.from(new Set([
@@ -297,8 +331,19 @@ export function mergePlayerProgress(
         ...(cleanRemote.vintageProgress?.completedLevels ?? []),
       ])).sort((a, b) => a - b),
       score: safeNum(Math.max(local.vintageProgress?.score ?? 0, cleanRemote.vintageProgress?.score ?? 0), 0),
+      levelStars: (() => {
+        const localStars = local.vintageProgress?.levelStars ?? {};
+        const remoteStars = cleanRemote.vintageProgress?.levelStars ?? {};
+        const allKeys = Array.from(new Set([...Object.keys(localStars), ...Object.keys(remoteStars)])).map(Number);
+        const merged: Record<number, number> = {};
+        allKeys.forEach((lvl) => {
+          merged[lvl] = Math.max(localStars[lvl] ?? 0, remoteStars[lvl] ?? 0);
+        });
+        return merged;
+      })(),
     },
     sfxEnabled: cleanRemote?.sfxEnabled ?? local.sfxEnabled ?? true,
+    bgmEnabled: cleanRemote?.bgmEnabled ?? local.bgmEnabled ?? true,
     hapticsEnabled: cleanRemote?.hapticsEnabled ?? local.hapticsEnabled ?? true,
     lastLoginDay: (() => {
       if (!local.lastLoginDay) return cleanRemote?.lastLoginDay;

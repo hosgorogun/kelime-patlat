@@ -296,7 +296,7 @@ export function CyberStoreScreenContainer(props: CyberStoreScreenContainerProps)
             } else if (picked.type === "lives") {
               const calc = getCalculatedLives(current);
               if (!calc.isInfinite) {
-                next.lives = Math.min(MAX_LIVES, calc.lives + (picked.val as number));
+                next.lives = Math.min(99, calc.lives + (picked.val as number));
                 next.lastLifeRegenTimestamp = Date.now();
               }
             } else if (picked.type === "radar") {

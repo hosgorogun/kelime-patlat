@@ -200,7 +200,7 @@ function scheduleRoundEnd(io: Server, room: Room, token: number) {
     clearTimeout(room.roundEndTimer);
     room.roundEndTimer = null;
   }
-  const duration = getRoundDurationMs(room.size) + 3000;
+  const duration = getRoundDurationMs(room.size) + 6000;
   room.roundEndTimer = setTimeout(() => {
     room.roundEndTimer = null;
     if (rooms.get(room.code) === room && room.roundToken === token) finishRound(io, room);
@@ -246,7 +246,7 @@ function startRound(io: Server, room: Room) {
   room.bonusWords = {};
   room.scores = Object.fromEntries([room.host, room.guest].filter(Boolean).map((player) => [player!.id, 0]));
   room.status = "playing";
-  room.startedAt = Date.now() + 3000;
+  room.startedAt = Date.now() + 6000;
   room.winnerId = null;
   room.message = `${words.length} gizli kelime var. Yalnız yatay ve dikey bağla!`;
   // Dereceli veya bot içeren maçlarda doğrudan oyun başlar, hazır durumu korunur

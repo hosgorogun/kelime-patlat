@@ -1,7 +1,7 @@
 export const MAX_LIVES = 5;
 export const LIVES_REGEN_INTERVAL_MS = 30 * 60 * 1000; // 30 dakika
-export const COST_PER_LIFE = 20;
-export const COST_REFILL_ALL = 75;
+export const COST_PER_LIFE = 50;
+export const COST_REFILL_ALL = 180;
 
 export interface LivesProgressState {
   lives?: number;
@@ -24,8 +24,9 @@ export function getCalculatedLives(progress: Partial<LivesProgressState>): {
     const maxAllowedFuture = now + 48 * 60 * 60 * 1000;
     const safeInfiniteUntil = Math.min(progress.infiniteLivesUntil, maxAllowedFuture);
     const remainingSeconds = Math.ceil((safeInfiniteUntil - now) / 1000);
+    const baseLives = typeof progress.lives === "number" && Number.isFinite(progress.lives) ? Math.max(MAX_LIVES, progress.lives) : MAX_LIVES;
     return {
-      lives: MAX_LIVES,
+      lives: baseLives,
       lastLifeRegenTimestamp:
         typeof progress.lastLifeRegenTimestamp === "number" && Number.isFinite(progress.lastLifeRegenTimestamp)
           ? progress.lastLifeRegenTimestamp
@@ -37,11 +38,11 @@ export function getCalculatedLives(progress: Partial<LivesProgressState>): {
   }
 
   const max = MAX_LIVES;
-  const currentLives = typeof progress.lives === "number" && Number.isFinite(progress.lives) ? Math.max(0, Math.min(max, progress.lives)) : max;
+  const currentLives = typeof progress.lives === "number" && Number.isFinite(progress.lives) ? Math.max(0, progress.lives) : max;
   let lastRegen = typeof progress.lastLifeRegenTimestamp === "number" && Number.isFinite(progress.lastLifeRegenTimestamp) ? progress.lastLifeRegenTimestamp : Date.now();
 
   if (currentLives >= max) {
-    return { lives: max, lastLifeRegenTimestamp: Date.now(), nextLifeTimerSeconds: 0 };
+    return { lives: currentLives, lastLifeRegenTimestamp: Date.now(), nextLifeTimerSeconds: 0 };
   }
 
   // Anti time-jump exploit: If lastRegen is in the future or corrupted, reset to current now
@@ -73,7 +74,7 @@ export function deductLife<T extends LivesProgressState>(progress: T): T {
   if (calc.lives <= 0) return { ...progress, lives: 0, lastLifeRegenTimestamp: calc.lastLifeRegenTimestamp };
   const nextLives = calc.lives - 1;
   const now = Date.now();
-  const nextTimestamp = calc.lives === MAX_LIVES ? now : calc.lastLifeRegenTimestamp;
+  const nextTimestamp = nextLives >= MAX_LIVES ? now : (calc.lives > MAX_LIVES ? now : calc.lastLifeRegenTimestamp);
   return {
     ...progress,
     lives: nextLives,
@@ -121,9 +122,10 @@ export function buyLives<T extends LivesProgressState>(progress: T, option: "one
 export function grantInfiniteLives<T extends LivesProgressState>(progress: T, minutes: number): T {
   const now = Date.now();
   const currentExpiry = progress.infiniteLivesUntil && progress.infiniteLivesUntil > now ? progress.infiniteLivesUntil : now;
+  const currentLives = typeof progress.lives === "number" && Number.isFinite(progress.lives) ? progress.lives : MAX_LIVES;
   return {
     ...progress,
-    lives: MAX_LIVES,
+    lives: Math.max(MAX_LIVES, currentLives),
     infiniteLivesUntil: currentExpiry + minutes * 60 * 1000,
   };
 }

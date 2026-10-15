@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "../constants/oauth";
 import { DEFAULT_PROGRESS, mergePlayerProgress, type PlayerProgress } from "../shared/progression";
@@ -23,6 +23,15 @@ export function useAuthSession({
   );
 
   const safeName = playerName.trim().slice(0, 16) || "OYUNCU";
+
+  const setProgressRef = useRef(setProgress);
+  setProgressRef.current = setProgress;
+
+  const setScreenRef = useRef(setScreen);
+  setScreenRef.current = setScreen;
+
+  const flushPendingAwardsRef = useRef(flushPendingAwards);
+  flushPendingAwardsRef.current = flushPendingAwards;
 
   useEffect(() => {
     let active = true;
@@ -60,7 +69,7 @@ export function useAuthSession({
                   user.name || user.username || "OYUNCU"
                 );
                 if (user.progress) {
-                  setProgress((current) =>
+                  setProgressRef.current((current) =>
                     mergePlayerProgress(current, user.progress, { preferRemoteBalances: true })
                   );
                 }
@@ -71,7 +80,7 @@ export function useAuthSession({
                 setPlayerId(cachedId || `user-${Math.random().toString(36).slice(2, 10)}`);
                 setPlayerName(cachedName || "OYUNCU");
               }
-              void flushPendingAwards();
+              void flushPendingAwardsRef.current();
             } else if (response.status === 401 || response.status === 403 || response.status === 404) {
               // Sunucu oturumu/hesabı tanımıyor (hesap silinmiş veya geçersiz token): yerel oturumu ve eski ilerlemeyi tamamen temizle ve giriş ekranına yönlendir
               await AsyncStorage.multiRemove([
@@ -80,11 +89,11 @@ export function useAuthSession({
                 "kelime-patlat:player-name",
                 PROGRESS_KEY,
               ]).catch(() => undefined);
-              setProgress({ ...DEFAULT_PROGRESS });
+              setProgressRef.current({ ...DEFAULT_PROGRESS });
               setAuthToken(null);
               setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
               setPlayerName("OYUNCU");
-              setScreen("auth");
+              setScreenRef.current("auth");
             } else {
               const cachedId = await AsyncStorage.getItem("kelime-patlat:player-id");
               const cachedName = await AsyncStorage.getItem("kelime-patlat:player-name");
@@ -105,7 +114,7 @@ export function useAuthSession({
           setAuthToken(null);
           setPlayerId(`player-${Math.random().toString(36).slice(2, 10)}`);
           setPlayerName("OYUNCU");
-          setScreen("auth");
+          setScreenRef.current("auth");
         }
         setAuthLoading(false);
       })
@@ -115,7 +124,7 @@ export function useAuthSession({
     return () => {
       active = false;
     };
-  }, [flushPendingAwards, setProgress, setScreen]);
+  }, []);
 
   return {
     authToken,

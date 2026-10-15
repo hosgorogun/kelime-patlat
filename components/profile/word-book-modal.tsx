@@ -9,8 +9,9 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { normalizeTr, isEqualTr } from "@/shared/tr-utils";
+import { normalizeTr, normalizeTrUpper, isEqualTr } from "@/shared/tr-utils";
 import { WORD_BOOK_MILESTONES, type PlayerProgress, type WordBookMilestone } from "@/shared/progression";
+import { WORD_CARD_ALBUMS } from "@/shared/card-albums";
 import { fetchWordDetail } from "@/shared/dictionary";
 import { haptics } from "@/lib/haptics";
 import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
@@ -30,6 +31,7 @@ export const WordBookModal = React.memo(({
   setProgress,
   onClaimMilestone,
 }: WordBookModalProps) => {
+  const [activeTab, setActiveTab] = useState<"words" | "albums">("words");
   const [filterLength, setFilterLength] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
@@ -129,165 +131,271 @@ export const WordBookModal = React.memo(({
             </Pressable>
           </View>
 
-          {/* Stats Bar */}
-          <View style={styles.statsCard}>
-            <View style={styles.statsTextWrap}>
-              <Text style={styles.statsCount}>{totalDiscovered}</Text>
-              <Text style={styles.statsLabel}>KEŞFEDİLEN KELİME</Text>
-            </View>
-            <Text style={styles.statsHint}>
-              Solo, PvP, Günlük, Arcade ve Gazete modlarında bulduğun tüm geçerli kelimeler buraya eklenir.
-            </Text>
+          {/* Tab Selector */}
+          <View style={styles.tabBarRow}>
+            <Pressable
+              onPress={() => {
+                haptics.select();
+                setActiveTab("words");
+              }}
+              style={[styles.tabItem, activeTab === "words" && styles.tabItemActive]}
+            >
+              <Text style={[styles.tabItemText, activeTab === "words" && styles.tabItemTextActive]}>
+                📖 Keşfedilen Kelimeler ({totalDiscovered})
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                haptics.select();
+                setActiveTab("albums");
+              }}
+              style={[styles.tabItem, activeTab === "albums" && styles.tabItemActive]}
+            >
+              <Text style={[styles.tabItemText, activeTab === "albums" && styles.tabItemTextActive]}>
+                🃏 Kart Albümleri ({progress.cardAlbum?.ownedCardIds?.length || 0}/18)
+              </Text>
+            </Pressable>
           </View>
 
-          {/* Milestone Badges Carousel */}
-          <View style={styles.milestoneSection}>
-            <Text style={styles.sectionTitle}>KEŞİF HEDEFLERİ & ÖDÜLLER</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.milestoneRow}>
-              {WORD_BOOK_MILESTONES.map((m) => {
-                const isClaimed = Boolean(claimedMilestones[m.count]);
-                const isReady = totalDiscovered >= m.count && !isClaimed;
-                return (
-                  <View
-                    key={`wb-m-${m.count}`}
-                    style={[
-                      styles.milestoneBox,
-                      isReady && styles.milestoneBoxReady,
-                      isClaimed && styles.milestoneBoxClaimed,
-                    ]}
-                  >
-                    <Text style={styles.milestoneIcon}>{m.badgeIcon}</Text>
-                    <Text style={styles.milestoneCount}>{m.count} Kelime</Text>
-                    <Text style={styles.milestoneCoins}>+{m.rewardCoins} Çip</Text>
-                    {isClaimed ? (
-                      <View style={styles.claimedBadge}>
-                        <Text style={styles.claimedBadgeText}>ALINDI ✓</Text>
-                      </View>
-                    ) : isReady ? (
-                      <Pressable
-                        onPress={() => handleClaimReward(m)}
-                        style={styles.claimBtn}
-                      >
-                        <Text style={styles.claimBtnText}>ÖDÜLÜ AL</Text>
-                      </Pressable>
-                    ) : (
-                      <Text style={styles.lockedMilestoneText}>
-                        {totalDiscovered}/{m.count}
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* Search & Filter Toolbar */}
-          <View style={styles.toolbar}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Kelime ara... (örn: ZAMAN)"
-              placeholderTextColor="#8A9BA8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterPills}>
-              <Pressable
-                onPress={() => setFilterLength(null)}
-                style={[styles.filterPill, filterLength === null && styles.filterPillActive]}
-              >
-                <Text style={[styles.filterPillText, filterLength === null && styles.filterPillTextActive]}>
-                  Tümü ({discoveredWords.length})
+          {activeTab === "words" ? (
+            <>
+              {/* Stats Bar */}
+              <View style={styles.statsCard}>
+                <View style={styles.statsTextWrap}>
+                  <Text style={styles.statsCount}>{totalDiscovered}</Text>
+                  <Text style={styles.statsLabel}>KEŞFEDİLEN KELİME</Text>
+                </View>
+                <Text style={styles.statsHint}>
+                  Solo, PvP, Günlük, Arcade ve Gazete modlarında bulduğun tüm geçerli kelimeler buraya eklenir.
                 </Text>
-              </Pressable>
-              {[3, 4, 5, 6, 7].map((len) => {
-                const label = len === 7 ? "7+ Harf" : `${len} Harf`;
-                const count = discoveredWords.filter((w) => len === 7 ? w.length >= 7 : w.length === len).length;
-                return (
+              </View>
+
+              {/* Milestone Badges Carousel */}
+              <View style={styles.milestoneSection}>
+                <Text style={styles.sectionTitle}>KEŞİF HEDEFLERİ & ÖDÜLLER</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.milestoneRow}>
+                  {WORD_BOOK_MILESTONES.map((m) => {
+                    const isClaimed = Boolean(claimedMilestones[m.count]);
+                    const isReady = totalDiscovered >= m.count && !isClaimed;
+                    return (
+                      <View
+                        key={`wb-m-${m.count}`}
+                        style={[
+                          styles.milestoneBox,
+                          isReady && styles.milestoneBoxReady,
+                          isClaimed && styles.milestoneBoxClaimed,
+                        ]}
+                      >
+                        <Text style={styles.milestoneIcon}>{m.badgeIcon}</Text>
+                        <Text style={styles.milestoneCount}>{m.count} Kelime</Text>
+                        <Text style={styles.milestoneCoins}>+{m.rewardCoins} Çip</Text>
+                        {isClaimed ? (
+                          <View style={styles.claimedBadge}>
+                            <Text style={styles.claimedBadgeText}>ALINDI ✓</Text>
+                          </View>
+                        ) : isReady ? (
+                          <Pressable
+                            onPress={() => handleClaimReward(m)}
+                            style={styles.claimBtn}
+                          >
+                            <Text style={styles.claimBtnText}>ÖDÜLÜ AL</Text>
+                          </Pressable>
+                        ) : (
+                          <Text style={styles.lockedMilestoneText}>
+                            {totalDiscovered}/{m.count}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Search & Filter Toolbar */}
+              <View style={styles.toolbar}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Kelime ara... (örn: ZAMAN)"
+                  placeholderTextColor="#8A9BA8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterPills}>
                   <Pressable
-                    key={`len-pill-${len}`}
-                    onPress={() => setFilterLength(filterLength === len ? null : len)}
-                    style={[styles.filterPill, filterLength === len && styles.filterPillActive]}
+                    onPress={() => setFilterLength(null)}
+                    style={[styles.filterPill, filterLength === null && styles.filterPillActive]}
                   >
-                    <Text style={[styles.filterPillText, filterLength === len && styles.filterPillTextActive]}>
-                      {label} ({count})
+                    <Text style={[styles.filterPillText, filterLength === null && styles.filterPillTextActive]}>
+                      Tümü ({discoveredWords.length})
                     </Text>
                   </Pressable>
+                  {[3, 4, 5, 6, 7].map((len) => {
+                    const label = len === 7 ? "7+ Harf" : `${len} Harf`;
+                    const count = discoveredWords.filter((w) => len === 7 ? w.length >= 7 : w.length === len).length;
+                    return (
+                      <Pressable
+                        key={`len-pill-${len}`}
+                        onPress={() => setFilterLength(filterLength === len ? null : len)}
+                        style={[styles.filterPill, filterLength === len && styles.filterPillActive]}
+                      >
+                        <Text style={[styles.filterPillText, filterLength === len && styles.filterPillTextActive]}>
+                          {label} ({count})
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Active Word Detail Popover */}
+              {selectedWord && (
+                <View style={styles.detailCard}>
+                  <View style={styles.detailHeader}>
+                    <Text style={styles.detailWord}>{selectedWord}</Text>
+                    {currentDefinition?.type && (
+                      <View style={styles.detailTypeBadge}>
+                        <Text style={styles.detailTypeText}>{currentDefinition.type}</Text>
+                      </View>
+                    )}
+                  </View>
+                  {definitionLoading ? (
+                    <ActivityIndicator size="small" color="#293541" style={{ marginVertical: 8 }} />
+                  ) : (
+                    <>
+                      <Text style={styles.detailDefinition}>
+                        {currentDefinition?.definition}
+                      </Text>
+                      {currentDefinition?.example ? (
+                        <Text style={styles.detailExample}>
+                          &ldquo;{currentDefinition.example}&rdquo;
+                        </Text>
+                      ) : null}
+                    </>
+                  )}
+                </View>
+              )}
+
+              {/* Discovered Words List */}
+              <ScrollView
+                style={styles.wordsScroll}
+                contentContainerStyle={styles.wordsContent}
+                keyboardShouldPersistTaps="handled"
+              >
+                {filteredWords.length === 0 ? (
+                  <View style={styles.emptyWrap}>
+                    <Text style={styles.emptyIcon}>🔍</Text>
+                    <Text style={styles.emptyTitle}>Kelime Bulunamadı</Text>
+                    <Text style={styles.emptyDesc}>
+                      {discoveredWords.length === 0
+                        ? "Henüz kelime keşfetmedin. Solo ve PvP maçları yaparak kelime koleksiyonunu doldur!"
+                        : "Aramana uygun kelime bulunamadı."}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.wordsGrid}>
+                    {filteredWords.map((word) => {
+                      const isInspected = isEqualTr(selectedWord, word);
+                      return (
+                        <Pressable
+                          key={`word-item-${word}`}
+                          onPress={() => handleInspectWord(word)}
+                          style={[
+                            styles.wordChip,
+                            isInspected && styles.wordChipActive,
+                          ]}
+                        >
+                          <Text style={[styles.wordChipText, isInspected && styles.wordChipTextActive]}>
+                            {word}
+                          </Text>
+                          <View style={styles.wordLengthBadge}>
+                            <Text style={styles.wordLengthText}>{word.length}</Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </ScrollView>
+            </>
+          ) : (
+            /* 🃏 KART ALBÜMLERİ GÖRÜNÜMÜ */
+            <ScrollView
+              style={styles.wordsScroll}
+              contentContainerStyle={{ paddingBottom: 30 }}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.albumsIntroCard}>
+                <Text style={styles.albumsIntroTitle}>🃏 LÜGAT KOLEKSİYONCUSU</Text>
+                <Text style={styles.albumsIntroText}>
+                  PvP ve Solo maçlar kazandıkça nadir sözcük kartları düşer. Albüm setlerini tamamlayarak devasa çip ödüllerini topla!
+                </Text>
+              </View>
+
+              {WORD_CARD_ALBUMS.map((set) => {
+                const ownedSet = new Set(progress.cardAlbum?.ownedCardIds || []);
+                const ownedCount = set.cards.filter((c) => ownedSet.has(c.id)).length;
+                const isCompleted = ownedCount === set.cards.length;
+
+                return (
+                  <View key={set.id} style={styles.albumSetCard}>
+                    <View style={styles.albumSetHeader}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Text style={{ fontSize: 22 }}>{set.icon}</Text>
+                        <View>
+                          <Text style={styles.albumSetTitle}>{set.title}</Text>
+                          <Text style={styles.albumSetDesc}>{set.description}</Text>
+                        </View>
+                      </View>
+                      <View style={[styles.albumProgressPill, isCompleted && styles.albumProgressPillDone]}>
+                        <Text style={[styles.albumProgressText, isCompleted && { color: "#047857" }]}>
+                          {isCompleted ? "TAMAMLANDI ✓" : `${ownedCount}/${set.cards.length}`}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Cards Grid */}
+                    <View style={styles.cardsGrid}>
+                      {set.cards.map((card) => {
+                        const isOwned = ownedSet.has(card.id);
+                        return (
+                          <View
+                            key={card.id}
+                            style={[
+                              styles.cardItem,
+                              !isOwned && styles.cardItemLocked,
+                              card.rarity === "legendary" && styles.cardLegendary,
+                              card.rarity === "epic" && styles.cardEpic,
+                            ]}
+                          >
+                            <Text style={styles.cardStars}>{"⭐".repeat(card.stars)}</Text>
+                            <Text numberOfLines={1} style={[styles.cardName, !isOwned && styles.cardNameLocked]}>
+                              {isOwned ? card.name : "???"}
+                            </Text>
+                            <Text numberOfLines={2} style={styles.cardMeaning}>
+                              {isOwned ? card.meaning : "Kilitli Kart"}
+                            </Text>
+                            <View style={[styles.cardRarityBadge, !isOwned && { backgroundColor: "#CBD5E1" }]}>
+                              <Text style={styles.cardRarityText}>
+                                {isOwned ? normalizeTrUpper(card.rarity) : "KİLİTLİ"}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {/* Set Reward Footer */}
+                    <View style={styles.albumSetFooter}>
+                      <Text style={styles.albumRewardLabel}>SET TAMAMLAMA ÖDÜLÜ:</Text>
+                      <Text style={styles.albumRewardValue}>+{set.rewardChips} Çip 🪙</Text>
+                    </View>
+                  </View>
                 );
               })}
             </ScrollView>
-          </View>
-
-          {/* Active Word Detail Popover */}
-          {selectedWord && (
-            <View style={styles.detailCard}>
-              <View style={styles.detailHeader}>
-                <Text style={styles.detailWord}>{selectedWord}</Text>
-                {currentDefinition?.type && (
-                  <View style={styles.detailTypeBadge}>
-                    <Text style={styles.detailTypeText}>{currentDefinition.type}</Text>
-                  </View>
-                )}
-              </View>
-              {definitionLoading ? (
-                <ActivityIndicator size="small" color="#293541" style={{ marginVertical: 8 }} />
-              ) : (
-                <>
-                  <Text style={styles.detailDefinition}>
-                    {currentDefinition?.definition}
-                  </Text>
-                  {currentDefinition?.example ? (
-                    <Text style={styles.detailExample}>
-                      &ldquo;{currentDefinition.example}&rdquo;
-                    </Text>
-                  ) : null}
-                </>
-              )}
-            </View>
           )}
-
-          {/* Discovered Words List */}
-          <ScrollView
-            style={styles.wordsScroll}
-            contentContainerStyle={styles.wordsContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {filteredWords.length === 0 ? (
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyIcon}>🔍</Text>
-                <Text style={styles.emptyTitle}>Kelime Bulunamadı</Text>
-                <Text style={styles.emptyDesc}>
-                  {discoveredWords.length === 0
-                    ? "Henüz kelime keşfetmedin. Solo ve PvP maçları yaparak kelime koleksiyonunu doldur!"
-                    : "Aramana uygun kelime bulunamadı."}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.wordsGrid}>
-                {filteredWords.map((word) => {
-                  const isInspected = isEqualTr(selectedWord, word);
-                  return (
-                    <Pressable
-                      key={`word-item-${word}`}
-                      onPress={() => handleInspectWord(word)}
-                      style={[
-                        styles.wordChip,
-                        isInspected && styles.wordChipActive,
-                      ]}
-                    >
-                      <Text style={[styles.wordChipText, isInspected && styles.wordChipTextActive]}>
-                        {word}
-                      </Text>
-                      <View style={styles.wordLengthBadge}>
-                        <Text style={styles.wordLengthText}>{word.length}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-          </ScrollView>
         </View>
         <CoinCascadeOverlay trigger={cascadeTrigger} count={12} icon="🪙" />
       </View>
@@ -602,4 +710,174 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     lineHeight: 16,
   },
+  tabBarRow: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 14,
+    padding: 3,
+    marginBottom: 12,
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: 11,
+  },
+  tabItemActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabItemText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#64748B",
+  },
+  tabItemTextActive: {
+    color: "#0F172A",
+    fontWeight: "900",
+  },
+  albumsIntroCard: {
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1.5,
+    borderColor: "#BFDBFE",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+  },
+  albumsIntroTitle: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#1E40AF",
+    marginBottom: 4,
+  },
+  albumsIntroText: {
+    fontSize: 11,
+    color: "#3B82F6",
+    lineHeight: 16,
+  },
+  albumSetCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    padding: 14,
+    marginBottom: 14,
+  },
+  albumSetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  albumSetTitle: {
+    fontSize: 13.5,
+    fontWeight: "900",
+    color: "#0F172A",
+  },
+  albumSetDesc: {
+    fontSize: 10.5,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  albumProgressPill: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  albumProgressPillDone: {
+    backgroundColor: "#ECFDF5",
+  },
+  albumProgressText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#64748B",
+  },
+  cardsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  cardItem: {
+    width: "31%",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#CBD5E1",
+    padding: 8,
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  cardItemLocked: {
+    opacity: 0.5,
+    backgroundColor: "#F1F5F9",
+    borderColor: "#E2E8F0",
+  },
+  cardLegendary: {
+    borderColor: "#F59E0B",
+    backgroundColor: "#FEF3C7",
+  },
+  cardEpic: {
+    borderColor: "#A855F7",
+    backgroundColor: "#FAF5FF",
+  },
+  cardStars: {
+    fontSize: 9,
+    marginBottom: 4,
+  },
+  cardName: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#0F172A",
+    textAlign: "center",
+  },
+  cardNameLocked: {
+    color: "#94A3B8",
+  },
+  cardMeaning: {
+    fontSize: 8.5,
+    color: "#64748B",
+    textAlign: "center",
+    marginTop: 2,
+    lineHeight: 11,
+  },
+  cardRarityBadge: {
+    backgroundColor: "#0284C7",
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    marginTop: 6,
+  },
+  cardRarityText: {
+    fontSize: 8,
+    fontWeight: "900",
+    color: "#FFFFFF",
+  },
+  albumSetFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  albumRewardLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748B",
+  },
+  albumRewardValue: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#D97706",
+  },
 });
+

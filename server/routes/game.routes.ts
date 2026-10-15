@@ -85,7 +85,7 @@ gameRouter.post("/daily-login", async (req, res) => {
 gameRouter.post(["/award", "/reward"], async (req, res) => {
   const payload = z.object({
     awardId: z.string().trim().min(8).max(128),
-    kind: z.enum(["solo", "arcade", "vintage"]),
+    kind: z.enum(["solo", "arcade", "vintage", "kelimematik"]),
     level: z.number().int().min(1).max(100).optional(),
     score: z.number().int().min(0).max(50000).optional(),
     foundWords: z.array(z.string().max(32)).max(64).optional(),
@@ -94,6 +94,7 @@ gameRouter.post(["/award", "/reward"], async (req, res) => {
     wordsCount: z.number().int().min(0).max(1000).optional(),
     comboCount: z.number().int().min(0).max(500).optional(),
     isDoubled: z.boolean().optional(),
+    stars: z.number().int().min(1).max(3).optional(),
   }).safeParse(req.body);
   if (!payload.success) return res.status(400).json({ error: "Geçersiz ödül isteği." });
   try {
@@ -132,7 +133,7 @@ gameRouter.post(["/award", "/reward"], async (req, res) => {
       }
     }
 
-    const SCORE_CAPS: Record<string, number> = { solo: 5000, arcade: 50000, vintage: 20000 };
+    const SCORE_CAPS: Record<string, number> = { solo: 5000, arcade: 50000, vintage: 20000, kelimematik: 50000 };
     const scoreCap = SCORE_CAPS[payload.data.kind] ?? 5000;
     if ((payload.data.score ?? 0) > scoreCap) {
       return res.status(400).json({ error: "Geçersiz ödül isteği." });
@@ -146,6 +147,14 @@ gameRouter.post(["/award", "/reward"], async (req, res) => {
       ? applyArcadeProgress(current, payload.data.score ?? 0, wordsCount, payload.data.isDoubled, payload.data.comboCount, foundWords)
       : payload.data.kind === "vintage"
       ? applyVintageProgress(current, payload.data.level ?? 1, payload.data.score ?? 30, wordsCount || 5, foundWords)
+      : payload.data.kind === "kelimematik"
+      ? {
+          ...current,
+          xp: current.xp + Math.max(10, Math.floor((payload.data.score ?? 0) / 10)),
+          coins: (current.coins ?? 0) + Math.max(1, Math.floor((payload.data.score ?? 0) / 50)),
+          bestKelimematikScore: Math.max(current.bestKelimematikScore ?? 0, payload.data.score ?? 0),
+          history: Array.from(new Set([...(current.history || []), ...foundWords])).slice(-150),
+        }
       : payload.data.daily
       ? completeDailyProgress(
           {
@@ -166,6 +175,10 @@ gameRouter.post(["/award", "/reward"], async (req, res) => {
             foundWords,
           }, "solo"),
           soloUnlockedLevel: Math.min(101, Math.max(current.soloUnlockedLevel ?? 1, (payload.data.level ?? 1) + 1)),
+          soloLevelStars: {
+            ...(current.soloLevelStars || {}),
+            [payload.data.level ?? 1]: Math.max(current.soloLevelStars?.[payload.data.level ?? 1] ?? 0, payload.data.stars ?? 3),
+          },
         };
     const awarded = next;
     dbUser.progress = awarded;
@@ -410,7 +423,7 @@ gameRouter.post("/mystery-chest", async (req, res) => {
     } else if (picked.type === "lives") {
       const calc = getCalculatedLives(current);
       if (!calc.isInfinite) {
-        next.lives = Math.min(MAX_LIVES, calc.lives + (picked.val as number));
+        next.lives = Math.min(99, calc.lives + (picked.val as number));
         next.lastLifeRegenTimestamp = Date.now();
       }
     } else if (picked.type === "radar") {

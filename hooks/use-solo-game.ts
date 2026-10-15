@@ -51,13 +51,14 @@ export function useSoloGame({
 
   const openSoloLevel = useCallback(
     (level: number) => {
+      const isReplay = level < soloUnlockedLevel;
       const activeProgress = progressRef?.current ?? progress;
       const calc = getCalculatedLives(activeProgress);
-      if (calc.lives <= 0) {
+      if (calc.lives <= 0 && !isReplay) {
         setGlobalToast({
           id: `no-lives-${Date.now()}`,
           title: "CANIN KALMADI! 💔",
-          subtitle: "Solo moda girmek için en az 1 Can gereklidir. Bekleyebilir veya Can satın alabilirsin.",
+          subtitle: "Yeni seviyeleri açmak için en az 1 Can gereklidir. Bekleyebilir veya Can satın alabilirsin.",
           icon: "💚",
           accentColor: "#EF4444",
         });
@@ -68,12 +69,24 @@ export function useSoloGame({
       setSoloLevel(Math.min(level, MAX_SOLO_LEVEL));
       setScreen("solo");
     },
-    [progress, setGlobalToast, setShowLivesModal, setScreen]
+    [progress, progressRef, soloUnlockedLevel, setGlobalToast, setShowLivesModal, setScreen]
   );
 
   const completeSoloLevel = useCallback(
-    (level: number, foundWords: string[] = [], won = true) => {
+    (level: number, foundWords: string[] = [], won = true, stars: number = 3) => {
       if (!won) {
+        // Daha önce geçilmiş seviye tekrar oynanırken kaybedilirse can düşürülmez (Pratik koruması)
+        if (level < soloUnlockedLevel) {
+          setGlobalToast({
+            id: `replay-lost-${Date.now()}`,
+            title: "SÜRE BİTTİ ⏱️",
+            subtitle: "Daha önce geçtiğin bir seviye olduğu için Canın eksilmedi.",
+            icon: "🔄",
+            accentColor: "#F59E0B",
+          });
+          return;
+        }
+
         const soloLossItem: MatchHistoryEntry = {
           id: `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           mode: "solo",
@@ -125,15 +138,21 @@ export function useSoloGame({
           { score: level * 14, tempo: Math.max(1, level / 2), won: true, longWord: level >= 5, foundWords },
           "solo"
         );
+        const currentStars = curr.soloLevelStars?.[level] ?? 0;
+        const updatedSoloLevelStars = {
+          ...(curr.soloLevelStars || {}),
+          [level]: Math.max(currentStars, stars),
+        };
         const updated = {
           ...localProgress,
           soloUnlockedLevel: next,
+          soloLevelStars: updatedSoloLevelStars,
         };
         void syncProgressToCloud(updated);
         return updated;
       });
       void awardProgressOnServer(
-        { kind: "solo", level, foundWords },
+        { kind: "solo", level, foundWords, stars },
         (current) => ({
           ...applyMatchProgress(
             current,
@@ -141,6 +160,10 @@ export function useSoloGame({
             "solo"
           ),
           soloUnlockedLevel: Math.min(MAX_SOLO_LEVEL + 1, Math.max(current.soloUnlockedLevel ?? 1, next)),
+          soloLevelStars: {
+            ...(current.soloLevelStars || {}),
+            [level]: Math.max(current.soloLevelStars?.[level] ?? 0, stars),
+          },
         })
       );
       const { shouldShowInterstitial } = monetizationManager.recordMatchFinished(true);

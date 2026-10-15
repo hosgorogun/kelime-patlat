@@ -17,6 +17,7 @@ export function useAudioHapticsSettings({
   setProgress,
 }: UseAudioHapticsSettingsParams) {
   const [sfxOn, setSfxOn] = useState(true);
+  const [bgmOn, setBgmOn] = useState(true);
   const [hapticsOn, setHapticsOn] = useState(true);
 
   // Initial load from AsyncStorage
@@ -25,6 +26,10 @@ export function useAudioHapticsSettings({
       const enabled = val !== "false";
       setSfxOn(enabled);
       setSfxEnabled(enabled);
+    }).catch(() => undefined);
+    AsyncStorage.getItem("kelime-patlat:bgm-enabled").then((val) => {
+      const enabled = val !== "false";
+      setBgmOn(enabled);
     }).catch(() => undefined);
     AsyncStorage.getItem("kelime-patlat:haptics-enabled").then((val) => {
       const enabled = val !== "false";
@@ -41,15 +46,18 @@ export function useAudioHapticsSettings({
       setSfxOn(progress.sfxEnabled);
       setSfxEnabled(progress.sfxEnabled);
     }
+    if (typeof progress.bgmEnabled === "boolean") {
+      setBgmOn(progress.bgmEnabled);
+    }
     if (typeof progress.hapticsEnabled === "boolean") {
       setHapticsOn(progress.hapticsEnabled);
       setHapticsEnabled(progress.hapticsEnabled);
       setSoloHapticsEnabled(progress.hapticsEnabled);
     }
-  }, [progress.sfxEnabled, progress.hapticsEnabled, progressReady]);
+  }, [progress.sfxEnabled, progress.bgmEnabled, progress.hapticsEnabled, progressReady]);
 
   useEffect(() => {
-    if (sfxOn) {
+    if (bgmOn) {
       startAmbientBgm();
     } else {
       stopAmbientBgm();
@@ -57,13 +65,19 @@ export function useAudioHapticsSettings({
     return () => {
       stopAmbientBgm();
     };
-  }, [sfxOn]);
+  }, [bgmOn]);
 
   const toggleSfx = (val: boolean) => {
     setSfxOn(val);
     setSfxEnabled(val);
     AsyncStorage.setItem("kelime-patlat:sfx-enabled", String(val)).catch(() => undefined);
     setProgress((curr) => ({ ...curr, sfxEnabled: val }));
+  };
+
+  const toggleBgm = (val: boolean) => {
+    setBgmOn(val);
+    AsyncStorage.setItem("kelime-patlat:bgm-enabled", String(val)).catch(() => undefined);
+    setProgress((curr) => ({ ...curr, bgmEnabled: val }));
   };
 
   const toggleHaptics = (val: boolean) => {
@@ -76,10 +90,13 @@ export function useAudioHapticsSettings({
 
   return {
     sfxOn,
+    bgmOn,
     hapticsOn,
     toggleSfx,
+    toggleBgm,
     toggleHaptics,
     setSfxOn,
+    setBgmOn,
     setHapticsOn,
   };
 }

@@ -229,6 +229,7 @@ export function PvpMatchContainer(props: PvpMatchContainerProps) {
       handleGestureStart={boardSelection.handleGestureStart}
       handleGestureMove={boardSelection.handleGestureMove}
       handleGestureEnd={boardSelection.handleGestureEnd}
+      handleGestureCancel={boardSelection.handleGestureCancel}
       selectionActiveRef={boardSelection.selectionActiveRef}
       clearSelection={boardSelection.clearSelection}
       submitSelection={() => boardSelection.submitSelection()}

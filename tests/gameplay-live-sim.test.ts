@@ -115,12 +115,12 @@ describe("CANLI OYUN OYNAMA & PLAYTEST SİMÜLASYONU", () => {
     expect(player.coins).toBe(380);
     expect(player.streakShields).toBe(1);
 
-    // 2. Can Satın Alma (buyLives: 75 Çip ile Tam Doldurma)
+    // 2. Can Satın Alma (buyLives: 180 Çip ile Tam Doldurma)
     const buyResult = buyLives(player, "all");
     expect(buyResult.success).toBe(true);
     player = buyResult.updatedProgress;
     expect(player.lives).toBe(MAX_LIVES);
-    expect(player.coins).toBe(305);
+    expect(player.coins).toBe(200); // 380 - 180 = 200
 
     // 3. Kozmetik Satın Alma: Neon Mor Çerçeve (140 Çip)
     const neonFrame = PROFILE_FRAMES.find(([fId]) => fId === "neon")!;
@@ -129,7 +129,7 @@ describe("CANLI OYUN OYNAMA & PLAYTEST SİMÜLASYONU", () => {
     player.coins -= frameCost;
     player.ownedFrames = { ...player.ownedFrames, neon: true };
     player.selectedFrame = "neon";
-    expect(player.coins).toBe(165);
+    expect(player.coins).toBe(60); // 200 - 140 = 60
     expect(player.ownedFrames.neon).toBe(true);
     expect(player.selectedFrame).toBe("neon");
 

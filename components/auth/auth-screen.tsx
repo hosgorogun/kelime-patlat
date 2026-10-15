@@ -545,7 +545,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#050B14",
+    backgroundColor: "transparent",
   },
   bgImage: {
     flex: 1,

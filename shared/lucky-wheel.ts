@@ -1,3 +1,7 @@
+// Çarkıfelek (Lucky Wheel) Ödül Havuzu ve Mantığı
+
+import { getCalculatedLives, MAX_LIVES } from "./lives-economy";
+
 export type BoosterType = "hint" | "freeze" | "shuffle";
 
 export const BOOSTER_CONFIG: Record<BoosterType, { name: string; icon: string; cost: number; description: string }> = {
@@ -141,7 +145,7 @@ export function canSpinLuckyWheel(progress: { lastSpinTimestamp?: number }): { c
   return { canSpin: false, remainingSeconds: Math.ceil((LUCKY_WHEEL_COOLDOWN_MS - elapsed) / 1000) };
 }
 
-export function claimLuckyWheelReward<T extends { coins?: number; lives?: number; infiniteLivesUntil?: number; lastSpinTimestamp?: number; [key: string]: any }>(
+export function claimLuckyWheelReward<T extends { coins?: number; lives?: number; lastLifeRegenTimestamp?: number; infiniteLivesUntil?: number; lastSpinTimestamp?: number; [key: string]: any }>(
   progress: T,
   sectorIndex: number,
   isAdSpin = false
@@ -161,12 +165,17 @@ export function claimLuckyWheelReward<T extends { coins?: number; lives?: number
     updated.coins = (updated.coins ?? 0) + sector.value;
     message = `+${sector.value} Çip Kazandın! 🪙`;
   } else if (sector.type === "life") {
-    updated.lives = Math.min(5, (updated.lives ?? 5) + sector.value);
-    message = `+${sector.value} Can Kazandın! 💚`;
+    // Can dolu olduğunda (örneğin 5/5) çarktan can ödülü gelirse can sayısı 6/5, 7/5 olabilir
+    const currentLives = getCalculatedLives(progress).lives;
+    const nextLives = currentLives + sector.value;
+    updated.lives = nextLives;
+    updated.lastLifeRegenTimestamp = Date.now();
+    message = `+${sector.value} Can Kazandın! (Toplam: ${nextLives}/5) 💚`;
   } else if (sector.type === "infinite_lives") {
     const currentExpiry = updated.infiniteLivesUntil && updated.infiniteLivesUntil > Date.now() ? updated.infiniteLivesUntil : Date.now();
     updated.infiniteLivesUntil = currentExpiry + sector.value * 60 * 1000;
-    updated.lives = 5;
+    const currentLives = getCalculatedLives(progress).lives;
+    updated.lives = Math.max(MAX_LIVES, currentLives);
     message = `${sector.value} Dakika Sonsuz Can Kazandın! ♾️`;
   }
 

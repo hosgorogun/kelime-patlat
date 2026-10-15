@@ -16,7 +16,7 @@ export interface SoloPlayScreenProps {
   onOpenLivesModal: () => void;
   watchAd: (onReward: () => void) => void;
   onExit: () => void;
-  onComplete: (level: number, foundWords?: string[], won?: boolean) => void;
+  onComplete: (level: number, foundWords?: string[], won?: boolean, stars?: number) => void;
   onNext: () => void;
   openSoloLevel: (level: number) => void;
   onNavigate: (destination: any) => void;

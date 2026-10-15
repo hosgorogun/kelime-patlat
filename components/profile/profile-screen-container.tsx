@@ -32,6 +32,8 @@ export interface ProfileScreenContainerProps {
   syncProgressToCloud?: (progress: PlayerProgress, customName?: string) => Promise<void>;
   sfxOn?: boolean;
   toggleSfx?: (val: boolean) => void;
+  bgmOn?: boolean;
+  toggleBgm?: (val: boolean) => void;
   hapticsOn?: boolean;
   toggleHaptics?: (val: boolean) => void;
   globalAlert?: ModernAlertData | null;
@@ -64,6 +66,8 @@ export function ProfileScreenContainer(props: ProfileScreenContainerProps) {
   const syncProgressToCloud = props.syncProgressToCloud ?? progression.syncProgressToCloud;
   const sfxOn = props.sfxOn ?? uiFeedback.sfxOn;
   const toggleSfx = props.toggleSfx ?? uiFeedback.toggleSfx;
+  const bgmOn = props.bgmOn ?? uiFeedback.bgmOn;
+  const toggleBgm = props.toggleBgm ?? uiFeedback.toggleBgm;
   const hapticsOn = props.hapticsOn ?? uiFeedback.hapticsOn;
   const toggleHaptics = props.toggleHaptics ?? uiFeedback.toggleHaptics;
   const globalAlert = props.globalAlert ?? uiFeedback.globalAlert;
@@ -162,6 +166,8 @@ export function ProfileScreenContainer(props: ProfileScreenContainerProps) {
         }}
         sfxOn={sfxOn}
         toggleSfx={toggleSfx}
+        bgmOn={bgmOn}
+        toggleBgm={toggleBgm}
         hapticsOn={hapticsOn}
         toggleHaptics={toggleHaptics}
         onBack={() => onNavigate("home")}

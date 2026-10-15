@@ -10,6 +10,8 @@ import { styles } from "./profile.styles";
 export type ProfileSettingsTabProps = {
   sfxOn: boolean;
   toggleSfx: (val: boolean) => void;
+  bgmOn?: boolean;
+  toggleBgm?: (val: boolean) => void;
   hapticsOn: boolean;
   toggleHaptics: (val: boolean) => void;
   notificationsOn?: boolean;
@@ -28,6 +30,8 @@ export type ProfileSettingsTabProps = {
 export const ProfileSettingsTab = React.memo(({
   sfxOn,
   toggleSfx,
+  bgmOn = true,
+  toggleBgm,
   hapticsOn,
   toggleHaptics,
   notificationsOn = true,
@@ -66,6 +70,27 @@ export const ProfileSettingsTab = React.memo(({
             onValueChange={(val) => {
               triggerHapticSelection();
               toggleSfx(val);
+            }}
+            trackColor={{ false: "#EDF4FC", true: "#3EE8B5" }}
+            thumbColor="#FFF"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <View style={styles.settingLabelWrap}>
+            <View style={[styles.settingIconCircle, { backgroundColor: "rgba(245, 158, 11, 0.12)" }]}>
+              <Text style={styles.settingRowIcon}>🎵</Text>
+            </View>
+            <View>
+              <Text style={styles.settingLabel}>ARKA PLAN MÜZİĞİ</Text>
+              <Text style={styles.settingSubLabel}>Rahatlatıcı Lo-Fi ortam melodileri</Text>
+            </View>
+          </View>
+          <Switch
+            value={bgmOn}
+            onValueChange={(val) => {
+              triggerHapticSelection();
+              toggleBgm?.(val);
             }}
             trackColor={{ false: "#EDF4FC", true: "#3EE8B5" }}
             thumbColor="#FFF"

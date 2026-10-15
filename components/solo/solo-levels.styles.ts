@@ -12,8 +12,11 @@ export const styles = StyleSheet.create({
   sectionTitle: { color: "#293541", fontSize: 12.5, fontWeight: "900", letterSpacing: 0.5, marginTop: 10, marginBottom: 16 },
 
   // World Chapter Header Banner
+  chapterSection: {
+    marginBottom: 20,
+  },
   chapterCard: {
-    marginVertical: 18,
+    marginVertical: 14,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1.5,
@@ -73,7 +76,8 @@ export const styles = StyleSheet.create({
   },
   gridRowWrap: {
     position: "relative",
-    marginBottom: 32,
+    marginBottom: 26,
+    zIndex: 2,
   },
   gridRow: {
     flexDirection: "row",
@@ -112,6 +116,7 @@ export const styles = StyleSheet.create({
   nodeWrapper: {
     alignItems: "center",
     position: "relative",
+    width: 84,
   },
 
   // 3D Stepped Button Node
@@ -248,9 +253,15 @@ export const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 4,
     letterSpacing: 0.3,
+    textAlign: "center",
+    maxWidth: 82,
   },
   nodeLabelSelected: {
     color: "#0891B2",
+    fontWeight: "900",
+  },
+  nodeLabelCurrent: {
+    color: "#D97706",
     fontWeight: "900",
   },
   nodeLabelLocked: {
@@ -396,111 +407,97 @@ export const styles = StyleSheet.create({
     opacity: 0.86,
     transform: [{ scale: 0.98 }],
   },
-  milestoneWrap: {
-    marginVertical: 10,
-    width: "100%",
-  },
-  milestoneBox: {
-    backgroundColor: "#EDF4FC",
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-    padding: 12,
+  // Chapter Milestone Chest Bar inside Chapter Card
+  chapterMilestoneBox: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0, 0, 0, 0.07)",
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    shadowColor: "#293541",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    justifyContent: "space-between",
+    gap: 10,
   },
-  milestoneBoxReady: {
-    borderColor: "#F0C855",
-    backgroundColor: "#FFF9E6",
-    shadowColor: "#293541",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+  chapterMilestoneBoxReady: {
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderTopWidth: 0,
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.35)",
   },
-  milestoneBoxClaimed: {
-    borderColor: "#A7F3D0",
-    backgroundColor: "#E8F8F0",
+  chapterMilestoneBoxClaimed: {
+    opacity: 0.72,
   },
-  milestoneIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: "#F7F5EE",
+  chapterMilestoneLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  chapterMilestoneIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-    shadowColor: "#293541",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  milestoneIcon: {
-    fontSize: 22,
+  chapterMilestoneIcon: {
+    fontSize: 16,
   },
-  milestoneTitle: {
-    color: "#293541",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    textShadowColor: "transparent",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 0,
-  },
-  milestoneBadge: {
-    color: "#349d5a",
-    fontSize: 9,
-    fontWeight: "900",
-    backgroundColor: "rgba(80, 227, 194, 0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  milestoneDesc: {
-    color: "#54646B",
+  chapterMilestoneTitle: {
+    color: "#1E293B",
     fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+  chapterMilestoneRewardText: {
+    color: "#64748B",
+    fontSize: 9.5,
+    fontWeight: "700",
     marginTop: 2,
-    lineHeight: 15,
   },
-  milestoneRewardText: {
-    color: "#98732c",
-    fontSize: 10.5,
-    fontWeight: "800",
-    marginTop: 3,
+  chapterMilestoneBtn: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
   },
-  milestoneBtn: {
-    backgroundColor: "#F7F5EE",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#DCE1D7",
-  },
-  milestoneBtnReady: {
-    backgroundColor: "#FFE5A3",
-    borderColor: "#D49B25",
-    borderWidth: 1.5,
-    shadowColor: "#293541",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+  chapterMilestoneBtnReady: {
+    backgroundColor: "#F59E0B",
+    borderColor: "#D97706",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
     elevation: 2,
   },
-  milestoneBtnClaimed: {
-    backgroundColor: "#E8F8F0",
-    borderColor: "#34D399",
-    borderWidth: 1.5,
+  chapterMilestoneBtnClaimed: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
   },
-  milestoneBtnText: {
-    color: "#293541",
-    fontSize: 11,
+  chapterMilestoneBtnText: {
+    color: "#64748B",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  chapterMilestoneBtnTextReady: {
+    color: "#FFFFFF",
     fontWeight: "900",
+  },
+  chapterMilestoneBtnTextClaimed: {
+    color: "#059669",
+    fontWeight: "800",
   },
 
   livesPill: {

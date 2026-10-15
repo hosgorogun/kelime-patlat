@@ -51,19 +51,19 @@ describe("Senior QA & Full-Stack Production Readiness Audit", () => {
     });
 
     it("Can satın alma ve yenileme bakiyeyi ve sınırları doğru yönetir", () => {
-      let prog: PlayerProgress = { ...DEFAULT_PROGRESS, lives: 2, coins: 100 };
+      let prog: PlayerProgress = { ...DEFAULT_PROGRESS, lives: 2, coins: 250 };
 
-      // 1 can satın al (maliyeti 20 çip)
+      // 1 can satın al (maliyeti 50 çip)
       const resOne = buyLives(prog, "one");
       expect(resOne.success).toBe(true);
       expect(resOne.updatedProgress.lives).toBe(3);
-      expect(resOne.updatedProgress.coins).toBe(80);
+      expect(resOne.updatedProgress.coins).toBe(200); // 250 - 50 = 200
 
-      // Kalan canları tamamen doldur (maliyeti 75 çip)
+      // Kalan canları tamamen doldur (maliyeti 180 çip)
       const resAll = buyLives(resOne.updatedProgress, "all");
       expect(resAll.success).toBe(true);
       expect(resAll.updatedProgress.lives).toBe(MAX_LIVES);
-      expect(resAll.updatedProgress.coins).toBe(5);
+      expect(resAll.updatedProgress.coins).toBe(20); // 200 - 180 = 20
 
       // Canlar doluyken tekrar satın alma engellenmeli
       const resFull = buyLives(resAll.updatedProgress, "all");

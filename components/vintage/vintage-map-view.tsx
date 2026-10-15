@@ -14,6 +14,7 @@ export interface VintageMapViewProps {
   score: number;
   maxUnlockedLevel: number;
   completedLevels: Set<number>;
+  levelStars?: Record<number, number>;
   levelIndex: number;
   onSelectLevel: (lvl: number) => void;
 }
@@ -28,16 +29,23 @@ export function VintageMapView({
   score,
   maxUnlockedLevel,
   completedLevels,
+  levelStars = {},
   levelIndex: _levelIndex,
   onSelectLevel,
 }: VintageMapViewProps) {
+  const totalEarnedStars = Object.values(levelStars).reduce((sum, s) => sum + s, 0) || completedLevels.size * 3;
+  const completionRatio = Math.round((completedLevels.size / 20) * 100);
+
   return (
     <View style={styles.outerContainer} onLayout={measureContainer}>
-      {/* Üst Başlık */}
+      {/* Üst Gazete Manşet Başlığı */}
       <View style={styles.headerContainer}>
         <View style={styles.headerNavRow}>
           <View style={styles.headerNavLeft}>
-            <Pressable onPress={onBack} style={styles.backBtn}>
+            <Pressable
+              onPress={onBack}
+              style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]}
+            >
               <Text style={styles.backBtnText}>‹ ANA MENÜ</Text>
             </Pressable>
           </View>
@@ -47,6 +55,8 @@ export function VintageMapView({
           </View>
           <View style={styles.headerNavRight} />
         </View>
+
+        {/* Can & Çip Barı */}
         <View style={styles.statusBarRow}>
           <Pressable
             onPress={() => {
@@ -60,48 +70,72 @@ export function VintageMapView({
               pressed && styles.pressedPill,
             ]}
           >
-            <Text style={styles.statusPillIcon}>💚</Text>
+            <Text style={styles.statusPillIcon}>{isInfiniteLives ? "⚡" : "💚"}</Text>
             <Text style={[styles.statusPillText, styles.livesPillText, isInfiniteLives && styles.infiniteLivesPillText]}>
-              {isInfiniteLives ? "∞" : `${lives}/${MAX_LIVES}`}
+              {isInfiniteLives ? "Sonsuz Can" : `${lives}/${MAX_LIVES} Can`}
             </Text>
           </Pressable>
           <View style={[styles.statusPill, styles.scorePill]}>
             <Text style={styles.statusPillIcon}>🪙</Text>
-            <Text style={[styles.statusPillText, styles.scorePillText]}>{coins !== undefined ? coins : score}</Text>
+            <Text style={[styles.statusPillText, styles.scorePillText]}>
+              {(coins !== undefined ? coins : score).toLocaleString("tr-TR")} Çip
+            </Text>
           </View>
         </View>
       </View>
 
-      {/* Harita Başlık Kartı */}
-      <View style={styles.mapHeroCard}>
-        <Text style={styles.mapHeroTitle}>🗞️ GAZETE KARE BULMACA SERİSİ</Text>
-        <Text style={styles.mapHeroSubtitle}>
-          Zorluğu kademeli olarak artan 20 özel bulmaca seviyesi. Kilitleri açmak için bulmacaları çöz!
-        </Text>
-        <View style={styles.mapStatsRow}>
-          <View style={styles.mapStatItem}>
-            <Text style={styles.mapStatValue}>{maxUnlockedLevel}/20</Text>
-            <Text style={styles.mapStatLabel}>KİLİT AÇIK</Text>
-          </View>
-          <View style={styles.mapStatItem}>
-            <Text style={styles.mapStatValue}>{completedLevels.size}</Text>
-            <Text style={styles.mapStatLabel}>TAMAMLANDI</Text>
-          </View>
-          <View style={styles.mapStatItem}>
-            <Text style={styles.mapStatValue}>⭐ {completedLevels.size * 3}</Text>
-            <Text style={styles.mapStatLabel}>TOPLAM YILDIZ</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Seviye Kartları Izgarası */}
       <ScrollView contentContainerStyle={styles.levelMapGridContainer} showsVerticalScrollIndicator={false}>
+        {/* Kompakt İlerleme & İstatistik Kartı */}
+        <View style={styles.mapHeroCard}>
+          <View style={styles.compactStatsHeader}>
+            <View style={styles.compactStatsLeft}>
+              <Text style={styles.compactHeroTitle}>10×10 ÇAPRAZ BULMACA</Text>
+              <Text style={styles.compactHeroSub}>20 seviyelik nostalji gazete serisi</Text>
+            </View>
+            <View style={styles.compactProgressBadge}>
+              <Text style={styles.compactProgressPercent}>%{completionRatio}</Text>
+            </View>
+          </View>
+
+          {/* İlerleme Çubuğu */}
+          <View style={styles.compactProgressTrack}>
+            <View style={[styles.compactProgressBarFill, { width: `${Math.max(5, completionRatio)}%` }]} />
+          </View>
+
+          {/* İstatistik Satırı */}
+          <View style={styles.mapStatsRow}>
+            <View style={styles.mapStatItem}>
+              <Text style={styles.mapStatLabel}>KİLİT AÇIK</Text>
+              <Text style={styles.mapStatValue}>{maxUnlockedLevel} / 20</Text>
+            </View>
+            <View style={styles.statSeparator} />
+            <View style={styles.mapStatItem}>
+              <Text style={styles.mapStatLabel}>TAMAMLANAN</Text>
+              <Text style={styles.mapStatValue}>{completedLevels.size}</Text>
+            </View>
+            <View style={styles.statSeparator} />
+            <View style={styles.mapStatItem}>
+              <Text style={styles.mapStatLabel}>TOPLAM YILDIZ</Text>
+              <Text style={[styles.mapStatValue, { color: "#D97706" }]}>⭐ {totalEarnedStars}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 20 Bölümlük Kart Izgarası */}
         <View style={styles.mapGridRow}>
           {Array.from({ length: 20 }, (_, i) => i + 1).map((lvl) => {
             const isCompleted = completedLevels.has(lvl);
             const isUnlocked = lvl <= maxUnlockedLevel;
-            const diffTag = lvl <= 5 ? "KOLAY" : lvl <= 10 ? "ORTA" : lvl <= 15 ? "ZOR" : "ULTRA ZOR";
-            const diffColor = lvl <= 5 ? "#F8FAFC" : lvl <= 10 ? "#F59E0B" : lvl <= 15 ? "#F97316" : "#8B5CF6";
+            const earnedStars = levelStars[lvl] ?? 3;
+            const diffTag = lvl <= 5 ? "KOLAY" : lvl <= 10 ? "ORTA" : lvl <= 15 ? "ZOR" : "USTA";
+            const diffColor =
+              lvl <= 5
+                ? { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" }
+                : lvl <= 10
+                ? { bg: "#FEF3C7", text: "#D97706", border: "#FDE68A" }
+                : lvl <= 15
+                ? { bg: "#FFEDD5", text: "#EA580C", border: "#FED7AA" }
+                : { bg: "#F3E8FF", text: "#7C3AED", border: "#DDD6FE" };
 
             return (
               <Pressable
@@ -122,27 +156,48 @@ export function VintageMapView({
                   styles.levelCardNode,
                   isCompleted && styles.levelCardCompleted,
                   !isUnlocked && styles.levelCardLocked,
-                  pressed && isUnlocked && { opacity: 0.8, transform: [{ scale: 0.96 }] },
+                  pressed && isUnlocked && { opacity: 0.88, transform: [{ scale: 0.96 }] },
                 ]}
               >
+                {/* Kart Üst Bilgisi: Zorluk Rozeti ve Durum Simgesi */}
                 <View style={styles.levelCardTop}>
-                  <Text style={[styles.levelDiffBadge, { backgroundColor: diffColor }]}>{diffTag}</Text>
+                  <View style={[styles.levelDiffBadge, { backgroundColor: diffColor.bg, borderColor: diffColor.border }]}>
+                    <Text style={[styles.levelDiffBadgeText, { color: diffColor.text }]}>{diffTag}</Text>
+                  </View>
                   {isCompleted ? (
-                    <Text style={styles.completedStarText}>⭐⭐⭐</Text>
+                    <Text style={styles.completedStarText}>{"⭐".repeat(earnedStars)}</Text>
                   ) : !isUnlocked ? (
-                    <Text style={styles.lockIconText}>🔒</Text>
+                    <View style={styles.lockIconBadge}>
+                      <Text style={styles.lockIconText}>🔒</Text>
+                    </View>
                   ) : (
-                    <Text style={styles.unlockedBadgeText}>AÇIK</Text>
+                    <View style={styles.playNowPulseBadge}>
+                      <Text style={styles.unlockedBadgeText}>AÇIK</Text>
+                    </View>
                   )}
                 </View>
 
-                <Text style={[styles.levelNumberText, !isUnlocked && styles.levelNumberLockedText]}>
-                  BÖLÜM {lvl}
-                </Text>
+                {/* Bölüm Başlığı & Numara Rozeti */}
+                <View style={styles.levelCardCenter}>
+                  <View style={[styles.levelNumberCircle, isCompleted && styles.levelNumberCircleCompleted, !isUnlocked && styles.levelNumberCircleLocked]}>
+                    <Text style={[styles.levelNumberCircleText, isCompleted && styles.levelNumberCircleTextCompleted, !isUnlocked && styles.levelNumberCircleTextLocked]}>
+                      {lvl}
+                    </Text>
+                  </View>
+                  <View style={styles.levelCardTitles}>
+                    <Text style={[styles.levelNumberText, !isUnlocked && styles.levelNumberLockedText]}>
+                      BÖLÜM {lvl}
+                    </Text>
+                    <Text style={styles.levelGridSizeSub}>10×10 Izgara</Text>
+                  </View>
+                </View>
 
-                <Text style={[styles.levelCardFooterText, isCompleted && { color: "#293541" }]}>
-                  {isCompleted ? "✓ TAMAMLANDI" : isUnlocked ? "OYNA ➔" : "KİLİTLİ"}
-                </Text>
+                {/* Kart Altı Eylem Butonu */}
+                <View style={[styles.levelCardFooter, isCompleted && styles.levelCardFooterCompleted, !isUnlocked && styles.levelCardFooterLocked]}>
+                  <Text style={[styles.levelCardFooterText, isCompleted && styles.levelCardFooterCompletedText, !isUnlocked && styles.levelCardFooterLockedText]}>
+                    {isCompleted ? "✓ TAMAMLANDI" : isUnlocked ? "BAŞLA ➔" : "KİLİTLİ"}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}
@@ -151,3 +206,4 @@ export function VintageMapView({
     </View>
   );
 }
+

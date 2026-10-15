@@ -347,12 +347,22 @@ export async function updateTurnMatchRecord(matchId: string, updates: Partial<Tu
   return mem || null;
 }
 
+let mongoWarningLogged = false;
+
 function databaseUri() {
   const uri = process.env.MONGODB_URI?.trim();
-  if (!uri && process.env.NODE_ENV === "production") {
-    throw new Error("[CRITICAL] MONGODB_URI environment variable is missing in production mode!");
+  if (!uri) {
+    if (!mongoWarningLogged) {
+      mongoWarningLogged = true;
+      if (process.env.NODE_ENV === "production") {
+        console.warn(
+          "[Database] MONGODB_URI ortam değişkeni tanımlanmamış. Yerel varsayılan (mongodb://127.0.0.1:27017/kelime_patlat) deneniyor. Üretim dağıtımında lütfen MONGODB_URI tanımlayın."
+        );
+      }
+    }
+    return "mongodb://127.0.0.1:27017/kelime_patlat";
   }
-  return uri || "mongodb://127.0.0.1:27017/kelime_patlat";
+  return uri;
 }
 
 import { DEFAULT_PROGRESS, getDayId, getSeasonId } from "../shared/progression";

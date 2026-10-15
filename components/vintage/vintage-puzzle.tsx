@@ -6,6 +6,7 @@ import {
   Animated,
   BackHandler,
   Pressable,
+  useWindowDimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -35,12 +36,14 @@ import {
   VintageVictoryModal,
   VintageExitModal,
   VintageResetModal,
+  VintageLevelPreviewModal,
 } from "./vintage-dialogs";
 import { GameCountdownOverlay } from "../game/game-countdown-overlay";
 import {
   TR_ALPHABET,
   VINTAGE_STORAGE_KEY,
   VINTAGE_HINT_COST,
+  calculateLevelStars,
 } from "./vintage-constants";
 
 export type VintagePuzzleProps = {
@@ -50,11 +53,13 @@ export type VintagePuzzleProps = {
     maxUnlockedLevel: number;
     completedLevels: number[];
     score: number;
+    levelStars?: Record<number, number>;
   };
   onSaveProgress?: (progress: {
     maxUnlockedLevel: number;
     completedLevels: number[];
     score: number;
+    levelStars?: Record<number, number>;
   }) => void;
   lives?: number;
   isInfiniteLives?: boolean;
@@ -77,18 +82,24 @@ export function VintagePuzzle({
   onSpendCoins,
   selectedVictoryEffect,
 }: VintagePuzzleProps) {
+  const { height: windowHeight } = useWindowDimensions();
   const [containerWidth, setContainerWidth] = useState(0);
-  // The screen is capped at 560px; window width is not the board's usable width.
-  // Reserve the paper's 20px and the grid's 4px horizontal padding.
-  const cellSize = Math.max(1, Math.floor((containerWidth - 24) / 10));
+  // Cap cellSize comfortably: reserve 16px horizontal margins, allows up to 35px cells for an immersive board
+  const maxCellFromHeight = Math.floor((windowHeight * 0.44) / 10);
+  const maxCellFromWidth = Math.floor((containerWidth - 20) / 10);
+  const cellSize = Math.min(35, Math.max(28, Math.min(maxCellFromWidth > 0 ? maxCellFromWidth : 34, maxCellFromHeight > 0 ? maxCellFromHeight : 34)));
+
   const measureContainer = useCallback((event: import("react-native").LayoutChangeEvent) => {
     setContainerWidth(event.nativeEvent.layout.width);
   }, []);
 
   const [viewMode, setViewMode] = useState<"map" | "play">("map");
+  const [previewLevel, setPreviewLevel] = useState<number | null>(null);
   const [maxUnlockedLevel, setMaxUnlockedLevel] = useState<number>(() => vintageProgress?.maxUnlockedLevel ?? 1);
   const [completedLevels, setCompletedLevels] = useState<Set<number>>(() => new Set(vintageProgress?.completedLevels ?? []));
+  const [levelStars, setLevelStars] = useState<Record<number, number>>(() => vintageProgress?.levelStars ?? {});
   const [levelIndex, setLevelIndex] = useState(1);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [puzzle, setPuzzle] = useState<PuzzleResult | null>(null);
 
   // 10x10 Oyuncu Tahtası
@@ -113,6 +124,17 @@ export function VintagePuzzle({
   const [hapticsOn, setHapticsOn] = useState(() => getHapticsEnabled());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+
+  // Seviye esnasında akan kronometre (oyun bittiğinde veya geri sayımda durur)
+  useEffect(() => {
+    if (viewMode !== "play" || countdown !== null || isLevelComplete) return;
+
+    const interval = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [viewMode, countdown, isLevelComplete]);
 
   // Countdown overlay effect for smooth level entry
   useEffect(() => {
@@ -140,6 +162,15 @@ export function VintagePuzzle({
       });
     }, 1000);
     return () => clearTimeout(timer);
+  }, [countdown]);
+
+  // Safety fallback: countdown must NEVER stay stuck on screen for more than 4.5 seconds
+  useEffect(() => {
+    if (countdown === null) return;
+    const safetyTimer = setTimeout(() => {
+      setCountdown(null);
+    }, 4500);
+    return () => clearTimeout(safetyTimer);
   }, [countdown]);
 
   const [showExitModal, setShowExitModal] = useState(false);
@@ -250,14 +281,18 @@ export function VintagePuzzle({
           const remoteMax = vintageProgress?.maxUnlockedLevel ?? 1;
           const remoteCompleted = vintageProgress?.completedLevels ?? [];
           const remoteScore = vintageProgress?.score ?? 0;
+          const remoteStars = vintageProgress?.levelStars ?? {};
+          const localStars = parsed?.levelStars && typeof parsed.levelStars === "object" ? parsed.levelStars : {};
 
           const mergedMax = Math.min(20, Math.max(localMax, remoteMax));
           const mergedCompleted = new Set([...localCompleted, ...remoteCompleted]);
           const mergedScore = Math.max(localScore, remoteScore);
+          const mergedStars = { ...localStars, ...remoteStars };
 
           setMaxUnlockedLevel(mergedMax);
           setCompletedLevels(mergedCompleted);
           setScore(mergedScore);
+          setLevelStars(mergedStars);
         } catch (e) {
           console.warn("[VintagePuzzle] Failed to parse progress", e);
         }
@@ -275,14 +310,18 @@ export function VintagePuzzle({
       setMaxUnlockedLevel((prev) => Math.min(20, Math.max(prev, vintageProgress.maxUnlockedLevel ?? 1)));
       setCompletedLevels((prev) => new Set([...Array.from(prev), ...(vintageProgress.completedLevels ?? [])]));
       setScore((prev) => Math.max(prev, vintageProgress.score ?? 0));
+      if (vintageProgress.levelStars) {
+        setLevelStars((prev) => ({ ...prev, ...vintageProgress.levelStars }));
+      }
     }
   }, [vintageProgress]);
 
-  const persistProgress = useCallback((newMaxUnlocked: number, newCompleted: Set<number>, newScore: number) => {
+  const persistProgress = useCallback((newMaxUnlocked: number, newCompleted: Set<number>, newScore: number, newStars: Record<number, number>) => {
     const payload = {
       maxUnlockedLevel: newMaxUnlocked,
       completedLevels: Array.from(newCompleted),
       score: newScore,
+      levelStars: newStars,
     };
     AsyncStorage.setItem(VINTAGE_STORAGE_KEY, JSON.stringify(payload)).catch((err) => {
       console.warn("[VintagePuzzle] Failed to save progress", err);
@@ -327,6 +366,7 @@ export function VintagePuzzle({
     setLetterPool(tiles.sort(() => Math.random() - 0.5));
     setSolvedWordIds(new Set());
     setSelectedCell([generated.centerWord.row, generated.centerWord.col]);
+    setElapsedSeconds(0);
     setIsLevelComplete(false);
     setShowVictoryModal(false);
     setErrorMessage(null);
@@ -458,12 +498,18 @@ export function VintagePuzzle({
             const xpEarned = isFirstTime ? baseXP : Math.max(3, Math.floor(baseXP / 10));
             onRewardXp?.(xpEarned, levelIndex, puzzle.words.length, puzzle.words.map((w) => w.answer));
 
+            const earnedStars = calculateLevelStars(levelIndex, elapsedSeconds);
+            const prevStar = levelStars[levelIndex] ?? 0;
+            const bestStars = Math.max(prevStar, earnedStars);
+            const nextStars = { ...levelStars, [levelIndex]: bestStars };
+            setLevelStars(nextStars);
+
             const nextCompleted = new Set([...completedLevels, levelIndex]);
             const nextMax = Math.min(20, Math.max(maxUnlockedLevel, levelIndex + 1));
             setCompletedLevels(nextCompleted);
             setMaxUnlockedLevel(nextMax);
 
-            persistProgress(nextMax, nextCompleted, nextScore);
+            persistProgress(nextMax, nextCompleted, nextScore, nextStars);
             return;
           } else {
             // Çözülen kelimeden sonra çözülmemiş sıradaki kelimeye otomatik yumuşak geçiş yap
@@ -564,7 +610,7 @@ export function VintagePuzzle({
         }, 650);
       }
     },
-    [puzzle, solvedWordIds, score, completedLevels, levelIndex, maxUnlockedLevel, onRewardXp, persistProgress, isCellLocked, shakeAnim, solvedPulseAnim, selectedWordId]
+    [puzzle, solvedWordIds, score, completedLevels, levelIndex, maxUnlockedLevel, onRewardXp, persistProgress, isCellLocked, shakeAnim, solvedPulseAnim, selectedWordId, elapsedSeconds, levelStars]
   );
 
   // Dokunulan Harf Taşını Doğrudan Tahtadaki Uygun Hücreye Koy
@@ -854,30 +900,85 @@ export function VintagePuzzle({
   const completedCount = solvedWordIds.size;
   const totalCount = puzzle?.words.length || 0;
 
+  const hasRemovableLettersInActiveWord = useMemo(() => {
+    if (!activeWordItem) return false;
+    return activeWordItem.cells.some(([r, c]) => {
+      return playerBoard[r]?.[c] !== null && !isCellLockedByCompletedWord(r, c);
+    });
+  }, [activeWordItem, playerBoard, isCellLockedByCompletedWord]);
+
+  const handleRecallActiveWordLetters = useCallback(() => {
+    if (!activeWordItem || isClearingErrorRef.current) return;
+    triggerHapticSelection();
+    playSelectionNote(0);
+
+    const lettersToReturn: string[] = [];
+    setPlayerBoard((prevBoard) => {
+      const nextBoard = prevBoard.map((row) => [...row]);
+      activeWordItem.cells.forEach(([r, c]) => {
+        if (!isCellLockedByCompletedWord(r, c)) {
+          const ch = nextBoard[r]?.[c];
+          if (ch !== null && ch !== undefined) {
+            lettersToReturn.push(ch);
+            nextBoard[r]![c] = null;
+          }
+        }
+      });
+      return nextBoard;
+    });
+
+    if (lettersToReturn.length > 0) {
+      const newTiles: PoolTile[] = lettersToReturn.map((ch, idx) => ({
+        id: `p-rec-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+        letter: ch,
+      }));
+      setLetterPool((prev) => [...prev, ...newTiles]);
+    }
+
+    const firstEmpty = activeWordItem.cells.find(([r, c]) => playerBoard[r]?.[c] === null);
+    setSelectedCell(firstEmpty || [activeWordItem.row, activeWordItem.col]);
+  }, [activeWordItem, isCellLockedByCompletedWord, playerBoard]);
+
   // 1. SEVİYE HARİTASI EKRANI
   if (viewMode === "map") {
     return (
-      <VintageMapView
-        measureContainer={measureContainer}
-        onBack={onBack}
-        onOpenLivesModal={onOpenLivesModal}
-        isInfiniteLives={isInfiniteLives}
-        lives={lives}
-        coins={coins}
-        score={score}
-        maxUnlockedLevel={maxUnlockedLevel}
-        completedLevels={completedLevels}
-        levelIndex={levelIndex}
-        onSelectLevel={(lvl) => {
-          if (lvl === levelIndex) {
-            loadNewPuzzleForLevel(lvl);
-          } else {
-            setLevelIndex(lvl);
-          }
-          setCountdown(3);
-          setViewMode("play");
-        }}
-      />
+      <>
+        <VintageMapView
+          measureContainer={measureContainer}
+          onBack={onBack}
+          onOpenLivesModal={onOpenLivesModal}
+          isInfiniteLives={isInfiniteLives}
+          lives={lives}
+          coins={coins}
+          score={score}
+          maxUnlockedLevel={maxUnlockedLevel}
+          completedLevels={completedLevels}
+          levelStars={levelStars}
+          levelIndex={levelIndex}
+          onSelectLevel={(lvl) => {
+            triggerHapticSelection();
+            setPreviewLevel(lvl);
+          }}
+        />
+
+        <VintageLevelPreviewModal
+          visible={previewLevel !== null}
+          levelIndex={previewLevel}
+          bestStars={previewLevel ? levelStars[previewLevel] : 0}
+          onDismiss={() => setPreviewLevel(null)}
+          onStartLevel={(lvl) => {
+            triggerHapticSelection();
+            if (lvl === levelIndex) {
+              loadNewPuzzleForLevel(lvl);
+            } else {
+              setLevelIndex(lvl);
+            }
+            setCountdown(3);
+            setViewMode("play");
+            setPreviewLevel(null);
+          }}
+        />
+      </>
     );
   }
 
@@ -893,6 +994,7 @@ export function VintagePuzzle({
         coins={coins}
         score={score}
         boardSwapCount={boardSwapCount}
+        elapsedSeconds={elapsedSeconds}
         onBackPress={handlePlayBackPress}
         onUseHint={handleUseHint}
         onResetLevel={handleResetLevel}
@@ -972,7 +1074,30 @@ export function VintagePuzzle({
           />
 
           {/* HARF TAŞLARI HAVUZU */}
-          <Text style={styles.sectionLabelCompact}>HARF TAŞLARI (DOKUN TAHTAYA KOY):</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <Text style={styles.sectionLabelCompact}>HARF TAŞLARI (DOKUN TAHTAYA KOY):</Text>
+            {hasRemovableLettersInActiveWord && (
+              <Pressable
+                onPress={handleRecallActiveWordLetters}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: "#FEE2E2",
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: "#FCA5A5",
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "800", color: "#DC2626" }}>↩️ Geri Al</Text>
+              </Pressable>
+            )}
+          </View>
           <View style={styles.letterPoolContainer} pointerEvents={errorCells.size > 0 ? "none" : "auto"}>
             {letterPool.length === 0 ? (
               <Text style={styles.emptyPoolText}>Tüm harfler yerleştirildi.</Text>
@@ -994,6 +1119,8 @@ export function VintagePuzzle({
         visible={showVictoryModal}
         selectedVictoryEffect={selectedVictoryEffect}
         levelIndex={levelIndex}
+        earnedStars={levelStars[levelIndex] ?? calculateLevelStars(levelIndex, elapsedSeconds)}
+        elapsedSeconds={elapsedSeconds}
         isInfiniteLives={isInfiniteLives}
         lives={lives}
         onOpenLivesModal={onOpenLivesModal}

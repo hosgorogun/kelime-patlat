@@ -13,4 +13,5 @@ export type Screen =
   | "missions"
   | "auth"
   | "store"
-  | "vintage";
+  | "vintage"
+  | "kelimematik";

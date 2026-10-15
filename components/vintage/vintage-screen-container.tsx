@@ -64,7 +64,11 @@ export function VintageScreenContainer(props: VintageScreenContainerProps) {
         }}
         onOpenLivesModal={onOpenLivesModal}
         onSaveProgress={(newProgress) => {
-          setProgress((current) => ({ ...current, vintageProgress: newProgress }));
+          setProgress((current) => {
+            const updated = { ...current, vintageProgress: newProgress };
+            void syncProgressToCloud(updated);
+            return updated;
+          });
         }}
         onRewardXp={(amount: number, level: number, wordsCount: number = 5, foundWords?: string[]) => {
           setProgress((current) => {

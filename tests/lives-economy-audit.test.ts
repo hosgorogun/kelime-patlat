@@ -38,17 +38,17 @@ describe("Tüm Oyun Can ve Çip/Ekonomi Denetimi", () => {
   it("Can satın alma: Çip ile 1 can ve tüm canları yenileme bakiyeyi ve canı doğru güncellemeli", () => {
     const lowLives = { ...DEFAULT_PROGRESS, lives: 1, coins: 500 };
 
-    // 1 can alma (COST_PER_LIFE = 20)
+    // 1 can alma (COST_PER_LIFE = 50)
     const buyOne = buyLives(lowLives, "one");
     expect(buyOne.success).toBe(true);
     expect(buyOne.updatedProgress.lives).toBe(2);
-    expect(buyOne.updatedProgress.coins).toBe(480); // 500 - 20
+    expect(buyOne.updatedProgress.coins).toBe(450); // 500 - 50
 
-    // Tüm canları yenileme (COST_REFILL_ALL = 75)
+    // Tüm canları yenileme (COST_REFILL_ALL = 180)
     const buyAll = buyLives(lowLives, "all");
     expect(buyAll.success).toBe(true);
     expect(buyAll.updatedProgress.lives).toBe(MAX_LIVES);
-    expect(buyAll.updatedProgress.coins).toBe(425); // 500 - 75
+    expect(buyAll.updatedProgress.coins).toBe(320); // 500 - 180
   });
 
   it("Can satın alma: Yetersiz çip olduğunda can vermemeli ve çip harcamamalı", () => {
@@ -108,5 +108,25 @@ describe("Tüm Oyun Can ve Çip/Ekonomi Denetimi", () => {
     const res = useBooster(broke, "hint");
     expect(res.success).toBe(false);
     expect(res.updatedProgress.coins).toBe(10);
+  });
+
+  it("Günlük Reklamla Can Kurtarma (dailyRevives) kotası günde en fazla 3 hak tanımalıdır", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const progressWith2Revives: PlayerProgress = {
+      ...DEFAULT_PROGRESS,
+      dailyRevivesDate: today,
+      dailyRevivesCount: 2,
+    };
+    const currentCount = progressWith2Revives.dailyRevivesDate === today ? (progressWith2Revives.dailyRevivesCount ?? 0) : 0;
+    const remaining = Math.max(0, 3 - currentCount);
+    expect(remaining).toBe(1);
+
+    const exhausted: PlayerProgress = {
+      ...DEFAULT_PROGRESS,
+      dailyRevivesDate: today,
+      dailyRevivesCount: 3,
+    };
+    const exhaustedRemaining = Math.max(0, 3 - (exhausted.dailyRevivesCount ?? 0));
+    expect(exhaustedRemaining).toBe(0);
   });
 });

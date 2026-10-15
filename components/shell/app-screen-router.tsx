@@ -14,6 +14,7 @@ import { ArcadeScreenContainer } from "../arcade/arcade-screen-container";
 import { OnlineLobbyContainer } from "../pvp/online-lobby-container";
 import { FriendsLobbyContainer } from "../friends/friends-lobby-container";
 import { VintageScreenContainer } from "../vintage/vintage-screen-container";
+import { KelimematikScreen } from "../kelimematik/kelimematik-screen";
 import { MissionsScreenContainer } from "../missions/missions-screen-container";
 import { ProfileScreenContainer } from "../profile/profile-screen-container";
 import { RoomWaitingContainer } from "../pvp/room-waiting-container";
@@ -37,7 +38,7 @@ export interface AppScreenRouterProps {
   soloLevel: number;
   setSoloLevel: (level: number) => void;
   openSoloLevel: (level: number) => void;
-  completeSoloLevel: (level: number, words?: string[], won?: boolean) => void;
+  completeSoloLevel: (level: number, words?: string[], won?: boolean, stars?: number) => void;
   completeDailyChallenge?: (level: number, words?: string[], won?: boolean) => void;
   // Root overlay elements & feedback
   livesModalElement: React.ReactNode;
@@ -197,6 +198,10 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
 
     if (screen === "vintage") {
       return <VintageScreenContainer />;
+    }
+
+    if (screen === "kelimematik") {
+      return <KelimematikScreen />;
     }
 
     if (screen === "missions") {

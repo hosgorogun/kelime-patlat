@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { BackHandler } from "react-native";
+import React, { useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { MainShell } from "../shell/main-shell";
 import { ScreenContainer } from "../common/screen-container";
@@ -41,14 +40,7 @@ export function ArcadeScreenContainer(props: ArcadeScreenContainerProps) {
   const onNavigate = props.onNavigate ?? navigation.setScreen;
   const [arcadeStarted, setArcadeStarted] = useState(false);
 
-  useEffect(() => {
-    if (!arcadeStarted) return;
-    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      setArcadeStarted(false);
-      return true;
-    });
-    return () => sub.remove();
-  }, [arcadeStarted]);
+
 
   if (!arcadeStarted) {
     return (

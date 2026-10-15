@@ -13,6 +13,7 @@ import { ICONS } from "@/components/game/game-ui";
 import {
   canSpinLuckyWheel,
   claimLuckyWheelReward,
+  getCalculatedLives,
   LUCKY_WHEEL_SECTORS,
   type LuckyWheelSector,
   type PlayerProgress,
@@ -235,7 +236,9 @@ export function LuckyWheelModal({
             <View style={styles.wonContainer}>
               <Text style={styles.wonTitle}>Tebrikler! 🎉</Text>
               <Text style={styles.wonSubtitle}>
-                {wonPrize.icon} {wonPrize.label} hesabına tanımlandı!
+                {wonPrize.type === "life"
+                  ? `${wonPrize.icon} ${wonPrize.label} hesabına tanımlandı! (Canın: ${getCalculatedLives(progress).lives}/5)`
+                  : `${wonPrize.icon} ${wonPrize.label} hesabına tanımlandı!`}
               </Text>
             </View>
           )}

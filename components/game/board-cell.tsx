@@ -163,7 +163,7 @@ export const BoardCell = React.memo(({
             cellColor && { color: cellColor.letterText },
             isMissed && !cellColor && styles.cellLetterMissed,
             isInspected && styles.cellLetterInspected,
-            isCountingDown && { opacity: 0 },
+            isCountingDown && { opacity: 0.35 },
           ]}
         >
           {letter}

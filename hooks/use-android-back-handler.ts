@@ -34,7 +34,7 @@ interface UseAndroidBackHandlerParams {
   dailySession: unknown;
   setDailySession: (val: null) => void;
   soloLevel: number;
-  completeSoloLevel: (level: number, words?: string[], won?: boolean) => void;
+  completeSoloLevel: (level: number, words?: string[], won?: boolean, stars?: number) => void;
 }
 
 export function useAndroidBackHandler({
@@ -142,8 +142,8 @@ export function useAndroidBackHandler({
         // duraklatma, süre kilitleri ve özel onay modalını yönetmesi için ekranın kendi kontrolüne bırakılır.
         return true;
       }
-      if (screen === "arcade" || screen === "vintage") {
-        // ArcadeChallenge ve VintagePuzzle kendi iç BackHandler'larını ve çıkış onay diyaloglarını yönetir.
+      if (screen === "arcade" || screen === "vintage" || screen === "kelimematik") {
+        // ArcadeChallenge, VintagePuzzle ve Kelimematik kendi iç BackHandler'larını ve çıkış onay diyaloglarını yönetir.
         return true;
       }
       if (

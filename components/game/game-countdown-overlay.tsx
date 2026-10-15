@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, Modal, StyleSheet, Text, View } from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { gameSfx, triggerHapticSelection, triggerHapticSuccess } from "@/shared/audio-haptics";
 
@@ -103,15 +103,14 @@ export function GameCountdownOverlay({
   const isStart = countdown === 0;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.countdownOverlay} pointerEvents="none">
-        {/* Central Glassmorphic Halo HUD */}
-        <View style={styles.contentWrap}>
-          {/* Mode Tag */}
-          <View style={[styles.modeTag, { borderColor: `${currentStage.accentColor}55`, backgroundColor: "rgba(255, 255, 255, 0.95)" }]}>
-            <Text style={styles.modeTagIcon}>{icon}</Text>
-            <Text style={[styles.modeTagText, { color: "#1E293B" }]}>{title}</Text>
-          </View>
+    <View style={styles.countdownOverlay} pointerEvents="none">
+      {/* Central Glassmorphic Halo HUD */}
+      <View style={styles.contentWrap}>
+        {/* Mode Tag */}
+        <View style={[styles.modeTag, { borderColor: `${currentStage.accentColor}55`, backgroundColor: "rgba(255, 255, 255, 0.95)" }]}>
+          <Text style={styles.modeTagIcon}>{icon}</Text>
+          <Text style={[styles.modeTagText, { color: "#1E293B" }]}>{title}</Text>
+        </View>
 
           {/* Central Glowing Orb with Dynamic Counter */}
           <View style={styles.orbArea}>
@@ -189,7 +188,6 @@ export function GameCountdownOverlay({
           </View>
         </View>
       </View>
-    </Modal>
   );
 }
 

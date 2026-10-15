@@ -27,9 +27,16 @@ export const SoloFoundWords = React.memo(({
 }: SoloFoundWordsProps) => {
   return (
     <View style={[styles.found, { backgroundColor: activeTheme.trayBackground, borderColor: activeTheme.cellBorder }]}>
-      <Text style={[styles.foundLabel, { color: activeTheme.headerText }]}>
-        BULDUKLARIN (ROTA VE SÖZLÜK İÇİN TIKLA)
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+        <Text style={[styles.foundLabel, { color: activeTheme.headerText }]}>
+          BULDUKLARIN (ROTA VE SÖZLÜK İÇİN TIKLA)
+        </Text>
+        {found.length > 0 && (
+          <Text style={{ fontSize: 9.5, fontWeight: "900", color: activeTheme.headerText }}>
+            {found.length} ADET
+          </Text>
+        )}
+      </View>
       <View style={styles.tags}>
         {found.length ? (
           found.map((word, index) => {
@@ -49,7 +56,7 @@ export const SoloFoundWords = React.memo(({
                     borderColor: palette.tagBorder,
                     borderWidth: 1.5,
                   },
-                  pressed && { opacity: 0.7 },
+                  pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
                 ]}
               >
                 <Text style={[styles.tagText, { color: palette.tagText }]}>✓ {word}</Text>
@@ -57,7 +64,12 @@ export const SoloFoundWords = React.memo(({
             );
           })
         ) : (
-          <Text style={styles.empty}>İlk kelimeyi bul.</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 2 }}>
+            <Text style={{ fontSize: 13 }}>💡</Text>
+            <Text style={[styles.empty, { color: activeTheme.headerText, fontStyle: "italic" }]}>
+              İlk kelimeyi bularak koleksiyonunu başlat!
+            </Text>
+          </View>
         )}
       </View>
 

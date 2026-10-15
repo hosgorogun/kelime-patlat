@@ -45,6 +45,8 @@ export function ProfileScreen({
   onUpdateAvatarPhoto,
   sfxOn,
   toggleSfx,
+  bgmOn = true,
+  toggleBgm,
   hapticsOn,
   toggleHaptics,
   onBack,
@@ -67,6 +69,8 @@ export function ProfileScreen({
   onUpdateAvatarPhoto?: (photoUrl?: string) => void;
   sfxOn: boolean;
   toggleSfx: (val: boolean) => void;
+  bgmOn?: boolean;
+  toggleBgm?: (val: boolean) => void;
   hapticsOn: boolean;
   toggleHaptics: (val: boolean) => void;
   onBack?: () => void;
@@ -380,6 +384,8 @@ export function ProfileScreen({
         <ProfileSettingsTab
           sfxOn={sfxOn}
           toggleSfx={toggleSfx}
+          bgmOn={bgmOn}
+          toggleBgm={toggleBgm}
           hapticsOn={hapticsOn}
           toggleHaptics={toggleHaptics}
           notificationsOn={progress.notificationsEnabled !== false}

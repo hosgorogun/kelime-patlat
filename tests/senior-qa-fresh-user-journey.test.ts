@@ -444,11 +444,11 @@ describe("Senior QA: Fresh Install & End-to-End User Journey", () => {
       userProgress.lives = 2;
       userProgress.coins = 100;
 
-      // 1 Can satın al ("one" -> 20 çip)
+      // 1 Can satın al ("one" -> 50 çip)
       const buyResult = buyLives(userProgress, "one");
       expect(buyResult.success).toBe(true);
       expect(buyResult.updatedProgress.lives).toBe(3);
-      expect(buyResult.updatedProgress.coins).toBe(80);
+      expect(buyResult.updatedProgress.coins).toBe(50); // 100 - 50 = 50
       userProgress = buyResult.updatedProgress;
 
       // Yetersiz çipte engelleme

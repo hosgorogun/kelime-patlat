@@ -1,10 +1,29 @@
 import { Platform } from "react-native";
 
-// Safe wrapper around expo-notifications so it never crashes Metro, web or dev environments
 let NotificationsModule: any = null;
+let expoGoWarningLogged = false;
 
 export async function getNotificationsModule() {
   if (Platform.OS === "web") return null;
+
+  // Expo SDK 53+ removed remote push notifications from Expo Go on Android.
+  // Importing expo-notifications inside Expo Go on Android triggers DevicePushTokenAutoRegistration.fx
+  // which calls addPushTokenListener -> warnOfExpoGoPushUsage and throws an unhandled Error.
+  try {
+    const { isRunningInExpoGo } = await import("expo");
+    if (isRunningInExpoGo && isRunningInExpoGo() && Platform.OS === "android") {
+      if (!expoGoWarningLogged) {
+        expoGoWarningLogged = true;
+        console.warn(
+          "[Notifications] Expo Go (Android) detected: expo-notifications dynamic import is bypassed to avoid SDK 53 crash. Use a development build (expo run:android / EAS Build) for native notifications."
+        );
+      }
+      return null;
+    }
+  } catch {
+    // ignore detection failure
+  }
+
   if (!NotificationsModule) {
     try {
       NotificationsModule = await import("expo-notifications");
@@ -78,7 +97,7 @@ export const notificationsService = {
     }
   },
 
-  async scheduleEveningStreakReminder() {
+  async scheduleEveningStreakReminder(streakDays = 1) {
     const notifs = await getNotificationsModule();
     if (!notifs) return;
     try {
@@ -96,8 +115,8 @@ export const notificationsService = {
 
       await notifs.scheduleNotificationAsync({
         content: {
-          title: "🔥 GÜNLÜK SERİNİ KAYBETME!",
-          body: "Günün kelime rotası ve ödülleri seni bekliyor. Serini korumak için 1 tur tamamla!",
+          title: `🔥 ${streakDays} GÜNLÜK SERİN YANMAK ÜZERE!`,
+          body: "Gece 00:00 olmadan hemen 1 kelime bul ve alevini söndürme!",
           sound: true,
           data: { screen: "missions" },
         },
@@ -109,6 +128,61 @@ export const notificationsService = {
       });
     } catch (e) {
       console.warn("[Notifications] Failed to schedule evening reminder:", e);
+    }
+  },
+
+  async scheduleRushHourReminder() {
+    const notifs = await getNotificationsModule();
+    if (!notifs) return;
+    try {
+      const hasPerm = await this.requestPermissions();
+      if (!hasPerm) return;
+
+      const now = new Date();
+      const rushHour = new Date();
+      rushHour.setHours(19, 55, 0, 0); // 19:55'te haber ver (5 dk önce)
+
+      let delaySeconds = Math.floor((rushHour.getTime() - now.getTime()) / 1000);
+      if (delaySeconds <= 0) {
+        delaySeconds += 24 * 3600;
+      }
+
+      await notifs.scheduleNotificationAsync({
+        content: {
+          title: "⚡ ALTIN SAAT BAŞLAMAK ÜZERE! (20:00)",
+          body: "20:00 - 21:00 arası tüm PvP maçlarında 2X LİG PUANI (LP) aktif! Sıralamada yüksel!",
+          sound: true,
+          data: { screen: "pvp" },
+        },
+        trigger: {
+          type: notifs.SchedulableTriggerInputTypes?.TIME_INTERVAL || "timeInterval",
+          seconds: delaySeconds,
+          repeats: false,
+        },
+      });
+    } catch (e) {
+      console.warn("[Notifications] Failed to schedule rush hour reminder:", e);
+    }
+  },
+
+  async notifyRivalOvertake(rivalName: string) {
+    const notifs = await getNotificationsModule();
+    if (!notifs) return;
+    try {
+      const hasPerm = await this.requestPermissions();
+      if (!hasPerm) return;
+
+      await notifs.scheduleNotificationAsync({
+        content: {
+          title: "⚔️ LİGDE GERİYE DÜŞTÜN!",
+          body: `${rivalName} az önce seni ligde geçti! Sıranı hemen geri alabilecek misin?`,
+          sound: true,
+          data: { screen: "leaderboard" },
+        },
+        trigger: null, // Anında göster
+      });
+    } catch (e) {
+      console.warn("[Notifications] Failed to send rival overtake notification:", e);
     }
   },
 

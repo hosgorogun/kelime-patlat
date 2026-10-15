@@ -118,7 +118,7 @@ const ArcadeCell = React.memo(function ArcadeCell({
               foundColor && { color: foundColor.text },
               isRadar && styles.letterRadar,
               missedColor && { color: missedColor.text },
-              countdown !== null && countdown > 0 && { opacity: 0 },
+              countdown !== null && countdown > 0 && { opacity: 0.35 },
             ]}
           >
             {letter}
@@ -422,7 +422,13 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
         pointerEvents={status === "playing" && countdown === null ? "auto" : "none"}
         onStartShouldSetResponder={() => status === "playing" && countdown === null}
         onMoveShouldSetResponder={() => status === "playing" && countdown === null}
+        onStartShouldSetResponderCapture={() => status === "playing" && countdown === null}
+        onMoveShouldSetResponderCapture={() => status === "playing" && countdown === null}
         onResponderTerminationRequest={() => false}
+        onResponderGrant={onGestureStart}
+        onResponderMove={onGestureMove}
+        onResponderRelease={onGestureEnd}
+        onResponderTerminate={onGestureCancel || onGestureEnd}
         {...(Platform.OS === "web"
           ? {
               onPointerDown: (e: any) => {
@@ -432,14 +438,9 @@ export const ArcadeBoardGrid = React.memo(function ArcadeBoardGrid({
               },
               onPointerMove: onGestureMove,
               onPointerUp: onGestureEnd,
-              onPointerCancel: onGestureCancel,
+              onPointerCancel: onGestureCancel || onGestureEnd,
             }
-          : {
-              onTouchStart: onGestureStart,
-              onTouchMove: onGestureMove,
-              onTouchEnd: onGestureEnd,
-              onTouchCancel: onGestureCancel,
-            })}
+          : {})}
         style={StyleSheet.absoluteFill}
       />
     </Animated.View>

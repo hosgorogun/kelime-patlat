@@ -61,7 +61,7 @@ export const SeasonFriendsTab = React.memo(({
             value={friendInput}
             onChangeText={setFriendInput}
             placeholder="Kullanıcı adı girin (Örn: neon_007)"
-            placeholderTextColor="#293541"
+            placeholderTextColor="#94A3B8"
             autoCapitalize="none"
             style={styles.addFriendInput}
           />

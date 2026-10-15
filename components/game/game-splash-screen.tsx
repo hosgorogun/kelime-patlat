@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Dimensions,
   ImageBackground,
   StyleSheet,
   Text,
@@ -27,7 +26,6 @@ const LOADING_STEPS = [
 ];
 
 export function GameSplashScreen({ isReady, onFinish }: GameSplashScreenProps) {
-  const { width, height } = Dimensions.get("window");
   const progressAnim = useRef(new Animated.Value(0.08)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -129,7 +127,7 @@ export function GameSplashScreen({ isReady, onFinish }: GameSplashScreenProps) {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <ImageBackground
         source={require("../../assets/images/splash.png")}
-        style={[styles.background, { width, height }]}
+        style={[styles.background, StyleSheet.absoluteFill]}
         resizeMode="cover"
         onError={() => {
           if (!finishedRef.current) {

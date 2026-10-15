@@ -138,7 +138,7 @@ const SoloCell = React.memo(function SoloCell({
               feedback === "invalid" && isSelected && { color: "#991B1B" },
               foundColor && !isSolution && { color: foundColor.letterText },
               isRadar && styles.letterRadar,
-              countdown !== null && countdown > 0 && { opacity: 0 },
+              countdown !== null && countdown > 0 && { opacity: 0.35 },
             ]}
           >
             {letter}
@@ -484,7 +484,13 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
         pointerEvents={status === "playing" && countdown === null ? "auto" : "none"}
         onStartShouldSetResponder={() => status === "playing" && countdown === null}
         onMoveShouldSetResponder={() => status === "playing" && countdown === null}
+        onStartShouldSetResponderCapture={() => status === "playing" && countdown === null}
+        onMoveShouldSetResponderCapture={() => status === "playing" && countdown === null}
         onResponderTerminationRequest={() => false}
+        onResponderGrant={onGestureStart}
+        onResponderMove={onGestureMove}
+        onResponderRelease={onGestureEnd}
+        onResponderTerminate={onGestureCancel || onGestureEnd}
         {...(Platform.OS === "web"
           ? {
               onPointerDown: (e: any) => {
@@ -493,14 +499,9 @@ export const SoloBoardGrid = React.memo(function SoloBoardGrid({
               },
               onPointerMove: onGestureMove,
               onPointerUp: onGestureEnd,
-              onPointerCancel: onGestureCancel,
+              onPointerCancel: onGestureCancel || onGestureEnd,
             }
-          : {
-              onTouchStart: onGestureStart,
-              onTouchMove: onGestureMove,
-              onTouchEnd: onGestureEnd,
-              onTouchCancel: onGestureCancel,
-            })}
+          : {})}
         style={StyleSheet.absoluteFill}
       />
       {/* 1. Touch Magnifier Bubble (Parmağın hemen üstünde parlayan harf büyüteci) */}

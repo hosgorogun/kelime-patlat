@@ -59,12 +59,16 @@ export function SoloLevelsScreen({
               ...(curr.claimedMilestones ?? {}),
               [milestone.level]: true,
             },
+            ownedTitles: {
+              ...(curr.ownedTitles ?? {}),
+              ...(milestone.badgeId ? { [milestone.badgeId]: true } : {}),
+            },
           }));
           setGlobalToast({
             id: `milestone-${milestone.level}-${Date.now()}`,
             title: `SANDIK AÇILDI: ${milestone.title}`,
-            subtitle: `+${milestone.coins} Çip, +${milestone.shields} Kalkan, +${milestone.xp} XP hesabına eklendi!`,
-            icon: "🎁",
+            subtitle: `+${milestone.coins} Çip, +${milestone.shields} Kalkan, +${milestone.xp} XP ve "${milestone.badgeTitle}" unvanı hesabına eklendi!`,
+            icon: milestone.icon || "🎁",
             accentColor: "#FFC24A",
             badge: `LVL ${milestone.level}`,
           });

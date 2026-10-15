@@ -293,7 +293,13 @@ export function DailyTreasureModal({
         trigger={showCascade}
         count={12}
         icon={todayReward.icon}
-        badgeText={todayReward.rewardType === "xp" ? `+${todayReward.amount} XP` : undefined}
+        badgeText={
+          todayReward.rewardType === "xp"
+            ? `+${todayReward.amount} XP`
+            : todayReward.rewardType === "coins"
+            ? `+${todayReward.amount} ÇİP`
+            : `+${todayReward.amount} KALKAN`
+        }
       />
     </Modal>
   );

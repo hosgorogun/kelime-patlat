@@ -15,8 +15,9 @@ import { NotificationCenterModal } from "@/components/modals/notification-center
 import { BotPracticeModal } from "./bot-practice-modal";
 import { CommandInfoModal } from "./command-info-modal";
 import { FRAME_IMAGES } from "@/components/profile/profile-constants";
+import { KelimematikPreviewModal } from "@/components/kelimematik/kelimematik-preview-modal";
 
-type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends" | "vintage";
+type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends" | "vintage" | "kelimematik";
 
 type CommandCenterProps = {
   playerName: string;
@@ -31,7 +32,7 @@ type CommandCenterProps = {
   unclaimedMilestonesCount?: number;
   onClaimDailyReward?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
-  onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo") => void;
+  onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo" | "kelimematik") => void;
   onOpenLivesModal?: () => void;
   onOpenHistory?: () => void;
   onOpenLuckyWheel?: () => void;
@@ -159,6 +160,7 @@ export function CommandCenter({
   const [infoModal, setInfoModal] = useState<"shield" | "radar" | "lives" | "rotani" | "mystery" | null>(null);
 
   const [showBotPracticeModal, setShowBotPracticeModal] = useState(false);
+  const [showKelimematikPreviewModal, setShowKelimematikPreviewModal] = useState(false);
 
   // PATLAT Harf Taşları Animasyonları (Subtle Bounce & Wiggle Loop)
   const tileAnims = useRef(PATLAT_TILES.map(() => new Animated.Value(0))).current;
@@ -396,11 +398,18 @@ export function CommandCenter({
               style={({ pressed }) => [
                 styles.livesHeaderPill,
                 livesCalc.isInfinite && styles.livesHeaderPillInfinite,
+                livesCalc.lives > 5 && { borderColor: "#F43F5E", backgroundColor: "#FFF1F2" },
                 pressed && styles.pressed,
               ]}
             >
               <GameGlyph source={ICONS.heart} size={20} />
-              <Text style={[styles.livesHeaderValue, livesCalc.isInfinite && styles.livesHeaderValueInfinite]}>
+              <Text
+                style={[
+                  styles.livesHeaderValue,
+                  livesCalc.isInfinite && styles.livesHeaderValueInfinite,
+                  livesCalc.lives > 5 && { color: "#BE123C", fontWeight: "900" },
+                ]}
+              >
                 {livesCalc.isInfinite ? "∞" : `${livesCalc.lives}/5`}
               </Text>
             </Pressable>
@@ -513,9 +522,6 @@ export function CommandCenter({
                 {isClaimedToday ? "Giriş Hediyesi" : "Hazineyi Al"}
               </Text>
             </View>
-            <View style={[styles.quickActionBadgePill, styles.readyPill]}>
-              <Text style={[styles.quickActionBadgeText, styles.readyPillText]}>➔</Text>
-            </View>
           </Pressable>
 
           <Pressable
@@ -544,9 +550,6 @@ export function CommandCenter({
                 {canSpinWheel ? "Ücretsiz Çevir" : "Hediyeler"}
               </Text>
             </View>
-            <View style={[styles.quickActionBadgePill, { backgroundColor: "#DBEAFE", borderColor: "#93C5FD" }]}>
-              <Text style={[styles.quickActionBadgeText, { color: "#1D4ED8" }]}>➔</Text>
-            </View>
           </Pressable>
 
           {unclaimedMissionsCount > 0 && (
@@ -571,9 +574,6 @@ export function CommandCenter({
                 <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#15803D" }]}>
                   Ödülü Al
                 </Text>
-              </View>
-              <View style={[styles.quickActionBadgePill, { backgroundColor: "#DCF5E7", borderColor: "#88DFB3" }]}>
-                <Text style={[styles.quickActionBadgeText, { color: "#166544" }]}>➔</Text>
               </View>
             </Pressable>
           )}
@@ -818,7 +818,11 @@ export function CommandCenter({
           >
             <View style={[styles.cardRibbonWrap, { flexDirection: "row", justifyContent: "center", position: "relative" }]}>
               <View style={[styles.cardRibbonAmber, { backgroundColor: "#FFF0F2", borderColor: "#F4B8C1" }]}>
-                <Text style={[styles.cardRibbonTextAmber, { color: "#991B1B" }]}>10×10 MATRİS</Text>
+                <Text style={[styles.cardRibbonTextAmber, { color: "#991B1B" }]}>
+                  {(progress.vintageProgress?.maxUnlockedLevel ?? 1) > 1
+                    ? `BÖLÜM ${progress.vintageProgress?.maxUnlockedLevel}/20`
+                    : "10×10 MATRİS"}
+                </Text>
               </View>
               {onOpenModeInfo && (
                 <View style={{ position: "absolute", right: -2, top: -2, zIndex: 10 }}>
@@ -835,7 +839,9 @@ export function CommandCenter({
 
             <Text style={[styles.cardTitle, { textAlign: "center" }]}>GAZETE BULMACASI</Text>
             <Text numberOfLines={2} style={[styles.cardBodyAmber, { textAlign: "center", color: "#7F1D1D", fontSize: 10, lineHeight: 14 }]}>
-              20 özel klasik kare bulmaca
+              {(progress.vintageProgress?.maxUnlockedLevel ?? 1) > 1
+                ? `İlerleme: Bölüm ${progress.vintageProgress?.maxUnlockedLevel}/20`
+                : "20 özel klasik kare bulmaca"}
             </Text>
 
             <View style={{ marginTop: "auto", paddingTop: 8, width: "100%" }}>
@@ -849,6 +855,61 @@ export function CommandCenter({
           </LinearGradient>
         </Pressable>
       </View>
+
+      {/* 4. YENİ TETRİS HAYATTA KALMA: KELİMEMATİK (YAKINDA) */}
+      <Pressable
+        onPress={() => {
+          triggerHapticSelection();
+          onShowToast?.("Kelimematik Modu", "Çok yakında sizlerle! Geliştirme süreci devam ediyor.", "⏳", "#0284C7");
+        }}
+        style={({ pressed }) => [{ width: "100%", marginTop: 8 }, pressed && styles.pressed]}
+      >
+        <OrnatePanel accent="sapphire" showJewels={false} contentStyle={[styles.soloHorizontalSkin, { opacity: 0.85 }]}>
+          <GameIcon source={ICONS.play} size={40} glow="#94A3B8" />
+          <View style={styles.soloMetaCol}>
+            <View style={styles.soloEyebrowRow}>
+              <View
+                style={{
+                  backgroundColor: "#EFF6FF",
+                  borderWidth: 1,
+                  borderColor: "#BFDBFE",
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={[styles.soloEyebrowText, { color: "#2563EB" }]}>
+                  ⏳ ÇOK YAKINDA
+                </Text>
+              </View>
+            </View>
+            <Text numberOfLines={1} style={styles.soloHeading}>KELİMEMATİK</Text>
+            <Text numberOfLines={1} style={[styles.soloDescEmerald, { color: "#64748B" }]}>
+              Düşen harfler, tetris mekaniği ve hayatta kalma
+            </Text>
+          </View>
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 12,
+              backgroundColor: "#F1F5F9",
+              borderWidth: 1.5,
+              borderColor: "#CBD5E1",
+              borderBottomWidth: 3,
+              borderBottomColor: "#94A3B8",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <Text style={{ fontSize: 13 }}>🔒</Text>
+            <Text style={{ color: "#475569", fontSize: 11, fontWeight: "900", letterSpacing: 0.3 }}>
+              YAKINDA
+            </Text>
+          </View>
+        </OrnatePanel>
+      </Pressable>
       </Animated.View>
 
       <DailyTreasureModal
@@ -882,6 +943,13 @@ export function CommandCenter({
         onOpenDailyReward={() => setShowDailyRewardModal(true)}
         onOpenLuckyWheel={onOpenLuckyWheel}
         onOpenLivesModal={onOpenLivesModal}
+      />
+
+      <KelimematikPreviewModal
+        visible={showKelimematikPreviewModal}
+        onClose={() => setShowKelimematikPreviewModal(false)}
+        onStart={() => onNavigate("kelimematik")}
+        progress={progress}
       />
     </ScrollView>
 

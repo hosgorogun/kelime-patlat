@@ -28,8 +28,8 @@ export interface HomeScreenViewProps {
   onOpenLivesModal?: () => void;
   onClaimDailyReward?: () => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
-  selectedModeInfo?: "pvp" | "vintage" | "arcade" | "solo" | null;
-  onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo") => void;
+  selectedModeInfo?: "pvp" | "vintage" | "arcade" | "solo" | "kelimematik" | null;
+  onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo" | "kelimematik") => void;
   onCloseModeInfo?: () => void;
   pendingMatchConfirm?: { size: BoardSize; modeTitle: string; durationText: string; routesText: string; isBot?: boolean } | null;
   onConfirmMatch?: (info: { size: BoardSize; isBot?: boolean }) => void;

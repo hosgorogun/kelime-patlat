@@ -30,6 +30,8 @@ export interface UIFeedbackContextValue {
   openUserProfile: (target: Partial<InspectableUser> & { id: string; name: string }) => Promise<void>;
   sfxOn: boolean;
   toggleSfx: (val: boolean) => void;
+  bgmOn: boolean;
+  toggleBgm: (val: boolean) => void;
   hapticsOn: boolean;
   toggleHaptics: (val: boolean) => void;
 }

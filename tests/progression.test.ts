@@ -705,18 +705,18 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     const lostCalc = getCalculatedLives(lost);
     expect(lostCalc.lives).toBe(4);
 
-    // 20 Çip ile 1 Can satın alma
+    // 50 Çip ile 1 Can satın alma
     const baseWithCoins = { ...lost, coins: 100 };
     const buyOne = buyLives(baseWithCoins, "one");
     expect(buyOne.success).toBe(true);
-    expect(buyOne.updatedProgress.coins).toBe(80);
+    expect(buyOne.updatedProgress.coins).toBe(50); // 100 - 50 = 50
     expect(getCalculatedLives(buyOne.updatedProgress).lives).toBe(5);
 
-    // 75 Çip ile tüm canları doldurma (0 candan 5 cana)
+    // 180 Çip ile tüm canları doldurma (0 candan 5 cana)
     const zeroLives = { ...DEFAULT_PROGRESS, lives: 0, coins: 200, lastLifeRegenTimestamp: Date.now() };
     const buyAll = buyLives(zeroLives, "all");
     expect(buyAll.success).toBe(true);
-    expect(buyAll.updatedProgress.coins).toBe(125); // 200 - 75 = 125
+    expect(buyAll.updatedProgress.coins).toBe(20); // 200 - 180 = 20
     expect(getCalculatedLives(buyAll.updatedProgress).lives).toBe(5);
 
     // Yetersiz bakiyede hata dönme

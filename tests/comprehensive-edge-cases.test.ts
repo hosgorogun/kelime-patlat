@@ -43,7 +43,7 @@ describe("Senior QA Edge Case Test Suiti - Derinlikli Sınır Durumları (Compre
     const poorProgress: PlayerProgress = {
       ...DEFAULT_PROGRESS,
       lives: 1,
-      coins: 10, // COST_PER_LIFE 20
+      coins: 10, // COST_PER_LIFE 50
     };
 
     const res = buyLives(poorProgress, "one");

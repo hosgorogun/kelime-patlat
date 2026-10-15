@@ -13,7 +13,7 @@ export interface SoloPlayContainerProps {
   activeBoardSkinColor?: string;
   onOpenLivesModal?: () => void;
   watchAd?: (onReward: () => void) => void;
-  completeSoloLevel: (level: number, foundWords?: string[], won?: boolean) => void;
+  completeSoloLevel: (level: number, foundWords?: string[], won?: boolean, stars?: number) => void;
   completeDailyChallenge?: (level: number, foundWords?: string[], won?: boolean) => void;
   openSoloLevel: (level: number) => void;
   setScreen?: (screen: any) => void;
@@ -51,11 +51,11 @@ export function SoloPlayContainer(props: SoloPlayContainerProps) {
       onExit={() => {
         setScreen("levels");
       }}
-      onComplete={(level, foundWords, won) => {
+      onComplete={(level, foundWords, won, stars) => {
         if (props.dailySession && props.completeDailyChallenge) {
           props.completeDailyChallenge(level, foundWords, won);
         } else if (props.completeSoloLevel) {
-          props.completeSoloLevel(level, foundWords, won);
+          props.completeSoloLevel(level, foundWords, won, stars);
         }
       }}
       onNext={() => setScreen("levels")}

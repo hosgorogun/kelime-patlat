@@ -12,6 +12,7 @@ export interface SoloWonViewProps {
   level: number;
   foundCount: number;
   seconds: number;
+  stars?: number;
   boardSkinColor?: string;
   accentColor: string;
   handleShareDaily?: () => void;
@@ -33,6 +34,7 @@ export function SoloWonView({
   level,
   foundCount,
   seconds,
+  stars = 3,
   boardSkinColor,
   accentColor,
   handleShareDaily,
@@ -67,11 +69,31 @@ export function SoloWonView({
   }, [targetXp]);
 
   return (
-    <View style={[styles.result, boardSkinColor && { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor }]}>
+    <View style={[styles.resultWon, boardSkinColor && { borderColor: `${boardSkinColor}88`, shadowColor: boardSkinColor }]}>
       <VictoryBanner
         title="Seviye senin!"
         subtitle={`${foundCount} kelime buldun · ${seconds} saniye artırdın`}
       />
+
+      {/* 3 Yıldız Performans Derecesi */}
+      <View style={{ alignItems: "center", marginVertical: 6 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={{ fontSize: stars >= 1 ? 34 : 26, opacity: stars >= 1 ? 1 : 0.25 }}>
+            ⭐
+          </Text>
+          <Text style={{ fontSize: stars >= 2 ? 42 : 30, marginTop: -6, opacity: stars >= 2 ? 1 : 0.25 }}>
+            ⭐
+          </Text>
+          <Text style={{ fontSize: stars >= 3 ? 34 : 26, opacity: stars >= 3 ? 1 : 0.25 }}>
+            ⭐
+          </Text>
+        </View>
+        <View style={{ backgroundColor: "rgba(245, 158, 11, 0.12)", borderColor: "rgba(245, 158, 11, 0.3)", borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 3, marginTop: 4 }}>
+          <Text style={{ fontSize: 11, fontWeight: "900", color: "#D97706", letterSpacing: 0.5 }}>
+            {stars === 3 ? "🏆 MÜKEMMEL PERFORMANS!" : stars === 2 ? "⚡ HARİKA İŞ!" : "👍 SEVİYE TAMAMLANDI!"}
+          </Text>
+        </View>
+      </View>
 
       {/* Roll-up Ödül Kartı */}
       <View
@@ -101,7 +123,7 @@ export function SoloWonView({
         </View>
       </View>
 
-      <View style={{ width: "100%", gap: 8, marginTop: 10 }}>
+      <View style={{ width: "100%", gap: 10, marginTop: 12 }}>
         {!daily && level < MAX_SOLO_LEVEL && (
           <Pressable
             onPress={() => {
@@ -111,12 +133,19 @@ export function SoloWonView({
             }}
             style={({ pressed }) => [
               styles.action,
-              { backgroundColor: accentColor, marginTop: 0 },
+              {
+                backgroundColor: "#10B981",
+                borderColor: "#059669",
+                borderBottomWidth: 3,
+                marginTop: 0,
+              },
               pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
             ]}
           >
-            <Text style={styles.actionText}>▶️ SONRAKİ BÖLÜM (BÖLÜM {level + 1})</Text>
-            <Text style={styles.actionArrow}>→</Text>
+            <Text style={[styles.actionText, { color: "#FFFFFF", fontSize: 12 }]}>
+              ▶️ SONRAKİ BÖLÜM (BÖLÜM {level + 1})
+            </Text>
+            <Text style={[styles.actionArrow, { color: "#FFFFFF" }]}>→</Text>
           </Pressable>
         )}
 
@@ -129,8 +158,8 @@ export function SoloWonView({
           style={({ pressed }) => [
             styles.action,
             {
-              backgroundColor: "rgba(255, 255, 255, 0.08)",
-              borderWidth: 1,
+              backgroundColor: "#FFFFFF",
+              borderWidth: 1.5,
               borderColor: "#DCE1D7",
               marginTop: 0,
             },
@@ -155,6 +184,8 @@ export interface SoloLostViewProps {
   revived: boolean;
   remainingRevives?: number;
   onReviveWithAd: () => void;
+  coins?: number;
+  onReviveWithCoins?: () => void;
   daily?: boolean;
   accentColor: string;
   onRetry: () => void;
@@ -169,6 +200,8 @@ export function SoloLostView({
   revived,
   remainingRevives = 3,
   onReviveWithAd,
+  coins,
+  onReviveWithCoins,
   daily,
   accentColor,
   onRetry,
@@ -205,10 +238,34 @@ export function SoloLostView({
         })}
       </View>
 
+      {/* İkinci Şans: Çip ile Süre Satın Alma */}
+      {!revived && onReviveWithCoins && (
+        <Pressable
+          onPress={onReviveWithCoins}
+          style={({ pressed }) => [
+            styles.action,
+            {
+              backgroundColor: (coins ?? 0) >= 50 ? "#FBBF24" : "#F3F4F6",
+              borderColor: (coins ?? 0) >= 50 ? "#D97706" : "#E5E7EB",
+              borderWidth: 1.5,
+              marginTop: 12,
+              marginBottom: 4,
+            },
+            pressed && (coins ?? 0) >= 50 && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <Text style={[styles.actionText, { color: (coins ?? 0) >= 50 ? "#78350F" : "#9CA3AF" }]}>
+            🪙 SÜREYİ KURTAR (+20sn) · 50 ÇİP {coins !== undefined ? `(${coins} Mevcut)` : ""}
+          </Text>
+          <Text style={[styles.actionArrow, { color: (coins ?? 0) >= 50 ? "#78350F" : "#9CA3AF" }]}>⚡</Text>
+        </Pressable>
+      )}
+
+      {/* İkinci Şans: Reklam ile Süre Kurtarma */}
       {!revived && remainingRevives > 0 && (
         <Pressable
           onPress={onReviveWithAd}
-          style={[styles.action, { backgroundColor: "#aef5e0", marginTop: 12 }]}
+          style={[styles.action, { backgroundColor: "#aef5e0", marginTop: onReviveWithCoins ? 6 : 12 }]}
         >
           <Text style={[styles.actionText, { color: "#293541" }]}>
             💾 SÜREYİ KURTAR (+20sn REKLAM) · KALAN: {remainingRevives}/3
@@ -218,9 +275,9 @@ export function SoloLostView({
       )}
 
       {!revived && remainingRevives <= 0 && (
-        <View style={{ marginTop: 10, padding: 10, backgroundColor: "#F3F4F6", borderRadius: 12, alignItems: "center" }}>
+        <View style={{ marginTop: 8, padding: 10, backgroundColor: "#F3F4F6", borderRadius: 12, alignItems: "center" }}>
           <Text style={{ fontSize: 11, fontWeight: "700", color: "#6B7280" }}>
-            🔒 Bugünlük reklamla kurtarma hakkın tükendi (3/3).
+            🔒 Bugünlük reklamla kurtarma hakkın tükendi (3/3). Çip kullanarak devam edebilirsin!
           </Text>
         </View>
       )}

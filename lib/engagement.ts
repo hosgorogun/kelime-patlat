@@ -14,14 +14,14 @@ export const notificationManager = {
   /**
    * Schedule engagement reminders safely without native build bundle errors
    */
-  async initAndScheduleReminders(currentLives = 5, nextLifeTimerSeconds = 0) {
+  async initAndScheduleReminders(currentLives = 5, nextLifeTimerSeconds = 0, streakDays = 1) {
     try {
       const today = new Date().toDateString();
       const lastScheduled = await AsyncStorage.getItem("kelime-patlat:last-reminder-scheduled");
       if (lastScheduled === today) return;
 
       await AsyncStorage.setItem("kelime-patlat:last-reminder-scheduled", today);
-      console.log("[NotificationManager] Local engagement reminders active.", { currentLives, nextLifeTimerSeconds });
+      console.log("[NotificationManager] Local engagement reminders active.", { currentLives, nextLifeTimerSeconds, streakDays });
 
       if (Platform.OS === "web") return;
 
@@ -34,7 +34,8 @@ export const notificationManager = {
         await notificationsService.scheduleLivesRefillNotification(totalSeconds);
       }
 
-      await notificationsService.scheduleEveningStreakReminder();
+      await notificationsService.scheduleEveningStreakReminder(streakDays);
+      await notificationsService.scheduleRushHourReminder();
     } catch (e) {
       console.warn("[NotificationManager] Failed to init reminders", e);
     }

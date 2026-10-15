@@ -129,11 +129,16 @@ export function applyMatchProgress(
   } else if (type === "pvp") {
     if (result.won) {
       baseXP = 25;
-      lpGain = isEntryTier ? 30 : isHighTier ? 20 : 25;
+      let baseLp = isEntryTier ? 30 : isHighTier ? 20 : 25;
       if (isCrushingWin) {
-        lpGain += 5; // Ezici galibiyet bonusu
+        baseLp += 5; // Ezici galibiyet bonusu
       }
-      lpGain += streakBonus; // Galibiyet serisi bonusu (2. galibiyette +3 LP, 3+ galibiyette +7 LP)
+      baseLp += streakBonus; // Galibiyet serisi bonusu (2. galibiyette +3 LP, 3+ galibiyette +7 LP)
+      
+      // Rush Hour (Altın Saat Turnuvası: 20:00 - 21:00 arası 2x LP)
+      const currentHour = new Date().getHours();
+      const isRushHour = currentHour >= 20 && currentHour < 21;
+      lpGain = isRushHour ? baseLp * 2 : baseLp;
     } else if (result.isDraw) {
       baseXP = 12;
       lpGain = 0;
@@ -230,6 +235,36 @@ export function applyMatchProgress(
     }
   }
 
+  // Lügat Koleksiyoncusu Kart Paketi Kazanımı:
+  // PvP galibiyetinde veya solo tamamlama durumunda kart düşme şansı
+  let updatedCardAlbum = progress.cardAlbum ? { ...progress.cardAlbum } : { ownedCardIds: [], completedSets: [] };
+  let cardAlbumRewardChips = 0;
+  if (result.won && (type === "pvp" || type === "solo")) {
+    const cardDropChance = type === "pvp" ? 0.45 : 0.25;
+    if (Math.random() < cardDropChance) {
+      const setDefinitions = [
+        { id: "eski_turkce", cards: ["et_1", "et_2", "et_3", "et_4", "et_5", "et_6"], rewardChips: 500 },
+        { id: "dogadaki_mucizeler", cards: ["dm_1", "dm_2", "dm_3", "dm_4", "dm_5", "dm_6"], rewardChips: 400 },
+        { id: "gokyuzu_ve_uzay", cards: ["gu_1", "gu_2", "gu_3", "gu_4", "gu_5", "gu_6"], rewardChips: 600 },
+      ];
+      const randomSetDef = setDefinitions[Math.floor(Math.random() * setDefinitions.length)]!;
+      const droppedCardId = randomSetDef.cards[Math.floor(Math.random() * randomSetDef.cards.length)]!;
+      const existingOwned = new Set(updatedCardAlbum.ownedCardIds);
+      existingOwned.add(droppedCardId);
+      updatedCardAlbum.ownedCardIds = Array.from(existingOwned);
+
+      // Set tamamlandı mı kontrol et
+      const completedSetsSet = new Set(updatedCardAlbum.completedSets || []);
+      for (const setDef of setDefinitions) {
+        if (!completedSetsSet.has(setDef.id) && setDef.cards.every((c) => existingOwned.has(c))) {
+          completedSetsSet.add(setDef.id);
+          cardAlbumRewardChips += setDef.rewardChips;
+        }
+      }
+      updatedCardAlbum.completedSets = Array.from(completedSetsSet);
+    }
+  }
+
   let nextMissions: Record<string, number> = {
     ...progress.missions,
     daily: progress.missions?.daily ?? 0,
@@ -305,7 +340,7 @@ export function applyMatchProgress(
     ...progress,
     xp: progress.xp + xpGain,
     lp: nextLp,
-    coins: (progress.coins ?? 0) + coinsEarned,
+    coins: (progress.coins ?? 0) + coinsEarned + cardAlbumRewardChips,
     pvpWinStreak: type === "pvp" && !isFriend ? pvpWinStreak : (progress.pvpWinStreak ?? 0),
     streakShields: shieldUsed ? streakShields : (progress.streakShields ?? 0),
     wins: progress.wins + (result.won && !isFriend ? 1 : 0),
@@ -322,6 +357,8 @@ export function applyMatchProgress(
       ? recordWeekendHuntWords(progress, foundWordsList).weekendHunt
       : progress.weekendHunt,
     matchHistory: updatedMatchHistory,
+    cardAlbum: updatedCardAlbum,
+    activeStreakBoost: (type === "pvp" && !isFriend ? pvpWinStreak : (progress.pvpWinStreak ?? 0)) >= 3,
     lastMatchReward: {
       xp: xpGain,
       lp: effectiveLpChange,
@@ -495,6 +532,7 @@ export function applyVintageProgress(
       maxUnlockedLevel: nextMaxUnlocked,
       completedLevels: nextCompleted,
       score: nextScore,
+      levelStars: currentVintage?.levelStars ?? {},
     },
     weekendHunt: isWeekendActive() && foundWords && foundWords.length > 0
       ? recordWeekendHuntWords(progress, foundWords).weekendHunt
@@ -574,3 +612,73 @@ export function completeDailyProgress(
     matchHistory: nextHistory,
   };
 }
+
+export function applyKelimematikProgress(
+  progress: PlayerProgress,
+  score: number,
+  wordsCount: number,
+  wave: number,
+  foundWords: string[] = []
+): { updatedProgress: PlayerProgress; xpGained: number; coinsGained: number; isNewHighScore: boolean } {
+  const safeScore = Math.max(0, Math.round(score));
+  const safeWordsCount = Math.max(0, wordsCount);
+  const currentBest = progress.bestKelimematikScore ?? 0;
+  const isNewHighScore = safeScore > currentBest;
+
+  // XP & Çip formülü: Her 5 puana 1 XP, Her 30 puana 1 Çip (Maks 35 çip/oyun)
+  const xpGained = Math.floor(safeScore / 5);
+  const coinsGained = Math.min(35, Math.floor(safeScore / 30));
+
+  // Görevler & Word Book keşifleri
+  const validWordsToDiscover = foundWords
+    .filter((w) => typeof w === "string" && w.trim().length >= 3)
+    .map((w) => normalizeTrUpper(w));
+  const updatedDiscoveredWords = Array.from(new Set([
+    ...(progress.discoveredWords || []),
+    ...validWordsToDiscover,
+  ])).slice(-2000);
+
+  const activeCatalog = [...getDailyMissions(getDayId()), ...getWeeklyMissions(getWeekId())];
+  let updatedMissions = updateMissionAction(progress.missions, activeCatalog, "word_count", safeWordsCount);
+  if (coinsGained > 0) {
+    updatedMissions = updateMissionAction(updatedMissions, activeCatalog, "earn_chips", coinsGained);
+  }
+  for (const w of foundWords) {
+    if (w.length >= 5) {
+      updatedMissions = updateMissionAction(updatedMissions, activeCatalog, "word_length", 1, w.length);
+    }
+  }
+
+  const kelimematikHistoryItem: MatchHistoryEntry = {
+    id: `km_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    mode: "arcade",
+    won: safeScore >= 200,
+    myScore: safeScore,
+    xpEarned: xpGained,
+    coinsEarned: coinsGained,
+    wordsCount: safeWordsCount,
+    date: Date.now(),
+  };
+
+  const nextHistory = [kelimematikHistoryItem, ...(progress.matchHistory || [])].slice(0, 50);
+
+  const updatedProgress: PlayerProgress = {
+    ...progress,
+    xp: (progress.xp || 0) + xpGained,
+    coins: (progress.coins || 0) + coinsGained,
+    bestKelimematikScore: Math.max(currentBest, safeScore),
+    bestArcadeScore: Math.max(progress.bestArcadeScore || 0, safeScore),
+    missions: updatedMissions,
+    discoveredWords: updatedDiscoveredWords,
+    matchHistory: nextHistory,
+    matches: (progress.matches || 0) + 1,
+  };
+
+  return {
+    updatedProgress,
+    xpGained,
+    coinsGained,
+    isNewHighScore,
+  };
+}
+

@@ -94,7 +94,7 @@ export const ProfileDeleteModal = React.memo(({
             value={deleteConfirmInput}
             onChangeText={setDeleteConfirmInput}
             placeholder="SİL"
-            placeholderTextColor="#ed4343"
+            placeholderTextColor="rgba(237, 67, 67, 0.4)"
             autoCapitalize="characters"
             style={styles.deleteModalInput}
           />
