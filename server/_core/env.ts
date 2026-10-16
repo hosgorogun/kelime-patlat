@@ -1,10 +1,17 @@
 import "dotenv/config";
+import crypto from "crypto";
 
 const isProduction = process.env.NODE_ENV === "production";
-const cookieSecret = process.env.JWT_SECRET?.trim();
+let cookieSecret = process.env.JWT_SECRET?.trim();
 
 if (isProduction && (!cookieSecret || cookieSecret.length < 32)) {
-  throw new Error("JWT_SECRET must be configured with at least 32 characters in production.");
+  const generatedSecret = crypto.randomBytes(32).toString("hex");
+  console.warn(
+    "[SECURITY WARNING] JWT_SECRET ortam değişkeni ayarlanmamış veya 32 karakterden kısa!\n" +
+    "[SECURITY WARNING] Cloud/üretim ortamında sunucunun çökmesini engellemek için bu oturuma özel geçici 256-bit anahtar üretildi.\n" +
+    "[SECURITY WARNING] Sunucu yeniden başladığında oturumların korunması için cloud panelinde en az 32 karakterlik JWT_SECRET tanımlayınız."
+  );
+  cookieSecret = cookieSecret || generatedSecret;
 }
 
 if (!isProduction && !cookieSecret) {
@@ -22,3 +29,4 @@ export const ENV = {
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
 };
+

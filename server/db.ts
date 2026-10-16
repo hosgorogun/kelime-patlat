@@ -431,6 +431,19 @@ export async function seedDemoUser() {
   }
 }
 
+// Global connection lifecycle event listeners for production resilience
+mongoose.connection.on("connected", () => {
+  console.log("[MongoDB] Veritabanı bağlantısı kuruldu.");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.warn("[MongoDB] Veritabanı bağlantı uyarısı:", err?.message || err);
+});
+
+mongoose.connection.on("disconnected", () => {
+  console.warn("[MongoDB] Veritabanı bağlantısı koptu. Bellek içi mod devrede.");
+});
+
 let connectionPromise: Promise<typeof mongoose> | null = null;
 let hasSeededDemoUser = false;
 
@@ -444,7 +457,8 @@ export async function connectDb() {
   }
   if (!connectionPromise || mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
     connectionPromise = mongoose.connect(databaseUri(), {
-      serverSelectionTimeoutMS: 4000
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
     }).then((m) => {
       hasSeededDemoUser = true;
       seedDemoUser().catch((err) => console.error("[DB] seedDemoUser failed:", err));

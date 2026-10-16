@@ -354,18 +354,26 @@ export const ConnectLine = React.memo(function ConnectLine({
   opacity?: number;
   showArrow?: boolean;
 }) {
-  const length = Math.hypot(x2 - x1, y2 - y1);
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.hypot(dx, dy);
+  if (length < 1) return null;
+
+  const cx = (x1 + x2) / 2;
+  const cy = (y1 + y2) / 2;
+  const angle = Math.atan2(dy, dx);
+  const LINE_HEIGHT = 12;
+
   return (
     <View
       pointerEvents="none"
       style={{
         position: "absolute",
-        left: x1,
-        top: y1,
+        left: cx - length / 2,
+        top: cy - LINE_HEIGHT / 2,
         width: length,
-        height: 0,
-        transform: [{ rotate: `${Math.atan2(y2 - y1, x2 - x1)}rad` }],
-        transformOrigin: "0% 50%",
+        height: LINE_HEIGHT,
+        transform: [{ rotate: `${angle}rad` }],
         zIndex: 20,
         opacity,
       }}
@@ -374,8 +382,8 @@ export const ConnectLine = React.memo(function ConnectLine({
       <View
         style={{
           position: "absolute",
-          top: -6,
           left: -2,
+          top: 0,
           width: length + 4,
           height: 12,
           borderRadius: 6,
@@ -387,8 +395,8 @@ export const ConnectLine = React.memo(function ConnectLine({
       <View
         style={{
           position: "absolute",
-          top: -3.5,
           left: 0,
+          top: 2.5,
           width: length,
           height: 7,
           borderRadius: 3.5,
@@ -399,11 +407,11 @@ export const ConnectLine = React.memo(function ConnectLine({
       <View
         style={{
           position: "absolute",
-          top: -1.25,
           left: 2,
+          top: 4.75,
           width: Math.max(0, length - 4),
           height: 2.5,
-          borderRadius: 1.5,
+          borderRadius: 1.25,
           backgroundColor: "rgba(255, 255, 255, 0.72)",
         }}
       />
@@ -412,7 +420,9 @@ export const ConnectLine = React.memo(function ConnectLine({
           style={{
             position: "absolute",
             left: length - 12,
-            top: -6,
+            top: 0,
+            width: 0,
+            height: 0,
             borderTopWidth: 6,
             borderBottomWidth: 6,
             borderLeftWidth: 10,

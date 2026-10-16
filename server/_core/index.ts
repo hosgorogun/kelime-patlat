@@ -1,13 +1,18 @@
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = "production";
+}
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import path from "node:path";
 import fs from "node:fs";
 import net from "net";
+import mongoose from "mongoose";
 import { Server as SocketIOServer } from "socket.io";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { registerGameRooms } from "../game/rooms";
+import { connectDb } from "../db";
 
 // Process level safety handlers for production stability
 process.on("uncaughtException", (error) => {
@@ -57,9 +62,23 @@ async function startServer() {
       .map((value) => value.trim().replace(/\/$/, ""))
       .filter(Boolean),
   );
-  const isAllowedOrigin = (origin?: string) => !origin || allowedOrigins.has(origin.replace(/\/$/, ""));
+  const allowAllOrigins = allowedOrigins.has("*") || !process.env.CORS_ORIGINS?.trim();
+  const isAllowedOrigin = (origin?: string) => {
+    if (!origin || origin === "null") return true;
+    if (allowAllOrigins) return true;
+    return allowedOrigins.has(origin.replace(/\/$/, ""));
+  };
   const io = new SocketIOServer(server, {
-    cors: { origin: (origin, callback) => callback(null, isAllowedOrigin(origin) ? origin : false), credentials: true },
+    cors: {
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+          callback(null, origin || true);
+        } else {
+          callback(new Error("CORS origin not allowed"), false);
+        }
+      },
+      credentials: true,
+    },
   });
 
   app.set("trust proxy", 1);
@@ -70,6 +89,8 @@ async function startServer() {
     if (origin && isAllowedOrigin(origin)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header("Vary", "Origin");
+    } else if (!origin && allowAllOrigins) {
+      res.header("Access-Control-Allow-Origin", "*");
     }
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header(
@@ -150,8 +171,76 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
-  app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, timestamp: Date.now() });
+  function formatUptime(seconds: number): string {
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const parts = [];
+    if (d > 0) parts.push(`${d}g`);
+    if (h > 0) parts.push(`${h}sa`);
+    if (m > 0) parts.push(`${m}dk`);
+    parts.push(`${s}sn`);
+    return parts.join(" ") || "0sn";
+  }
+
+  const dbStateMap: Record<number, string> = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+  };
+
+  // Comprehensive health & status endpoint for cloud monitoring & production diagnostics
+  app.get(["/health", "/api/health"], (_req, res) => {
+    const uptimeSec = Math.floor(process.uptime());
+    const mem = process.memoryUsage();
+    const readyState = mongoose.connection.readyState;
+    const dbStatus = dbStateMap[readyState] || "unknown";
+
+    res.json({
+      ok: true,
+      status: readyState === 1 ? "healthy" : "degraded",
+      server: {
+        name: "Kelime Patlat Server",
+        version: "1.0.0",
+        environment: process.env.NODE_ENV || "production",
+        uptimeSeconds: uptimeSec,
+        uptime: formatUptime(uptimeSec),
+        nodeVersion: process.version,
+        timestamp: new Date().toISOString(),
+      },
+      database: {
+        status: dbStatus,
+        connected: readyState === 1,
+        host: mongoose.connection.host || "in-memory-fallback",
+        name: mongoose.connection.name || "kelime_patlat",
+      },
+      websocket: {
+        activeClients: io.engine?.clientsCount ?? 0,
+        activeRooms: io.sockets?.adapter?.rooms?.size ?? 0,
+      },
+      system: {
+        memoryRssMb: Math.round(mem.rss / 1024 / 1024),
+        heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotalMb: Math.round(mem.heapTotal / 1024 / 1024),
+      },
+    });
+  });
+
+  // Root endpoint fallback for API-only deployments (when static dist/index.html is not served)
+  app.get("/", (req, res, next) => {
+    const staticDir = path.resolve(process.cwd(), "dist");
+    if (fs.existsSync(path.join(staticDir, "index.html"))) {
+      return next();
+    }
+    res.json({
+      ok: true,
+      name: "Kelime Patlat API Server",
+      status: "online",
+      env: process.env.NODE_ENV,
+      timestamp: Date.now(),
+    });
   });
 
   // Mount Modular Routes
@@ -176,21 +265,44 @@ async function startServer() {
 
   registerGameRooms(io);
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  // Pre-warm database connection in background
+  connectDb().catch((err) => {
+    console.warn("[Database] Başlangıçta veritabanına bağlanılamadı (bellek içi mod aktif):", err?.message || err);
+  });
 
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  const host = process.env.HOST || "0.0.0.0";
+  const preferredPort = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  let port = preferredPort;
+
+  // In local development without an explicit PORT, find next available port if 3000 is occupied
+  if (!process.env.PORT && process.env.NODE_ENV !== "production") {
+    port = await findAvailablePort(preferredPort);
+    if (port !== preferredPort) {
+      console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    }
   }
 
-  server.listen(port, () => {
-    console.log(`[api] server listening on port ${port}`);
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`[Server CRITICAL] Port ${port} is already in use.`);
+      process.exit(1);
+    } else {
+      console.error("[Server CRITICAL] Server error:", err);
+      process.exit(1);
+    }
+  });
+
+  server.listen(port, host, () => {
+    console.log(`[api] server listening on http://${host === "0.0.0.0" ? "localhost" : host}:${port} (bound to ${host}, env: ${process.env.NODE_ENV})`);
   });
 
   const shutdown = async (signal: string) => {
     console.log(`[Server] ${signal} alındı, sunucu güvenle kapatılıyor...`);
     try {
       io.close();
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close().catch(() => {});
+      }
       server.close(() => {
         console.log("[Server] HTTP sunucusu kapatıldı.");
         process.exit(0);

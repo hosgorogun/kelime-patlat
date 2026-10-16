@@ -10,10 +10,32 @@ export interface AdMobConfig {
   testMode: boolean;
 }
 
-function getNativeModule(name: string): any {
+function getReactNativeModule(): any {
   try {
     if (typeof require !== "undefined") {
-      return require(name);
+      return require("react-native");
+    }
+  } catch {
+    // Web, test veya Node ESM ortamı
+  }
+  return null;
+}
+
+function getExpoConstantsModule(): any {
+  try {
+    if (typeof require !== "undefined") {
+      return require("expo-constants");
+    }
+  } catch {
+    // Web, test veya Node ESM ortamı
+  }
+  return null;
+}
+
+function getGoogleMobileAdsModule(): any {
+  try {
+    if (typeof require !== "undefined") {
+      return require("react-native-google-mobile-ads");
     }
   } catch {
     // Web, test veya Node ESM ortamı
@@ -23,7 +45,7 @@ function getNativeModule(name: string): any {
 
 export function getPlatformOS(): "android" | "ios" | "web" {
   try {
-    const rn = getNativeModule("react-native");
+    const rn = getReactNativeModule();
     if (rn?.Platform?.OS) return rn.Platform.OS;
   } catch {
     // Headless, Node veya Test ortamı
@@ -33,7 +55,7 @@ export function getPlatformOS(): "android" | "ios" | "web" {
 
 function getExpoExtra(): any {
   try {
-    const expoConstants = getNativeModule("expo-constants");
+    const expoConstants = getExpoConstantsModule();
     const Constants = expoConstants?.default || expoConstants;
     return Constants?.expoConfig?.extra?.admob || {};
   } catch {
@@ -110,7 +132,7 @@ export function getBannerAdUnitId(): string {
   const config = getAdMobConfig();
   if (config.testMode) {
     try {
-      const gma = getNativeModule("react-native-google-mobile-ads");
+      const gma = getGoogleMobileAdsModule();
       if (gma?.TestIds?.BANNER) return gma.TestIds.BANNER;
     } catch {
       // Fallback to static test ids if package mock is used
@@ -127,7 +149,7 @@ export function getInterstitialAdUnitId(): string {
   const config = getAdMobConfig();
   if (config.testMode) {
     try {
-      const gma = getNativeModule("react-native-google-mobile-ads");
+      const gma = getGoogleMobileAdsModule();
       if (gma?.TestIds?.INTERSTITIAL) return gma.TestIds.INTERSTITIAL;
     } catch {
       // Fallback to static test ids
@@ -146,7 +168,7 @@ export function getRewardedAdUnitId(): string {
   const config = getAdMobConfig();
   if (config.testMode) {
     try {
-      const gma = getNativeModule("react-native-google-mobile-ads");
+      const gma = getGoogleMobileAdsModule();
       if (gma?.TestIds?.REWARDED) return gma.TestIds.REWARDED;
     } catch {
       // Fallback to static test ids
@@ -177,7 +199,7 @@ class AdMobService {
 
     this.initializingPromise = (async () => {
       try {
-        const gma = getNativeModule("react-native-google-mobile-ads");
+        const gma = getGoogleMobileAdsModule();
         const mobileAds = gma?.default || gma;
         if (typeof mobileAds === "function") {
           await mobileAds().initialize();
@@ -212,7 +234,7 @@ class AdMobService {
 
     try {
       await this.initialize();
-      const gma = getNativeModule("react-native-google-mobile-ads");
+      const gma = getGoogleMobileAdsModule();
       if (!gma?.InterstitialAd) {
         handleClose();
         return;
@@ -291,7 +313,7 @@ class AdMobService {
 
     try {
       await this.initialize();
-      const gma = getNativeModule("react-native-google-mobile-ads");
+      const gma = getGoogleMobileAdsModule();
       if (!gma?.RewardedAd) {
         onReward();
         return;

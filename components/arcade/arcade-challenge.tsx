@@ -209,6 +209,12 @@ export function ArcadeChallenge({
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
   const lastTouchedIndexRef = useRef<number | null>(null);
+  const gestureAnchorRef = useRef<{
+    locX: number;
+    locY: number;
+    pageX: number;
+    pageY: number;
+  } | null>(null);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -688,6 +694,7 @@ export function ArcadeChallenge({
   };
 
   const finish = () => {
+    gestureAnchorRef.current = null;
     lastTouchedIndexRef.current = -1;
     const wasPointerActive = pointerActive.current;
     pointerActive.current = false;
@@ -729,60 +736,83 @@ export function ArcadeChallenge({
     }
   };
 
-  const getEventBoardCoords = (event: any) => {
-    const ne = event.nativeEvent ?? event;
-
-    if (Platform.OS === "web" || (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function")) {
-      if (event.currentTarget?.getBoundingClientRect) {
-        const rect = event.currentTarget.getBoundingClientRect();
-        const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
-        const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
-        return {
-          x: clientX - rect.left,
-          y: clientY - rect.top,
-        };
-      }
-    }
-
-    const { pageX, pageY } = getEventPageCoords(event);
-    if ((boardPageX.current > 0 || boardPageY.current > 0) && pageX !== undefined && pageY !== undefined && (pageX > 0 || pageY > 0)) {
-      return {
-        x: pageX - boardPageX.current,
-        y: pageY - boardPageY.current,
-      };
-    }
-
-    const x = ne.locationX ?? ne.offsetX;
-    const y = ne.locationY ?? ne.offsetY;
-    if (x !== undefined && y !== undefined) {
-      return { x, y };
-    }
-
-    return {
-      x: (pageX || 0) - boardPageX.current,
-      y: (pageY || 0) - boardPageY.current,
-    };
-  };
-
   const handleGestureStart = (event: any) => {
     if (status !== "playing") return;
     lastTouchedIndexRef.current = -1;
     event.preventDefault?.();
     event.stopPropagation?.();
     measureBoard();
-    const { x, y } = getEventBoardCoords(event);
-    handleGesture(x, y);
+
+    const ne = event.nativeEvent ?? event;
+    const { pageX, pageY } = getEventPageCoords(event);
+
+    let startX: number;
+    let startY: number;
+
+    if (Platform.OS === "web" && event.currentTarget?.getBoundingClientRect) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+      startX = clientX - rect.left;
+      startY = clientY - rect.top;
+    } else if (ne.locationX !== undefined && !isNaN(ne.locationX) && ne.locationY !== undefined && !isNaN(ne.locationY)) {
+      startX = ne.locationX;
+      startY = ne.locationY;
+    } else if (boardPageX.current > 0 || boardPageY.current > 0) {
+      startX = pageX - boardPageX.current;
+      startY = pageY - boardPageY.current;
+    } else {
+      startX = ne.offsetX ?? 0;
+      startY = ne.offsetY ?? 0;
+    }
+
+    gestureAnchorRef.current = {
+      locX: startX,
+      locY: startY,
+      pageX,
+      pageY,
+    };
+
+    handleGesture(startX, startY);
   };
 
   const handleGestureMove = (event: any) => {
     if (status !== "playing" || !pointerActive.current) return;
     event.preventDefault?.();
     event.stopPropagation?.();
-    const { x, y } = getEventBoardCoords(event);
-    handleGesture(x, y);
+
+    const ne = event.nativeEvent ?? event;
+    const { pageX, pageY } = getEventPageCoords(event);
+
+    if (Platform.OS === "web" && event.currentTarget?.getBoundingClientRect) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+      handleGesture(clientX - rect.left, clientY - rect.top);
+      return;
+    }
+
+    let currentX: number;
+    let currentY: number;
+
+    if (gestureAnchorRef.current) {
+      const deltaX = pageX - gestureAnchorRef.current.pageX;
+      const deltaY = pageY - gestureAnchorRef.current.pageY;
+      currentX = gestureAnchorRef.current.locX + deltaX;
+      currentY = gestureAnchorRef.current.locY + deltaY;
+    } else if (ne.locationX !== undefined && ne.locationY !== undefined) {
+      currentX = ne.locationX;
+      currentY = ne.locationY;
+    } else {
+      currentX = pageX - boardPageX.current;
+      currentY = pageY - boardPageY.current;
+    }
+
+    handleGesture(currentX, currentY);
   };
 
   const handleGestureEnd = (event?: any) => {
+    gestureAnchorRef.current = null;
     if (event?.target?.releasePointerCapture) {
       try {
         event.target.releasePointerCapture(event.pointerId ?? event.nativeEvent?.pointerId);

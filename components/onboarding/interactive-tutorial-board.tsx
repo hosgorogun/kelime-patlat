@@ -48,6 +48,7 @@ export function InteractiveTutorialBoard({ onInteractingChange }: InteractiveTut
 
   const pointerActiveRef = useRef(false);
   const lastTouchedIndexRef = useRef<number | null>(null);
+  const anchorRef = useRef<{ locX: number; locY: number; pageX: number; pageY: number } | null>(null);
   const boardRef = useRef<View>(null);
   const boardPageX = useRef(0);
   const boardPageY = useRef(0);
@@ -306,19 +307,41 @@ export function InteractiveTutorialBoard({ onInteractingChange }: InteractiveTut
                 onTouchStart: (e: any) => {
                   measureBoard();
                   const ne = e.nativeEvent ?? e;
-                  const x = ne.locationX ?? (ne.pageX - boardPageX.current);
-                  const y = ne.locationY ?? (ne.pageY - boardPageY.current);
+                  const pageX = ne.touches?.[0]?.pageX ?? ne.pageX ?? 0;
+                  const pageY = ne.touches?.[0]?.pageY ?? ne.pageY ?? 0;
+                  const x = (ne.locationX !== undefined && !isNaN(ne.locationX))
+                    ? ne.locationX
+                    : (pageX - boardPageX.current);
+                  const y = (ne.locationY !== undefined && !isNaN(ne.locationY))
+                    ? ne.locationY
+                    : (pageY - boardPageY.current);
+                  anchorRef.current = { locX: x, locY: y, pageX, pageY };
                   const cell = getCellFromLocalCoords(x, y);
                   if (cell !== null) handlePointerDownCell(cell);
                 },
                 onTouchMove: (e: any) => {
                   const ne = e.nativeEvent ?? e;
-                  const x = ne.locationX ?? (ne.pageX - boardPageX.current);
-                  const y = ne.locationY ?? (ne.pageY - boardPageY.current);
+                  const pageX = ne.touches?.[0]?.pageX ?? ne.pageX ?? 0;
+                  const pageY = ne.touches?.[0]?.pageY ?? ne.pageY ?? 0;
+                  let x: number;
+                  let y: number;
+                  if (anchorRef.current) {
+                    x = anchorRef.current.locX + (pageX - anchorRef.current.pageX);
+                    y = anchorRef.current.locY + (pageY - anchorRef.current.pageY);
+                  } else {
+                    x = ne.locationX ?? (pageX - boardPageX.current);
+                    y = ne.locationY ?? (pageY - boardPageY.current);
+                  }
                   handlePointerMoveCoords(x, y);
                 },
-                onTouchEnd: handlePointerUp,
-                onTouchCancel: handlePointerUp,
+                onTouchEnd: () => {
+                  anchorRef.current = null;
+                  handlePointerUp();
+                },
+                onTouchCancel: () => {
+                  anchorRef.current = null;
+                  handlePointerUp();
+                },
               })}
         />
       </View>

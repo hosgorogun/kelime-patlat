@@ -25,6 +25,12 @@ export function useBoardSelection({
   const pendingWordTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastGestureStartTimeRef = useRef(0);
   const lastTouchedIndexRef = useRef<number | null>(null);
+  const gestureAnchorRef = useRef<{
+    locX: number;
+    locY: number;
+    pageX: number;
+    pageY: number;
+  } | null>(null);
 
   const boardRef = useRef<View>(null);
   const boardPageX = useRef(0);
@@ -244,43 +250,6 @@ export function useBoardSelection({
     return { pageX: ne.pageX ?? 0, pageY: ne.pageY ?? 0 };
   };
 
-  const getEventBoardCoords = (event: any) => {
-    const ne = event.nativeEvent ?? event;
-
-    // Web / DOM ortamı
-    if (Platform.OS === "web" || (event.currentTarget && typeof event.currentTarget.getBoundingClientRect === "function")) {
-      if (event.currentTarget?.getBoundingClientRect) {
-        const rect = event.currentTarget.getBoundingClientRect();
-        const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
-        const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
-        return {
-          x: clientX - rect.left,
-          y: clientY - rect.top,
-        };
-      }
-    }
-
-    // Mobil (Android / iOS): Tahta pozisyonu biliniyorsa pageX/pageY kullanımı alt eleman kaymalarından etkilenmez
-    const { pageX, pageY } = getEventPageCoords(event);
-    if ((boardPageX.current > 0 || boardPageY.current > 0) && pageX !== undefined && pageY !== undefined && (pageX > 0 || pageY > 0)) {
-      return {
-        x: pageX - boardPageX.current,
-        y: pageY - boardPageY.current,
-      };
-    }
-
-    const x = ne.locationX ?? ne.offsetX;
-    const y = ne.locationY ?? ne.offsetY;
-    if (x !== undefined && y !== undefined) {
-      return { x, y };
-    }
-
-    return {
-      x: (pageX || 0) - boardPageX.current,
-      y: (pageY || 0) - boardPageY.current,
-    };
-  };
-
   const handleGestureStart = (event: any) => {
     event.preventDefault?.();
     event.stopPropagation?.();
@@ -291,19 +260,79 @@ export function useBoardSelection({
     lastTouchedIndexRef.current = null;
     setIsSelecting(true);
     measureBoard();
-    const { x, y } = getEventBoardCoords(event);
-    handleGesture(x, y);
+
+    const ne = event.nativeEvent ?? event;
+    const { pageX, pageY } = getEventPageCoords(event);
+
+    let startX: number;
+    let startY: number;
+
+    if (Platform.OS === "web" && event.currentTarget?.getBoundingClientRect) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+      startX = clientX - rect.left;
+      startY = clientY - rect.top;
+    } else if (ne.locationX !== undefined && !isNaN(ne.locationX) && ne.locationY !== undefined && !isNaN(ne.locationY)) {
+      // iOS / Android: Dokunma overlay view'a doğrudan ulaştığında locationX/Y view içindeki kesin koordinattır
+      startX = ne.locationX;
+      startY = ne.locationY;
+    } else if (boardPageX.current > 0 || boardPageY.current > 0) {
+      startX = pageX - boardPageX.current;
+      startY = pageY - boardPageY.current;
+    } else {
+      startX = ne.offsetX ?? 0;
+      startY = ne.offsetY ?? 0;
+    }
+
+    // Hareket sırasında sayfa kaymalarından/güvenli alan farklarından etkilenmemek için başlangıç noktasını sabitle
+    gestureAnchorRef.current = {
+      locX: startX,
+      locY: startY,
+      pageX,
+      pageY,
+    };
+
+    handleGesture(startX, startY);
   };
 
   const handleGestureMove = (event: any) => {
     event.preventDefault?.();
     event.stopPropagation?.();
     if (!selectionActiveRef.current) return;
-    const { x, y } = getEventBoardCoords(event);
-    handleGesture(x, y);
+
+    const ne = event.nativeEvent ?? event;
+    const { pageX, pageY } = getEventPageCoords(event);
+
+    if (Platform.OS === "web" && event.currentTarget?.getBoundingClientRect) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clientX = ne.clientX ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientX : 0);
+      const clientY = ne.clientY ?? (ne.touches && ne.touches[0] ? ne.touches[0].clientY : 0);
+      handleGesture(clientX - rect.left, clientY - rect.top);
+      return;
+    }
+
+    let currentX: number;
+    let currentY: number;
+
+    if (gestureAnchorRef.current) {
+      const deltaX = pageX - gestureAnchorRef.current.pageX;
+      const deltaY = pageY - gestureAnchorRef.current.pageY;
+      currentX = gestureAnchorRef.current.locX + deltaX;
+      currentY = gestureAnchorRef.current.locY + deltaY;
+    } else if (ne.locationX !== undefined && ne.locationY !== undefined) {
+      currentX = ne.locationX;
+      currentY = ne.locationY;
+    } else {
+      currentX = pageX - boardPageX.current;
+      currentY = pageY - boardPageY.current;
+    }
+
+    handleGesture(currentX, currentY);
   };
 
   const handleGestureEnd = () => {
+    gestureAnchorRef.current = null;
     setIsSelecting(false);
     if (!selectionActiveRef.current) return;
     selectionActiveRef.current = false;
@@ -312,6 +341,7 @@ export function useBoardSelection({
   };
 
   const handleGestureCancel = () => {
+    gestureAnchorRef.current = null;
     setIsSelecting(false);
     if (!selectionActiveRef.current) return;
     selectionActiveRef.current = false;

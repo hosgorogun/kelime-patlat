@@ -364,7 +364,7 @@ describe("Arkadaşlık ve Sosyal Sistem Testleri", () => {
       const friend: FriendUser = {
         id: "usr_ismail",
         name: "İSMAİL IŞIK",
-        username: "ismail_isik",
+        username: "ismail_ışık",
         avatar: "🎮",
         isOnline: true,
         xp: 3000,
