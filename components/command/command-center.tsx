@@ -30,7 +30,7 @@ type CommandCenterProps = {
   onShowGuide: () => void;
   unclaimedMissionsCount?: number;
   unclaimedMilestonesCount?: number;
-  onClaimDailyReward?: () => void;
+  onClaimDailyReward?: (isDoubled?: boolean) => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
   onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo" | "kelimematik") => void;
   onOpenLivesModal?: () => void;
@@ -82,7 +82,7 @@ export function CommandCenter({
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
-  const hasAutoOpenedDailyRewardRef = useRef(false);
+  const lastAutoOpenedDateRef = useRef<string | null>(null);
   const [livesCalc, setLivesCalc] = useState(() => getCalculatedLives(progress));
   const [imgError, setImgError] = useState(false);
   const [displayCoins, setDisplayCoins] = useState(() => progress.coins ?? 0);
@@ -142,14 +142,14 @@ export function CommandCenter({
   const { canSpin: canSpinWheel } = canSpinLuckyWheel(progress);
 
   useEffect(() => {
-    if (!isClaimedToday && !hasAutoOpenedDailyRewardRef.current && progress.welcomeRewardClaimed) {
-      hasAutoOpenedDailyRewardRef.current = true;
+    if (!isClaimedToday && lastAutoOpenedDateRef.current !== todayId && progress.welcomeRewardClaimed) {
+      lastAutoOpenedDateRef.current = todayId;
       const timer = setTimeout(() => {
         setShowDailyRewardModal(true);
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [isClaimedToday, progress.welcomeRewardClaimed]);
+  }, [isClaimedToday, todayId, progress.welcomeRewardClaimed]);
 
   const activeAvatar = AVATARS.find((a) => a.id === progress.selectedAvatar) ?? AVATARS[0]!;
   const activeFrame = PROFILE_FRAMES.find((f) => f[0] === progress.selectedFrame);
@@ -856,16 +856,16 @@ export function CommandCenter({
         </Pressable>
       </View>
 
-      {/* 4. YENİ TETRİS HAYATTA KALMA: KELİMEMATİK (YAKINDA) */}
+      {/* 4. TETRİS HAYATTA KALMA: KELİMEMATİK */}
       <Pressable
         onPress={() => {
           triggerHapticSelection();
-          onShowToast?.("Kelimematik Modu", "Çok yakında sizlerle! Geliştirme süreci devam ediyor.", "⏳", "#0284C7");
+          setShowKelimematikPreviewModal(true);
         }}
         style={({ pressed }) => [{ width: "100%", marginTop: 8 }, pressed && styles.pressed]}
       >
-        <OrnatePanel accent="sapphire" showJewels={false} contentStyle={[styles.soloHorizontalSkin, { opacity: 0.85 }]}>
-          <GameIcon source={ICONS.play} size={40} glow="#94A3B8" />
+        <OrnatePanel accent="sapphire" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
+          <GameIcon source={ICONS.play} size={40} glow="#38BDF8" />
           <View style={styles.soloMetaCol}>
             <View style={styles.soloEyebrowRow}>
               <View
@@ -878,36 +878,29 @@ export function CommandCenter({
                   borderRadius: 6,
                 }}
               >
-                <Text style={[styles.soloEyebrowText, { color: "#2563EB" }]}>
-                  ⏳ ÇOK YAKINDA
+                <Text style={[styles.soloEyebrowText, { color: "#0284C7" }]}>
+                  {progress.bestKelimematikScore ? `EN İYİ: ${progress.bestKelimematikScore} P` : "⚡ 5×8 TETRİS HAYATTA KALMA"}
                 </Text>
               </View>
             </View>
             <Text numberOfLines={1} style={styles.soloHeading}>KELİMEMATİK</Text>
-            <Text numberOfLines={1} style={[styles.soloDescEmerald, { color: "#64748B" }]}>
+            <Text numberOfLines={1} style={[styles.soloDescEmerald, { color: "#0369A1" }]}>
               Düşen harfler, tetris mekaniği ve hayatta kalma
             </Text>
           </View>
-          <View
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 12,
-              backgroundColor: "#F1F5F9",
-              borderWidth: 1.5,
-              borderColor: "#CBD5E1",
-              borderBottomWidth: 3,
-              borderBottomColor: "#94A3B8",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 4,
+          {onOpenModeInfo && (
+            <InfoMini color="#0284C7" onPress={() => onOpenModeInfo("kelimematik")} />
+          )}
+          <GameButton
+            label="OYNA ▶"
+            size="sm"
+            variant="primary"
+            onPress={() => {
+              triggerHapticSelection();
+              setShowKelimematikPreviewModal(true);
             }}
-          >
-            <Text style={{ fontSize: 13 }}>🔒</Text>
-            <Text style={{ color: "#475569", fontSize: 11, fontWeight: "900", letterSpacing: 0.3 }}>
-              YAKINDA
-            </Text>
-          </View>
+            style={styles.soloActionBtn}
+          />
         </OrnatePanel>
       </Pressable>
       </Animated.View>
@@ -916,8 +909,8 @@ export function CommandCenter({
         visible={showDailyRewardModal}
         onClose={() => setShowDailyRewardModal(false)}
         progress={progress}
-        onClaim={() => {
-          onClaimDailyReward?.();
+        onClaim={(isDoubled) => {
+          onClaimDailyReward?.(isDoubled);
         }}
       />
 

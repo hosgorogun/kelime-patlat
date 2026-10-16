@@ -226,6 +226,8 @@ export const SeasonFriendsTab = React.memo(({
                     style={({ pressed }) => [styles.acceptBtn, pressed && { opacity: 0.8 }]}
                     onPress={() => {
                       triggerHapticSuccess();
+                      setPendingRequestsList((prev) => prev.filter((r) => r.id !== req.id));
+                      socialManager.removePendingRequest(req.id);
                       if (onAcceptRequest) {
                         onAcceptRequest(req.id);
                       } else {
@@ -239,8 +241,6 @@ export const SeasonFriendsTab = React.memo(({
                           lp: req.fromLp,
                           xp: req.fromXp,
                         });
-                        socialManager.removePendingRequest(req.id);
-                        setPendingRequestsList([...socialManager.getPendingRequests()]);
                         setFriendsList([...socialManager.getFriends()]);
                       }
                     }}
@@ -251,11 +251,10 @@ export const SeasonFriendsTab = React.memo(({
                     style={({ pressed }) => [styles.rejectBtn, pressed && { opacity: 0.8 }]}
                     onPress={() => {
                       triggerHapticSelection();
+                      setPendingRequestsList((prev) => prev.filter((r) => r.id !== req.id));
+                      socialManager.removePendingRequest(req.id);
                       if (onRejectRequest) {
                         onRejectRequest(req.id);
-                      } else {
-                        socialManager.removePendingRequest(req.id);
-                        setPendingRequestsList([...socialManager.getPendingRequests()]);
                       }
                     }}
                   >

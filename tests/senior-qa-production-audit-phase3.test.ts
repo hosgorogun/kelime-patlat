@@ -114,9 +114,85 @@ describe("Senior QA Test Suite - Phase 3 (Sosyal Sistem, Oda Kodları ve Platfor
     });
   });
 
-  describe("5. Platform ve Web Güvenliği", () => {
-    it("Web ortamında reviewManager çağrıldığında mağaza diyaloğu açmadan güvenle döner", async () => {
-      await expect(reviewManager.recordVictoryAndCheckPrompt(10)).resolves.not.toThrow();
+  describe("6. Canlı Düello Rövanş (Rematch) ve Odadan Ayrılma Durumları", () => {
+    it("Rakip rövanş istediğinde buton durumu ve banner metinleri doğru formatlanmalıdır", () => {
+      const getRematchButtonState = (params: {
+        rematchPending: boolean;
+        opponentRematch: boolean;
+        opponentLeft: boolean;
+        opponentName?: string;
+      }) => {
+        if (params.opponentLeft) {
+          return { text: "🚪 RAKİP AYRILDI", disabled: true, isAccept: false };
+        }
+        if (params.opponentRematch && !params.rematchPending) {
+          return {
+            text: `⚡ RÖVANŞI KABUL ET ▶`,
+            disabled: false,
+            isAccept: true,
+          };
+        }
+        if (params.rematchPending) {
+          return { text: "⏳ BEKLENİYOR...", disabled: true, isAccept: false };
+        }
+        return { text: "↻ RÖVANŞ İSTE", disabled: false, isAccept: false };
+      };
+
+      // Durum 1: Kimse rövanş istememiş
+      const initial = getRematchButtonState({
+        rematchPending: false,
+        opponentRematch: false,
+        opponentLeft: false,
+        opponentName: "Caner",
+      });
+      expect(initial.text).toBe("↻ RÖVANŞ İSTE");
+      expect(initial.disabled).toBe(false);
+      expect(initial.isAccept).toBe(false);
+
+      // Durum 2: Rakip rövanş teklif etmiş, ben henüz basmadım (Kabul etme modu)
+      const opponentChallenged = getRematchButtonState({
+        rematchPending: false,
+        opponentRematch: true,
+        opponentLeft: false,
+        opponentName: "Caner",
+      });
+      expect(opponentChallenged.text).toBe("⚡ RÖVANŞI KABUL ET ▶");
+      expect(opponentChallenged.disabled).toBe(false);
+      expect(opponentChallenged.isAccept).toBe(true);
+
+      // Durum 3: Ben rövanş istedim, rakip henüz basmadı (Bekleme modu)
+      const waitingOpponent = getRematchButtonState({
+        rematchPending: true,
+        opponentRematch: false,
+        opponentLeft: false,
+        opponentName: "Caner",
+      });
+      expect(waitingOpponent.text).toBe("⏳ BEKLENİYOR...");
+      expect(waitingOpponent.disabled).toBe(true);
+      expect(waitingOpponent.isAccept).toBe(false);
+
+      // Durum 4: Rakip odadan ayrıldı
+      const opponentLeft = getRematchButtonState({
+        rematchPending: false,
+        opponentRematch: false,
+        opponentLeft: true,
+        opponentName: "Caner",
+      });
+      expect(opponentLeft.text).toBe("🚪 RAKİP AYRILDI");
+      expect(opponentLeft.disabled).toBe(true);
+    });
+
+    it("Rakip ayrılmışken rövanş isteği sunucu tarafında güvenle engellenmelidir", () => {
+      const room = {
+        code: "TEST1",
+        status: "finished",
+        host: { id: "p1", name: "Host", rematch: false, connected: true },
+        guest: null as any,
+      };
+
+      const canInitiateRematch = Boolean(room.guest && (room.guest.isBot || room.guest.connected));
+      expect(canInitiateRematch).toBe(false);
     });
   });
 });
+

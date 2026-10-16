@@ -1,8 +1,9 @@
 import type { BoardSize } from "../../shared/game";
+import { isEqualTr } from "../../shared/tr-utils";
 
 export function findWordPath(board: string[], size: BoardSize, word: string): number[] | null {
   const visit = (index: number, offset: number, used: number[]): number[] | null => {
-    if (board[index] !== word[offset]) return null;
+    if (!isEqualTr(board[index], word[offset])) return null;
     const nextUsed = [...used, index];
     if (offset === word.length - 1) return nextUsed;
     const row = Math.floor(index / size);

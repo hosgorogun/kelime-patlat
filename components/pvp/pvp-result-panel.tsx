@@ -8,6 +8,9 @@ export type PvpResultPanelProps = {
   iWon: boolean;
   activeVictoryEffect: string;
   rematchPending: boolean;
+  opponentRematch?: boolean;
+  opponentLeft?: boolean;
+  opponentName?: string;
   notice: string;
   onShowResultsModal: () => void;
   onRequestRematch: () => void;
@@ -20,6 +23,9 @@ export const PvpResultPanel = React.memo(({
   iWon,
   activeVictoryEffect,
   rematchPending,
+  opponentRematch,
+  opponentLeft,
+  opponentName,
   notice,
   onShowResultsModal,
   onRequestRematch,
@@ -53,12 +59,25 @@ export const PvpResultPanel = React.memo(({
       </Pressable>
       <Pressable
         onPress={onRequestRematch}
-        style={({ pressed }) => [styles.primaryButton, styles.rematchButton, pressed && styles.pressed]}
+        disabled={rematchPending || opponentLeft}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          styles.rematchButton,
+          opponentRematch && !rematchPending && { backgroundColor: "#10B981", borderColor: "#059669" },
+          (rematchPending || opponentLeft) && { opacity: 0.6 },
+          pressed && !rematchPending && !opponentLeft && styles.pressed,
+        ]}
       >
         <Text style={styles.primaryButtonText}>
-          {rematchPending ? "RAKİP BEKLENİYOR" : "↻ RÖVANŞ İSTE"}
+          {opponentLeft
+            ? "🚪 RAKİP AYRILDI"
+            : opponentRematch && !rematchPending
+            ? `⚡ RÖVANŞI KABUL ET (${opponentName || "RAKİP"})`
+            : rematchPending
+            ? "⏳ RAKİP BEKLENİYOR..."
+            : "↻ RÖVANŞ İSTE"}
         </Text>
-        <Text style={styles.primaryButtonArrow}>↻</Text>
+        <Text style={styles.primaryButtonArrow}>{opponentLeft ? "🚪" : opponentRematch ? "▶" : "↻"}</Text>
       </Pressable>
       <Pressable
         onPress={onLeaveRoom}

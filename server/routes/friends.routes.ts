@@ -228,11 +228,11 @@ friendsRouter.post("/remove", async (req, res) => {
 
     await UserModel.findOneAndUpdate(
       { openId: user.openId },
-      { $pull: { "progress.friends": { $or: [{ id: friendId }, { id: targetOpenId }, { username: targetUsername }] } as any } }
+      { $pull: { "progress.friends": { $or: [{ id: { $in: [friendId, targetOpenId] } }, { username: { $in: [friendId, targetUsername] } }] } as any } }
     );
     await UserModel.findOneAndUpdate(
       { openId: targetOpenId },
-      { $pull: { "progress.friends": { $or: [{ id: user.openId }] } as any } }
+      { $pull: { "progress.friends": { $or: [{ id: user.openId }, { username: user.username || user.openId }] } as any } }
     );
 
     res.json({ success: true, message: "Arkadaş başarıyla listeden çıkarıldı." });

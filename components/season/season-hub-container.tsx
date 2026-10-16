@@ -68,7 +68,7 @@ export function SeasonHubContainer(props: SeasonHubContainerProps) {
   const handleChallengeTarget = props.handleChallengeTarget ?? pvp.handleChallengeTarget;
   const onChallengeFriend = props.onChallengeFriend ?? (async (friendName, size) => {
     const targetFriend = pvp.friendsList.find(
-      (f) => f.name === friendName || f.username === friendName
+      (f) => isEqualTr(f.name, friendName) || isEqualTr(f.username, friendName)
     );
     if (targetFriend) {
       await pvp.handleChallengeTarget(targetFriend as any, size);
@@ -149,7 +149,9 @@ export function SeasonHubContainer(props: SeasonHubContainerProps) {
                 .getFriends()
                 .some(
                   (f) =>
-                    isEqualTr(f.username, inspectedUser.username || inspectedUser.name)
+                    f.id === inspectedUser.id ||
+                    isEqualTr(f.username, inspectedUser.username || inspectedUser.name) ||
+                    isEqualTr(f.name, inspectedUser.username || inspectedUser.name)
                 )
             : false
         }

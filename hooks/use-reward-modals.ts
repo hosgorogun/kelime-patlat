@@ -91,7 +91,7 @@ export function useRewardModals({
     }
   };
 
-  const handleClaimDailyReward = async () => {
+  const handleClaimDailyReward = async (isDoubled: boolean = false) => {
     if (isClaimingDailyRewardRef.current) return;
     const currentProgress = progressRef.current;
     const todayId = getDayId();
@@ -105,6 +105,7 @@ export function useRewardModals({
           const response = await fetch(`${getApiBaseUrl()}/api/game/daily-login`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ isDoubled }),
           });
           const data = await response.json();
           if (response.ok && data.progress) {
@@ -117,7 +118,7 @@ export function useRewardModals({
               reward.rewardType === "coins" ? "ÇİP" : reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
             setGlobalToast({
               id: `daily-reward-${Date.now()}`,
-              title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
+              title: isDoubled ? `🎁 2X GÜNLÜK ÖDÜL ALINDI!` : `🎁 GÜNLÜK ÖDÜL ALINDI!`,
               subtitle: `${reward.label} tamamlandı! +${reward.amount} ${rewardName} hesabına eklendi.`,
               icon: reward.icon,
               accentColor: "#3EE8B5",
@@ -137,7 +138,7 @@ export function useRewardModals({
         }
       }
 
-      const res = checkDailyLoginReward(progressRef.current, todayId);
+      const res = checkDailyLoginReward(progressRef.current, todayId, isDoubled);
       if (!res) return;
       setProgress(res.updatedProgress);
       AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(res.updatedProgress)).catch(() => undefined);
@@ -148,7 +149,7 @@ export function useRewardModals({
         res.reward.rewardType === "coins" ? "ÇİP" : res.reward.rewardType === "shield" ? "SERİ KALKANI" : "SEZON XP";
       setGlobalToast({
         id: `daily-reward-${Date.now()}`,
-        title: `🎁 GÜNLÜK ÖDÜL ALINDI!`,
+        title: isDoubled ? `🎁 2X GÜNLÜK ÖDÜL ALINDI!` : `🎁 GÜNLÜK ÖDÜL ALINDI!`,
         subtitle: `${res.reward.label} tamamlandı! +${res.reward.amount} ${rewardName} hesabına eklendi.`,
         icon: res.reward.icon,
         accentColor: "#3EE8B5",

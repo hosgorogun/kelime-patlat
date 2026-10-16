@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   DEFAULT_PROGRESS,
+  getDayId,
   mergePlayerProgress,
   reconcilePlayerProgress,
   type PlayerProgress,
@@ -474,6 +475,25 @@ export function usePlayerProgression({
     });
     return () => subscription.remove();
   }, [progressReady, authToken, syncProgressToCloud]);
+
+  // Proaktif gece yarısı gün yenilenmesi kontrolü (00:00:00 geçişinde aktif oynayan oyuncunun görevlerini, serisini ve haklarını anında yeniler)
+  useEffect(() => {
+    if (!progressReady || !authToken || screen === "auth") return;
+
+    const checkMidnightRollover = () => {
+      const todayId = getDayId();
+      const current = progressRef.current;
+      if (current && (current.missionsDate !== todayId || current.dailyRevivesDate !== todayId)) {
+        setProgress((prev) => {
+          const res = reconcilePlayerProgress(prev);
+          return res.progress;
+        });
+      }
+    };
+
+    const interval = setInterval(checkMidnightRollover, 15000);
+    return () => clearInterval(interval);
+  }, [progressReady, authToken, screen]);
 
   // Autosave to AsyncStorage and debounce sync to cloud
   useEffect(() => {

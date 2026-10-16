@@ -262,10 +262,18 @@ authRouter.post("/sync-progress", async (req, res) => {
         progress.lastLoginDay === todayId
       );
       let dailyLoginXpBonus = 0;
+      let dailyLoginCoinsBonus = 0;
+      let dailyLoginShieldBonus = 0;
       if (isClaimingDailyLogin) {
         const dlResult = checkDailyLoginReward(currentProg, progress.lastLoginDay!);
-        if (dlResult && dlResult.reward.rewardType === "xp") {
-          dailyLoginXpBonus = dlResult.reward.amount;
+        if (dlResult) {
+          if (dlResult.reward.rewardType === "xp") {
+            dailyLoginXpBonus = dlResult.reward.amount;
+          } else if (dlResult.reward.rewardType === "coins") {
+            dailyLoginCoinsBonus = dlResult.reward.amount;
+          } else if (dlResult.reward.rewardType === "shield") {
+            dailyLoginShieldBonus = dlResult.reward.amount;
+          }
         }
       }
 
@@ -350,8 +358,8 @@ authRouter.post("/sync-progress", async (req, res) => {
           ...(currentProg.claimedLeagueTiers || {}),
           ...(progress.claimedLeagueTiers || {}),
         },
-        coins: Math.max(0, Math.min(2_000_000, nextCoins + missingWelcomeCoins)),
-        streakShields: Math.max(0, Math.min(99, nextShields + missingWelcomeShields)),
+        coins: Math.max(0, Math.min(2_000_000, nextCoins + missingWelcomeCoins + dailyLoginCoinsBonus)),
+        streakShields: Math.max(0, Math.min(99, nextShields + missingWelcomeShields + dailyLoginShieldBonus)),
         radarChargesBonus: Math.max(0, Math.min(99, nextRadar + missingWelcomeRadar)),
         lives: (() => {
           if (typeof progress.lives !== "number") return currentProg.lives;

@@ -76,7 +76,7 @@ export async function recordRoundForLeaderboard(io: Server, room: Room) {
               opponentScore,
               isFriendGame: isUnrankedFriendly,
             },
-            isBotMatch ? "bot" : "pvp"
+            isBotMatch && !room.isRanked ? "bot" : "pvp"
           );
 
           dbUser.progress = nextProgress;

@@ -12,8 +12,10 @@ import {
   createInitialTurnBoard,
   calculateTurnWordScore,
 } from "../../shared/turn-match";
-import { normalizeTrUpper, isEqualTr } from "../../shared/tr-utils";
+import { isAdjacent, type BoardSize } from "../../shared/game";
+import { normalizeTr, normalizeTrUpper, isEqualTr } from "../../shared/tr-utils";
 import { isValidTurkishWord } from "../../shared/dictionary";
+import { sdk } from "../_core/sdk";
 
 export const turnMatchRouter = Router();
 
@@ -41,6 +43,17 @@ turnMatchRouter.post("/create", async (req, res) => {
       return res.status(400).json({ error: "Geçersiz istek parametreleri." });
     }
     const { player1Id, player1Name, player1Avatar, player2Id, player2Name, player2Avatar, size } = parse.data;
+
+    try {
+      const authUser = await sdk.authenticateRequest(req);
+      const normAuth = normalizeTr(authUser.openId);
+      const normP1 = normalizeTr(player1Id);
+      if (normAuth !== normP1 && normAuth !== `usr_${normP1}` && `usr_${normAuth}` !== normP1) {
+        return res.status(403).json({ error: "Başka bir kullanıcı adına maç başlatamazsınız." });
+      }
+    } catch {
+      // Misafir veya çevrimdışı yerel mod
+    }
 
     const board = createInitialTurnBoard(size);
     const matchId = `turn_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
@@ -115,6 +128,17 @@ turnMatchRouter.post("/:id/play", async (req, res) => {
     }
     const { playerId, word, selection } = parse.data;
 
+    try {
+      const authUser = await sdk.authenticateRequest(req);
+      const normAuth = normalizeTr(authUser.openId);
+      const normPlayer = normalizeTr(playerId);
+      if (normAuth !== normPlayer && normAuth !== `usr_${normPlayer}` && `usr_${normAuth}` !== normPlayer) {
+        return res.status(403).json({ error: "Bu hamleyi yapma yetkiniz yok." });
+      }
+    } catch {
+      // Misafir veya çevrimdışı yerel mod
+    }
+
     const match = await findTurnMatchById(matchId);
     if (!match) {
       return res.status(404).json({ error: "Maç bulunamadı." });
@@ -126,11 +150,27 @@ turnMatchRouter.post("/:id/play", async (req, res) => {
       return res.status(403).json({ error: "Sıra sizde değil!" });
     }
 
-    // Tahta harf doğrulaması
+    // Tahta harf ve komşuluk doğrulaması
+    const size = (match.size || 4) as BoardSize;
+    const validIndices =
+      selection.length >= 2 &&
+      new Set(selection).size === selection.length &&
+      selection.every((idx) => Number.isInteger(idx) && idx >= 0 && idx < match.board.length) &&
+      selection.every((idx, i) => i === 0 || isAdjacent(selection[i - 1]!, idx, size));
+    if (!validIndices) {
+      return res.status(400).json({ error: "Geçersiz veya bitişik olmayan harf seçimi." });
+    }
+
     const constructedWord = selection.map((idx) => match.board[idx] || "").join("");
     const upperWord = normalizeTrUpper(word.trim());
     if (!isEqualTr(constructedWord, upperWord)) {
       return res.status(400).json({ error: "Kelime tahtadaki seçimle uyuşmuyor." });
+    }
+
+    // Kelime daha önce bu maçta bulundu mu kontrolü
+    const alreadyFound = (match.foundWords || []).some((f) => isEqualTr(f.word, upperWord));
+    if (alreadyFound) {
+      return res.status(400).json({ error: "Bu kelime bu maçta daha önce kullanıldı." });
     }
 
     // Kelime geçerlilik doğrulaması (Sözlük)
@@ -191,8 +231,13 @@ turnMatchRouter.post("/:id/play", async (req, res) => {
     // Otomatik Bot Hamlesi (Eğer rakip botsa ve maç bitmediyse)
     if (nextStatus === "active" && (nextTurnPlayerId.startsWith("bot_") || match.player2Name.includes("Bot"))) {
       const botScore = 15 + Math.floor(Math.random() * 25);
-      const botWords = ["KARA", "MASA", "YOL", "KENT", "ZAMAN", "KUTU"];
-      const botWord = botWords[Math.floor(Math.random() * botWords.length)]!;
+      const usedWords = new Set((updated?.foundWords || []).map((w) => normalizeTrUpper(w.word)));
+      const candidateBotWords = ["KARA", "MASA", "YOL", "KENT", "ZAMAN", "KUTU", "PARK", "KALEM", "DENİZ", "GÜNEŞ", "ÇİÇEK", "RÜZGAR"].filter(
+        (w) => !usedWords.has(w)
+      );
+      const botWord = candidateBotWords.length > 0
+        ? candidateBotWords[Math.floor(Math.random() * candidateBotWords.length)]!
+        : "YILDIZ";
       
       const finalFoundWords = [
         ...(updated?.foundWords || []),

@@ -100,6 +100,13 @@ async function startServer() {
         for (const [k, v] of storage) {
           if (now - v.startedAt >= windowMs) storage.delete(k);
         }
+        if (storage.size > 2500) {
+          let evicted = 0;
+          for (const k of storage.keys()) {
+            storage.delete(k);
+            if (++evicted >= 500) break;
+          }
+        }
       }
       storage.set(key, { startedAt: now, count: 1 });
       return true;

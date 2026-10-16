@@ -26,7 +26,7 @@ export interface HomeScreenViewProps {
   onSolo?: () => void;
   onLeaderboard?: () => void;
   onOpenLivesModal?: () => void;
-  onClaimDailyReward?: () => void;
+  onClaimDailyReward?: (isDoubled?: boolean) => void;
   onShowToast?: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
   selectedModeInfo?: "pvp" | "vintage" | "arcade" | "solo" | "kelimematik" | null;
   onOpenModeInfo?: (mode: "pvp" | "vintage" | "arcade" | "solo" | "kelimematik") => void;

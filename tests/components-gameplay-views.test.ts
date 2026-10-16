@@ -299,8 +299,8 @@ describe("Component Tests: Gameplay & Board Views", () => {
           activeTheme: mockTheme,
         })
       );
-      expect(playingHtml).toContain("[ K - A - L - E ]");
-      expect(playingHtml).toContain("BAĞLANTI SAĞLANDI");
+      expect(playingHtml).toContain("K · A · L · E");
+      expect(playingHtml).toContain("GEÇERLİ SÖZCÜK");
 
       const wonHtml = renderToStaticMarkup(
         React.createElement(SoloWordTray, {

@@ -587,8 +587,8 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(day1).not.toBeNull();
     expect(day1!.reward.day).toBe(1);
     expect(day1!.reward.rewardType).toBe("coins");
-    expect(day1!.reward.amount).toBe(15);
-    expect(day1!.updatedProgress.coins).toBe(65);
+    expect(day1!.reward.amount).toBe(8);
+    expect(day1!.updatedProgress.coins).toBe(58);
     expect(day1!.updatedProgress.lastLoginDay).toBe(today);
     expect(day1!.updatedProgress.loginDaysCount).toBe(1);
 
@@ -601,8 +601,8 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(day2).not.toBeNull();
     expect(day2!.reward.day).toBe(2);
     expect(day2!.reward.rewardType).toBe("xp");
-    expect(day2!.reward.amount).toBe(100);
-    expect(day2!.updatedProgress.xp).toBe(100);
+    expect(day2!.reward.amount).toBe(50);
+    expect(day2!.updatedProgress.xp).toBe(50);
     expect(day2!.updatedProgress.loginDaysCount).toBe(2);
 
     // 7. Gün Epik Ödülü (Seri Kalkanı)
@@ -611,8 +611,8 @@ describe("Günlük rota ve sezon ilerlemesi", () => {
     expect(day7).not.toBeNull();
     expect(day7!.reward.day).toBe(7);
     expect(day7!.reward.rewardType).toBe("shield");
-    expect(day7!.reward.amount).toBe(2);
-    expect(day7!.updatedProgress.streakShields).toBe((day6Prog.streakShields || 0) + 2);
+    expect(day7!.reward.amount).toBe(1);
+    expect(day7!.updatedProgress.streakShields).toBe((day6Prog.streakShields || 0) + 1);
     expect(day7!.updatedProgress.loginDaysCount).toBe(7);
 
     // 8. Günde döngü 1. güne sıfırlanır

@@ -47,15 +47,22 @@ gameRouter.use(async (req, res, next) => {
   const chained = previous.then(() => current);
   userLocks.set(openId, chained);
   let released = false;
+  let safetyTimeout: NodeJS.Timeout | null = null;
   const done = () => {
     if (released) return;
     released = true;
+    if (safetyTimeout) {
+      clearTimeout(safetyTimeout);
+      safetyTimeout = null;
+    }
     release();
     if (userLocks.get(openId) === chained) userLocks.delete(openId);
   };
+  safetyTimeout = setTimeout(done, 12_000);
   res.on("finish", done);
   res.on("close", done);
-  previous.then(() => next()).catch((err) => {
+  const waitPrevious = Promise.race([previous, new Promise<void>((r) => setTimeout(r, 6_000))]);
+  waitPrevious.then(() => next()).catch((err) => {
     done();
     next(err);
   });
@@ -69,7 +76,8 @@ gameRouter.post("/daily-login", async (req, res) => {
     if (!dbUser) return res.status(404).json({ error: "Kullanıcı bulunamadı." });
     const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
     const todayId = getDayId();
-    const claimResult = checkDailyLoginReward(current, todayId);
+    const isDoubled = Boolean(req.body?.isDoubled);
+    const claimResult = checkDailyLoginReward(current, todayId, isDoubled);
     if (!claimResult) {
       return res.status(400).json({ error: "Bugünkü giriş ödülü zaten alındı.", progress: current });
     }

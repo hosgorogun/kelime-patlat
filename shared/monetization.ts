@@ -1,6 +1,13 @@
 // Monetization Engine (Google AdMob Rewarded & Interstitial Ads)
 
-export type AdRewardType = "radar_charge" | "double_xp" | "time_boost";
+export type AdRewardType =
+  | "radar_charge"
+  | "double_xp"
+  | "time_boost"
+  | "second_chance"
+  | "daily_treasure_double"
+  | "vintage_clue"
+  | "weekend_hunt_clue";
 
 /**
  * Ansızın çıkan (interstitial) video reklamların tetiklenme sıklığı.
@@ -31,9 +38,14 @@ class MonetizationManager {
       return;
     }
     try {
-      onReward();
-    } catch (e: any) {
-      if (onError) onError(e?.message || "Ödül verilirken bir hata oluştu.");
+      const { admobService } = await import("../lib/admob-service");
+      await admobService.showRewarded(onReward, onError);
+    } catch {
+      try {
+        onReward();
+      } catch (e: any) {
+        if (onError) onError(e?.message || "Ödül verilirken bir hata oluştu.");
+      }
     }
   }
 
@@ -67,9 +79,10 @@ class MonetizationManager {
    */
   async showInterstitialAd(onClosed?: () => void, onError?: (err: string) => void) {
     try {
+      const { admobService } = await import("../lib/admob-service");
+      await admobService.showInterstitial(onClosed, onError);
+    } catch {
       if (onClosed) onClosed();
-    } catch (err: any) {
-      if (onError) onError(err?.message || "Geçiş reklamı gösterilemedi.");
     }
   }
 }

@@ -74,10 +74,17 @@ export function getDailyMysteryWord(date = new Date()): DailyMystery {
   return { ...picked, rewardXp: 150 };
 }
 
-export function checkDailyLoginReward(progress: PlayerProgress, todayId: string): { reward: DailyLoginReward; updatedProgress: PlayerProgress } | null {
+export function checkDailyLoginReward(
+  progress: PlayerProgress,
+  todayId: string,
+  isDoubled: boolean = false
+): { reward: DailyLoginReward; updatedProgress: PlayerProgress } | null {
   if (progress.lastLoginDay === todayId) return null;
   const currentCount = (progress.loginDaysCount || 0) % 7;
-  const reward = DAILY_LOGIN_REWARDS[currentCount]!;
+  const baseReward = DAILY_LOGIN_REWARDS[currentCount]!;
+  const reward = isDoubled
+    ? { ...baseReward, amount: baseReward.amount * 2, label: `${baseReward.label} (2x)` }
+    : baseReward;
   
   let xpBonus = reward.rewardType === "xp" ? reward.amount : 0;
   let shieldBonus = reward.rewardType === "shield" ? reward.amount : 0;

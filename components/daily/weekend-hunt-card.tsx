@@ -15,6 +15,7 @@ import {
 import type { PlayerProgress } from "@/shared/progression";
 import { haptics } from "@/lib/haptics";
 import { isEqualTr } from "@/shared/tr-utils";
+import { monetizationManager } from "@/shared/monetization";
 
 interface WeekendHuntCardProps {
   progress: PlayerProgress;
@@ -34,6 +35,8 @@ export const WeekendHuntCard: React.FC<WeekendHuntCardProps> = ({
     : { eventId: event.eventId, foundWords: [], claimedTiers: [] };
 
   const [inspectedWord, setInspectedWord] = useState<string | null>(null);
+  const [unlockedClueWords, setUnlockedClueWords] = useState<Record<string, boolean>>({});
+  const [loadingAdWord, setLoadingAdWord] = useState<string | null>(null);
 
   const foundCount = huntData.foundWords.length;
   const totalCount = event.targetWords.length;
@@ -112,6 +115,43 @@ export const WeekendHuntCard: React.FC<WeekendHuntCardProps> = ({
           <View style={styles.hintBox}>
             <Text style={styles.hintTitle}>İPUCU ({inspectedWord.length} Harfli):</Text>
             <Text style={styles.hintContent}>{event.hints[inspectedWord]}</Text>
+
+            {unlockedClueWords[inspectedWord] ? (
+              <View style={styles.revealedLettersBox}>
+                <Text style={styles.revealedLettersText}>
+                  🔍 İLK 2 HARF: "{inspectedWord.slice(0, 2).toLocaleUpperCase("tr-TR")}..."
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                disabled={loadingAdWord === inspectedWord}
+                onPress={async () => {
+                  setLoadingAdWord(inspectedWord);
+                  haptics.select();
+                  await monetizationManager.showRewardedAd(
+                    "weekend_hunt_clue",
+                    () => {
+                      setLoadingAdWord(null);
+                      haptics.success();
+                      setUnlockedClueWords((prev) => ({ ...prev, [inspectedWord]: true }));
+                    },
+                    () => {
+                      setLoadingAdWord(null);
+                      haptics.error();
+                    }
+                  );
+                }}
+                style={({ pressed }) => [
+                  styles.adClueBtn,
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text style={styles.adClueBtnText}>
+                  {loadingAdWord === inspectedWord ? "⏳ YÜKLENİYOR..." : "🎬 İLK 2 HARFİ GÖR (Reklam İzle)"}
+                </Text>
+              </Pressable>
+            )}
+
             <Text style={styles.hintFoot}>Tüm oyun modlarında (Solo, Günlük, Düello) bu kelimeyi bularak avlayabilirsin!</Text>
           </View>
         )}
@@ -311,6 +351,40 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontSize: 9.5,
     marginTop: 4,
+  },
+  revealedLettersBox: {
+    marginTop: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#10B981",
+    alignSelf: "flex-start",
+  },
+  revealedLettersText: {
+    color: "#059669",
+    fontSize: 11.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  adClueBtn: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#FBBF24",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D97706",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-start",
+  },
+  adClueBtnText: {
+    color: "#78350F",
+    fontSize: 10.5,
+    fontWeight: "900",
+    letterSpacing: 0.3,
   },
   rewardsSection: {
     gap: 8,

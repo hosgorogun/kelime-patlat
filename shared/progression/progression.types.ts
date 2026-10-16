@@ -339,13 +339,13 @@ export type DailyLoginReward = {
 };
 
 export const DAILY_LOGIN_REWARDS: DailyLoginReward[] = [
-  { day: 1, label: "1. GÜN", rewardType: "coins", amount: 15, icon: "🪙" },
-  { day: 2, label: "2. GÜN", rewardType: "xp", amount: 100, icon: "⚡" },
-  { day: 3, label: "3. GÜN", rewardType: "coins", amount: 30, icon: "🪙" },
-  { day: 4, label: "4. GÜN", rewardType: "xp", amount: 200, icon: "⚡" },
-  { day: 5, label: "5. GÜN", rewardType: "coins", amount: 50, icon: "🪙" },
-  { day: 6, label: "6. GÜN", rewardType: "xp", amount: 300, icon: "⚡" },
-  { day: 7, label: "7. GÜN", rewardType: "shield", amount: 2, icon: "🛡️" },
+  { day: 1, label: "1. GÜN", rewardType: "coins", amount: 8, icon: "🪙" },
+  { day: 2, label: "2. GÜN", rewardType: "xp", amount: 50, icon: "⚡" },
+  { day: 3, label: "3. GÜN", rewardType: "coins", amount: 15, icon: "🪙" },
+  { day: 4, label: "4. GÜN", rewardType: "xp", amount: 100, icon: "⚡" },
+  { day: 5, label: "5. GÜN", rewardType: "coins", amount: 25, icon: "🪙" },
+  { day: 6, label: "6. GÜN", rewardType: "xp", amount: 150, icon: "⚡" },
+  { day: 7, label: "7. GÜN", rewardType: "shield", amount: 1, icon: "🛡️" },
 ];
 
 export type StreakReconciliationResult = {

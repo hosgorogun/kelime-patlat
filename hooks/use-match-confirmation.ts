@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { BoardSize } from "../shared/game";
 import type { ModernAlertData } from "../components/modals/modern-alert-modal";
+import { monetizationManager } from "../shared/monetization";
 
 export interface PendingMatchConfirm {
   size: BoardSize;
@@ -67,7 +68,9 @@ export function useMatchConfirmation({
       primaryButton: {
         text: "İZLE VE KORUMAYI AL",
         color: "#98732c",
-        onPress: () => onReward(),
+        onPress: () => {
+          void monetizationManager.showRewardedAd("second_chance", onReward);
+        },
       },
       secondaryButton: {
         text: "VAZGEÇ",

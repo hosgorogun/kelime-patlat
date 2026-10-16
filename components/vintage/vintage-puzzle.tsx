@@ -7,8 +7,10 @@ import {
   BackHandler,
   Pressable,
   useWindowDimensions,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { monetizationManager } from "@/shared/monetization";
 import {
   triggerHapticSelection,
   triggerHapticSuccess,
@@ -796,10 +798,6 @@ export function VintagePuzzle({
   const handleUseHint = useCallback(() => {
     if (!puzzle || isLevelComplete || isClearingErrorRef.current) return;
     const availableCoins = coins ?? 0;
-    if (availableCoins < VINTAGE_HINT_COST) {
-      triggerError(`Yetersiz Çip! 1 harf açmak için ${VINTAGE_HINT_COST} Çip gerekir.`);
-      return;
-    }
 
     // 1. Hedef kelimeyi belirle (seçili ve çözülmemişse o, aksi halde ilk çözülmemiş kelime)
     const targetWord =
@@ -832,57 +830,85 @@ export function VintagePuzzle({
       return;
     }
 
-    // 3. Çipi harca
+    const applyHintLetter = (cell: [number, number], char: string) => {
+      triggerHapticSuccess();
+      playSuccessSound();
+
+      const [tr, tc] = cell;
+      const oldChar = playerBoard[tr]![tc];
+      const newBoard = playerBoard.map((rowArr) => [...rowArr]);
+      newBoard[tr]![tc] = char;
+
+      const tileInPool = letterPool.some((t) => isEqualTr(t.letter, char));
+      if (!tileInPool) {
+        for (let r = 0; r < 10; r++) {
+          let cleared = false;
+          for (let c = 0; c < 10; c++) {
+            const boardChar = newBoard[r]![c];
+            if ((r !== tr || c !== tc) && boardChar && isEqualTr(boardChar, char) && !isCellLockedByCompletedWord(r, c)) {
+              newBoard[r]![c] = null;
+              cleared = true;
+              break;
+            }
+          }
+          if (cleared) break;
+        }
+      }
+      setPlayerBoard(newBoard);
+
+      setLetterPool((prev) => {
+        let nextPool = [...prev];
+        if (oldChar !== null && !isEqualTr(oldChar, char)) {
+          nextPool.push({
+            id: `p-ret-hint-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            letter: oldChar,
+          });
+        }
+        const tileIndex = nextPool.findIndex((t) => isEqualTr(t.letter, char));
+        if (tileIndex !== -1) {
+          nextPool.splice(tileIndex, 1);
+        }
+        return nextPool;
+      });
+
+      setSelectedCell([tr, tc]);
+      checkCompletedWordsOnBoard(newBoard);
+    };
+
+    // 3. Yetersiz Çip durumunda Rewarded Ad ile Ücretsiz Harf Açma teklif et
+    if (availableCoins < VINTAGE_HINT_COST) {
+      Alert.alert(
+        "💡 Ücretsiz İpucu",
+        `Yetersiz Çip! 1 harf açmak için ${VINTAGE_HINT_COST} Çip gerekiyor. Kısa bir sponsorlu reklam izleyerek 1 harfi ücretsiz açmak ister misiniz?`,
+        [
+          { text: "Vazgeç", style: "cancel" },
+          {
+            text: "🎬 Reklam İzle & Aç",
+            onPress: () => {
+              void monetizationManager.showRewardedAd(
+                "vintage_clue",
+                () => {
+                  applyHintLetter(targetCell!, targetChar!);
+                },
+                (err) => {
+                  triggerError(err || "Reklam yüklenemedi.");
+                }
+              );
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    // Çipi harca
     const success = onSpendCoins ? onSpendCoins(VINTAGE_HINT_COST) : true;
     if (!success) {
       triggerError(`Yetersiz Çip! 1 harf açmak için ${VINTAGE_HINT_COST} Çip gerekir.`);
       return;
     }
 
-    triggerHapticSuccess();
-    playSuccessSound();
-
-    const [tr, tc] = targetCell;
-    const oldChar = playerBoard[tr]![tc];
-    const newBoard = playerBoard.map((rowArr) => [...rowArr]);
-    newBoard[tr]![tc] = targetChar;
-
-    // Eğer hedef harf havuzda mevcut değilse, oyuncunun tahtada yanlış yerleştirdiği kilitlenmemiş bir hücreden temizle
-    const tileInPool = letterPool.some((t) => isEqualTr(t.letter, targetChar!));
-    if (!tileInPool) {
-      for (let r = 0; r < 10; r++) {
-        let cleared = false;
-        for (let c = 0; c < 10; c++) {
-          const boardChar = newBoard[r]![c];
-          if ((r !== tr || c !== tc) && boardChar && isEqualTr(boardChar, targetChar!) && !isCellLockedByCompletedWord(r, c)) {
-            newBoard[r]![c] = null;
-            cleared = true;
-            break;
-          }
-        }
-        if (cleared) break;
-      }
-    }
-    setPlayerBoard(newBoard);
-
-    // 4. Havuzdan doğru harf taşını çıkar ve varsa eski yanlış harfi havuza geri ver
-    setLetterPool((prev) => {
-      let nextPool = [...prev];
-      if (oldChar !== null && !isEqualTr(oldChar, targetChar!)) {
-        nextPool.push({
-          id: `p-ret-hint-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          letter: oldChar,
-        });
-      }
-      const tileIndex = nextPool.findIndex((t) => isEqualTr(t.letter, targetChar!));
-      if (tileIndex !== -1) {
-        nextPool.splice(tileIndex, 1);
-      }
-      return nextPool;
-    });
-
-    setSelectedCell([tr, tc]);
-    checkCompletedWordsOnBoard(newBoard);
+    applyHintLetter(targetCell, targetChar);
   }, [puzzle, isLevelComplete, coins, selectedWordId, solvedWordIds, playerBoard, letterPool, isCellLockedByCompletedWord, onSpendCoins, triggerError, checkCompletedWordsOnBoard]);
 
   const activeWordItem = useMemo(
@@ -967,6 +993,13 @@ export function VintagePuzzle({
           bestStars={previewLevel ? levelStars[previewLevel] : 0}
           onDismiss={() => setPreviewLevel(null)}
           onStartLevel={(lvl) => {
+            if (!isInfiniteLives && typeof lives === "number" && lives <= 0) {
+              triggerHapticError();
+              playErrorSound();
+              setPreviewLevel(null);
+              onOpenLivesModal?.();
+              return;
+            }
             triggerHapticSelection();
             if (lvl === levelIndex) {
               loadNewPuzzleForLevel(lvl);

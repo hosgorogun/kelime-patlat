@@ -205,6 +205,23 @@ class SocialManager {
     return { success: true, message: `${friend.name} arkadaş listenizden çıkarıldı.` };
   }
 
+  updateOnlineStatuses(statusMap: Record<string, boolean>) {
+    let changed = false;
+    this.friends = this.friends.map((f) => {
+      const isMock = Boolean(f.isBot || /^f\d+$/.test(f.id) || f.id.startsWith("bot:") || f.id.startsWith("friend:bot:"));
+      if (isMock) return f;
+      const online = statusMap[f.id] ?? statusMap[f.username] ?? statusMap[normalizeTr(f.username)] ?? statusMap[f.name];
+      if (typeof online === "boolean" && f.isOnline !== online) {
+        changed = true;
+        return { ...f, isOnline: online };
+      }
+      return f;
+    });
+    if (changed) {
+      this.notify();
+    }
+  }
+
   async reset(): Promise<void> {
     this.friends = [...MOCK_FRIENDS];
     this.pendingRequests = [];

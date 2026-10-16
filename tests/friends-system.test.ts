@@ -8,6 +8,8 @@ import {
   type FriendRequest,
 } from "../server/db";
 import { socialManager, type FriendUser } from "../shared/social";
+import { isEqualTr } from "../shared/tr-utils";
+import { pendingDuelInvites } from "../server/game/friend-socket-handlers";
 
 describe("Arkadaşlık ve Sosyal Sistem Testleri", () => {
   beforeEach(async () => {
@@ -306,6 +308,77 @@ describe("Arkadaşlık ve Sosyal Sistem Testleri", () => {
       expect(socialManager.getFriends().length).toBe(initialCount + 1);
       expect(socialManager.getFriends().some((f) => f.id === "f_1")).toBe(false);
       expect(socialManager.getFriends().some((f) => f.id === "f_2")).toBe(true);
+    });
+
+    it("canlı çevrim içi durum haritası (updateOnlineStatuses) arkadaşların isOnline durumunu anında günceller", () => {
+      const realFriend: FriendUser = {
+        id: "usr_kerem",
+        name: "Kerem Yıldız",
+        username: "kerem_yildiz",
+        avatar: "⚡",
+        isOnline: false,
+        xp: 1500,
+      };
+      socialManager.addFriend(realFriend);
+      let found = socialManager.getFriends().find((f) => f.id === "usr_kerem");
+      expect(found).toBeDefined();
+
+      // Sunucudan gelen socket durum haritası ile çevrim içi yap
+      socialManager.updateOnlineStatuses({ usr_kerem: true });
+      found = socialManager.getFriends().find((f) => f.id === "usr_kerem");
+      expect(found?.isOnline).toBe(true);
+
+      // Çevrim dışı yap
+      socialManager.updateOnlineStatuses({ usr_kerem: false });
+      found = socialManager.getFriends().find((f) => f.id === "usr_kerem");
+      expect(found?.isOnline).toBe(false);
+    });
+
+    it("düello daveti yetkilendirmesi (pendingDuelInvites) oluşturulan oda ve hedef soketle eşleşir", () => {
+      const socketId = "sock_test_recipient_456";
+      const fromPlayerId = "usr_host_123";
+      const roomCode = "ABCDE";
+
+      pendingDuelInvites.set(socketId, {
+        fromPlayerId,
+        roomCode,
+        expiresAt: Date.now() + 60_000,
+      });
+
+      const invite = pendingDuelInvites.get(socketId);
+      expect(invite).toBeDefined();
+      expect(invite?.fromPlayerId).toBe(fromPlayerId);
+      expect(invite?.roomCode).toBe(roomCode);
+      expect(invite?.expiresAt).toBeGreaterThan(Date.now());
+
+      // Süresi geçmiş davet kontrolü
+      const expiredInvite = {
+        fromPlayerId,
+        roomCode,
+        expiresAt: Date.now() - 1000,
+      };
+      expect(expiredInvite.expiresAt < Date.now()).toBe(true);
+    });
+
+    it("Türkçe harf kurallarına göre (isEqualTr) arkadaş arama ve düello eşleşmesi (I/ı/İ/i) hatasız çalışır", () => {
+      const friend: FriendUser = {
+        id: "usr_ismail",
+        name: "İSMAİL IŞIK",
+        username: "ismail_isik",
+        avatar: "🎮",
+        isOnline: true,
+        xp: 3000,
+      };
+      socialManager.addFriend(friend);
+
+      const all = socialManager.getFriends();
+      const match1 = all.find((f) => isEqualTr(f.name, "ismail ışık"));
+      expect(match1).toBeDefined();
+      expect(match1?.id).toBe("usr_ismail");
+
+      const match2 = all.find((f) => isEqualTr(f.username, "İSMAİL_IŞIK"));
+      expect(match2).toBeDefined();
+      expect(match2?.id).toBe("usr_ismail");
     });
   });
 });

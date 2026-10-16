@@ -15,6 +15,7 @@ import { advanceSelection } from "@/shared/game";
 import { isValidTurkishWord } from "@/shared/dictionary";
 import { haptics } from "@/lib/haptics";
 import { getApiBaseUrl } from "@/constants/oauth";
+import { monetizationManager } from "@/shared/monetization";
 
 export interface TurnMatchesModalProps {
   visible: boolean;
@@ -156,6 +157,10 @@ export const TurnMatchesModal = React.memo(({
           setMatches((curr) => curr.map((m) => m.id === data.match.id ? data.match : m));
           setActiveMatch(null);
           setSelectedIndices([]);
+        }
+        const { shouldShowInterstitial } = monetizationManager.recordMatchFinished(true);
+        if (shouldShowInterstitial) {
+          void monetizationManager.showInterstitialAd();
         }
       } else {
         const err = await res.json();

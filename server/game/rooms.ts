@@ -13,7 +13,7 @@ import {
 } from "../../shared/game";
 import { getRandomBotPersona } from "../../shared/botPersonas";
 import { loadLeaderboard } from "./mongo-store";
-import { isEqualTr } from "../../shared/tr-utils";
+import { isEqualTr, normalizeTr } from "../../shared/tr-utils";
 import { isValidTurkishWord } from "../../shared/dictionary";
 
 export { cleanCode } from "./schemas";
@@ -412,17 +412,30 @@ export function registerGameRooms(io: Server) {
 
   io.on("connection", (socket) => {
     const ownsPlayerId = (playerId: string) => {
+      if (!playerId || typeof playerId !== "string") return false;
+      const cleanInput = playerId.trim();
+      const normInput = normalizeTr(cleanInput);
+
       if (socket.data.userId) {
-        return socket.data.userId === playerId;
+        const normUser = normalizeTr(socket.data.userId);
+        if (normUser === normInput) return true;
+        if (normUser === `usr_${normInput}`) return true;
+        if (`usr_${normUser}` === normInput) return true;
+        return false;
       }
-      if (playerId.startsWith("usr_")) {
+      if (normInput.startsWith("usr_")) {
         return false;
       }
       if (!socket.data.boundPlayerId) {
-        socket.data.boundPlayerId = playerId;
+        socket.data.boundPlayerId = cleanInput;
         return true;
       }
-      return socket.data.boundPlayerId === playerId;
+      const normBound = normalizeTr(socket.data.boundPlayerId);
+      return (
+        normBound === normInput ||
+        normBound === `usr_${normInput}` ||
+        `usr_${normBound}` === normInput
+      );
     };
 
     socket.emit("leaderboard:update", leaderboardSnapshot());
@@ -700,12 +713,30 @@ export function registerGameRooms(io: Server) {
 
         if (payload.inviteTarget) {
           const { toPlayerId, toUsername } = payload.inviteTarget;
+          let isTargetBusy = false;
+          for (const r of rooms.values()) {
+            if (r.status === "playing" && (r.host.id === toPlayerId || r.guest?.id === toPlayerId)) {
+              isTargetBusy = true;
+              break;
+            }
+          }
+          if (isTargetBusy) {
+            socket.emit("friend:duel:failed", {
+              message: `${toUsername || "Arkadaşınız"} şu anda başka bir canlı düelloda oynuyor.`,
+            });
+            return;
+          }
           const targetSockets = [
             ...getSocketsForUser(toPlayerId),
             ...(toUsername ? getSocketsForUser(toUsername) : []),
           ];
           const uniqueSockets = Array.from(new Set(targetSockets));
           for (const sId of uniqueSockets) {
+            pendingDuelInvites.set(sId, {
+              fromPlayerId: payload.playerId,
+              roomCode: code,
+              expiresAt: Date.now() + 60_000,
+            });
             io.to(sId).emit("friend:duel:incoming", {
               fromPlayerId: payload.playerId,
               fromPlayerName: payload.playerName,
@@ -929,7 +960,10 @@ export function registerGameRooms(io: Server) {
       if (!ownsPlayerId(payload.playerId)) return fail(socket, "Oyuncu kimliği bu oturuma ait değil.");
       const room = rooms.get(cleanCode(payload.code));
       const player = room ? playerForSocket(room, socket, payload.playerId) : null;
-      if (!room || !player || !room.guest || room.status !== "finished") return;
+      if (!room || !player || room.status !== "finished") return;
+      if (!room.guest || (!room.guest.isBot && !room.guest.connected)) {
+        return fail(socket, "Rakip odadan ayrıldığı için rövanş başlatılamaz.");
+      }
       if (player.rematch && room.guest.isBot && room.rematchTimer) return;
       player.rematch = true;
       if (room.guest.isBot) {
@@ -955,6 +989,15 @@ export function registerGameRooms(io: Server) {
       }
       room.message = `${player.name} rövanş istiyor.`;
       emitRoom(io, room);
+
+      const otherPlayer = room.host.id === player.id ? room.guest : room.host;
+      if (otherPlayer && otherPlayer.socketId) {
+        io.to(otherPlayer.socketId).emit("room:rematch:received", {
+          fromPlayerId: player.id,
+          fromPlayerName: player.name,
+          roomCode: room.code,
+        });
+      }
     });
 
     socket.on("room:leave", (payload: { code: string; playerId: string }) => {

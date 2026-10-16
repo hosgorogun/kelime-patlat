@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { palette } from "@/shared/palette";
 import { haptics } from "@/lib/haptics";
+import { getBannerAdUnitId } from "@/lib/admob-service";
 
 export type CyberBannerAdProps = {
   style?: any;
   adUnitId?: string;
   onPressAd?: () => void;
+  forceCyberOnly?: boolean;
 };
 
 const SAMPLE_CAMPAIGNS = [
@@ -41,8 +43,23 @@ const SAMPLE_CAMPAIGNS = [
   },
 ];
 
-export function CyberBannerAd({ style, onPressAd }: CyberBannerAdProps) {
+let BannerAdComponent: any = null;
+let BannerAdSizeEnum: any = null;
+
+if (Platform.OS !== "web") {
+  try {
+    const mobileAds = require("react-native-google-mobile-ads");
+    BannerAdComponent = mobileAds.BannerAd;
+    BannerAdSizeEnum = mobileAds.BannerAdSize;
+  } catch {
+    // Native module not linked or running in mock environment
+  }
+}
+
+export function CyberBannerAd({ style, adUnitId, onPressAd, forceCyberOnly = false }: CyberBannerAdProps) {
   const [campaignIndex, setCampaignIndex] = useState(0);
+  const [admobFailed, setAdmobFailed] = useState(false);
+  const [admobLoaded, setAdmobLoaded] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -60,7 +77,7 @@ export function CyberBannerAd({ style, onPressAd }: CyberBannerAdProps) {
     }
   };
 
-  return (
+  const renderCyberFallback = () => (
     <Pressable
       onPress={handlePress}
       style={({ pressed }) => [styles.bannerWrap, style, pressed && styles.pressed]}
@@ -108,9 +125,42 @@ export function CyberBannerAd({ style, onPressAd }: CyberBannerAdProps) {
       </LinearGradient>
     </Pressable>
   );
+
+  // Native Android/iOS ortamında ve AdMob destekleniyorsa
+  if (!forceCyberOnly && Platform.OS !== "web" && BannerAdComponent && !admobFailed) {
+    const resolvedUnitId = adUnitId || getBannerAdUnitId();
+    return (
+      <View style={[styles.admobWrapper, style]}>
+        <BannerAdComponent
+          unitId={resolvedUnitId}
+          size={BannerAdSizeEnum?.ANCHORED_ADAPTIVE_BANNER || "BANNER"}
+          requestOptions={{
+            requestNonPersonalizedAdsOnly: true,
+          }}
+          onAdLoaded={() => {
+            setAdmobLoaded(true);
+            setAdmobFailed(false);
+          }}
+          onAdFailedToLoad={(error: any) => {
+            console.warn("[AdMob] Banner yüklenemedi, Cyber Banner'a geçiliyor:", error?.message);
+            setAdmobFailed(true);
+          }}
+        />
+        {!admobLoaded && !admobFailed && renderCyberFallback()}
+      </View>
+    );
+  }
+
+  return renderCyberFallback();
 }
 
 const styles = StyleSheet.create({
+  admobWrapper: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
   bannerWrap: {
     width: "100%",
     marginBottom: 8,

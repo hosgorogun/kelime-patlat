@@ -63,7 +63,14 @@ export function CyberStore({
         setTodayId((prev) => (prev !== current ? current : prev));
       }
     });
-    return () => sub.remove();
+    const interval = setInterval(() => {
+      const current = getDayId();
+      setTodayId((prev) => (prev !== current ? current : prev));
+    }, 15000);
+    return () => {
+      sub.remove();
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {

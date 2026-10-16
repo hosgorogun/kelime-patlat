@@ -1,4 +1,5 @@
 import type { Server, Socket } from "socket.io";
+import mongoose from "mongoose";
 import { z } from "zod";
 import type { BoardSize } from "../../shared/game";
 import { normalizeTr, isEqualTr } from "../../shared/tr-utils";
@@ -9,7 +10,7 @@ import {
   updateFriendRequestStatus,
   findFriendRequestById,
 } from "../db";
-import { registerUserSocket, getSocketsForUser } from "./user-socket-registry";
+import { registerUserSocket, getSocketsForUser, isUserOnline } from "./user-socket-registry";
 import type { Room } from "./types";
 import { emitRoom } from "./room-snapshot";
 import type { playerProfileSchema } from "./schemas";
@@ -62,13 +63,20 @@ export function registerFriendSocketHandlers(
           return socket.emit("friend:error", { message: "Kendinize arkadaşlık isteği gönderemezsiniz." });
         }
 
-        const targetUser = await UserModel.findOne({
-          $or: [
-            { username: normalizeTr(toUsername) },
-            { openId: toUsername },
-            { name: new RegExp(`^${escapeRegex(toUsername)}$`, "i") },
-          ],
-        }).lean();
+        let targetUser: any = null;
+        if (mongoose.connection.readyState === 1) {
+          try {
+            targetUser = await UserModel.findOne({
+              $or: [
+                { username: normalizeTr(toUsername) },
+                { openId: toUsername },
+                { name: new RegExp(`^${escapeRegex(toUsername)}$`, "i") },
+              ],
+            }).lean();
+          } catch (e) {
+            console.warn("[Friend] UserModel.findOne error:", e);
+          }
+        }
 
         const targetUserId = targetUser?.openId || toUsername;
         const targetUsernameClean = targetUser?.username || targetUser?.name || toUsername;
@@ -90,6 +98,100 @@ export function registerFriendSocketHandlers(
         );
         if (alreadyPending) {
           return socket.emit("friend:error", { message: "Bu kullanıcıya daha önce istek gönderilmiş." });
+        }
+
+        const incomingRequests = [
+          ...(await getPendingFriendRequests(fromId)),
+          ...(fromUsername ? await getPendingFriendRequests(fromUsername) : []),
+          ...(fromName ? await getPendingFriendRequests(fromName) : []),
+        ];
+        const existingReverseReq = incomingRequests.find(
+          (r) =>
+            (r.fromUserId === targetUserId ||
+              isEqualTr(r.fromUsername, toUsername) ||
+              isEqualTr(r.fromUsername, targetUsernameClean) ||
+              isEqualTr(r.fromName, toUsername) ||
+              isEqualTr(r.fromName, targetNameClean)) &&
+            r.status === "pending"
+        );
+        if (existingReverseReq) {
+          await updateFriendRequestStatus(existingReverseReq.id, "accepted");
+          const friendForAcceptor = {
+            id: existingReverseReq.fromUserId || targetUserId,
+            name: existingReverseReq.fromName || targetNameClean,
+            username: existingReverseReq.fromUsername || targetUsernameClean,
+            avatar: existingReverseReq.fromAvatar || targetUser?.progress?.selectedAvatar || "🎮",
+            avatarPhoto: existingReverseReq.fromAvatarPhoto || targetUser?.progress?.avatarPhoto,
+            selectedTitle: existingReverseReq.fromSelectedTitle || targetUser?.progress?.selectedTitle || "[ÇAYLAK]",
+            level: existingReverseReq.fromLevel || targetUser?.progress?.level || 1,
+            tier: existingReverseReq.fromTier || targetUser?.progress?.tier || "DEMİR",
+            lp: existingReverseReq.fromLp || targetUser?.progress?.lp || 0,
+            xp: existingReverseReq.fromXp || targetUser?.progress?.xp || 0,
+            isOnline: isUserOnline(existingReverseReq.fromUserId) || isUserOnline(targetUserId),
+          };
+          const friendForRequester = {
+            id: fromId,
+            name: fromName,
+            username: fromUsername,
+            avatar: payload.profile?.avatar || "spark",
+            avatarPhoto: payload.profile?.avatarPhoto,
+            selectedTitle: payload.profile?.selectedTitle || "[ÇAYLAK]",
+            level: payload.profile?.level || 1,
+            tier: payload.profile?.tier || "DEMİR",
+            lp: payload.profile?.lp || 0,
+            xp: payload.profile?.xp || 0,
+            isOnline: true,
+          };
+
+          if (mongoose.connection.readyState === 1) {
+            try {
+              await UserModel.findOneAndUpdate(
+                { openId: fromId },
+                { $pull: { "progress.friends": { id: friendForAcceptor.id } } }
+              );
+              await UserModel.findOneAndUpdate(
+                { openId: fromId },
+                { $push: { "progress.friends": friendForAcceptor } }
+              );
+              await UserModel.findOneAndUpdate(
+                { openId: targetUserId },
+                { $pull: { "progress.friends": { id: friendForRequester.id } } }
+              );
+              await UserModel.findOneAndUpdate(
+                { openId: targetUserId },
+                { $push: { "progress.friends": friendForRequester } }
+              );
+            } catch (e) {
+              console.warn("[Friend] Mutual accept DB update error:", e);
+            }
+          }
+
+          const acceptorSockets = [
+            ...getSocketsForUser(fromId),
+            ...getSocketsForUser(fromUsername),
+          ];
+          for (const sId of Array.from(new Set(acceptorSockets))) {
+            io.to(sId).emit("friend:request:accepted", {
+              requestId: existingReverseReq.id,
+              newFriend: friendForAcceptor,
+              message: `${friendForAcceptor.name} ile karşılıklı arkadaş oldunuz! 🎉`,
+            });
+          }
+
+          const requesterSockets = [
+            ...getSocketsForUser(existingReverseReq.fromUserId),
+            ...getSocketsForUser(existingReverseReq.fromUsername),
+            ...getSocketsForUser(targetUserId),
+            ...getSocketsForUser(targetUsernameClean),
+          ];
+          for (const sId of Array.from(new Set(requesterSockets))) {
+            io.to(sId).emit("friend:request:accepted", {
+              requestId: existingReverseReq.id,
+              newFriend: friendForRequester,
+              message: `${friendForRequester.name} arkadaşlık isteğinizi kabul etti! 🎉`,
+            });
+          }
+          return;
         }
 
         const newRequest = await createFriendRequest({
@@ -174,10 +276,12 @@ export function registerFriendSocketHandlers(
         }
         const isAuthorized =
           req.toUserId === playerId ||
-          (payload.playerName && isEqualTr(req.toUserId, payload.playerName)) ||
-          (payload.profile?.username && isEqualTr(req.toUserId, payload.profile.username)) ||
-          (payload.playerName && isEqualTr(req.toUsername, payload.playerName)) ||
-          (payload.profile?.username && isEqualTr(req.toUsername, payload.profile.username));
+          isEqualTr(req.toUserId, playerId) ||
+          isEqualTr(req.toUsername, playerId) ||
+          getSocketsForUser(req.toUserId).includes(socket.id) ||
+          getSocketsForUser(req.toUsername).includes(socket.id) ||
+          (payload.playerName && (isEqualTr(req.toUserId, payload.playerName) || isEqualTr(req.toUsername, payload.playerName))) ||
+          (payload.profile?.username && (isEqualTr(req.toUserId, payload.profile.username) || isEqualTr(req.toUsername, payload.profile.username)));
 
         if (!isAuthorized) {
           return socket.emit("friend:error", { message: "Bu isteği yanıtlama yetkiniz yok." });
@@ -188,7 +292,14 @@ export function registerFriendSocketHandlers(
 
         if (action === "reject") {
           await updateFriendRequestStatus(requestId, "rejected");
-          socket.emit("friend:request:rejected", { requestId, success: true });
+          const acceptorSockets = [
+            ...getSocketsForUser(playerId),
+            ...(payload.playerName ? getSocketsForUser(payload.playerName) : []),
+            ...(payload.profile?.username ? getSocketsForUser(payload.profile.username) : []),
+          ];
+          for (const sId of Array.from(new Set(acceptorSockets))) {
+            io.to(sId).emit("friend:request:rejected", { requestId, success: true });
+          }
           return;
         }
 
@@ -223,32 +334,41 @@ export function registerFriendSocketHandlers(
             isOnline: true,
           };
 
-          try {
-            await UserModel.findOneAndUpdate(
-              { openId: playerId },
-              { $pull: { "progress.friends": { id: friendForAcceptor.id } } }
-            );
-            await UserModel.findOneAndUpdate(
-              { openId: playerId },
-              { $push: { "progress.friends": friendForAcceptor } }
-            );
-            await UserModel.findOneAndUpdate(
-              { openId: req.fromUserId },
-              { $pull: { "progress.friends": { id: friendForRequester.id } } }
-            );
-            await UserModel.findOneAndUpdate(
-              { openId: req.fromUserId },
-              { $push: { "progress.friends": friendForRequester } }
-            );
-          } catch (e) {
-            console.warn("[Friend] DB update friends error:", e);
+          if (mongoose.connection.readyState === 1) {
+            try {
+              await UserModel.findOneAndUpdate(
+                { openId: playerId },
+                { $pull: { "progress.friends": { id: friendForAcceptor.id } } }
+              );
+              await UserModel.findOneAndUpdate(
+                { openId: playerId },
+                { $push: { "progress.friends": friendForAcceptor } }
+              );
+              await UserModel.findOneAndUpdate(
+                { openId: req.fromUserId },
+                { $pull: { "progress.friends": { id: friendForRequester.id } } }
+              );
+              await UserModel.findOneAndUpdate(
+                { openId: req.fromUserId },
+                { $push: { "progress.friends": friendForRequester } }
+              );
+            } catch (e) {
+              console.warn("[Friend] DB update friends error:", e);
+            }
           }
 
-          socket.emit("friend:request:accepted", {
-            requestId,
-            newFriend: friendForAcceptor,
-            message: `${friendForAcceptor.name} ile artık arkadaşsınız!`,
-          });
+          const acceptorSockets = [
+            ...getSocketsForUser(playerId),
+            ...(payload.playerName ? getSocketsForUser(payload.playerName) : []),
+            ...(payload.profile?.username ? getSocketsForUser(payload.profile.username) : []),
+          ];
+          for (const sId of Array.from(new Set(acceptorSockets))) {
+            io.to(sId).emit("friend:request:accepted", {
+              requestId,
+              newFriend: friendForAcceptor,
+              message: `${friendForAcceptor.name} ile artık arkadaşsınız!`,
+            });
+          }
 
           const requesterSockets = [
             ...getSocketsForUser(req.fromUserId),
@@ -275,28 +395,41 @@ export function registerFriendSocketHandlers(
       if (!ownsPlayerId(playerId)) {
         return socket.emit("friend:error", { message: "Oyuncu kimliği bu oturuma ait değil." });
       }
-      try {
-        const friendUser = await UserModel.findOne({
-          $or: [{ openId: friendId }, { username: normalizeTr(friendId) }],
-        }).lean();
-        const targetOpenId = friendUser?.openId || friendId;
-        const targetUsername = friendUser?.username || friendId;
 
-        await UserModel.findOneAndUpdate(
-          { openId: playerId },
-          { $pull: { "progress.friends": { $or: [{ id: friendId }, { id: targetOpenId }, { username: targetUsername }] } as any } }
-        );
-        await UserModel.findOneAndUpdate(
-          { openId: targetOpenId },
-          { $pull: { "progress.friends": { $or: [{ id: playerId }] } as any } }
-        );
-      } catch (e) {
-        console.warn("[Friend] DB remove friend error:", e);
+      let targetOpenId = friendId;
+      let targetUsername = friendId;
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const friendUser = await UserModel.findOne({
+            $or: [{ openId: friendId }, { username: normalizeTr(friendId) }],
+          }).lean();
+          if (friendUser?.openId) targetOpenId = friendUser.openId;
+          if (friendUser?.username) targetUsername = friendUser.username;
+
+          await UserModel.findOneAndUpdate(
+            { openId: playerId },
+            { $pull: { "progress.friends": { $or: [{ id: { $in: [friendId, targetOpenId] } }, { username: { $in: [friendId, targetUsername] } }] } as any } }
+          );
+          await UserModel.findOneAndUpdate(
+            { openId: targetOpenId },
+            { $pull: { "progress.friends": { $or: [{ id: playerId }, { username: playerId }] } as any } }
+          );
+        } catch (e) {
+          console.warn("[Friend] DB remove friend error:", e);
+        }
       }
-      socket.emit("friend:removed", { friendId, success: true });
 
-      const friendSockets = getSocketsForUser(friendId);
-      for (const sId of friendSockets) {
+      const mySockets = getSocketsForUser(playerId);
+      for (const sId of mySockets) {
+        io.to(sId).emit("friend:removed", { friendId, success: true });
+      }
+
+      const friendSockets = [
+        ...getSocketsForUser(friendId),
+        ...getSocketsForUser(targetOpenId),
+        ...getSocketsForUser(targetUsername),
+      ];
+      for (const sId of Array.from(new Set(friendSockets))) {
         io.to(sId).emit("friend:removed", { friendId: playerId, success: true });
       }
     } catch (err: any) {
@@ -324,6 +457,19 @@ export function registerFriendSocketHandlers(
         ...(toUsername ? getSocketsForUser(toUsername) : []),
       ];
       const uniqueSockets = Array.from(new Set(targetSockets));
+
+      let isTargetBusy = false;
+      for (const r of rooms.values()) {
+        if (r.status === "playing" && (r.host.id === toPlayerId || r.guest?.id === toPlayerId)) {
+          isTargetBusy = true;
+          break;
+        }
+      }
+      if (isTargetBusy) {
+        return socket.emit("friend:duel:failed", {
+          message: `${toUsername || "Arkadaşınız"} şu anda başka bir canlı düelloda oynuyor.`,
+        });
+      }
 
       if (uniqueSockets.length === 0) {
         const isMockFriend =
@@ -411,10 +557,15 @@ export function registerFriendSocketHandlers(
     }) => {
       const { toPlayerId, fromPlayerName, roomCode, accepted } = payload;
       const pendingInvite = pendingDuelInvites.get(socket.id);
-      if (!pendingInvite || pendingInvite.fromPlayerId !== toPlayerId || pendingInvite.roomCode !== roomCode) {
+      const room = rooms.get(roomCode);
+      const isAuthorized =
+        (pendingInvite && pendingInvite.fromPlayerId === toPlayerId && pendingInvite.roomCode === roomCode) ||
+        (room && (room.status === "waiting" || room.status === "lobby") && room.host.id === toPlayerId);
+
+      if (!isAuthorized) {
         return socket.emit("friend:duel:failed", { message: "Bu daveti yanıtlama yetkiniz yok." });
       }
-      if (pendingInvite.expiresAt < Date.now()) {
+      if (pendingInvite && pendingInvite.expiresAt < Date.now()) {
         pendingDuelInvites.delete(socket.id);
         return socket.emit("friend:duel:failed", { message: "Bu davetin süresi dolmuş." });
       }
@@ -429,6 +580,17 @@ export function registerFriendSocketHandlers(
       }
     }
   );
+
+  socket.on("friends:status:get", (payload: { userIds: string[] }) => {
+    if (!payload?.userIds || !Array.isArray(payload.userIds)) return;
+    const statuses: Record<string, boolean> = {};
+    for (const id of payload.userIds) {
+      if (id) {
+        statuses[id] = isUserOnline(id);
+      }
+    }
+    socket.emit("friends:status:update", { statuses });
+  });
 
   socket.on("disconnect", () => {
     pendingDuelInvites.delete(socket.id);

@@ -683,6 +683,7 @@ export function useRoomSocket({
     setProgress,
     setRoomFromServer,
     setScreen,
+    setShowResultModal,
   });
   callbacksRef.current = {
     flushPendingAwards,
@@ -695,6 +696,7 @@ export function useRoomSocket({
     setProgress,
     setRoomFromServer,
     setScreen,
+    setShowResultModal,
   };
 
   // Socket event subscriptions
@@ -858,6 +860,47 @@ export function useRoomSocket({
       }, 2500);
     };
 
+    const onRematchReceived = (payload: { fromPlayerId: string; fromPlayerName: string; roomCode: string }) => {
+      gameSfx.tap();
+      haptics.success();
+      callbacksRef.current.setShowResultModal(true);
+      callbacksRef.current.setGlobalToast({
+        id: `rematch-req-${Date.now()}`,
+        title: "🔥 RÖVANŞ TEKLİFİ!",
+        subtitle: `${payload.fromPlayerName} seninle rövanş oynamak istiyor!`,
+        icon: "⚔️",
+        accentColor: "#FFC24A",
+      });
+    };
+
+    const onOpponentLeft = (payload: { code: string; playerId: string; reason?: string }) => {
+      callbacksRef.current.setGlobalToast({
+        id: `opp-left-${Date.now()}`,
+        title: "🚪 RAKİP AYRILDI",
+        subtitle: "Rakip odadan ayrıldı. Yeni bir maça başlayabilirsin.",
+        icon: "🚪",
+        accentColor: "#94A3B8",
+      });
+    };
+
+    const onFriendsStatusUpdate = (payload: { statuses: Record<string, boolean> }) => {
+      if (payload?.statuses) {
+        socialManager.updateOnlineStatuses(payload.statuses);
+        callbacksRef.current.setProgress((curr) => ({
+          ...curr,
+          friends: [...socialManager.getFriends()],
+        }));
+      }
+    };
+
+    const fetchFriendsStatus = () => {
+      const allFriends = socialManager.getFriends();
+      const ids = allFriends.map((f) => f.id).concat(allFriends.map((f) => f.username)).filter(Boolean);
+      if (ids.length > 0) {
+        socket.emit("friends:status:get", { userIds: ids });
+      }
+    };
+
     const onReconnect = () => {
       setIsSocketConnected(true);
       if (activeRoomCodeRef.current) {
@@ -865,6 +908,7 @@ export function useRoomSocket({
       }
       socket.emit("player:identify", { playerId, username: safeName });
       socket.emit("friend:requests:get", { playerId, username: safeName });
+      fetchFriendsStatus();
       void callbacksRef.current.flushPendingAwards();
     };
 
@@ -887,11 +931,15 @@ export function useRoomSocket({
     socket.on("friend:duel:accepted", onDuelAccepted);
     socket.on("friend:duel:rejected", onDuelRejected);
     socket.on("friend:duel:failed", onDuelFailed);
+    socket.on("friends:status:update", onFriendsStatusUpdate);
     socket.on("room:emote:received", onEmoteReceived);
+    socket.on("room:rematch:received", onRematchReceived);
+    socket.on("room:opponent:left", onOpponentLeft);
 
     socket.emit("leaderboard:request");
     socket.emit("player:identify", { playerId, username: safeName });
     socket.emit("friend:requests:get", { playerId, username: safeName });
+    fetchFriendsStatus();
 
     return () => {
       if (matchmakingIntervalRef.current) {
@@ -917,7 +965,10 @@ export function useRoomSocket({
       socket.off("friend:duel:accepted", onDuelAccepted);
       socket.off("friend:duel:rejected", onDuelRejected);
       socket.off("friend:duel:failed", onDuelFailed);
+      socket.off("friends:status:update", onFriendsStatusUpdate);
       socket.off("room:emote:received", onEmoteReceived);
+      socket.off("room:rematch:received", onRematchReceived);
+      socket.off("room:opponent:left", onOpponentLeft);
     };
   }, [playerId, safeName, screenRef]);
 

@@ -3,7 +3,7 @@ import { palette } from "@/shared/palette";
 
 export const styles = StyleSheet.create({
 
-  content: { flexGrow: 1, paddingBottom: 135 },
+  content: { flexGrow: 1, paddingBottom: 170 },
   hud: {
     borderRadius: 22,
     backgroundColor: palette.panel,

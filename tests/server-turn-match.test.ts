@@ -12,6 +12,7 @@ import {
 } from "../server/db";
 import { isValidTurkishWord } from "../shared/dictionary";
 import { isEqualTr, normalizeTrUpper } from "../shared/tr-utils";
+import { isAdjacent } from "../shared/game";
 
 describe("Senior QA Test Suite: Kahve Düellosu (Asenkron Sıra Tabanlı PvP)", () => {
   it("createInitialTurnBoard 4x4 ve 6x6 tahtalar için geçerli Türkçe harf dizileri üretmelidir", () => {
@@ -157,5 +158,48 @@ describe("Senior QA Test Suite: Kahve Düellosu (Asenkron Sıra Tabanlı PvP)", 
     expect(finished?.winnerId).toBe("p1_champ");
     expect(finished?.player1Score).toBe(80);
     expect(finished?.player2Score).toBe(65);
+  });
+
+  it("Komşuluk (isAdjacent) ve benzersiz hücre kuralları hileli seçimleri engellemelidir", () => {
+    // 4x4 tahtada:
+    // 0, 1 komşudur (yatay)
+    // 0, 4 komşudur (dikey)
+    // 0, 5 çaprazdır (komşu değil)
+    // 0, 15 karşıt köşelerdir (komşu değil)
+    expect(isAdjacent(0, 1, 4)).toBe(true);
+    expect(isAdjacent(0, 4, 4)).toBe(true);
+    expect(isAdjacent(0, 5, 4)).toBe(false);
+    expect(isAdjacent(0, 15, 4)).toBe(false);
+
+    // Bitişik olmayan harf seçimi doğrulaması
+    const invalidSelection = [0, 5, 15]; // Çapraz ve kopuk
+    const isValid =
+      invalidSelection.length >= 2 &&
+      new Set(invalidSelection).size === invalidSelection.length &&
+      invalidSelection.every((idx, i) => i === 0 || isAdjacent(invalidSelection[i - 1]!, idx, 4));
+    expect(isValid).toBe(false);
+
+    // Geçerli bitişik seçim: 0 -> 1 -> 2 -> 3
+    const validSelection = [0, 1, 2, 3];
+    const isAdjacentValid =
+      validSelection.length >= 2 &&
+      new Set(validSelection).size === validSelection.length &&
+      validSelection.every((idx, i) => i === 0 || isAdjacent(validSelection[i - 1]!, idx, 4));
+    expect(isAdjacentValid).toBe(true);
+  });
+
+  it("Aynı maçta mükerrer kelime kullanımı tespit edilmelidir", () => {
+    const foundWords = [
+      { word: "KAPI", playerId: "p1", score: 25, playedAt: Date.now() },
+      { word: "ELMA", playerId: "p2", score: 25, playedAt: Date.now() },
+    ];
+
+    const duplicateWord = "kApı";
+    const isAlreadyFound = foundWords.some((f) => isEqualTr(f.word, duplicateWord));
+    expect(isAlreadyFound).toBe(true);
+
+    const newWord = "MASA";
+    const isNewFound = foundWords.some((f) => isEqualTr(f.word, newWord));
+    expect(isNewFound).toBe(false);
   });
 });

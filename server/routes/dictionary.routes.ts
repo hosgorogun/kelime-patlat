@@ -31,7 +31,10 @@ dictionaryRouter.get("/:word", async (req, res) => {
     // TDK GTS API sorgusu
     try {
       const tdkUrl = `https://sozluk.gov.tr/gts?ara=${encodeURIComponent(normalizeTr(clean))}`;
-      const tdkRes = await fetch(tdkUrl, { headers: { "User-Agent": "KelimePatlat/1.0" } });
+      const tdkRes = await fetch(tdkUrl, {
+        headers: { "User-Agent": "KelimePatlat/1.0" },
+        signal: AbortSignal.timeout(2500),
+      });
       if (tdkRes.ok) {
         const data = await tdkRes.json();
         if (Array.isArray(data) && data[0]?.anlamlarListe && data[0].anlamlarListe.length > 0) {

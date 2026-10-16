@@ -64,6 +64,8 @@ export interface MatchResultModalProps {
     loading?: boolean;
   } | null;
   rematchPending?: boolean;
+  opponentRematch?: boolean;
+  opponentLeft?: boolean;
   isFriend?: boolean;
   onInspectWord: (word: string, path: number[], color?: string) => void;
   onOpenUserProfile?: (opponent: any) => void;
@@ -100,6 +102,8 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
   bonusWords,
   selectedWordInfo,
   rematchPending,
+  opponentRematch,
+  opponentLeft,
   isFriend,
   onInspectWord,
   onOpenUserProfile,
@@ -386,18 +390,60 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
                 </Pressable>
               )}
 
+              {opponentLeft && (
+                <View style={styles.opponentLeftBanner}>
+                  <Text style={styles.opponentLeftBannerText}>
+                    🚪 {opponentName} odadan ayrıldı. Yeni bir düello için Ana Menü&apos;ye dönebilirsin.
+                  </Text>
+                </View>
+              )}
+
+              {opponentRematch && !rematchPending && !opponentLeft && (
+                <View style={styles.rematchPromptBanner}>
+                  <Text style={styles.rematchPromptIcon}>🔥</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rematchPromptTitle}>RÖVANŞ TEKLİFİ GELDİ!</Text>
+                    <Text style={styles.rematchPromptSub}>
+                      {opponentName} seninle hemen rövanş oynamak istiyor!
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {rematchPending && !opponentRematch && !opponentLeft && (
+                <View style={styles.rematchWaitingBanner}>
+                  <ActivityIndicator size="small" color="#8c7540" style={{ transform: [{ scale: 0.8 }] }} />
+                  <Text style={styles.rematchWaitingText}>
+                    {opponentName} oyuncusunun yanıtı bekleniyor...
+                  </Text>
+                </View>
+              )}
+
               <View style={styles.actionBtnRow}>
                 <Pressable
                   onPress={onRequestRematch}
-                  disabled={rematchPending}
+                  disabled={rematchPending || opponentLeft}
                   style={({ pressed }) => [
                     styles.rematchBtn,
-                    rematchPending && { opacity: 0.6 },
-                    pressed && !rematchPending && { opacity: 0.8 },
+                    opponentRematch && !rematchPending && styles.rematchBtnActiveAccept,
+                    (rematchPending || opponentLeft) && styles.rematchBtnDisabled,
+                    pressed && !rematchPending && !opponentLeft && { opacity: 0.8 },
                   ]}
                 >
-                  <Text style={styles.rematchBtnText}>
-                    {rematchPending ? "BEKLENİYOR..." : "↻ RÖVANŞ İSTE"}
+                  <Text
+                    style={[
+                      styles.rematchBtnText,
+                      opponentRematch && !rematchPending && styles.rematchBtnTextActiveAccept,
+                      opponentLeft && styles.rematchBtnTextDisabled,
+                    ]}
+                  >
+                    {opponentLeft
+                      ? "🚪 RAKİP AYRILDI"
+                      : opponentRematch && !rematchPending
+                      ? "⚡ RÖVANŞI KABUL ET ▶"
+                      : rematchPending
+                      ? "⏳ BEKLENİYOR..."
+                      : "↻ RÖVANŞ İSTE"}
                   </Text>
                 </Pressable>
 
@@ -755,11 +801,91 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  rematchBtnActiveAccept: {
+    backgroundColor: "#10B981",
+    borderColor: "#059669",
+    borderBottomWidth: 3,
+  },
+  rematchBtnDisabled: {
+    opacity: 0.65,
+    backgroundColor: "#E2E8F0",
+    borderColor: "#CBD5E1",
+  },
   rematchBtnText: {
     color: "#293541",
     fontSize: 13,
     fontWeight: "900",
     letterSpacing: 0.4,
+  },
+  rematchBtnTextActiveAccept: {
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+  },
+  rematchBtnTextDisabled: {
+    color: "#94A3B8",
+  },
+  opponentLeftBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    borderColor: "#CBD5E1",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 4,
+  },
+  opponentLeftBannerText: {
+    color: "#64748B",
+    fontSize: 10.5,
+    fontWeight: "800",
+    textAlign: "center",
+    flex: 1,
+  },
+  rematchPromptBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF3C7",
+    borderColor: "#F59E0B",
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  rematchPromptIcon: {
+    fontSize: 20,
+  },
+  rematchPromptTitle: {
+    color: "#92400E",
+    fontSize: 11.5,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  rematchPromptSub: {
+    color: "#B45309",
+    fontSize: 9.5,
+    fontWeight: "700",
+    marginTop: 1,
+  },
+  rematchWaitingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#FDF8E2",
+    borderColor: "#E5D298",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 4,
+  },
+  rematchWaitingText: {
+    color: "#8C7540",
+    fontSize: 10.5,
+    fontWeight: "800",
   },
   leaveBtn: {
     flex: 1,

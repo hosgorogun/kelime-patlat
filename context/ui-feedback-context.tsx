@@ -18,7 +18,7 @@ export interface UIFeedbackContextValue {
   setShowWelcomeModal: (show: boolean) => void;
   isClaimingWelcomeReward: boolean;
   handleClaimWelcomeReward: () => void;
-  handleClaimDailyReward: () => void;
+  handleClaimDailyReward: (isDoubled?: boolean) => void;
   showConsentModal: boolean;
   setShowConsentModal: (show: boolean) => void;
   showLivesModal: boolean;

@@ -8,6 +8,8 @@ export interface ArcadeResultModalProps {
   score: number;
   doubled: boolean;
   onDoubleReward: () => void;
+  hasRevived?: boolean;
+  onRevive?: () => void;
   onRestart: () => void;
   onInspectBoard: () => void;
   onExit: () => void;
@@ -19,6 +21,8 @@ export function ArcadeResultModal({
   score,
   doubled,
   onDoubleReward,
+  hasRevived,
+  onRevive,
   onRestart,
   onInspectBoard,
   onExit,
@@ -62,6 +66,21 @@ export function ArcadeResultModal({
                 </Text>
               </View>
             </View>
+
+            {!hasRevived && (
+              <Pressable
+                onPress={onRevive}
+                style={[
+                  styles.action,
+                  { backgroundColor: "#aef5e0", borderColor: "#3EE8B5", borderWidth: 2, marginBottom: 8 },
+                ]}
+              >
+                <Text style={[styles.actionText, { color: "#065F46", fontWeight: "900" }]}>
+                  ⏳ İKİNCİ ŞANS (+30sn SÜRE İLE DEVAM ET)
+                </Text>
+                <Text style={[styles.actionArrow, { color: "#065F46" }]}>⚡</Text>
+              </Pressable>
+            )}
 
             {!doubled && score > 0 && (
               <Pressable

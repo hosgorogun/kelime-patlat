@@ -37,7 +37,7 @@ import {
 import { PvpFoundWordsPanel } from "./pvp-found-words-panel";
 import { PvpResultPanel } from "./pvp-result-panel";
 import type { BoardSize, RoomSnapshot } from "@/shared/game";
-import { type PlayerProgress, resolveAvatarDisplay } from "@/shared/progression";
+import { type PlayerProgress, resolveAvatarDisplay, getPlayerLevel } from "@/shared/progression";
 import type { ToastData } from "../common/global-game-toast";
 
 export { type SelectedWordDetail } from "./pvp-route-inspector";
@@ -210,6 +210,8 @@ export function PvpMatchScreen({
   const opponent = room.players.find((player) => player.id !== playerId) ?? null;
   const iWon = room.winnerId === playerId;
   const isDraw = Boolean(room.status === "finished" && !room.winnerId);
+  const opponentRematch = Boolean(opponent?.rematch);
+  const opponentLeft = !opponent || (!opponent.isBot && !opponent.connected);
 
   const selectionSet = useMemo(() => new Set(selectedCells), [selectedCells]);
   const myFoundWords = useMemo(
@@ -738,6 +740,9 @@ export function PvpMatchScreen({
           iWon={iWon}
           activeVictoryEffect={activeVictoryEffect}
           rematchPending={Boolean(me?.rematch)}
+          opponentRematch={opponentRematch}
+          opponentLeft={opponentLeft}
+          opponentName={opponent?.name ?? "RAKİP"}
           notice={notice}
           onShowResultsModal={() => setShowResultModal(true)}
           onRequestRematch={onRequestRematch}
@@ -771,13 +776,17 @@ export function PvpMatchScreen({
         bonusWords={room.bonusWords?.[playerId]}
         selectedWordInfo={selectedWordInfo}
         rematchPending={Boolean(me?.rematch)}
+        opponentRematch={opponentRematch}
+        opponentLeft={opponentLeft}
         isFriend={
           opponent
             ? socialManager
                 .getFriends()
                 .some(
                   (f) =>
-                    isEqualTr(f.username, opponent.name)
+                    f.id === opponent.id ||
+                    isEqualTr(f.username, opponent.name) ||
+                    isEqualTr(f.name, opponent.name)
                 )
             : false
         }
@@ -788,29 +797,50 @@ export function PvpMatchScreen({
         }}
         onAddFriend={(opp) => {
           triggerHapticSuccess();
-          const res = socialManager.addFriend({
-            id: opp.id,
-            name: opp.name,
-            username: opp.name,
-            avatar: opp.avatar || (opp.isBot ? "🤖" : "🎮"),
-            avatarPhoto: opp.avatarPhoto,
-            selectedTitle: opp.selectedTitle,
-            level: opp.level,
-            tier: opp.tier,
-            lp: opp.lp,
-            wins: opp.wins,
-            matches: opp.matches,
-            streak: opp.streak,
-            bestScore: opp.bestScore,
-            bestTempo: opp.bestTempo,
-          });
-          onSetGlobalToast({
-            id: `friend-${Date.now()}`,
-            title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
-            subtitle: res.message,
-            icon: res.success ? "👥" : "ℹ️",
-            accentColor: res.success ? "#3EE8B5" : "#FFC24A",
-          });
+          if (onAddFriendTarget) {
+            onAddFriendTarget({
+              id: opp.id,
+              name: opp.name,
+              username: opp.name,
+              avatar: opp.avatar || (opp.isBot ? "🤖" : "🎮"),
+              avatarPhoto: opp.avatarPhoto,
+              selectedTitle: opp.selectedTitle,
+              selectedFrame: opp.selectedFrame,
+              level: opp.level,
+              tier: opp.tier,
+              lp: opp.lp,
+              wins: opp.wins,
+              matches: opp.matches,
+              streak: opp.streak,
+              bestScore: opp.bestScore,
+              bestTempo: opp.bestTempo,
+              isBot: opp.isBot,
+            });
+          } else {
+            const res = socialManager.addFriend({
+              id: opp.id,
+              name: opp.name,
+              username: opp.name,
+              avatar: opp.avatar || (opp.isBot ? "🤖" : "🎮"),
+              avatarPhoto: opp.avatarPhoto,
+              selectedTitle: opp.selectedTitle,
+              level: opp.level,
+              tier: opp.tier,
+              lp: opp.lp,
+              wins: opp.wins,
+              matches: opp.matches,
+              streak: opp.streak,
+              bestScore: opp.bestScore,
+              bestTempo: opp.bestTempo,
+            });
+            onSetGlobalToast({
+              id: `friend-${Date.now()}`,
+              title: res.success ? "ARKADAŞ EKLENDİ" : "BİLGİ",
+              subtitle: res.message,
+              icon: res.success ? "👥" : "ℹ️",
+              accentColor: res.success ? "#3EE8B5" : "#FFC24A",
+            });
+          }
         }}
         onWatchAdStreakSave={() => {
           onWatchAd(() => {
@@ -857,7 +887,7 @@ export function PvpMatchScreen({
         playerAvatarPhoto={progress.avatarPhoto}
         playerTier={me?.tier || "BRONZ"}
         playerTitle={me?.selectedTitle || progress.selectedTitle || "Kelime Avcısı"}
-        playerLevel={progress.level || 1}
+        playerLevel={getPlayerLevel(progress.xp)}
         opponentName={opponent?.name || "RAKİP"}
         opponentAvatar={opponent?.avatar || "⚡"}
         opponentAvatarPhoto={opponent?.avatarPhoto}
@@ -889,7 +919,9 @@ export function PvpMatchScreen({
                 .getFriends()
                 .some(
                   (f) =>
-                    isEqualTr(f.username, inspectedUser.username || inspectedUser.name)
+                    f.id === inspectedUser.id ||
+                    isEqualTr(f.username, inspectedUser.username || inspectedUser.name) ||
+                    isEqualTr(f.name, inspectedUser.username || inspectedUser.name)
                 )
             : false
         }

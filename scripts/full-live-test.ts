@@ -445,21 +445,25 @@ async function runFullLiveTest() {
   assert(getLeagueTier(10000).tier === "HAKİM", "10000 LP Hakim olmalı!");
   console.log("[LEAGUE TIERS] 9 Lig Kademesi (Demir, Bronz, Gümüş, Altın, Platin, Elmas, Kozmik, Ebedi, Hakim) doğrulandı ✅");
 
-  // 5.2 Kademeli LP Formülü ve Demir Koruma Kuralı
+  // 5.2 Kademeli LP Formülü ve Demir Koruma Kuralı (Rush Hour dinamik çarpanı dahil)
+  const currentHour = new Date().getHours();
+  const isRushHour = currentHour >= 20 && currentHour < 21;
+  const lpMultiplier = isRushHour ? 2 : 1;
+
   const demirWin = applyMatchProgress({ ...DEFAULT_PROGRESS, lp: 100 }, { score: 100, tempo: 2.0, won: true }, "pvp");
-  assert(demirWin.lp === 130, "Demir galibiyeti +30 LP vermedi!");
+  assert(demirWin.lp === 100 + 30 * lpMultiplier, "Demir galibiyeti doğru LP vermedi!");
 
   const demirLoss = applyMatchProgress({ ...DEFAULT_PROGRESS, lp: 100 }, { score: 30, tempo: 1.0, won: false }, "pvp");
   assert(demirLoss.lp === 100, "Demir mağlubiyetinde 0 LP koruması çalışmadı!");
 
   const floorProtection = applyMatchProgress({ ...DEFAULT_PROGRESS, lp: 0 }, { score: 20, tempo: 1.0, won: false }, "pvp");
   assert(floorProtection.lp === 0, "LP taban koruması (asgari 0) çalışmadı!");
-  console.log("[LP FORMULA] Demir (+30 / 0 LP Koruma) ve Taban Koruması (0 LP) doğrulandı ✅");
+  console.log(`[LP FORMULA] Demir (+${30 * lpMultiplier} LP / 0 LP Koruma) ve Taban Koruması (0 LP) doğrulandı ${isRushHour ? '(⚡ RUSH HOUR 2X AKTİF)' : ''} ✅`);
 
   // 5.3 Galibiyet Serisi Bonusları
   const streak1 = applyMatchProgress({ ...DEFAULT_PROGRESS, lp: 100 }, { score: 100, tempo: 2.0, won: true }, "pvp");
   const streak2 = applyMatchProgress(streak1, { score: 100, tempo: 2.0, won: true }, "pvp");
-  assert(streak2.lp === 100 + 30 + 33, "2. Galibiyet seri bonusu (+3 LP) hatalı!");
+  assert(streak2.lp === 100 + 30 * lpMultiplier + 33 * lpMultiplier, "2. Galibiyet seri bonusu (+3 LP) hatalı!");
   const streak3 = applyMatchProgress(streak2, { score: 100, tempo: 2.0, won: true }, "pvp");
   console.log("[WIN STREAK] 2. Galibiyet (+3 LP) ve 3+ Galibiyet (+7 LP) bonusları doğrulandı ✅");
 
@@ -478,8 +482,8 @@ async function runFullLiveTest() {
 
   // 5.4 Ezici Galibiyet / Tempo Bonusu
   const crushing = applyMatchProgress({ ...DEFAULT_PROGRESS, lp: 100 }, { score: 125, tempo: 3.8, won: true }, "pvp");
-  assert(crushing.lp === 135, "Ezici galibiyet bonusu (+5 LP) hatalı!");
-  console.log("[CRUSHING WIN] Ezici Galibiyet (Skor ≥ 120, Tempo ≥ 3.5 ➔ +5 LP) doğrulandı ✅\n");
+  assert(crushing.lp === 100 + 35 * lpMultiplier, "Ezici galibiyet bonusu (+5 LP) hatalı!");
+  console.log(`[CRUSHING WIN] Ezici Galibiyet (Skor ≥ 120, Tempo ≥ 3.5 ➔ +${5 * lpMultiplier} LP) doğrulandı ✅\n`);
   totalCategoriesPassed++;
 
   // -------------------------------------------------------------------
@@ -495,17 +499,17 @@ async function runFullLiveTest() {
   assert(getCalculatedLives(livesState).lives === 0, "Can 0'ın altına indi!");
   console.log("[LIVES] Can düşürme ve 0 alt sınır koruması doğrulandı ✅");
 
-  // 6.2 Tek Can Satın Alma (20 Çip ➔ +1 Can)
+  // 6.2 Tek Can Satın Alma (COST_PER_LIFE ➔ +1 Can)
   const buyOne = buyLives({ ...livesState, coins: 100 }, "one");
   assert(buyOne.success === true && buyOne.updatedProgress.lives === 1, "Tek can satın alınamadı!");
-  assert(buyOne.updatedProgress.coins === 80, "20 çip düşülmedi!");
-  console.log("[SHOP BUY] Tek Can (20 Çip ➔ +1 Can) başarıyla satın alındı ✅");
+  assert(buyOne.updatedProgress.coins === 50, "50 çip düşülmedi!");
+  console.log("[SHOP BUY] Tek Can (50 Çip ➔ +1 Can) başarıyla satın alındı ✅");
 
-  // 6.3 Tam Can Doldurma (75 Çip ➔ 5/5 Tam Can)
+  // 6.3 Tam Can Doldurma (COST_REFILL_ALL ➔ 5/5 Tam Can)
   const buyAll = buyLives({ ...livesState, coins: 200 }, "all");
   assert(buyAll.success === true && buyAll.updatedProgress.lives === 5, "Tüm canlar dolmadı!");
-  assert(buyAll.updatedProgress.coins === 125, "75 çip düşülmedi!");
-  console.log("[SHOP BUY] Tam Can (75 Çip ➔ 5/5 Tam Can) başarıyla satın alındı ✅");
+  assert(buyAll.updatedProgress.coins === 20, "180 çip düşülmedi!");
+  console.log("[SHOP BUY] Tam Can (180 Çip ➔ 5/5 Tam Can) başarıyla satın alındı ✅");
 
   // 6.4 Canlar Doluyken Satın Alma Engeli
   const buyWhenFull = buyLives({ ...DEFAULT_PROGRESS, lives: 5, coins: 500 }, "all");
@@ -546,11 +550,17 @@ async function runFullLiveTest() {
 
   // 7.2 Görev Eylem İlerletme
   let missionProgressMap: Record<string, number> = {};
-  missionProgressMap = updateMissionAction(missionProgressMap, dailyMissions, "word_count", 5);
-  missionProgressMap = updateMissionAction(missionProgressMap, dailyMissions, "duel_win", 1);
-  missionProgressMap = updateMissionAction(missionProgressMap, dailyMissions, "word_length", 1, 5);
+  for (const m of dailyMissions) {
+    missionProgressMap = updateMissionAction(
+      missionProgressMap,
+      dailyMissions,
+      m.actionType,
+      1,
+      m.param ?? 10
+    );
+  }
   assert(Object.keys(missionProgressMap).length > 0, "Görev ilerlemesi güncellenemedi!");
-  console.log("[MISSIONS] Görev eylem ilerleticisi (word_count, duel_win, word_length) doğrulandı ✅");
+  console.log(`[MISSIONS] Görev eylem ilerleticisi (${Object.keys(missionProgressMap).length} görev güncellendi) doğrulandı ✅`);
 
   // 7.3 Seviye Sandıkları (Milestones)
   assert(MILESTONE_REWARDS.length >= 6, "Seviye sandıkları eksik!");

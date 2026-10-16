@@ -3,14 +3,15 @@ import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { palette } from "@/shared/palette";
 import { GameButton, ICONS, OrnatePanel } from "@/components/game/game-ui";
 import { DAILY_LOGIN_REWARDS, getDayId, type PlayerProgress } from "@/shared/progression";
-import { triggerHapticSelection } from "@/shared/audio-haptics";
+import { triggerHapticSelection, triggerHapticSuccess, triggerHapticError } from "@/shared/audio-haptics";
 import { CoinCascadeOverlay } from "@/components/game/coin-cascade";
+import { monetizationManager } from "@/shared/monetization";
 
 type DailyTreasureModalProps = {
   visible: boolean;
   onClose: () => void;
   progress: PlayerProgress;
-  onClaim: () => void;
+  onClaim: (isDoubled?: boolean) => void;
 };
 
 export function DailyTreasureModal({
@@ -20,6 +21,8 @@ export function DailyTreasureModal({
   onClaim,
 }: DailyTreasureModalProps) {
   const [isClaiming, setIsClaiming] = React.useState(false);
+  const [isAdLoading, setIsAdLoading] = React.useState(false);
+  const [isDoubledClaim, setIsDoubledClaim] = React.useState(false);
   const [showCascade, setShowCascade] = React.useState(false);
   const claimTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -242,26 +245,72 @@ export function DailyTreasureModal({
 
             {/* Aksiyon Alanı */}
             {!isClaimedToday ? (
-              <GameButton
-                label={isClaiming ? "ÖDÜL ALINIYOR..." : `ÖDÜLÜ TOPLA  (+${todayReward.amount} ${getRewardUnitName(todayReward.rewardType)})`}
-                icon={isClaiming ? "⏳" : "🎁"}
-                size="lg"
-                variant="gold"
-                disabled={isClaiming || isClaimedToday}
-                onPress={() => {
-                  if (isClaiming || isClaimedToday) return;
-                  setIsClaiming(true);
-                  setShowCascade(true);
-                  triggerHapticSelection();
-                  onClaim();
-                  if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
-                  claimTimerRef.current = setTimeout(() => {
-                    setIsClaiming(false);
-                    setShowCascade(false);
-                  }, 2000);
-                }}
-                style={styles.claimButton}
-              />
+              <View style={styles.claimButtonGroup}>
+                <GameButton
+                  label={
+                    isAdLoading
+                      ? "REKLAM YÜKLENİYOR..."
+                      : `🎁 2X KAZAN (+${todayReward.amount * 2} ${getRewardUnitName(todayReward.rewardType)})`
+                  }
+                  icon={isAdLoading ? "⏳" : "🎬"}
+                  size="lg"
+                  variant="gold"
+                  disabled={isClaiming || isAdLoading || isClaimedToday}
+                  onPress={async () => {
+                    if (isClaiming || isAdLoading || isClaimedToday) return;
+                    setIsAdLoading(true);
+                    triggerHapticSelection();
+
+                    await monetizationManager.showRewardedAd(
+                      "daily_treasure_double",
+                      () => {
+                        setIsAdLoading(false);
+                        setIsClaiming(true);
+                        setIsDoubledClaim(true);
+                        setShowCascade(true);
+                        triggerHapticSuccess();
+                        onClaim(true);
+                        if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+                        claimTimerRef.current = setTimeout(() => {
+                          setIsClaiming(false);
+                          setShowCascade(false);
+                        }, 2200);
+                      },
+                      () => {
+                        setIsAdLoading(false);
+                        triggerHapticError();
+                      }
+                    );
+                  }}
+                  style={styles.claimButtonDouble}
+                />
+
+                <GameButton
+                  label={
+                    isClaiming && !isDoubledClaim
+                      ? "ÖDÜL ALINIYOR..."
+                      : `Normal Topla (+${todayReward.amount} ${getRewardUnitName(todayReward.rewardType)})`
+                  }
+                  icon={isClaiming ? "⏳" : "🎁"}
+                  size="md"
+                  variant="dark"
+                  disabled={isClaiming || isAdLoading || isClaimedToday}
+                  onPress={() => {
+                    if (isClaiming || isAdLoading || isClaimedToday) return;
+                    setIsClaiming(true);
+                    setIsDoubledClaim(false);
+                    setShowCascade(true);
+                    triggerHapticSelection();
+                    onClaim(false);
+                    if (claimTimerRef.current) clearTimeout(claimTimerRef.current);
+                    claimTimerRef.current = setTimeout(() => {
+                      setIsClaiming(false);
+                      setShowCascade(false);
+                    }, 2000);
+                  }}
+                  style={styles.claimButtonNormal}
+                />
+              </View>
             ) : (
               <View style={styles.claimedContainer}>
                 <View style={styles.claimedBanner}>
@@ -291,14 +340,14 @@ export function DailyTreasureModal({
 
       <CoinCascadeOverlay
         trigger={showCascade}
-        count={12}
+        count={isDoubledClaim ? 24 : 12}
         icon={todayReward.icon}
         badgeText={
           todayReward.rewardType === "xp"
-            ? `+${todayReward.amount} XP`
+            ? `+${isDoubledClaim ? todayReward.amount * 2 : todayReward.amount} XP`
             : todayReward.rewardType === "coins"
-            ? `+${todayReward.amount} ÇİP`
-            : `+${todayReward.amount} KALKAN`
+            ? `+${isDoubledClaim ? todayReward.amount * 2 : todayReward.amount} ÇİP`
+            : `+${isDoubledClaim ? todayReward.amount * 2 : todayReward.amount} KALKAN`
         }
       />
     </Modal>
@@ -547,6 +596,18 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "900",
     lineHeight: 11,
+  },
+  claimButtonGroup: {
+    width: "100%",
+    gap: 8,
+    marginTop: 4,
+  },
+  claimButtonDouble: {
+    width: "100%",
+  },
+  claimButtonNormal: {
+    width: "100%",
+    opacity: 0.9,
   },
   claimButton: {
     width: "100%",

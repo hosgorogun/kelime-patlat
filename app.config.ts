@@ -94,7 +94,51 @@ const config: ExpoConfig = {
         },
       },
     ],
+    [
+      "react-native-google-mobile-ads",
+      {
+        androidAppId:
+          process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ||
+          process.env.ADMOB_ANDROID_APP_ID ||
+          "ca-app-pub-3940256099942544~3347511713",
+        iosAppId:
+          process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID ||
+          process.env.ADMOB_IOS_APP_ID ||
+          "ca-app-pub-3940256099942544~1458002511",
+      },
+    ],
   ],
+  extra: {
+    admob: {
+      androidAppId:
+        process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ||
+        process.env.ADMOB_ANDROID_APP_ID ||
+        "ca-app-pub-3940256099942544~3347511713",
+      iosAppId:
+        process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID ||
+        process.env.ADMOB_IOS_APP_ID ||
+        "ca-app-pub-3940256099942544~1458002511",
+      bannerIdAndroid:
+        process.env.EXPO_PUBLIC_ADMOB_BANNER_ID_ANDROID ||
+        "ca-app-pub-3940256099942544/6300978111",
+      bannerIdIos:
+        process.env.EXPO_PUBLIC_ADMOB_BANNER_ID_IOS ||
+        "ca-app-pub-3940256099942544/2934735716",
+      interstitialIdAndroid:
+        process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID_ANDROID ||
+        "ca-app-pub-3940256099942544/1033173712",
+      interstitialIdIos:
+        process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID_IOS ||
+        "ca-app-pub-3940256099942544/4411468910",
+      rewardedIdAndroid:
+        process.env.EXPO_PUBLIC_ADMOB_REWARDED_ID_ANDROID ||
+        "ca-app-pub-3940256099942544/5224354917",
+      rewardedIdIos:
+        process.env.EXPO_PUBLIC_ADMOB_REWARDED_ID_IOS ||
+        "ca-app-pub-3940256099942544/1712485313",
+      testMode: process.env.EXPO_PUBLIC_ADMOB_TEST_MODE !== "false",
+    },
+  },
   experiments: {
     reactCompiler: true,
   },

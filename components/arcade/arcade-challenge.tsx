@@ -99,6 +99,7 @@ export function ArcadeChallenge({
   const [showResultModal, setShowResultModal] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [doubled, setDoubled] = useState(false);
+  const [hasRevived, setHasRevived] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [timeBonusText, setTimeBonusText] = useState<string | null>(null);
   const [scoreBurstText, setScoreBurstText] = useState<string | null>(null);
@@ -650,6 +651,7 @@ export function ArcadeChallenge({
     setShowResultModal(false);
     savedRef.current = false;
     setDoubled(false);
+    setHasRevived(false);
     totalWordsFoundRef.current = 0;
     totalCombosRef.current = 0;
     allFoundWordsRef.current = [];
@@ -818,6 +820,21 @@ export function ArcadeChallenge({
     });
   };
 
+  const handleReviveArcade = () => {
+    if (hasRevived) return;
+    safeWatchAd(() => {
+      triggerHapticSuccess();
+      gameSfx.victory();
+      setHasRevived(true);
+      setSeconds(30);
+      setStatus("playing");
+      setShowResultModal(false);
+      savedRef.current = false;
+      setTimeBonusText("⚡ +30sn SÜRE YENİLENDİ! ⚡");
+      setTimeout(() => setTimeBonusText(null), 2500);
+    });
+  };
+
   const handleConfirmExit = () => {
     savedRef.current = true;
     if (scoreRef.current > 0) {
@@ -951,6 +968,8 @@ export function ArcadeChallenge({
         score={score}
         doubled={doubled}
         onDoubleReward={handleDoubleReward}
+        hasRevived={hasRevived}
+        onRevive={handleReviveArcade}
         onRestart={handleRestart}
         onInspectBoard={() => {
           triggerHapticSelection();

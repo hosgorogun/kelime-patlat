@@ -29,6 +29,7 @@ export interface FriendItem {
   bestTempo?: number;
   xp?: number;
   isOnline?: boolean;
+  isBot?: boolean;
 }
 
 interface FriendsLobbyScreenProps {
@@ -198,7 +199,12 @@ export const FriendsLobbyScreen: React.FC<FriendsLobbyScreenProps> = ({
             bestScore: friend.bestScore,
             bestTempo: friend.bestTempo,
             xp: friend.xp,
-            isBot: false,
+            isBot: Boolean(
+              friend.isBot ||
+              friend.id?.startsWith("bot:") ||
+              friend.id?.startsWith("friend:bot:") ||
+              /^f\d+$/.test(friend.id)
+            ),
           };
 
           return (

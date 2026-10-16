@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { ScreenContainer } from "../common/screen-container";
 import { RoomWaitingScreen } from "./room-waiting-screen";
 import { UserProfileModal, type InspectableUser } from "../profile/user-profile-modal";
+import { CyberBannerAd } from "../common/cyber-banner-ad";
 import { socialManager } from "@/shared/social";
 import { triggerHapticSelection } from "@/shared/audio-haptics";
 import { isEqualTr } from "@/shared/tr-utils";
@@ -58,6 +59,7 @@ export function RoomWaitingContainer(props: RoomWaitingContainerProps) {
           openUserProfile(player);
         }}
       />
+      <CyberBannerAd style={{ marginTop: 16 }} />
       <UserProfileModal
         visible={inspectedUser !== null}
         user={inspectedUser}
@@ -71,8 +73,11 @@ export function RoomWaitingContainer(props: RoomWaitingContainerProps) {
           inspectedUser
             ? socialManager
                 .getFriends()
-                .some((f) =>
-                  isEqualTr(f.username, inspectedUser.username || inspectedUser.name)
+                .some(
+                  (f) =>
+                    f.id === inspectedUser.id ||
+                    isEqualTr(f.username, inspectedUser.username || inspectedUser.name) ||
+                    isEqualTr(f.name, inspectedUser.username || inspectedUser.name)
                 )
             : false
         }

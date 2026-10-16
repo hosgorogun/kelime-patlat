@@ -221,11 +221,11 @@ describe("Senior QA: Fresh Install & End-to-End User Journey", () => {
       const loginReward = checkDailyLoginReward(userProgress, today);
       expect(loginReward).not.toBeNull();
       expect(loginReward!.reward.day).toBe(1);
-      expect(loginReward!.reward.amount).toBe(15);
+      expect(loginReward!.reward.amount).toBe(8);
 
       // Çip hesaba geçti mi?
       userProgress = loginReward!.updatedProgress;
-      expect(userProgress.coins).toBe(15);
+      expect(userProgress.coins).toBe(8);
 
       // Aynı gün tekrar tıklanırsa engellenmeli
       const duplicateReward = checkDailyLoginReward(userProgress, today);
