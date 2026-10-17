@@ -90,7 +90,6 @@ export function DailyPuzzleModal({
       setIsPlaying(false);
 
       if (isAlreadyCompletedToday) {
-        // Build mock result for display if already completed
         const percentile = 5;
         const shareText = buildDailyShareText(
           data.dayNumber,
@@ -160,7 +159,6 @@ export function DailyPuzzleModal({
     if (!isPlaying || isSubmitting || completedResult) return;
 
     if (selectedIndices.includes(index)) {
-      // If pressing the last selected tile, deselect it
       if (selectedIndices[selectedIndices.length - 1] === index) {
         triggerHapticSelection();
         setSelectedIndices((prev) => prev.slice(0, -1));
@@ -279,33 +277,39 @@ export function DailyPuzzleModal({
     }
   };
 
-  if (!puzzleData) return null;
+  if (!visible || !puzzleData) return null;
 
   const size = puzzleData.size;
-  const targetWordsRemaining = puzzleData.targetWords.filter(
-    (tw) => !foundWords.some((fw) => isEqualTr(fw, tw))
-  );
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
-        <View style={styles.container}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <Text style={styles.headerIcon}>🧩</Text>
-              <View>
-                <Text style={styles.headerTitle}>GÜNÜN BULMACASI</Text>
+              <View style={styles.puzzleIconRing}>
+                <Text style={styles.headerIcon}>🧩</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.headerBadgeRow}>
+                  <Text style={styles.headerTitle}>GÜNÜN BULMACASI</Text>
+                  <View style={styles.dayBadge}>
+                    <Text style={styles.dayBadgeText}>#{puzzleData.dayNumber}</Text>
+                  </View>
+                </View>
                 <Text style={styles.headerSub}>
-                  #{puzzleData.dayNumber} • {todayDateId}
+                  {todayDateId} • 24 Saatlik Ortak Meydan Okuma
                 </Text>
               </View>
             </View>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Kapat"
@@ -313,7 +317,7 @@ export function DailyPuzzleModal({
                 triggerHapticSelection();
                 onClose();
               }}
-              style={styles.closeBtn}
+              style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
             >
               <Text style={styles.closeBtnText}>✕</Text>
             </Pressable>
@@ -321,9 +325,20 @@ export function DailyPuzzleModal({
 
           {/* If already completed or finished just now */}
           {completedResult ? (
-            <ScrollView contentContainerStyle={styles.resultContainer}>
+            <ScrollView
+              contentContainerStyle={styles.resultContainer}
+              showsVerticalScrollIndicator={false}
+              style={{ width: "100%" }}
+            >
               <View style={styles.resultCard}>
-                <Text style={styles.resultTrophy}>🏆</Text>
+                <View style={styles.trophyRing}>
+                  <Text style={styles.resultTrophy}>🏆</Text>
+                </View>
+
+                <View style={styles.completedTag}>
+                  <Text style={styles.completedTagText}>✦ GÜNLÜK ZAFER ✦</Text>
+                </View>
+
                 <Text style={styles.resultTitle}>GÜNÜN BULMACASI ÇÖZÜLDÜ!</Text>
                 <Text style={styles.resultSub}>
                   Bugünkü ortak bulmacayı başarıyla tamamladın!
@@ -335,21 +350,30 @@ export function DailyPuzzleModal({
                     <Text style={styles.statLabel}>SÜRE</Text>
                     <Text style={styles.statVal}>{completedResult.secondsTaken}s</Text>
                   </View>
+
                   <View style={[styles.statBox, styles.statBoxHighlight]}>
-                    <Text style={styles.statLabel}>SIRALAMA</Text>
-                    <Text style={[styles.statVal, styles.statValHighlight]}>
+                    <Text style={styles.statLabelHighlight}>SIRALAMA</Text>
+                    <Text style={styles.statValHighlight}>
                       En Hızlı %{completedResult.percentile}
                     </Text>
                   </View>
+
                   <View style={styles.statBox}>
                     <Text style={styles.statLabel}>SKOR</Text>
-                    <Text style={styles.statVal}>{completedResult.score}</Text>
+                    <Text style={[styles.statVal, styles.statValScore]}>
+                      {completedResult.score}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Emoji Preview Card */}
+                {/* WhatsApp Emoji Preview Card */}
                 <View style={styles.emojiCardBox}>
-                  <Text style={styles.emojiCardHeader}>Günün Kartı (WhatsApp Kartı):</Text>
+                  <View style={styles.emojiCardHeaderRow}>
+                    <Text style={styles.emojiCardHeader}>Günün Kartı (WhatsApp Kartı):</Text>
+                    <View style={styles.verifiedBadge}>
+                      <Text style={styles.verifiedBadgeText}>✓ ONAYLI</Text>
+                    </View>
+                  </View>
                   <Text style={styles.emojiCardText}>
                     🧩 Günün Bulmacası #{puzzleData.dayNumber}{"\n"}
                     ⏱️ {completedResult.secondsTaken}s (En Hızlı %{completedResult.percentile}){"\n"}
@@ -374,7 +398,7 @@ export function DailyPuzzleModal({
                   onPress={handleShare}
                   style={({ pressed }) => [
                     styles.whatsappShareBtn,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.whatsappShareBtnPressed,
                   ]}
                 >
                   <Text style={styles.whatsappIcon}>💬</Text>
@@ -392,51 +416,70 @@ export function DailyPuzzleModal({
             </ScrollView>
           ) : !isPlaying ? (
             /* Intro / Ready Screen */
-            <View style={styles.introContainer}>
+            <ScrollView
+              contentContainerStyle={styles.introScrollContent}
+              showsVerticalScrollIndicator={false}
+              style={{ width: "100%" }}
+            >
               <View style={styles.introCard}>
-                <Text style={styles.introIcon}>🎯</Text>
+                <View style={styles.introEventPill}>
+                  <Text style={styles.introEventText}>✦ GÜNLÜK ORTAK ETKİNLİK ✦</Text>
+                </View>
+
+                <View style={styles.introHeroRing}>
+                  <Text style={styles.introIcon}>🎯</Text>
+                </View>
+
                 <Text style={styles.introTitle}>Türkiye ile Aynı Anda Çöz!</Text>
                 <Text style={styles.introDesc}>
                   Her gün 00:00&apos;da tüm Türkiye için özel hazırlanan ortak kelime bulmacası!
                   Tüm gizli kelimeleri en hızlı sürede bul, sıralamaya gir ve şehrini zirveye taşı!
                 </Text>
 
-                <View style={styles.introDetails}>
-                  <View style={styles.introDetailItem}>
-                    <Text style={styles.introDetailIcon}>📐</Text>
-                    <Text style={styles.introDetailText}>
-                      Tahta Boyutu: {size}×{size}
-                    </Text>
+                {/* 3-Column Spec Cards */}
+                <View style={styles.specCardsRow}>
+                  <View style={styles.specCard}>
+                    <Text style={styles.specIcon}>📐</Text>
+                    <Text style={styles.specValue}>{size}×{size}</Text>
+                    <Text style={styles.specLabel}>Tahta Boyutu</Text>
                   </View>
-                  <View style={styles.introDetailItem}>
-                    <Text style={styles.introDetailIcon}>🔍</Text>
-                    <Text style={styles.introDetailText}>
-                      Aranan Kelimeler: {puzzleData.targetWords.length} Adet
-                    </Text>
+
+                  <View style={styles.specCard}>
+                    <Text style={styles.specIcon}>🔍</Text>
+                    <Text style={styles.specValue}>{puzzleData.targetWords.length}</Text>
+                    <Text style={styles.specLabel}>Hedef Kelime</Text>
                   </View>
-                  <View style={styles.introDetailItem}>
-                    <Text style={styles.introDetailIcon}>🎁</Text>
-                    <Text style={styles.introDetailText}>
-                      Ödül: 50 Çip + 150 Sezon XP
-                    </Text>
+
+                  <View style={[styles.specCard, styles.specCardGold]}>
+                    <Text style={styles.specIcon}>🎁</Text>
+                    <Text style={[styles.specValue, styles.specValueGold]}>50 + 150</Text>
+                    <Text style={styles.specLabel}>Çip & Sezon XP</Text>
                   </View>
                 </View>
 
+                {/* Reset Notice */}
+                <View style={styles.timerNoticeCard}>
+                  <Text style={styles.timerNoticeText}>
+                    ⏳ Sıradaki bulmacaya kalan: <Text style={styles.timerNoticeHighlight}>{countdownText}</Text>
+                  </Text>
+                </View>
+
+                {/* Big Tactile CTA Start Button */}
                 <Pressable
                   onPress={handleStartGame}
                   style={({ pressed }) => [
                     styles.startBtn,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.startBtnPressed,
                   ]}
                 >
                   <Text style={styles.startBtnText}>▶ BULMACAYI BAŞLAT</Text>
                 </Pressable>
               </View>
-            </View>
+            </ScrollView>
           ) : (
             /* Active Game Play Screen */
             <View style={styles.gameContainer}>
-              {/* Top HUD: Timer & Target Progress */}
+              {/* Top HUD: Timer, Score, Progress */}
               <View style={styles.hudRow}>
                 <View style={styles.hudTimerBox}>
                   <Text style={styles.hudTimerLabel}>SÜRE</Text>
@@ -494,8 +537,8 @@ export function DailyPuzzleModal({
                   style={[
                     styles.boardGrid,
                     {
-                      width: size * 56 + (size - 1) * 8,
-                      height: size * 56 + (size - 1) * 8,
+                      width: size * 60 + (size - 1) * 8,
+                      height: size * 60 + (size - 1) * 8,
                     },
                   ]}
                 >
@@ -534,7 +577,7 @@ export function DailyPuzzleModal({
                   style={({ pressed }) => [
                     styles.clearBtn,
                     selectedIndices.length === 0 && styles.clearBtnDisabled,
-                    pressed && { opacity: 0.7 },
+                    pressed && styles.clearBtnPressed,
                   ]}
                 >
                   <Text style={styles.clearBtnText}>TEMİZLE</Text>
@@ -546,7 +589,7 @@ export function DailyPuzzleModal({
                   style={({ pressed }) => [
                     styles.submitWordBtn,
                     selectedIndices.length < 2 && styles.submitWordBtnDisabled,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.submitWordBtnPressed,
                   ]}
                 >
                   {isSubmitting ? (
@@ -558,140 +601,254 @@ export function DailyPuzzleModal({
               </View>
             </View>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  overlay: {
     flex: 1,
-    backgroundColor: "rgba(3, 7, 18, 0.85)",
-    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
   },
-  container: {
-    backgroundColor: "#0B1120",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: "#1E293B",
-    height: "92%",
-    paddingTop: 16,
-    paddingHorizontal: 16,
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    maxHeight: "92%",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+    alignItems: "center",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
+    width: "100%",
   },
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
+  },
+  puzzleIconRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#E0F2FE",
+    borderWidth: 2,
+    borderColor: "#BAE6FD",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerIcon: {
-    fontSize: 26,
+    fontSize: 22,
+  },
+  headerBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   headerTitle: {
-    color: "#F8FAFC",
-    fontSize: 18,
+    color: "#0F172A",
+    fontSize: 19,
     fontWeight: "900",
     letterSpacing: 0.6,
   },
+  dayBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  dayBadgeText: {
+    color: "#B45309",
+    fontSize: 10,
+    fontWeight: "900",
+  },
   headerSub: {
-    color: "#94A3B8",
+    color: "#64748B",
     fontSize: 11,
     fontWeight: "600",
+    marginTop: 1,
   },
   closeBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#1E293B",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     justifyContent: "center",
     alignItems: "center",
+  },
+  closeBtnPressed: {
+    backgroundColor: "#E2E8F0",
+    transform: [{ scale: 0.95 }],
   },
   closeBtnText: {
-    color: "#94A3B8",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: "#475569",
+    fontSize: 14,
+    fontWeight: "900",
   },
-  introContainer: {
-    flex: 1,
-    justifyContent: "center",
+  introScrollContent: {
+    paddingBottom: 16,
     alignItems: "center",
-    paddingBottom: 40,
+    width: "100%",
   },
   introCard: {
-    backgroundColor: "#131C31",
-    borderRadius: 18,
-    padding: 20,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 22,
+    padding: 18,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#223555",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     width: "100%",
-    maxWidth: 360,
   },
-  introIcon: {
-    fontSize: 48,
+  introEventPill: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
     marginBottom: 12,
   },
+  introEventText: {
+    color: "#B45309",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
+  introHeroRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 2,
+    borderColor: "#A7F3D0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  introIcon: {
+    fontSize: 34,
+  },
   introTitle: {
-    color: "#F8FAFC",
-    fontSize: 18,
+    color: "#0F172A",
+    fontSize: 19,
     fontWeight: "900",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   introDesc: {
-    color: "#94A3B8",
+    color: "#64748B",
     fontSize: 12.5,
     textAlign: "center",
     lineHeight: 18,
     marginBottom: 16,
+    paddingHorizontal: 4,
   },
-  introDetails: {
-    width: "100%",
-    backgroundColor: "#0B1120",
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#1E293B",
-  },
-  introDetailItem: {
+  specCardsRow: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 8,
+    width: "100%",
+    marginBottom: 14,
   },
-  introDetailIcon: {
+  specCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+  },
+  specCardGold: {
+    borderColor: "#FDE68A",
+    backgroundColor: "#FFFBEB",
+  },
+  specIcon: {
+    fontSize: 18,
+    marginBottom: 3,
+  },
+  specValue: {
+    color: "#0F172A",
     fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 1,
   },
-  introDetailText: {
-    color: "#CBD5E1",
-    fontSize: 12,
+  specValueGold: {
+    color: "#B45309",
+  },
+  specLabel: {
+    color: "#64748B",
+    fontSize: 9.5,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  timerNoticeCard: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginBottom: 16,
+  },
+  timerNoticeText: {
+    color: "#64748B",
+    fontSize: 11.5,
     fontWeight: "600",
   },
+  timerNoticeHighlight: {
+    color: "#0284C7",
+    fontWeight: "800",
+  },
   startBtn: {
-    backgroundColor: "#10B981",
-    borderRadius: 12,
+    backgroundColor: "#059669",
+    borderRadius: 16,
     paddingVertical: 14,
     width: "100%",
     alignItems: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: "#047857",
+  },
+  startBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 3 }],
   },
   startBtnText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   gameContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingBottom: 20,
+    paddingBottom: 10,
+    width: "100%",
   },
   hudRow: {
     flexDirection: "row",
@@ -700,58 +857,58 @@ const styles = StyleSheet.create({
   },
   hudTimerBox: {
     flex: 1,
-    backgroundColor: "#131C31",
-    borderRadius: 10,
-    paddingVertical: 8,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 7,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   hudTimerLabel: {
     color: "#64748B",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "800",
   },
   hudTimerVal: {
-    color: "#F8FAFC",
+    color: "#0284C7",
     fontSize: 16,
     fontWeight: "900",
   },
   hudScoreBox: {
     flex: 1,
-    backgroundColor: "#131C31",
-    borderRadius: 10,
-    paddingVertical: 8,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 7,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   hudScoreLabel: {
     color: "#64748B",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "800",
   },
   hudScoreVal: {
-    color: "#FBBF24",
+    color: "#D97706",
     fontSize: 16,
     fontWeight: "900",
   },
   hudWordsBox: {
     flex: 1,
-    backgroundColor: "#131C31",
-    borderRadius: 10,
-    paddingVertical: 8,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 7,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   hudWordsLabel: {
     color: "#64748B",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "800",
   },
   hudWordsVal: {
-    color: "#34D399",
+    color: "#059669",
     fontSize: 16,
     fontWeight: "900",
   },
@@ -759,44 +916,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-    marginBottom: 10,
+    marginBottom: 8,
     justifyContent: "center",
   },
   targetWordPill: {
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 10,
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 9,
     paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#334155",
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   targetWordPillFound: {
-    backgroundColor: "#065F46",
-    borderColor: "#10B981",
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
   },
   targetWordPillText: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "700",
+    color: "#64748B",
+    fontSize: 10.5,
+    fontWeight: "800",
   },
   targetWordPillTextFound: {
-    color: "#FFFFFF",
+    color: "#059669",
     fontWeight: "900",
   },
   activeWordBar: {
-    backgroundColor: "#131C31",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    backgroundColor: "#F0F9FF",
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     alignItems: "center",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#223555",
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: "#BAE6FD",
     minHeight: 44,
     justifyContent: "center",
   },
   activeWordText: {
-    color: "#38BDF8",
+    color: "#0284C7",
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -814,23 +971,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tile: {
-    width: 56,
-    height: 56,
-    backgroundColor: "#1E293B",
-    borderRadius: 12,
+    width: 60,
+    height: 60,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#334155",
+    borderColor: "#CBD5E1",
+    borderBottomWidth: 3.5,
+    borderBottomColor: "#94A3B8",
     justifyContent: "center",
     alignItems: "center",
   },
   tileSelected: {
     backgroundColor: "#0284C7",
     borderColor: "#38BDF8",
-    transform: [{ scale: 1.05 }],
+    borderBottomColor: "#0369A1",
+    transform: [{ scale: 1.06 }],
   },
   tileLetter: {
-    color: "#F8FAFC",
-    fontSize: 22,
+    color: "#0F172A",
+    fontSize: 23,
     fontWeight: "900",
   },
   tileLetterSelected: {
@@ -838,12 +998,12 @@ const styles = StyleSheet.create({
   },
   tileBadge: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: 3,
+    right: 3,
     backgroundColor: "#FBBF24",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -855,31 +1015,46 @@ const styles = StyleSheet.create({
   actionControls: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 12,
+    marginTop: 8,
   },
   clearBtn: {
     flex: 1,
-    backgroundColor: "#334155",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 14,
+    paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderBottomWidth: 3.5,
+    borderBottomColor: "#CBD5E1",
+  },
+  clearBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 2.5 }],
   },
   clearBtnDisabled: {
     opacity: 0.4,
   },
   clearBtnText: {
-    color: "#94A3B8",
+    color: "#475569",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   submitWordBtn: {
     flex: 2,
-    backgroundColor: "#10B981",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: "#059669",
+    borderRadius: 14,
+    paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
+    borderBottomWidth: 3.5,
+    borderBottomColor: "#047857",
+  },
+  submitWordBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 2.5 }],
   },
   submitWordBtnDisabled: {
     opacity: 0.4,
@@ -888,109 +1063,164 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "900",
+    letterSpacing: 0.5,
   },
   resultContainer: {
-    paddingBottom: 30,
+    paddingBottom: 20,
     alignItems: "center",
-  },
-  resultCard: {
-    backgroundColor: "#131C31",
-    borderRadius: 18,
-    padding: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#223555",
     width: "100%",
   },
-  resultTrophy: {
-    fontSize: 48,
+  resultCard: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 22,
+    padding: 18,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    width: "100%",
+  },
+  trophyRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 2,
+    borderColor: "#FDE68A",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
+  resultTrophy: {
+    fontSize: 34,
+  },
+  completedTag: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    marginBottom: 6,
+  },
+  completedTagText: {
+    color: "#B45309",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
   resultTitle: {
-    color: "#FBBF24",
-    fontSize: 18,
+    color: "#0F172A",
+    fontSize: 19,
     fontWeight: "900",
     textAlign: "center",
     marginBottom: 4,
   },
   resultSub: {
-    color: "#94A3B8",
+    color: "#64748B",
     fontSize: 12,
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   statsRow: {
     flexDirection: "row",
     gap: 8,
     width: "100%",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   statBox: {
     flex: 1,
-    backgroundColor: "#0B1120",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     paddingVertical: 10,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   statBoxHighlight: {
-    borderColor: "#10B981",
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
+    borderColor: "#A7F3D0",
+    backgroundColor: "#ECFDF5",
   },
   statLabel: {
     color: "#64748B",
     fontSize: 9,
     fontWeight: "800",
   },
+  statLabelHighlight: {
+    color: "#059669",
+    fontSize: 9,
+    fontWeight: "800",
+  },
   statVal: {
-    color: "#F8FAFC",
+    color: "#0F172A",
     fontSize: 14,
     fontWeight: "900",
     marginTop: 2,
   },
   statValHighlight: {
-    color: "#34D399",
-    fontSize: 12,
+    color: "#059669",
+    fontSize: 12.5,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  statValScore: {
+    color: "#B45309",
   },
   emojiCardBox: {
     width: "100%",
-    backgroundColor: "#0B1120",
-    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     padding: 12,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
-  emojiCardHeader: {
-    color: "#94A3B8",
-    fontSize: 10,
-    fontWeight: "700",
+  emojiCardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 6,
   },
+  emojiCardHeader: {
+    color: "#64748B",
+    fontSize: 10.5,
+    fontWeight: "800",
+  },
+  verifiedBadge: {
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  verifiedBadgeText: {
+    color: "#059669",
+    fontSize: 8.5,
+    fontWeight: "900",
+  },
   emojiCardText: {
-    color: "#F8FAFC",
-    fontSize: 13,
-    lineHeight: 20,
+    color: "#0F172A",
+    fontSize: 12.5,
+    lineHeight: 19,
     fontFamily: "monospace",
   },
   rewardBanner: {
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
-    borderRadius: 10,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 14,
     padding: 10,
     width: "100%",
     alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#F59E0B",
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
   },
   rewardText: {
-    color: "#FBBF24",
-    fontSize: 12,
-    fontWeight: "800",
+    color: "#B45309",
+    fontSize: 12.5,
+    fontWeight: "900",
   },
   rewardSubText: {
-    color: "#94A3B8",
+    color: "#78350F",
     fontSize: 10,
     marginTop: 2,
   },
@@ -1000,13 +1230,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     backgroundColor: "#25D366",
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 14,
     width: "100%",
-    marginBottom: 16,
+    marginBottom: 12,
+    borderBottomWidth: 4,
+    borderBottomColor: "#1EBE5D",
+  },
+  whatsappShareBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 3 }],
   },
   whatsappIcon: {
-    fontSize: 18,
+    fontSize: 19,
   },
   whatsappShareBtnText: {
     color: "#FFFFFF",
@@ -1020,9 +1256,10 @@ const styles = StyleSheet.create({
   nextCountdownLabel: {
     color: "#64748B",
     fontSize: 10,
+    fontWeight: "600",
   },
   nextCountdownTime: {
-    color: "#94A3B8",
+    color: "#0F172A",
     fontSize: 13,
     fontWeight: "800",
     marginTop: 2,

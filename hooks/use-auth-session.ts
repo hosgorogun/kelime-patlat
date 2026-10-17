@@ -50,7 +50,7 @@ export function useAuthSession({
           }
           try {
             const authAbort = new AbortController();
-            const timeoutId = setTimeout(() => authAbort.abort(), 2500);
+            const timeoutId = setTimeout(() => authAbort.abort(), 10000);
             const response = await fetch(`${getApiBaseUrl()}/api/auth/me`, {
               headers: { Authorization: `Bearer ${token}` },
               signal: authAbort.signal,

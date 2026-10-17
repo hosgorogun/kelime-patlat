@@ -245,26 +245,32 @@ export function ChallengeModal({
     setSelectedIndices([]);
   };
 
+  if (!visible) return null;
+
   const size = currentChallenge?.size || 4;
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
-        <View style={styles.container}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <Text style={styles.headerIcon}>⚔️</Text>
-              <View>
+              <View style={styles.swordsIconRing}>
+                <Text style={styles.headerIcon}>⚔️</Text>
+              </View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.headerTitle}>ARKADAŞA MEYDAN OKU</Text>
                 <Text style={styles.headerSub}>Aynı Tahta • Aynı Süre • Tek Kazanan</Text>
               </View>
             </View>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Kapat"
@@ -272,7 +278,7 @@ export function ChallengeModal({
                 triggerHapticSelection();
                 onClose();
               }}
-              style={styles.closeBtn}
+              style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
             >
               <Text style={styles.closeBtnText}>✕</Text>
             </Pressable>
@@ -280,9 +286,20 @@ export function ChallengeModal({
 
           {/* Mode A: Create Challenge */}
           {mode === "create" && !currentChallenge ? (
-            <View style={styles.centerCardContainer}>
+            <ScrollView
+              contentContainerStyle={styles.centerScrollContent}
+              showsVerticalScrollIndicator={false}
+              style={{ width: "100%" }}
+            >
               <View style={styles.challengeBox}>
-                <Text style={styles.boxBigIcon}>🏆</Text>
+                <View style={styles.heroDuelRing}>
+                  <Text style={styles.boxBigIcon}>🏆</Text>
+                </View>
+
+                <View style={styles.eventPill}>
+                  <Text style={styles.eventPillText}>✦ 1V1 DOSTLUK MEYDAN OKUMASI ✦</Text>
+                </View>
+
                 <Text style={styles.boxTitle}>Arkadaşına Meydan Oku!</Text>
                 <Text style={styles.boxSub}>
                   Oynadığın bu tahtayı bir link ile arkadaşına gönder.
@@ -294,7 +311,7 @@ export function ChallengeModal({
                   onPress={handleCreate}
                   style={({ pressed }) => [
                     styles.primaryBtn,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.primaryBtnPressed,
                   ]}
                 >
                   {isCreating ? (
@@ -304,14 +321,23 @@ export function ChallengeModal({
                   )}
                 </Pressable>
               </View>
-            </View>
+            </ScrollView>
           ) : mode === "create" && currentChallenge ? (
             /* Challenge Created Preview & Share Screen */
-            <View style={styles.centerCardContainer}>
+            <ScrollView
+              contentContainerStyle={styles.centerScrollContent}
+              showsVerticalScrollIndicator={false}
+              style={{ width: "100%" }}
+            >
               <View style={styles.challengeBox}>
-                <Text style={styles.boxBigIcon}>🔥</Text>
+                <View style={styles.heroDuelRing}>
+                  <Text style={styles.boxBigIcon}>🔥</Text>
+                </View>
+
                 <Text style={styles.boxTitle}>Meydan Okuma Hazır!</Text>
-                <Text style={styles.challengeCodeBadge}>KOD: {currentChallenge.id}</Text>
+                <View style={styles.challengeCodeBadge}>
+                  <Text style={styles.challengeCodeText}>KOD: {currentChallenge.id}</Text>
+                </View>
 
                 <View style={styles.targetPreviewCard}>
                   <Text style={styles.targetPreviewTitle}>MEYDAN OKUMA DETAYI</Text>
@@ -328,7 +354,7 @@ export function ChallengeModal({
                   onPress={handleShareWhatsApp}
                   style={({ pressed }) => [
                     styles.whatsappBtn,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.whatsappBtnPressed,
                   ]}
                 >
                   <Text style={styles.whatsappIcon}>💬</Text>
@@ -337,17 +363,27 @@ export function ChallengeModal({
 
                 <Pressable
                   onPress={onClose}
-                  style={styles.secondaryBtn}
+                  style={({ pressed }) => [
+                    styles.secondaryBtn,
+                    pressed && styles.secondaryBtnPressed,
+                  ]}
                 >
                   <Text style={styles.secondaryBtnText}>TAMAM</Text>
                 </Pressable>
               </View>
-            </View>
+            </ScrollView>
           ) : result ? (
             /* Mode B: Play Challenge - Result Screen */
-            <ScrollView contentContainerStyle={styles.resultScroll}>
+            <ScrollView
+              contentContainerStyle={styles.resultScroll}
+              showsVerticalScrollIndicator={false}
+              style={{ width: "100%" }}
+            >
               <View style={styles.challengeBox}>
-                <Text style={styles.boxBigIcon}>{result.won ? "👑" : "🤝"}</Text>
+                <View style={styles.heroDuelRing}>
+                  <Text style={styles.boxBigIcon}>{result.won ? "👑" : "🤝"}</Text>
+                </View>
+
                 <Text style={[styles.boxTitle, result.won && styles.boxTitleWon]}>
                   {result.won ? "MEYDAN OKUMAYI KAZANDIN!" : "MEYDAN OKUMA TAMAMLANDI"}
                 </Text>
@@ -361,7 +397,9 @@ export function ChallengeModal({
                       {score}
                     </Text>
                   </View>
-                  <Text style={styles.compareVs}>VS</Text>
+                  <View style={styles.vsBadgeRing}>
+                    <Text style={styles.compareVs}>VS</Text>
+                  </View>
                   <View style={styles.compareBox}>
                     <Text style={styles.compareLabel}>{currentChallenge?.creatorName ?? "RAKİP"}</Text>
                     <Text style={styles.compareScore}>
@@ -382,7 +420,7 @@ export function ChallengeModal({
                   onPress={handleShareWhatsApp}
                   style={({ pressed }) => [
                     styles.whatsappBtn,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.whatsappBtnPressed,
                   ]}
                 >
                   <Text style={styles.whatsappIcon}>💬</Text>
@@ -391,7 +429,10 @@ export function ChallengeModal({
 
                 <Pressable
                   onPress={onClose}
-                  style={styles.secondaryBtn}
+                  style={({ pressed }) => [
+                    styles.secondaryBtn,
+                    pressed && styles.secondaryBtnPressed,
+                  ]}
                 >
                   <Text style={styles.secondaryBtnText}>KAPAT</Text>
                 </Pressable>
@@ -399,9 +440,20 @@ export function ChallengeModal({
             </ScrollView>
           ) : !isPlaying ? (
             /* Mode B: Play Challenge - Ready Screen */
-            <View style={styles.centerCardContainer}>
+            <ScrollView
+              contentContainerStyle={styles.centerScrollContent}
+              showsVerticalScrollIndicator={false}
+              style={{ width: "100%" }}
+            >
               <View style={styles.challengeBox}>
-                <Text style={styles.boxBigIcon}>⚔️</Text>
+                <View style={styles.heroDuelRing}>
+                  <Text style={styles.boxBigIcon}>⚔️</Text>
+                </View>
+
+                <View style={styles.eventPill}>
+                  <Text style={styles.eventPillText}>✦ CANLI DÜELLO ÇAĞRISI ✦</Text>
+                </View>
+
                 <Text style={styles.boxTitle}>
                   {currentChallenge?.creatorName} Sana Meydan Okudu!
                 </Text>
@@ -423,13 +475,13 @@ export function ChallengeModal({
                   onPress={handleStartPlay}
                   style={({ pressed }) => [
                     styles.primaryBtn,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.primaryBtnPressed,
                   ]}
                 >
                   <Text style={styles.primaryBtnText}>MEYDAN OKUMAYI BAŞLAT ▶</Text>
                 </Pressable>
               </View>
-            </View>
+            </ScrollView>
           ) : (
             /* Mode B: Play Challenge - Active Game Screen */
             <View style={styles.gameContainer}>
@@ -464,8 +516,8 @@ export function ChallengeModal({
                   style={[
                     styles.boardGrid,
                     {
-                      width: size * 56 + (size - 1) * 8,
-                      height: size * 56 + (size - 1) * 8,
+                      width: size * 60 + (size - 1) * 8,
+                      height: size * 60 + (size - 1) * 8,
                     },
                   ]}
                 >
@@ -504,7 +556,7 @@ export function ChallengeModal({
                   style={({ pressed }) => [
                     styles.clearBtn,
                     selectedIndices.length === 0 && styles.clearBtnDisabled,
-                    pressed && { opacity: 0.7 },
+                    pressed && styles.clearBtnPressed,
                   ]}
                 >
                   <Text style={styles.clearBtnText}>TEMİZLE</Text>
@@ -516,7 +568,7 @@ export function ChallengeModal({
                   style={({ pressed }) => [
                     styles.submitWordBtn,
                     selectedIndices.length < 2 && styles.submitWordBtnDisabled,
-                    pressed && { opacity: 0.8 },
+                    pressed && styles.submitWordBtnPressed,
                   ]}
                 >
                   <Text style={styles.submitWordBtnText}>✓ KELİMEYİ BUL</Text>
@@ -524,151 +576,216 @@ export function ChallengeModal({
               </View>
             </View>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  overlay: {
     flex: 1,
-    backgroundColor: "rgba(3, 7, 18, 0.85)",
-    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
   },
-  container: {
-    backgroundColor: "#0B1120",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: "#1E293B",
-    height: "92%",
-    paddingTop: 16,
-    paddingHorizontal: 16,
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    maxHeight: "92%",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
+    alignItems: "center",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
+    width: "100%",
   },
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
+  },
+  swordsIconRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 2,
+    borderColor: "#FDE68A",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerIcon: {
-    fontSize: 26,
+    fontSize: 22,
   },
   headerTitle: {
-    color: "#F8FAFC",
-    fontSize: 18,
+    color: "#0F172A",
+    fontSize: 19,
     fontWeight: "900",
     letterSpacing: 0.6,
   },
   headerSub: {
-    color: "#94A3B8",
+    color: "#64748B",
     fontSize: 11,
     fontWeight: "600",
+    marginTop: 1,
   },
   closeBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#1E293B",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     justifyContent: "center",
     alignItems: "center",
+  },
+  closeBtnPressed: {
+    backgroundColor: "#E2E8F0",
+    transform: [{ scale: 0.95 }],
   },
   closeBtnText: {
-    color: "#94A3B8",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: "#475569",
+    fontSize: 14,
+    fontWeight: "900",
   },
-  centerCardContainer: {
-    flex: 1,
-    justifyContent: "center",
+  centerScrollContent: {
+    paddingBottom: 16,
     alignItems: "center",
-    paddingBottom: 40,
+    width: "100%",
   },
   challengeBox: {
-    backgroundColor: "#131C31",
-    borderRadius: 18,
-    padding: 20,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 22,
+    padding: 18,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#223555",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     width: "100%",
-    maxWidth: 360,
+  },
+  heroDuelRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 2,
+    borderColor: "#FDE68A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
   },
   boxBigIcon: {
-    fontSize: 48,
-    marginBottom: 8,
+    fontSize: 34,
+  },
+  eventPill: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    marginBottom: 10,
+  },
+  eventPillText: {
+    color: "#B45309",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.6,
   },
   boxTitle: {
-    color: "#F8FAFC",
-    fontSize: 18,
+    color: "#0F172A",
+    fontSize: 19,
     fontWeight: "900",
     textAlign: "center",
     marginBottom: 6,
   },
   boxTitleWon: {
-    color: "#FBBF24",
+    color: "#B45309",
   },
   boxSub: {
-    color: "#94A3B8",
-    fontSize: 12,
+    color: "#64748B",
+    fontSize: 12.5,
     textAlign: "center",
-    lineHeight: 17,
+    lineHeight: 18,
     marginBottom: 16,
+    paddingHorizontal: 4,
   },
   challengeCodeBadge: {
-    backgroundColor: "#1E293B",
-    color: "#38BDF8",
-    fontSize: 14,
-    fontWeight: "900",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: "#E0F2FE",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
     marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: "#BAE6FD",
+  },
+  challengeCodeText: {
+    color: "#0284C7",
+    fontSize: 13.5,
+    fontWeight: "900",
     letterSpacing: 1.2,
   },
   targetPreviewCard: {
-    backgroundColor: "#0B1120",
-    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     padding: 14,
     alignItems: "center",
     width: "100%",
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   targetPreviewTitle: {
     color: "#64748B",
     fontSize: 10,
     fontWeight: "800",
+    letterSpacing: 0.5,
   },
   targetPreviewScore: {
-    color: "#FBBF24",
+    color: "#D97706",
     fontSize: 22,
     fontWeight: "900",
-    marginVertical: 4,
+    marginVertical: 3,
   },
   targetPreviewSub: {
-    color: "#94A3B8",
-    fontSize: 11,
+    color: "#64748B",
+    fontSize: 11.5,
+    fontWeight: "600",
   },
   primaryBtn: {
-    backgroundColor: "#10B981",
-    borderRadius: 12,
+    backgroundColor: "#059669",
+    borderRadius: 16,
     paddingVertical: 14,
     width: "100%",
     alignItems: "center",
+    borderBottomWidth: 4,
+    borderBottomColor: "#047857",
+  },
+  primaryBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 3 }],
   },
   primaryBtnText: {
     color: "#FFFFFF",
     fontSize: 13.5,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   whatsappBtn: {
     flexDirection: "row",
@@ -676,13 +793,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     backgroundColor: "#25D366",
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 14,
     width: "100%",
     marginBottom: 10,
+    borderBottomWidth: 4,
+    borderBottomColor: "#1EBE5D",
+  },
+  whatsappBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 3 }],
   },
   whatsappIcon: {
-    fontSize: 18,
+    fontSize: 19,
   },
   whatsappBtnText: {
     color: "#FFFFFF",
@@ -691,36 +814,45 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   secondaryBtn: {
-    backgroundColor: "#1E293B",
-    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 14,
     paddingVertical: 12,
     width: "100%",
     alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderBottomWidth: 3,
+    borderBottomColor: "#CBD5E1",
+  },
+  secondaryBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 2 }],
   },
   secondaryBtnText: {
-    color: "#94A3B8",
-    fontSize: 12,
+    color: "#475569",
+    fontSize: 12.5,
     fontWeight: "800",
   },
   resultScroll: {
-    paddingBottom: 30,
+    paddingBottom: 20,
     alignItems: "center",
+    width: "100%",
   },
   compareRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
     width: "100%",
     marginBottom: 14,
   },
   compareBox: {
     flex: 1,
-    backgroundColor: "#0B1120",
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingVertical: 10,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   compareLabel: {
     color: "#64748B",
@@ -728,38 +860,49 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   compareScore: {
-    color: "#F8FAFC",
+    color: "#0F172A",
     fontSize: 18,
     fontWeight: "900",
     marginTop: 2,
   },
   compareScoreWin: {
-    color: "#34D399",
+    color: "#059669",
+  },
+  vsBadgeRing: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    justifyContent: "center",
+    alignItems: "center",
   },
   compareVs: {
-    color: "#64748B",
-    fontSize: 14,
+    color: "#B45309",
+    fontSize: 11,
     fontWeight: "900",
   },
   rewardBanner: {
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
-    borderRadius: 10,
+    backgroundColor: "#FEF3C7",
+    borderRadius: 14,
     padding: 10,
     width: "100%",
     alignItems: "center",
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#F59E0B",
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
   },
   rewardText: {
-    color: "#FBBF24",
-    fontSize: 12,
-    fontWeight: "800",
+    color: "#B45309",
+    fontSize: 12.5,
+    fontWeight: "900",
   },
   gameContainer: {
     flex: 1,
     justifyContent: "space-between",
-    paddingBottom: 20,
+    paddingBottom: 10,
+    width: "100%",
   },
   hudRow: {
     flexDirection: "row",
@@ -768,47 +911,47 @@ const styles = StyleSheet.create({
   },
   hudBox: {
     flex: 1,
-    backgroundColor: "#131C31",
-    borderRadius: 10,
-    paddingVertical: 8,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 7,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
   },
   hudBoxUrgent: {
-    borderColor: "#EF4444",
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderColor: "#FECDD3",
+    backgroundColor: "#FFF1F2",
   },
   hudLabel: {
     color: "#64748B",
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: "800",
   },
   hudVal: {
-    color: "#F8FAFC",
+    color: "#0F172A",
     fontSize: 16,
     fontWeight: "900",
   },
   hudValUrgent: {
-    color: "#EF4444",
+    color: "#E11D48",
   },
   hudValScore: {
-    color: "#FBBF24",
+    color: "#D97706",
   },
   activeWordBar: {
-    backgroundColor: "#131C31",
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    backgroundColor: "#F0F9FF",
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
     alignItems: "center",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#223555",
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: "#BAE6FD",
     minHeight: 44,
     justifyContent: "center",
   },
   activeWordText: {
-    color: "#38BDF8",
+    color: "#0284C7",
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -826,23 +969,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tile: {
-    width: 56,
-    height: 56,
-    backgroundColor: "#1E293B",
-    borderRadius: 12,
+    width: 60,
+    height: 60,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#334155",
+    borderColor: "#CBD5E1",
+    borderBottomWidth: 3.5,
+    borderBottomColor: "#94A3B8",
     justifyContent: "center",
     alignItems: "center",
   },
   tileSelected: {
     backgroundColor: "#0284C7",
     borderColor: "#38BDF8",
-    transform: [{ scale: 1.05 }],
+    borderBottomColor: "#0369A1",
+    transform: [{ scale: 1.06 }],
   },
   tileLetter: {
-    color: "#F8FAFC",
-    fontSize: 22,
+    color: "#0F172A",
+    fontSize: 23,
     fontWeight: "900",
   },
   tileLetterSelected: {
@@ -850,12 +996,12 @@ const styles = StyleSheet.create({
   },
   tileBadge: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: 3,
+    right: 3,
     backgroundColor: "#FBBF24",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -867,31 +1013,46 @@ const styles = StyleSheet.create({
   actionControls: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 12,
+    marginTop: 8,
   },
   clearBtn: {
     flex: 1,
-    backgroundColor: "#334155",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 14,
+    paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderBottomWidth: 3.5,
+    borderBottomColor: "#CBD5E1",
+  },
+  clearBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 2.5 }],
   },
   clearBtnDisabled: {
     opacity: 0.4,
   },
   clearBtnText: {
-    color: "#94A3B8",
+    color: "#475569",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   submitWordBtn: {
     flex: 2,
-    backgroundColor: "#10B981",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: "#059669",
+    borderRadius: 14,
+    paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
+    borderBottomWidth: 3.5,
+    borderBottomColor: "#047857",
+  },
+  submitWordBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 2.5 }],
   },
   submitWordBtnDisabled: {
     opacity: 0.4,
@@ -900,5 +1061,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "900",
+    letterSpacing: 0.5,
   },
 });

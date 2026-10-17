@@ -1068,7 +1068,7 @@ export function CommandCenter({
         </Pressable>
       </View>
 
-      {/* 4. TETRİS HAYATTA KALMA: KELİMEMATİK */}
+      {/* 4. TETRİS HAYATTA KALMA: KELİMEMATİK (KİLİTLİ - ÇOK YAKINDA) */}
       <Pressable
         onPress={() => {
           triggerHapticSelection();
@@ -1076,43 +1076,29 @@ export function CommandCenter({
         }}
         style={({ pressed }) => [{ width: "100%", marginTop: 8 }, pressed && styles.pressed]}
       >
-        <OrnatePanel accent="sapphire" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
-          <GameIcon source={ICONS.play} size={40} glow="#38BDF8" />
+        <OrnatePanel accent="amber" showJewels={false} contentStyle={styles.soloHorizontalSkin}>
+          <View style={styles.kelimematikIconWrap}>
+            <Text style={styles.kelimematikEmojiIcon}>🧱</Text>
+            <View style={styles.kelimematikLockBadge}>
+              <Text style={styles.kelimematikLockBadgeIcon}>🔒</Text>
+            </View>
+          </View>
           <View style={styles.soloMetaCol}>
             <View style={styles.soloEyebrowRow}>
-              <View
-                style={{
-                  backgroundColor: "#EFF6FF",
-                  borderWidth: 1,
-                  borderColor: "#BFDBFE",
-                  paddingHorizontal: 7,
-                  paddingVertical: 2,
-                  borderRadius: 6,
-                }}
-              >
-                <Text style={[styles.soloEyebrowText, { color: "#0284C7" }]}>
-                  {progress.bestKelimematikScore ? `EN İYİ: ${progress.bestKelimematikScore} P` : "⚡ 5×8 TETRİS HAYATTA KALMA"}
-                </Text>
+              <View style={styles.kelimematikPill}>
+                <Text style={styles.kelimematikPillText}>🔒 ÇOK YAKINDA</Text>
               </View>
             </View>
             <Text numberOfLines={1} style={styles.soloHeading}>KELİMEMATİK</Text>
-            <Text numberOfLines={1} style={[styles.soloDescEmerald, { color: "#0369A1" }]}>
+            <Text numberOfLines={1} style={styles.kelimematikDesc}>
               Düşen harfler, tetris mekaniği ve hayatta kalma
             </Text>
           </View>
-          {onOpenModeInfo && (
-            <InfoMini color="#0284C7" onPress={() => onOpenModeInfo("kelimematik")} />
-          )}
-          <GameButton
-            label="OYNA ▶"
-            size="sm"
-            variant="primary"
-            onPress={() => {
-              triggerHapticSelection();
-              setShowKelimematikPreviewModal(true);
-            }}
-            style={styles.soloActionBtn}
-          />
+          <View style={styles.kelimematikActionWrap}>
+            <View style={styles.kelimematikLockedBtn}>
+              <Text style={styles.kelimematikLockedBtnText}>🔒 YAKINDA</Text>
+            </View>
+          </View>
         </OrnatePanel>
       </Pressable>
       </Animated.View>

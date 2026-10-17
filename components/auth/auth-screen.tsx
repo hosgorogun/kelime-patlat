@@ -222,6 +222,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
         style={styles.bgImage}
         resizeMode="cover"
       >
+        <View style={styles.backdropOverlay} />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1, width: "100%" }}
@@ -235,11 +236,13 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
             <View style={styles.card}>
             {/* Header / Brand */}
             <View style={styles.brandContainer}>
-              <Image
-                source={require("../../assets/images/icon.png")}
-                style={styles.brandLogoImage}
-                resizeMode="contain"
-              />
+              <View style={styles.brandLogoWrap}>
+                <Image
+                  source={require("../../assets/images/icon.png")}
+                  style={styles.brandLogoImage}
+                  resizeMode="contain"
+                />
+              </View>
               <Text style={styles.brandTitle}>KELİME PATLAT</Text>
               <Text style={styles.brandSubtitle}>
                 {isSignUp ? "Kelime dünyasına katıl, rekorları kır!" : "Akıl dolu kelime mücadelesine hazır mısın?"}
@@ -290,7 +293,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                         autoCorrect={false}
                         style={styles.fieldInput}
                         placeholder="Örn: Ahmet Yılmaz"
-                        placeholderTextColor="#8F9CA3"
+                        placeholderTextColor="#94A3B8"
                       />
                     </View>
                   </View>
@@ -308,7 +311,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                         autoCorrect={false}
                         style={styles.fieldInput}
                         placeholder="adiniz@ornek.com"
-                        placeholderTextColor="#8F9CA3"
+                        placeholderTextColor="#94A3B8"
                       />
                     </View>
                   </View>
@@ -359,7 +362,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                   isSignUp && usernameAvailable === true && styles.inputWrapperSuccess,
                   isSignUp && usernameAvailable === false && styles.inputWrapperError
                 ]}>
-                  <Text style={styles.inputIcon}>🏷️</Text>
+                  <Text style={styles.inputIcon}>👤</Text>
                   <TextInput
                     value={username}
                     onChangeText={(val) => {
@@ -384,7 +387,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                     autoCorrect={false}
                     style={styles.fieldInput}
                     placeholder={isSignUp ? "En az 4 karakter" : "Kullanıcı adı veya e-posta"}
-                    placeholderTextColor="#8F9CA3"
+                    placeholderTextColor="#94A3B8"
                   />
                   {isSignUp && username.trim().length >= 4 && (
                     <View style={styles.badgeContainer}>
@@ -394,7 +397,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                         </View>
                       ) : usernameAvailable === true ? (
                         <View style={styles.successBadge}>
-                          <Text style={styles.successBadgeText}>✓ KULLANILABİLİR</Text>
+                          <Text style={styles.successBadgeText}>✓ MÜSAİT</Text>
                         </View>
                       ) : usernameAvailable === false ? (
                         <View style={styles.errorBadge}>
@@ -423,7 +426,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                     autoCorrect={false}
                     style={styles.fieldInput}
                     placeholder={isSignUp ? "En az 6 karakter" : "Şifreniz"}
-                    placeholderTextColor="#8F9CA3"
+                    placeholderTextColor="#94A3B8"
                     returnKeyType="done"
                     onSubmitEditing={handleSubmit}
                   />
@@ -446,7 +449,12 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                     style={styles.eyeButton}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
-                    <Text style={styles.eyeIconText}>{showPassword ? "👁" : "🕶️"}</Text>
+                    <View style={[styles.eyePill, showPassword && styles.eyePillActive]}>
+                      <Text style={styles.eyePillIcon}>{showPassword ? "👁️" : "🔒"}</Text>
+                      <Text style={[styles.eyePillText, showPassword && styles.eyePillTextActive]}>
+                        {showPassword ? "GİZLE" : "GÖSTER"}
+                      </Text>
+                    </View>
                   </Pressable>
                 </View>
               </View>
@@ -458,7 +466,8 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                   disabled={loading}
                   style={({ pressed }) => [styles.demoPill, pressed && styles.pressedPill]}
                 >
-                  <Text style={styles.demoPillText}>⚡ Hızlı Test Hesabı ile Giriş Yap</Text>
+                  <Text style={styles.demoPillIcon}>⚡</Text>
+                  <Text style={styles.demoPillText}>Hızlı Test Hesabı ile Giriş Yap</Text>
                 </Pressable>
               )}
 
@@ -483,7 +492,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                 <Text style={styles.primaryButtonText}>
                   {loading ? "BAĞLANILIYOR..." : isSignUp ? "KAYIT OL VE BAŞLA" : "GİRİŞ YAP"}
                 </Text>
-                <Text style={styles.primaryButtonArrow}>→</Text>
+                <Text style={styles.primaryButtonArrow}>➔</Text>
               </Pressable>
 
               {/* Social Login Section */}
@@ -529,7 +538,7 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
                   haptics.light();
                   onCancel();
                 }}
-                style={({ pressed }) => [styles.guestFooter, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.guestFooter, pressed && { opacity: 0.75 }]}
               >
                 <Text style={styles.guestFooterText}>Misafir Olarak Oynamaya Devam Et ➔</Text>
               </Pressable>
@@ -545,93 +554,110 @@ export function AuthScreen({ onSuccess, onCancel }: AuthScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#050B14",
   },
   bgImage: {
     flex: 1,
     width: "100%",
     height: "100%",
   },
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(5, 11, 20, 0.74)",
+  },
   scroll: {
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 20,
     paddingHorizontal: 16,
   },
   card: {
     width: "100%",
-    maxWidth: 370,
+    maxWidth: 380,
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    borderRadius: 28,
+    paddingVertical: 24,
+    paddingHorizontal: 22,
     borderWidth: 1.5,
-    borderColor: "#E5ECE0",
-    shadowColor: "#1A2530",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.25,
+    shadowRadius: 32,
+    elevation: 8,
   },
   brandContainer: {
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  brandLogoWrap: {
+    width: 62,
+    height: 62,
+    borderRadius: 18,
+    backgroundColor: "#0F172A",
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 10,
+    overflow: "hidden",
   },
   brandLogoImage: {
-    width: 54,
-    height: 54,
-    borderRadius: 14,
-    marginBottom: 6,
+    width: "100%",
+    height: "100%",
   },
   brandTitle: {
     fontSize: 22,
     fontWeight: "900",
-    color: "#202E38",
+    color: "#0F172A",
     letterSpacing: 0.8,
   },
   brandSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600",
-    color: "#6B7D89",
+    color: "#64748B",
     textAlign: "center",
-    marginTop: 2,
-    paddingHorizontal: 10,
-    lineHeight: 15,
+    marginTop: 3,
+    paddingHorizontal: 8,
+    lineHeight: 16,
   },
 
   /* Segmented Tab Switcher */
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: "#F0F4EC",
-    borderRadius: 14,
-    padding: 3,
-    marginBottom: 12,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#E1E8DC",
+    borderColor: "#E2E8F0",
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 7,
+    paddingVertical: 9,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
+    borderRadius: 12,
   },
   tabButtonActive: {
     backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 3,
+    shadowRadius: 4,
     elevation: 2,
   },
   tabButtonText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#6F808C",
+    color: "#64748B",
   },
   tabButtonTextActive: {
-    color: "#1B2A34",
+    color: "#0F172A",
     fontWeight: "900",
   },
 
@@ -640,25 +666,25 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   fieldGroup: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   fieldLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
-    color: "#4A5A66",
+    color: "#475569",
     letterSpacing: 0.6,
-    marginBottom: 4,
+    marginBottom: 6,
     marginLeft: 2,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F7FAF5",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1.5,
-    borderColor: "#DEE5D9",
-    borderRadius: 12,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
     paddingHorizontal: 12,
-    height: 44,
+    height: 48,
   },
   inputWrapperSuccess: {
     borderColor: "#10B981",
@@ -731,24 +757,42 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   inputIcon: {
-    fontSize: 15,
-    marginRight: 8,
+    fontSize: 16,
+    marginRight: 10,
   },
   fieldInput: {
     flex: 1,
-    color: "#1E2C36",
+    color: "#0F172A",
     fontSize: 14,
     fontWeight: "600",
     paddingVertical: 0,
     height: "100%",
   },
   eyeButton: {
-    padding: 6,
+    paddingLeft: 6,
     justifyContent: "center",
     alignItems: "center",
   },
-  eyeIconText: {
-    fontSize: 16,
+  eyePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EDF2F7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  eyePillActive: {
+    backgroundColor: "#E2E8F0",
+  },
+  eyePillIcon: {
+    fontSize: 11,
+  },
+  eyePillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#475569",
+    letterSpacing: 0.4,
   },
 
   /* Gender Options */
@@ -761,20 +805,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F7FAF5",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1.5,
-    borderColor: "#DEE5D9",
-    borderRadius: 12,
-    paddingVertical: 10,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    paddingVertical: 12,
     gap: 8,
   },
   genderCardActiveMale: {
-    backgroundColor: "#E8F4FD",
-    borderColor: "#38BDF8",
+    backgroundColor: "#EFF6FF",
+    borderColor: "#3B82F6",
   },
   genderCardActiveFemale: {
-    backgroundColor: "#FDF0F6",
-    borderColor: "#F472B6",
+    backgroundColor: "#FDF2F8",
+    borderColor: "#EC4899",
   },
   genderIcon: {
     fontSize: 18,
@@ -782,21 +826,21 @@ const styles = StyleSheet.create({
   genderText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#52636F",
+    color: "#475569",
   },
   genderTextActiveMale: {
-    color: "#0284C7",
+    color: "#1D4ED8",
     fontWeight: "900",
   },
   genderTextActiveFemale: {
-    color: "#DB2777",
+    color: "#BE185D",
     fontWeight: "900",
   },
   genderCheckBadge: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#167653",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
     marginLeft: 2,
@@ -809,84 +853,93 @@ const styles = StyleSheet.create({
 
   /* Demo Pill */
   demoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     alignSelf: "center",
-    backgroundColor: "#FFF9E6",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#FFE082",
+    borderColor: "#CBD5E1",
     borderRadius: 20,
     paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginTop: 2,
-    marginBottom: 6,
+    paddingVertical: 7,
+    marginTop: 4,
+    marginBottom: 8,
+    gap: 6,
   },
   pressedPill: {
     opacity: 0.8,
     transform: [{ scale: 0.98 }],
   },
+  demoPillIcon: {
+    fontSize: 12,
+  },
   demoPillText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#A26E05",
+    color: "#475569",
+    letterSpacing: 0.2,
   },
 
   /* Error Box */
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FDF2F4",
+    backgroundColor: "#FEF2F2",
     borderWidth: 1,
-    borderColor: "#F9CBD3",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderColor: "#FECACA",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     marginVertical: 8,
-    gap: 6,
+    gap: 8,
   },
   errorIcon: {
-    fontSize: 14,
+    fontSize: 15,
   },
   errorText: {
     flex: 1,
     fontSize: 12,
     fontWeight: "700",
-    color: "#D83A56",
+    color: "#DC2626",
+    lineHeight: 16,
   },
 
   /* Primary Button */
   primaryButton: {
     flexDirection: "row",
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: "#FFCA38",
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#F59E0B",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: "#E5A91E",
-    marginTop: 6,
-    shadowColor: "#D3960E",
-    shadowOffset: { width: 0, height: 3 },
+    borderColor: "#D97706",
+    marginTop: 8,
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
     paddingHorizontal: 16,
   },
   primaryButtonPressed: {
     transform: [{ scale: 0.98 }],
-    opacity: 0.9,
+    opacity: 0.92,
   },
   primaryButtonDisabled: {
     opacity: 0.6,
   },
   primaryButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "900",
-    color: "#463000",
-    letterSpacing: 0.5,
+    color: "#FFFFFF",
+    letterSpacing: 0.6,
   },
   primaryButtonArrow: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "900",
-    color: "#463000",
+    color: "#FFFFFF",
     marginLeft: 8,
   },
 
@@ -894,19 +947,19 @@ const styles = StyleSheet.create({
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 10,
+    marginVertical: 14,
     gap: 12,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E5ECE0",
+    backgroundColor: "#E2E8F0",
   },
   dividerText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
-    color: "#8FA0AC",
-    letterSpacing: 1,
+    color: "#94A3B8",
+    letterSpacing: 1.2,
   },
 
   /* Social Login Buttons */
@@ -917,7 +970,7 @@ const styles = StyleSheet.create({
   socialCard: {
     flex: 1,
     flexDirection: "row",
-    height: 44,
+    height: 48,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
@@ -927,16 +980,16 @@ const styles = StyleSheet.create({
   socialCardGoogle: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#DCE3D6",
+    borderColor: "#E2E8F0",
     shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 1,
   },
   pressedCardGoogle: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: "#F8FAF6",
+    backgroundColor: "#F8FAFC",
     borderColor: "#CBD5C5",
   },
   socialCardLabelGoogle: {
@@ -968,15 +1021,20 @@ const styles = StyleSheet.create({
 
   /* Guest Footer */
   guestFooter: {
-    marginTop: 10,
-    paddingVertical: 6,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#DCFCE7",
     alignItems: "center",
     justifyContent: "center",
   },
   guestFooterText: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#167653",
+    color: "#16A34A",
     letterSpacing: 0.3,
   },
 });

@@ -56,6 +56,36 @@ export function usePlayerProgression({
     progressRef.current = progress;
   }, [progress]);
 
+  // Periodic and on-mount server health check to accurately determine online/offline status
+  useEffect(() => {
+    let active = true;
+    const checkServerHealth = async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/health`, {
+          method: "GET",
+          headers: { "Cache-Control": "no-cache" },
+        });
+        if (!active) return;
+        if (res.ok) {
+          setIsOffline(false);
+          wasOfflineRef.current = false;
+        } else {
+          setIsOffline(true);
+        }
+      } catch {
+        if (!active) return;
+        setIsOffline(true);
+      }
+    };
+
+    void checkServerHealth();
+    const interval = setInterval(checkServerHealth, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   const syncProgressToCloud = useCallback(
     async (currentProgress: PlayerProgress, customName?: string) => {
       try {
@@ -84,6 +114,10 @@ export function usePlayerProgression({
               accentColor: "#3EE8B5",
             });
           }
+        } else if (res.status === 401 || res.status === 403) {
+          // Token is expired/unrecognized by remote server; server is ONLINE, not offline!
+          setIsOffline(false);
+          wasOfflineRef.current = false;
         } else {
           wasOfflineRef.current = true;
           setIsOffline(true);

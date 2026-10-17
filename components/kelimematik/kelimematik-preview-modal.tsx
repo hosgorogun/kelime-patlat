@@ -7,19 +7,15 @@ import type { PlayerProgress } from "@/shared/progression";
 interface KelimematikPreviewModalProps {
   visible: boolean;
   onClose: () => void;
-  onStart: () => void;
+  onStart?: () => void;
   progress?: PlayerProgress;
 }
 
 export function KelimematikPreviewModal({
   visible,
   onClose,
-  onStart,
-  progress,
 }: KelimematikPreviewModalProps) {
   if (!visible) return null;
-
-  const bestScore = progress?.bestKelimematikScore || 0;
 
   return (
     <Modal
@@ -31,78 +27,70 @@ export function KelimematikPreviewModal({
     >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          {/* Header Icon */}
+          {/* Header Icon Ring */}
           <View style={styles.iconWrap}>
-            <Text style={styles.icon}>⚡</Text>
+            <Text style={styles.icon}>🔒</Text>
           </View>
 
           {/* Kicker & Title */}
           <View style={styles.kickerBadge}>
-            <Text style={styles.kickerText}>HAYATTA KALMA MODU</Text>
+            <Text style={styles.kickerText}>✦ ÇOK YAKINDA ✦</Text>
           </View>
           <Text style={styles.title}>KELİMEMATİK</Text>
           <Text style={styles.subtitle}>
-            Düşen harfler tavan sınırına ulaşmadan kelimeler üret, patlat ve hayatta kal!
+            Tetris mekaniğiyle harfleri birleştirip hayatta kalacağın yeni oyun modu çok yakında sizlerle!
           </Text>
 
-          {/* Game Stats & Features Card */}
-          <View style={styles.statsCard}>
-            <View style={styles.statRow}>
-              <View style={styles.statCol}>
-                <Text style={styles.statLabel}>EN YÜKSEK SKOR</Text>
-                <Text style={styles.statValue}>
-                  {bestScore > 0 ? `${bestScore} P` : "— Henüz Yok"}
-                </Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statCol}>
-                <Text style={styles.statLabel}>IZGARA TİPİ</Text>
-                <Text style={[styles.statValue, { color: "#0284C7" }]}>5×8 Tetris</Text>
-              </View>
+          {/* Under Development Teaser Banner */}
+          <View style={styles.teaserNotice}>
+            <View style={styles.teaserIconWrap}>
+              <Text style={styles.teaserIcon}>🚧</Text>
             </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.teaserNoticeTitle}>GELİŞTİRME AŞAMASINDA</Text>
+              <Text style={styles.teaserNoticeSub}>
+                Kelimematik modu şu anda son test ve dengeleme aşamasındadır. Çok yakında yeni güncellemeyle tüm oyunculara açılacaktır!
+              </Text>
+            </View>
+          </View>
 
+          {/* Features Sneak Peek Card */}
+          <View style={styles.featuresCard}>
+            <Text style={styles.featuresHeader}>Neler Geliyor?</Text>
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>🌪️</Text>
-                <Text style={styles.featureText}>Süpürge: En yüksek sütunu anında temizler.</Text>
+                <Text style={styles.featureIcon}>🧱</Text>
+                <Text style={styles.featureText}>
+                  <Text style={styles.featureBold}>5×8 Tetris Izgarası:</Text> Düşen harfler tavana ulaşmadan sözcükleri patlat.
+                </Text>
               </View>
               <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>💧</Text>
-                <Text style={styles.featureText}>Sesli Harf: Tahtaya yeni sesli harfler serper.</Text>
+                <Text style={styles.featureIcon}>🌪️</Text>
+                <Text style={styles.featureText}>
+                  <Text style={styles.featureBold}>Süpürge:</Text> En yüksek sütunu tek hamlede anında temizle.
+                </Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>⚡</Text>
-                <Text style={styles.featureText}>Zincirleme: Düşen harfler yeni kelime yaparsa kombo!</Text>
+                <Text style={styles.featureText}>
+                  <Text style={styles.featureBold}>Zincirleme Kombo:</Text> Düşen harfler yeni kelime oluşturursa ekstra puan patlaması!
+                </Text>
               </View>
             </View>
           </View>
 
-          {/* Action Buttons */}
+          {/* Action Button */}
           <View style={styles.buttonGroup}>
             <GameButton
-              label="OYUNA BAŞLA ▶"
-              variant="primary"
+              label="TAMAM, ANLADIM"
+              variant="emerald"
               size="lg"
               onPress={() => {
                 triggerHapticSelection();
                 onClose();
-                onStart();
               }}
               style={{ width: "100%" }}
             />
-
-            <Pressable
-              onPress={() => {
-                triggerHapticSelection();
-                onClose();
-              }}
-              style={({ pressed }) => [
-                styles.cancelBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-            >
-              <Text style={styles.cancelBtnText}>Vazgeç</Text>
-            </Pressable>
           </View>
         </Pressable>
       </Pressable>
@@ -123,7 +111,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
-    padding: 24,
+    padding: 22,
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#E2E8F0",
@@ -137,27 +125,29 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "rgba(2, 132, 199, 0.12)",
+    backgroundColor: "#FEF3C7",
     borderWidth: 2,
-    borderColor: "rgba(2, 132, 199, 0.25)",
+    borderColor: "#FDE68A",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   icon: {
-    fontSize: 28,
+    fontSize: 26,
   },
   kickerBadge: {
-    backgroundColor: "#E0F2FE",
+    backgroundColor: "#FEF3C7",
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: 10,
     marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
   },
   kickerText: {
     fontSize: 10,
     fontWeight: "900",
-    color: "#0369A1",
+    color: "#B45309",
     letterSpacing: 0.8,
   },
   title: {
@@ -167,81 +157,88 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: "#64748B",
     textAlign: "center",
-    lineHeight: 18,
-    marginTop: 6,
-    paddingHorizontal: 8,
+    lineHeight: 17,
+    marginTop: 4,
+    paddingHorizontal: 4,
   },
-  statsCard: {
+  teaserNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
+    width: "100%",
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  teaserIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FEF3C7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  teaserIcon: {
+    fontSize: 18,
+  },
+  teaserNoticeTitle: {
+    color: "#B45309",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  teaserNoticeSub: {
+    color: "#78350F",
+    fontSize: 10.5,
+    lineHeight: 14,
+    marginTop: 2,
+  },
+  featuresCard: {
     width: "100%",
     backgroundColor: "#F8FAFC",
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: "#E2E8F0",
-    padding: 14,
-    marginVertical: 18,
+    padding: 12,
+    marginBottom: 16,
   },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  statCol: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: "#E2E8F0",
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#94A3B8",
-    letterSpacing: 0.5,
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: "900",
+  featuresHeader: {
     color: "#0F172A",
-    marginTop: 2,
+    fontSize: 11.5,
+    fontWeight: "900",
+    marginBottom: 8,
   },
   featuresList: {
-    paddingTop: 12,
     gap: 8,
   },
   featureItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 8,
   },
   featureIcon: {
     fontSize: 14,
+    marginTop: 1,
   },
   featureText: {
     flex: 1,
     fontSize: 11,
-    fontWeight: "600",
     color: "#475569",
     lineHeight: 15,
+  },
+  featureBold: {
+    fontWeight: "800",
+    color: "#0F172A",
   },
   buttonGroup: {
     width: "100%",
     alignItems: "center",
-    gap: 8,
-  },
-  cancelBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  cancelBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#94A3B8",
   },
 });

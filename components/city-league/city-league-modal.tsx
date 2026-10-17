@@ -112,24 +112,36 @@ export function CityLeagueModal({
     }
   };
 
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <View style={styles.backdrop}>
-        <View style={styles.container}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <Text style={styles.headerIcon}>🇹🇷</Text>
-              <View>
-                <Text style={styles.headerTitle}>81 İL LİGİ</Text>
+              <View style={styles.flagIconRing}>
+                <Text style={styles.headerIcon}>🇹🇷</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.headerBadgeRow}>
+                  <Text style={styles.headerTitle}>81 İL LİGİ</Text>
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveBadgeText}>CANLI</Text>
+                  </View>
+                </View>
                 <Text style={styles.headerSub}>Şehrin İçin Yarış • Zirveye Taşı</Text>
               </View>
             </View>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Kapat"
@@ -137,39 +149,45 @@ export function CityLeagueModal({
                 triggerHapticSelection();
                 onClose();
               }}
-              style={styles.closeBtn}
+              style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
             >
               <Text style={styles.closeBtnText}>✕</Text>
             </Pressable>
           </View>
 
-          {/* Active Player City Banner */}
-          <View style={styles.myCityCard}>
+          {/* Active Player City Banner / Callout */}
+          <View style={styles.myCityCardWrapper}>
             {userCityStanding ? (
-              <View style={styles.myCityRow}>
-                <View style={styles.plateBadge}>
-                  <View style={styles.plateTrSection}>
-                    <Text style={styles.plateTrText}>TR</Text>
-                  </View>
-                  <Text style={styles.plateNumber}>
-                    {String(userCityStanding.plate).padStart(2, "0")}
-                  </Text>
-                </View>
-                <View style={styles.myCityInfo}>
-                  <View style={styles.myCityTitleRow}>
-                    <Text style={styles.myCityName}>{userCityStanding.city}</Text>
-                    <View style={styles.rankPill}>
-                      <Text style={styles.rankPillText}>#{userCityStanding.rank}. Sırada</Text>
+              <View style={styles.myCityCardActive}>
+                <View style={styles.myCityRow}>
+                  {/* Authentic Turkish License Plate */}
+                  <View style={styles.plateBadge}>
+                    <View style={styles.plateTrSection}>
+                      <Text style={styles.plateTrText}>TR</Text>
                     </View>
+                    <Text style={styles.plateNumber}>
+                      {String(userCityStanding.plate).padStart(2, "0")}
+                    </Text>
                   </View>
-                  <Text style={styles.myCityScoreText}>
-                    ⚡ {userCityStanding.weeklyScore.toLocaleString("tr-TR")} Puan • {userCityStanding.playerCount} Oyuncu
-                  </Text>
+
+                  <View style={styles.myCityInfo}>
+                    <View style={styles.myCityTitleRow}>
+                      <Text style={styles.myCityName}>{userCityStanding.city}</Text>
+                      <View style={styles.rankPill}>
+                        <Text style={styles.rankPillText}>#{userCityStanding.rank}. Sırada</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.myCityScoreText}>
+                      ⚡ {userCityStanding.weeklyScore.toLocaleString("tr-TR")} Puan • 👥 {userCityStanding.playerCount} Oyuncu
+                    </Text>
+                  </View>
                 </View>
               </View>
             ) : (
               <View style={styles.noCityNotice}>
-                <Text style={styles.noCityIcon}>📍</Text>
+                <View style={styles.noCityIconWrapper}>
+                  <Text style={styles.noCityIcon}>📍</Text>
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.noCityTitle}>Henüz Şehrini Seçmedin!</Text>
                   <Text style={styles.noCitySub}>
@@ -180,33 +198,60 @@ export function CityLeagueModal({
             )}
           </View>
 
-          {/* Top 3 Podium Cards */}
+          {/* 3D Olympic Stepped Podium for Top 3 */}
           {top3.length >= 3 && !searchQuery && selectedRegion === "ALL" && (
-            <View style={styles.podiumContainer}>
-              {/* 2nd Place */}
-              <View style={[styles.podiumItem, styles.podiumSilver]}>
-                <Text style={styles.podiumMedal}>🥈</Text>
-                <Text style={styles.podiumCityName} numberOfLines={1}>{top3[1]?.city}</Text>
-                <Text style={styles.podiumScore}>{top3[1]?.weeklyScore.toLocaleString("tr-TR")}p</Text>
-              </View>
+            <View style={styles.podiumSection}>
+              <View style={styles.podiumContainer}>
+                {/* 2nd Place (Silver - Left) */}
+                <View style={[styles.podiumColumn, styles.podiumColSilver]}>
+                  <View style={[styles.podiumMedalRing, styles.silverMedalRing]}>
+                    <Text style={styles.podiumMedal}>🥈</Text>
+                  </View>
+                  <View style={[styles.podiumPedestal, styles.silverPedestal]}>
+                    <Text style={styles.podiumRankLabel}>#2</Text>
+                    <Text style={styles.podiumCityName} numberOfLines={1}>{top3[1]?.city}</Text>
+                    <View style={styles.podiumScoreBadge}>
+                      <Text style={styles.podiumScoreText}>
+                        ⚡ {top3[1]?.weeklyScore.toLocaleString("tr-TR")}p
+                      </Text>
+                    </View>
+                  </View>
+                </View>
 
-              {/* 1st Place */}
-              <View style={[styles.podiumItem, styles.podiumGold]}>
-                <Text style={styles.podiumCrown}>👑</Text>
-                <Text style={styles.podiumMedal}>🥇</Text>
-                <Text style={[styles.podiumCityName, styles.podiumGoldName]} numberOfLines={1}>
-                  {top3[0]?.city}
-                </Text>
-                <Text style={[styles.podiumScore, styles.podiumGoldScore]}>
-                  {top3[0]?.weeklyScore.toLocaleString("tr-TR")}p
-                </Text>
-              </View>
+                {/* 1st Place (Gold Champion - Center, Elevated) */}
+                <View style={[styles.podiumColumn, styles.podiumColGold]}>
+                  <Text style={styles.podiumCrown}>👑</Text>
+                  <View style={[styles.podiumMedalRing, styles.goldMedalRing]}>
+                    <Text style={styles.podiumMedal}>🥇</Text>
+                  </View>
+                  <View style={[styles.podiumPedestal, styles.goldPedestal]}>
+                    <Text style={styles.podiumGoldRankLabel}>#1 ŞAMPİYON</Text>
+                    <Text style={[styles.podiumCityName, styles.podiumGoldName]} numberOfLines={1}>
+                      {top3[0]?.city}
+                    </Text>
+                    <View style={styles.podiumGoldScoreBadge}>
+                      <Text style={styles.podiumGoldScoreText}>
+                        ⚡ {top3[0]?.weeklyScore.toLocaleString("tr-TR")}p
+                      </Text>
+                    </View>
+                  </View>
+                </View>
 
-              {/* 3rd Place */}
-              <View style={[styles.podiumItem, styles.podiumBronze]}>
-                <Text style={styles.podiumMedal}>🥉</Text>
-                <Text style={styles.podiumCityName} numberOfLines={1}>{top3[2]?.city}</Text>
-                <Text style={styles.podiumScore}>{top3[2]?.weeklyScore.toLocaleString("tr-TR")}p</Text>
+                {/* 3rd Place (Bronze - Right) */}
+                <View style={[styles.podiumColumn, styles.podiumColBronze]}>
+                  <View style={[styles.podiumMedalRing, styles.bronzeMedalRing]}>
+                    <Text style={styles.podiumMedal}>🥉</Text>
+                  </View>
+                  <View style={[styles.podiumPedestal, styles.bronzePedestal]}>
+                    <Text style={styles.podiumRankLabel}>#3</Text>
+                    <Text style={styles.podiumCityName} numberOfLines={1}>{top3[2]?.city}</Text>
+                    <View style={styles.podiumScoreBadge}>
+                      <Text style={styles.podiumScoreText}>
+                        ⚡ {top3[2]?.weeklyScore.toLocaleString("tr-TR")}p
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               </View>
             </View>
           )}
@@ -218,7 +263,7 @@ export function CityLeagueModal({
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Şehir adı veya plaka ara (örn: 34, İzmir)..."
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#94A3B8"
               style={styles.searchInput}
               autoCapitalize="none"
               autoCorrect={false}
@@ -227,6 +272,7 @@ export function CityLeagueModal({
               <Pressable
                 onPress={() => setSearchQuery("")}
                 style={styles.clearSearchBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.clearSearchText}>✕</Text>
               </Pressable>
@@ -249,7 +295,11 @@ export function CityLeagueModal({
                     triggerHapticSelection();
                     setSelectedRegion(r.id);
                   }}
-                  style={[styles.regionTab, active && styles.regionTabActive]}
+                  style={({ pressed }) => [
+                    styles.regionTab,
+                    active && styles.regionTabActive,
+                    pressed && { opacity: 0.8 },
+                  ]}
                 >
                   <Text style={[styles.regionTabText, active && styles.regionTabTextActive]}>
                     {r.label}
@@ -262,18 +312,22 @@ export function CityLeagueModal({
           {/* Standings List */}
           {isLoading ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#10B981" />
-              <Text style={styles.loadingText}>Şehir ligi yükleniyor...</Text>
+              <ActivityIndicator size="large" color="#059669" />
+              <Text style={styles.loadingText}>Şehir ligi sıralaması yükleniyor...</Text>
             </View>
           ) : (
             <ScrollView
               style={styles.listScroll}
               contentContainerStyle={styles.listContent}
               keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
               {filteredCities.map((item) => {
                 const isSelected = selectedCity && isEqualTr(item.city, selectedCity);
                 const isSaving = savingCity === item.city;
+                const isTop1 = item.rank === 1;
+                const isTop2 = item.rank === 2;
+                const isTop3 = item.rank === 3;
 
                 return (
                   <View
@@ -281,18 +335,34 @@ export function CityLeagueModal({
                     style={[
                       styles.cityRow,
                       isSelected && styles.cityRowSelected,
+                      isTop1 && styles.cityRowTop1,
                     ]}
                   >
-                    {/* Rank */}
-                    <View style={styles.cityRankBox}>
-                      <Text style={[styles.cityRankText, item.rank <= 3 && styles.cityRankTopText]}>
-                        #{item.rank}
+                    {/* Rank Badge */}
+                    <View
+                      style={[
+                        styles.cityRankBox,
+                        isTop1 && styles.rankBoxGold,
+                        isTop2 && styles.rankBoxSilver,
+                        isTop3 && styles.rankBoxBronze,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.cityRankText,
+                          (isTop1 || isTop2 || isTop3) && styles.cityRankTopText,
+                        ]}
+                      >
+                        {isTop1 ? "🥇" : isTop2 ? "🥈" : isTop3 ? "🥉" : `#${item.rank}`}
                       </Text>
                     </View>
 
-                    {/* Plate */}
-                    <View style={styles.cityPlateBox}>
-                      <Text style={styles.cityPlateText}>
+                    {/* Realistic Turkish Plate Badge */}
+                    <View style={styles.cityPlateBadge}>
+                      <View style={styles.cityPlateTr}>
+                        <Text style={styles.cityPlateTrText}>TR</Text>
+                      </View>
+                      <Text style={styles.cityPlateNumber}>
                         {String(item.plate).padStart(2, "0")}
                       </Text>
                     </View>
@@ -300,13 +370,22 @@ export function CityLeagueModal({
                     {/* City Info */}
                     <View style={styles.cityInfoBox}>
                       <View style={styles.cityNameLine}>
-                        <Text style={[styles.cityNameText, isSelected && styles.cityNameSelected]}>
+                        <Text
+                          style={[
+                            styles.cityNameText,
+                            isSelected && styles.cityNameSelected,
+                            isTop1 && styles.cityNameTop1,
+                          ]}
+                          numberOfLines={1}
+                        >
                           {item.city}
                         </Text>
-                        <Text style={styles.cityRegionTag}>{item.region}</Text>
+                        <View style={styles.cityRegionCapsule}>
+                          <Text style={styles.cityRegionTag}>{item.region}</Text>
+                        </View>
                       </View>
                       <Text style={styles.cityPointsText}>
-                        ⚡ {item.weeklyScore.toLocaleString("tr-TR")} Puan • 👥 {item.playerCount}
+                        ⚡ <Text style={styles.cityPointsHighlight}>{item.weeklyScore.toLocaleString("tr-TR")}</Text> Puan • 👥 {item.playerCount}
                       </Text>
                     </View>
 
@@ -314,10 +393,11 @@ export function CityLeagueModal({
                     <Pressable
                       disabled={isSelected || isSaving}
                       onPress={() => handleCityPick(item.city)}
-                      style={[
+                      style={({ pressed }) => [
                         styles.selectBtn,
                         isSelected && styles.selectBtnActive,
                         isSaving && styles.selectBtnLoading,
+                        pressed && !isSelected && styles.selectBtnPressed,
                       ]}
                     >
                       {isSaving ? (
@@ -334,79 +414,138 @@ export function CityLeagueModal({
             </ScrollView>
           )}
 
-          {/* Footer Note */}
+          {/* Tournament Footer Note */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              Her hafta Pazar 23:59&apos;da haftalık şehir sıralaması sıfırlanır ve şampiyon il ödüllendirilir!
+              ⏱ Her hafta Pazar 23:59&apos;da haftalık şehir sıralaması sıfırlanır ve şampiyon il ödüllendirilir!
             </Text>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  overlay: {
     flex: 1,
-    backgroundColor: "rgba(3, 7, 18, 0.85)",
-    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
   },
-  container: {
-    backgroundColor: "#0B1120",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: "#1E293B",
-    height: "92%",
-    paddingTop: 16,
-    paddingHorizontal: 16,
+  card: {
+    width: "100%",
+    maxWidth: 420,
+    maxHeight: "92%",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 12,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 8,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
+    width: "100%",
   },
   headerTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
+  },
+  flagIconRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFF1F2",
+    borderWidth: 2,
+    borderColor: "#FECDD3",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerIcon: {
-    fontSize: 28,
+    fontSize: 22,
+  },
+  headerBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   headerTitle: {
-    color: "#F8FAFC",
-    fontSize: 19,
+    color: "#0F172A",
+    fontSize: 20,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#059669",
+  },
+  liveBadgeText: {
+    color: "#059669",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   headerSub: {
-    color: "#94A3B8",
-    fontSize: 11,
+    color: "#64748B",
+    fontSize: 11.5,
     fontWeight: "600",
+    marginTop: 1,
   },
   closeBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#1E293B",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     justifyContent: "center",
     alignItems: "center",
   },
-  closeBtnText: {
-    color: "#94A3B8",
-    fontSize: 16,
-    fontWeight: "bold",
+  closeBtnPressed: {
+    backgroundColor: "#E2E8F0",
+    transform: [{ scale: 0.95 }],
   },
-  myCityCard: {
-    backgroundColor: "#131C31",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#223555",
+  closeBtnText: {
+    color: "#475569",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  myCityCardWrapper: {
+    width: "100%",
     marginBottom: 10,
+  },
+  myCityCardActive: {
+    backgroundColor: "#ECFDF5",
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: "#A7F3D0",
   },
   myCityRow: {
     flexDirection: "row",
@@ -422,6 +561,10 @@ const styles = StyleSheet.create({
     borderColor: "#0F172A",
     overflow: "hidden",
     height: 36,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   plateTrSection: {
     backgroundColor: "#0284C7",
@@ -440,6 +583,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "900",
     paddingHorizontal: 8,
+    letterSpacing: 0.5,
   },
   myCityInfo: {
     flex: 1,
@@ -450,25 +594,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   myCityName: {
-    color: "#F8FAFC",
+    color: "#0F172A",
     fontSize: 16,
     fontWeight: "900",
   },
   rankPill: {
-    backgroundColor: "rgba(16, 185, 129, 0.2)",
+    backgroundColor: "#D1FAE5",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: "#10B981",
+    borderColor: "#059669",
   },
   rankPillText: {
-    color: "#34D399",
+    color: "#065F46",
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "900",
   },
   myCityScoreText: {
-    color: "#94A3B8",
+    color: "#475569",
     fontSize: 11,
     fontWeight: "600",
     marginTop: 2,
@@ -476,86 +620,171 @@ const styles = StyleSheet.create({
   noCityNotice: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
+  },
+  noCityIconWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FEF3C7",
+    justifyContent: "center",
+    alignItems: "center",
   },
   noCityIcon: {
-    fontSize: 24,
+    fontSize: 20,
   },
   noCityTitle: {
-    color: "#FBBF24",
-    fontSize: 13,
-    fontWeight: "800",
+    color: "#B45309",
+    fontSize: 13.5,
+    fontWeight: "900",
   },
   noCitySub: {
-    color: "#94A3B8",
+    color: "#78350F",
     fontSize: 11,
     lineHeight: 15,
+    marginTop: 2,
+  },
+  podiumSection: {
+    width: "100%",
+    marginBottom: 10,
   },
   podiumContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "center",
     gap: 8,
-    marginBottom: 12,
-    paddingVertical: 6,
   },
-  podiumItem: {
+  podiumColumn: {
     flex: 1,
     alignItems: "center",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderWidth: 1,
   },
-  podiumGold: {
-    backgroundColor: "rgba(245, 158, 11, 0.12)",
-    borderColor: "#F59E0B",
-    transform: [{ translateY: -6 }],
+  podiumColGold: {
+    transform: [{ translateY: -4 }],
   },
-  podiumSilver: {
-    backgroundColor: "rgba(148, 163, 184, 0.12)",
-    borderColor: "#94A3B8",
-  },
-  podiumBronze: {
-    backgroundColor: "rgba(205, 127, 50, 0.12)",
-    borderColor: "#CD7F32",
-  },
+  podiumColSilver: {},
+  podiumColBronze: {},
   podiumCrown: {
-    fontSize: 14,
+    fontSize: 16,
     marginBottom: -4,
   },
+  podiumMedalRing: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+    borderWidth: 1.5,
+  },
+  goldMedalRing: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#F59E0B",
+  },
+  silverMedalRing: {
+    backgroundColor: "#F1F5F9",
+    borderColor: "#CBD5E1",
+  },
+  bronzeMedalRing: {
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FDBA74",
+  },
   podiumMedal: {
-    fontSize: 18,
-    marginBottom: 2,
+    fontSize: 16,
+  },
+  podiumPedestal: {
+    width: "100%",
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderBottomWidth: 3.5,
+  },
+  goldPedestal: {
+    minHeight: 84,
+    backgroundColor: "#FFFBEB",
+    borderColor: "#F59E0B",
+    borderBottomColor: "#D97706",
+  },
+  silverPedestal: {
+    minHeight: 74,
+    backgroundColor: "#F8FAFC",
+    borderColor: "#CBD5E1",
+    borderBottomColor: "#94A3B8",
+  },
+  bronzePedestal: {
+    minHeight: 68,
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FDBA74",
+    borderBottomColor: "#EA580C",
+  },
+  podiumRankLabel: {
+    color: "#64748B",
+    fontSize: 9.5,
+    fontWeight: "900",
+    marginBottom: 1,
+  },
+  podiumGoldRankLabel: {
+    color: "#B45309",
+    fontSize: 8.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    marginBottom: 1,
   },
   podiumCityName: {
-    color: "#F1F5F9",
+    color: "#0F172A",
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "900",
+    textAlign: "center",
   },
   podiumGoldName: {
-    color: "#FBBF24",
+    color: "#B45309",
     fontSize: 13,
   },
-  podiumScore: {
-    color: "#94A3B8",
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 1,
+  podiumScoreBadge: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginTop: 3,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
-  podiumGoldScore: {
-    color: "#FDE68A",
+  podiumScoreText: {
+    color: "#64748B",
+    fontSize: 9.5,
+    fontWeight: "800",
+  },
+  podiumGoldScoreBadge: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginTop: 3,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  podiumGoldScoreText: {
+    color: "#B45309",
+    fontSize: 10,
+    fontWeight: "900",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#131C31",
-    borderRadius: 10,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     height: 42,
     marginBottom: 8,
+    width: "100%",
   },
   searchIcon: {
     fontSize: 14,
@@ -563,51 +792,57 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "#F8FAFC",
-    fontSize: 13,
+    color: "#0F172A",
+    fontSize: 12.5,
+    fontWeight: "600",
     paddingVertical: 0,
   },
   clearSearchBtn: {
-    padding: 4,
+    padding: 6,
   },
   clearSearchText: {
     color: "#64748B",
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "bold",
   },
   regionTabsWrapper: {
     maxHeight: 34,
     marginBottom: 8,
+    width: "100%",
   },
   regionTabsScroll: {
     gap: 6,
     paddingVertical: 2,
   },
   regionTab: {
-    backgroundColor: "#131C31",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     borderWidth: 1,
-    borderColor: "#1E293B",
+    borderColor: "#E2E8F0",
   },
   regionTabActive: {
-    backgroundColor: "#065F46",
-    borderColor: "#10B981",
+    backgroundColor: "#059669",
+    borderColor: "#047857",
+    borderBottomWidth: 3,
   },
   regionTabText: {
-    color: "#94A3B8",
+    color: "#64748B",
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   regionTabTextActive: {
     color: "#FFFFFF",
+    fontWeight: "900",
   },
   listScroll: {
     flex: 1,
+    width: "100%",
   },
   listContent: {
-    paddingBottom: 24,
-    gap: 6,
+    paddingBottom: 16,
+    gap: 7,
   },
   loadingBox: {
     flex: 1,
@@ -616,46 +851,85 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: "#94A3B8",
+    color: "#64748B",
     fontSize: 13,
+    fontWeight: "600",
   },
   cityRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0F172A",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "#1E293B",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     gap: 8,
   },
   cityRowSelected: {
-    backgroundColor: "#064E3B",
-    borderColor: "#10B981",
+    backgroundColor: "#F0FDF4",
+    borderColor: "#86EFAC",
+  },
+  cityRowTop1: {
+    borderColor: "#FDE68A",
   },
   cityRankBox: {
-    width: 28,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    justifyContent: "center",
     alignItems: "center",
+  },
+  rankBoxGold: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FDE68A",
+  },
+  rankBoxSilver: {
+    backgroundColor: "#F1F5F9",
+    borderColor: "#CBD5E1",
+  },
+  rankBoxBronze: {
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FDBA74",
   },
   cityRankText: {
     color: "#64748B",
-    fontSize: 12,
+    fontSize: 10.5,
     fontWeight: "900",
   },
   cityRankTopText: {
-    color: "#FBBF24",
+    fontSize: 13,
   },
-  cityPlateBox: {
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  cityPlateBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#0F172A",
+    overflow: "hidden",
+    height: 22,
   },
-  cityPlateText: {
-    color: "#94A3B8",
-    fontSize: 10,
+  cityPlateTr: {
+    backgroundColor: "#0284C7",
+    paddingHorizontal: 3,
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cityPlateTrText: {
+    color: "#FFFFFF",
+    fontSize: 7.5,
     fontWeight: "900",
+  },
+  cityPlateNumber: {
+    color: "#0F172A",
+    fontSize: 11,
+    fontWeight: "900",
+    paddingHorizontal: 4,
   },
   cityInfoBox: {
     flex: 1,
@@ -663,60 +937,87 @@ const styles = StyleSheet.create({
   cityNameLine: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
   },
   cityNameText: {
-    color: "#F8FAFC",
-    fontSize: 13,
-    fontWeight: "800",
+    color: "#0F172A",
+    fontSize: 13.5,
+    fontWeight: "900",
   },
   cityNameSelected: {
-    color: "#34D399",
+    color: "#059669",
+  },
+  cityNameTop1: {
+    color: "#B45309",
+  },
+  cityRegionCapsule: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
   },
   cityRegionTag: {
     color: "#64748B",
-    fontSize: 9,
-    fontWeight: "600",
+    fontSize: 8.5,
+    fontWeight: "700",
   },
   cityPointsText: {
-    color: "#94A3B8",
-    fontSize: 10,
+    color: "#64748B",
+    fontSize: 10.5,
     fontWeight: "600",
     marginTop: 1,
   },
+  cityPointsHighlight: {
+    color: "#D97706",
+    fontWeight: "800",
+  },
   selectBtn: {
-    backgroundColor: "#1E293B",
+    backgroundColor: "#059669",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 10,
     minWidth: 64,
     alignItems: "center",
     justifyContent: "center",
+    borderBottomWidth: 3,
+    borderBottomColor: "#047857",
+  },
+  selectBtnPressed: {
+    borderBottomWidth: 1,
+    transform: [{ translateY: 2 }],
   },
   selectBtnActive: {
-    backgroundColor: "#10B981",
+    backgroundColor: "#0284C7",
+    borderBottomColor: "#0369A1",
   },
   selectBtnLoading: {
-    backgroundColor: "#334155",
+    backgroundColor: "#94A3B8",
+    borderBottomColor: "#64748B",
   },
   selectBtnText: {
-    color: "#F1F5F9",
-    fontSize: 11,
-    fontWeight: "800",
+    color: "#FFFFFF",
+    fontSize: 11.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   selectBtnActiveText: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "900",
+    letterSpacing: 0.3,
   },
   footer: {
     paddingVertical: 8,
     alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    width: "100%",
   },
   footerText: {
-    color: "#475569",
+    color: "#64748B",
     fontSize: 9.5,
     textAlign: "center",
     lineHeight: 13,
+    fontWeight: "600",
   },
 });

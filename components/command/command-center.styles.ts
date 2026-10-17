@@ -3,7 +3,7 @@ import { palette } from "@/shared/palette";
 
 export const styles = StyleSheet.create({
 
-  content: { flexGrow: 1, paddingBottom: 170 },
+  content: { flexGrow: 1, paddingBottom: 220 },
   hud: {
     borderRadius: 22,
     backgroundColor: palette.panel,
@@ -766,7 +766,7 @@ export const styles = StyleSheet.create({
   notificationFab: {
     position: "absolute",
     right: 12,
-    bottom: 210,
+    bottom: 140,
     zIndex: 999,
     width: 48,
     height: 48,
@@ -789,7 +789,7 @@ export const styles = StyleSheet.create({
   mysteryFab: {
     position: "absolute",
     right: 12,
-    bottom: 152,
+    bottom: 84,
     zIndex: 999,
     width: 48,
     height: 48,
@@ -918,4 +918,76 @@ export const styles = StyleSheet.create({
   },
 
   pressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
+
+  kelimematikIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  kelimematikEmojiIcon: {
+    fontSize: 22,
+  },
+  kelimematikLockBadge: {
+    position: "absolute",
+    bottom: -3,
+    right: -3,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: "#92400E",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  kelimematikLockBadgeIcon: {
+    fontSize: 9,
+  },
+  kelimematikPill: {
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  kelimematikPillText: {
+    color: "#B45309",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  kelimematikDesc: {
+    color: "#64748B",
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  kelimematikActionWrap: {
+    marginLeft: 6,
+  },
+  kelimematikLockedBtn: {
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1.5,
+    borderColor: "#CBD5E1",
+    borderBottomWidth: 3,
+    borderBottomColor: "#94A3B8",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  kelimematikLockedBtnText: {
+    color: "#64748B",
+    fontSize: 10.5,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
 });
