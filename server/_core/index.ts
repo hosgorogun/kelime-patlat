@@ -228,6 +228,69 @@ async function startServer() {
     });
   });
 
+  // Google AdMob app-ads.txt publisher verification route
+  app.get("/app-ads.txt", (_req, res) => {
+    res.type("text/plain");
+    const customAdsTxt = process.env.APP_ADS_TXT?.trim();
+    if (customAdsTxt) {
+      return res.send(customAdsTxt);
+    }
+    res.send("# Kelime Patlat Google AdMob app-ads.txt\ngoogle.com, pub-3940256099942544, DIRECT, f08c47fec0942fa0\n");
+  });
+
+  // Privacy Policy & Terms of Service for Google Play & Apple App Store compliance
+  app.get(["/privacy-policy", "/privacy", "/terms", "/api/privacy"], (_req, res) => {
+    res.type("text/html");
+    res.send(`<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelime Patlat - Gizlilik Politikası ve Kullanım Koşulları</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1E293B; background: #F8FAFC; margin: 0; padding: 24px; }
+    .container { max-width: 800px; margin: 0 auto; background: #FFFFFF; padding: 32px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    h1 { color: #0284C7; font-size: 26px; border-bottom: 2px solid #E2E8F0; padding-bottom: 12px; }
+    h2 { color: #0F172A; font-size: 18px; margin-top: 24px; }
+    p, li { font-size: 15px; color: #475569; }
+    ul { padding-left: 20px; }
+    .badge { display: inline-block; background: #E0F2FE; color: #0369A1; padding: 4px 10px; border-radius: 9999px; font-weight: bold; font-size: 13px; }
+    footer { margin-top: 32px; border-top: 1px solid #E2E8F0; padding-top: 16px; font-size: 13px; color: #94A3B8; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <span class="badge">KVKK & GDPR UYUMLU</span>
+    <h1>Kelime Patlat - Gizlilik Politikası & Kullanım Koşulları</h1>
+    <p>Son Güncelleme: 17 Ekim 2026</p>
+    
+    <h2>1. Genel Bilgilendirme</h2>
+    <p>Kelime Patlat ("Uygulama"), kullanıcılarının gizliliğine ve kişisel verilerinin korunmasına azami önem verir. Bu metin, verilerinizin nasıl toplandığını, kullanıldığını ve korunduğunu açıklar.</p>
+
+    <h2>2. Toplanan Bilgiler</h2>
+    <ul>
+      <li><strong>Hesap Bilgileri:</strong> Kayıtlı hesap oluşturduğunuzda kullanıcı adı, e-posta adresi ve şifreniz (güçlü PBKDF2 hash ile şifrelenmiş olarak) saklanır. Misafir hesaplarda yalnızca rastgele cihaz kimliği kullanılır.</li>
+      <li><strong>Oyun İlerlemesi ve Skorlar:</strong> Seviye, deneyim puanı (XP), lig derecesi (LP), kazanılan çipler, tamamlanan görevler ve maç geçmişiniz.</li>
+      <li><strong>Cihaz Bilgileri ve Tanımlayıcılar:</strong> Oyun içi performans optimizasyonu ve ödüllü reklam sunumu için anonim cihaz tanımlayıcıları.</li>
+    </ul>
+
+    <h2>3. Reklamlar ve Google AdMob</h2>
+    <p>Uygulamamız, oyun içi ödüller (çip ve can takviyesi) ve sunucu masraflarını karşılamak için Google AdMob reklam ağını kullanır. Google AdMob, kişiselleştirilmiş veya kişiselleştirilmemiş reklamlar sunmak için cihaz reklam tanımlayıcınızı kullanabilir. Reklam kişiselleştirmesini cihazınızın gizlilik ayarlarından dilediğiniz zaman kapatabilirsiniz.</p>
+
+    <h2>4. Hesap ve Veri Silme Hakkı (GDPR / KVKK)</h2>
+    <p>Apple App Store ve Google Play kuralları gereğince; <strong>oyuncularımız istedikleri an profil ayarları ekranındaki "Hesabı Sil" butonuna tıklayarak</strong> hesaplarını, kayıtlı tüm verilerini, skorlarını ve ilerlemelerini veritabanımızdan kalıcı olarak silebilirler.</p>
+
+    <h2>5. İletişim</h2>
+    <p>Gizlilik politikamız veya kişisel verilerinizle ilgili her türlü soru ve talebiniz için <strong>destek@kelimepatlat.app</strong> adresinden bizimle iletişime geçebilirsiniz.</p>
+
+    <footer>
+      &copy; 2026 Kelime Patlat. Tüm hakları saklıdır.
+    </footer>
+  </div>
+</body>
+</html>`);
+  });
+
   // Root endpoint fallback for API-only deployments (when static dist/index.html is not served)
   app.get("/", (req, res, next) => {
     const staticDir = path.resolve(process.cwd(), "dist");
@@ -294,6 +357,24 @@ async function startServer() {
 
   server.listen(port, host, () => {
     console.log(`[api] server listening on http://${host === "0.0.0.0" ? "localhost" : host}:${port} (bound to ${host}, env: ${process.env.NODE_ENV})`);
+
+    // Self-pinger to prevent 15-minute idle spin-down on Render free tier
+    const keepAliveUrl = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL;
+    if (keepAliveUrl) {
+      const cleanUrl = keepAliveUrl.replace(/\/$/, "");
+      console.log(`[KeepAlive] Render otomatik uyanık tutucu devrede: ${cleanUrl}/health (Her 13 dk'da bir kontrol ediliyor)`);
+      setInterval(() => {
+        fetch(`${cleanUrl}/health`)
+          .then((r) => {
+            if (r.ok) {
+              console.log("[KeepAlive] Sunucu başarıyla uyanık tutuldu.");
+            }
+          })
+          .catch((err) => {
+            console.warn("[KeepAlive] Self-ping uyarısı:", err?.message || err);
+          });
+      }, 13 * 60 * 1000).unref();
+    }
   });
 
   const shutdown = async (signal: string) => {

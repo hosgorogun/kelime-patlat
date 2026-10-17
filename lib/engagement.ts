@@ -28,14 +28,28 @@ export const notificationManager = {
       // Temizle ve yeni hatırlatmaları planla
       await notificationsService.cancelAll();
 
+      // 1. Can Dolumu (Canlar 5'in altındaysa tam dolduğu an için zamanla)
       if (currentLives < 5) {
         const missingLives = 5 - currentLives;
         const totalSeconds = Math.max(60, (missingLives - 1) * 1800 + (nextLifeTimerSeconds || 1800));
         await notificationsService.scheduleLivesRefillNotification(totalSeconds);
       }
 
-      await notificationsService.scheduleEveningStreakReminder(streakDays);
+      // 2. Sabah Gazetesi (09:00 - Vintage Crossword Kahve Rutini)
+      await notificationsService.scheduleMorningGazetteNotification();
+
+      // 3. Akşam Altın Saat & Alev Serisi (19:55 Altın Saat, 20:30 Seri Koruma)
       await notificationsService.scheduleRushHourReminder();
+      await notificationsService.scheduleEveningStreakReminder(streakDays);
+
+      // 4. Günlük Özel Mod (Hafta sonu ise Arcade Etkinliği, Hafta içi ise Kelimematik)
+      const dayOfWeek = new Date().getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      if (isWeekend) {
+        await notificationsService.scheduleWeekendArcadeNotification();
+      } else {
+        await notificationsService.scheduleDailyKelimematikReminder();
+      }
     } catch (e) {
       console.warn("[NotificationManager] Failed to init reminders", e);
     }
@@ -92,9 +106,11 @@ export const reviewManager = {
               onPress: async () => {
                 await AsyncStorage.setItem(REVIEW_PROMPT_KEY, "true");
                 const storeUrl = Platform.OS === "ios"
-                  ? "https://apps.apple.com"
-                  : "https://play.google.com/store";
-                Linking.openURL(storeUrl).catch(() => undefined);
+                  ? "https://apps.apple.com/app/kelime-patlat/id6470000000"
+                  : "https://play.google.com/store/apps/details?id=com.kelimepatlat.app";
+                Linking.openURL(storeUrl).catch(() => {
+                  Linking.openURL("https://kelimepatlat.com").catch(() => undefined);
+                });
               },
             },
           ],

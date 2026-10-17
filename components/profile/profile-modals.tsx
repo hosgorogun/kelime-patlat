@@ -19,10 +19,11 @@ export const ProfileLogoutModal = React.memo(({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onDismiss}
     >
-      <View style={styles.deleteModalOverlay}>
-        <View style={[styles.deleteModalCard, { borderColor: "#DCE1D7" }]}>
+      <Pressable style={styles.deleteModalOverlay} onPress={onDismiss}>
+        <Pressable style={[styles.deleteModalCard, { borderColor: "#DCE1D7" }]} onPress={(e) => e.stopPropagation()}>
           <View style={styles.modalIconTopWrap}>
             <Text style={styles.modalIconTop}>🚪</Text>
           </View>
@@ -44,8 +45,8 @@ export const ProfileLogoutModal = React.memo(({
               <Text style={[styles.deleteModalConfirmText, { color: "#293541" }]}>ÇIKIŞ YAP</Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 });
@@ -74,6 +75,7 @@ export const ProfileDeleteModal = React.memo(({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onDismiss}
     >
       <View style={styles.deleteModalOverlay}>
@@ -140,10 +142,11 @@ export const ProfilePrivacyModal = React.memo(({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onDismiss}
     >
-      <View style={styles.deleteModalOverlay}>
-        <View style={[styles.deleteModalCard, { borderColor: "#DCE1D7" }]}>
+      <Pressable style={styles.deleteModalOverlay} onPress={onDismiss}>
+        <Pressable style={[styles.deleteModalCard, { borderColor: "#DCE1D7" }]} onPress={(e) => e.stopPropagation()}>
           <Text style={{ fontSize: 36, marginBottom: 6 }}>🔒</Text>
           <Text style={[styles.deleteModalTitle, { color: "#2a9c7a" }]}>GİZLİLİK POLİTİKASI</Text>
           <Text style={[styles.deleteModalDesc, { color: "#293541", lineHeight: 20 }]}>
@@ -156,8 +159,11 @@ export const ProfilePrivacyModal = React.memo(({
           <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
             <Pressable
               onPress={() => {
-                Linking.openURL("https://kelimepatlat.app/privacy").catch(() => {
-                  Alert.alert("Bağlantı", "Gizlilik politikası sayfasına https://kelimepatlat.app/privacy adresinden ulaşabilirsiniz.");
+                const targetUrl = process.env.EXPO_PUBLIC_API_BASE_URL
+                  ? `${process.env.EXPO_PUBLIC_API_BASE_URL.replace(/\/$/, "")}/privacy-policy`
+                  : "https://kelime-patlat.onrender.com/privacy-policy";
+                Linking.openURL(targetUrl).catch(() => {
+                  Alert.alert("Bağlantı", `Gizlilik politikası sayfasına ${targetUrl} adresinden ulaşabilirsiniz.`);
                 });
               }}
               style={[styles.deleteModalCancelBtn, { flex: 1, backgroundColor: "#E9EDE7", borderColor: "#DCE1D7" }]}
@@ -171,8 +177,8 @@ export const ProfilePrivacyModal = React.memo(({
               <Text style={[styles.deleteModalCancelText, { color: "#293541", fontWeight: "900", fontSize: 12 }]}>ANLADIM</Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 });

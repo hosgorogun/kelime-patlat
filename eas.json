@@ -10,7 +10,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.kelimepatlat.com"
+        "EXPO_PUBLIC_API_BASE_URL": "https://kelime-patlat.onrender.com"
       },
       "android": {
         "buildType": "apk"
@@ -19,7 +19,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.kelimepatlat.com"
+        "EXPO_PUBLIC_API_BASE_URL": "https://kelime-patlat.onrender.com"
       },
       "android": {
         "buildType": "app-bundle"

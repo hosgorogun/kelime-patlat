@@ -225,6 +225,9 @@ export type PlayerProgress = {
   };
   activeStreakBoost?: boolean; // 3+ seride ilk kelime harfi parlar
   bestKelimematikScore?: number;
+  city?: string;
+  dailyWordleCompletedDate?: string;
+  dailyWordleStreak?: number;
 };
 
 export const DEFAULT_PROGRESS: PlayerProgress = {
@@ -233,6 +236,9 @@ export const DEFAULT_PROGRESS: PlayerProgress = {
   dailyCompletedId: null,
   streak: 0,
   pvpWinStreak: 0,
+  city: undefined,
+  dailyWordleCompletedDate: undefined,
+  dailyWordleStreak: 0,
   wins: 0,
   matches: 0,
   bestScore: 0,

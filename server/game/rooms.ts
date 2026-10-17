@@ -51,6 +51,7 @@ const rooms = new Map<string, Room>();
 const matchmakingQueue = new Map<BoardSize, QueueEntry[]>();
 const matchmakingTimers = new Map<string, NodeJS.Timeout>();
 const ROOM_TTL_MS = 15 * 60 * 1000;
+const MATCHMAKING_TIMEOUT_MS = 15_000; // Gerçek rakip arama süresi (15 saniye)
 
 function makeCode() {
   return makeUniqueCode((code) => rooms.has(code));
@@ -617,7 +618,7 @@ export function registerGameRooms(io: Server) {
             // Bot ile genel eşleşmede de bekleme yok, direkt başlar
             startRound(io, room);
           }
-        }, 4000);
+        }, MATCHMAKING_TIMEOUT_MS);
         matchmakingTimers.set(socket.id, timer);
       }
     });
@@ -1099,8 +1100,6 @@ export function registerGameRooms(io: Server) {
           }
         } else if (room.status === "playing") {
           room.message = `${player.name} bağlantısı koptu. (15s içinde yeniden bağlanmazsa hükmen yenilecek)`;
-          emitRoom(io, room);
-
           if (room.disconnectTimer) {
             clearTimeout(room.disconnectTimer);
           }
@@ -1149,7 +1148,7 @@ export function registerGameRooms(io: Server) {
       const guestConnected = room.guest && !room.guest.isBot ? room.guest.connected : false;
       const noHumanConnected = !hostConnected && !guestConnected;
 
-      if (room.status === "finished" && noHumanConnected) {
+      if (room.status === "finished" && (noHumanConnected || now - room.touchedAt > 10 * 60 * 1000)) {
         destroyRoom(code, room);
         continue;
       }

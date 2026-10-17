@@ -12,7 +12,13 @@ export function TermsModal({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onAccept}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onAccept}
+    >
       <View style={styles.overlay}>
         <View style={styles.card}>
           <Text style={styles.icon}>📜</Text>

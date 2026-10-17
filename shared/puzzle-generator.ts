@@ -47,7 +47,7 @@ export const WORD_DICTIONARY: Omit<WordEntry, "id">[] = [
   { answer: "NEHİR", category: "Karma", clue: "Denize veya göle dökülen büyük akarsu, ırmak.", length: 5, difficulty: "easy" },
   { answer: "ROKET", category: "Karma", clue: "Tepki kuvvetiyle uzaya fırlatılan hava aracı.", length: 5, difficulty: "medium" },
   { answer: "TILSIM", category: "Karma", clue: "Doğaüstü güç taşıdığına inanılan büyülü nesne.", length: 6, difficulty: "medium" },
-  { answer: "KOSMOS", category: "Karma", clue: "Evren ve gök cisimlerinin oluşturduğu düzenli bütün.", length: 6, difficulty: "medium" },
+  { answer: "KOZMOZ", category: "Karma", clue: "Evren ve gök cisimlerinin oluşturduğu düzenli bütün.", length: 6, difficulty: "medium" },
   { answer: "LEVYE", category: "Karma", clue: "Ağır nesneleri kaldırmaya yarayan dayanıklı metal çubuk.", length: 5, difficulty: "medium" },
   { answer: "ORMAN", category: "Karma", clue: "Ağaçlarla kaplı geniş ve zengin doğal alan.", length: 5, difficulty: "easy" },
   { answer: "KAPLAN", category: "Karma", clue: "Asya ormanlarında yaşayan çizgili büyük yırtıcı kedi.", length: 6, difficulty: "medium" },

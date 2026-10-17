@@ -38,8 +38,8 @@ const createModalMock = (actual: any) => ({
     if (!visible) return null;
     return children;
   },
-  Image: (props: any) => React.createElement("div", { "data-image": true }),
-  ImageBackground: ({ children, ...props }: any) =>
+  Image: ({ resizeMode, ...props }: any) => React.createElement("div", { "data-image": true }),
+  ImageBackground: ({ children, resizeMode, ...props }: any) =>
     React.createElement("div", { "data-image-bg": true, ...props }, children),
 });
 
@@ -54,7 +54,7 @@ vi.mock("react-native", async (importOriginal) => {
 });
 
 vi.mock("expo-linear-gradient", () => ({
-  LinearGradient: "LinearGradient",
+  LinearGradient: ({ children, ...props }: any) => React.createElement("div", { "data-linear-gradient": true }, children),
 }));
 
 vi.mock("expo-linking", () => ({
@@ -107,7 +107,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 
 vi.mock("react-native-safe-area-context", () => ({
-  SafeAreaView: "SafeAreaView",
+  SafeAreaView: ({ children, ...props }: any) => React.createElement("div", { "data-safe-area-view": true }, children),
   SafeAreaProvider: ({ children }: any) => children,
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -132,6 +132,7 @@ vi.mock("@/lib/haptics", () => ({
   getHapticsEnabled: vi.fn(() => _hapticsEnabled),
 }));
 
+let _sfxEnabled = true;
 vi.mock("@/lib/game-sfx", () => ({
   gameSfx: {
     select: vi.fn(),
@@ -141,6 +142,7 @@ vi.mock("@/lib/game-sfx", () => ({
     combo: vi.fn(),
     tick: vi.fn(),
     powerup: vi.fn(),
+    jackpot: vi.fn(),
     playLetter: vi.fn(),
     playCelebrationCascade: vi.fn(),
     startAmbientBgm: vi.fn(),
@@ -149,17 +151,27 @@ vi.mock("@/lib/game-sfx", () => ({
     playSfx: vi.fn(),
     init: vi.fn(),
   },
-  setSfxEnabled: vi.fn(),
-  getSfxEnabled: vi.fn(() => true),
+  setSfxEnabled: vi.fn((enabled: boolean) => {
+    _sfxEnabled = enabled;
+  }),
+  getSfxEnabled: vi.fn(() => _sfxEnabled),
 }));
 
-vi.mock("@/lib/game-socket", () => ({
-  getSocket: vi.fn(() => ({
+vi.mock("@/lib/game-socket", () => {
+  const fake = {
     on: vi.fn(),
     off: vi.fn(),
     emit: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
     connected: true,
-  })),
-  connectSocket: vi.fn(),
-  disconnectSocket: vi.fn(),
-}));
+    disconnected: false,
+  };
+  return {
+    getGameSocket: vi.fn(() => fake),
+    getSocket: vi.fn(() => fake),
+    connectSocket: vi.fn(),
+    disconnectSocket: vi.fn(),
+    reconnectGameSocket: vi.fn(),
+  };
+});

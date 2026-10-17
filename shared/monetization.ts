@@ -7,7 +7,8 @@ export type AdRewardType =
   | "second_chance"
   | "daily_treasure_double"
   | "vintage_clue"
-  | "weekend_hunt_clue";
+  | "weekend_hunt_clue"
+  | "life_refill";
 
 /**
  * Ansızın çıkan (interstitial) video reklamların tetiklenme sıklığı.

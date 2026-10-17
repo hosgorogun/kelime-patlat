@@ -28,7 +28,13 @@ export function SoloPauseModal({
   if (!visible) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onResume}>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onResume}
+    >
       <View style={styles.pauseOverlay}>
         <View style={styles.pauseCard}>
           <Text style={{ fontSize: 44, marginBottom: 6 }}>⏸️</Text>

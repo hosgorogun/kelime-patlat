@@ -42,9 +42,10 @@ export type ModernAlertData = {
 export type ModernAlertModalProps = {
   alert: ModernAlertData | null;
   onDismiss: () => void;
+  inline?: boolean;
 };
 
-export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
+export function ModernAlertModal({ alert, onDismiss, inline = false }: ModernAlertModalProps) {
   const { width: windowWidth } = useWindowDimensions();
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -105,26 +106,21 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
     onDismiss();
   };
 
-  return (
-    <Modal
-      visible={Boolean(alert)}
-      transparent
-      animationType="none"
-      onRequestClose={handleDismiss}
-    >
-      <View style={styles.overlay}>
-        <Animated.View
-          style={[
-            styles.card,
-            {
-              width: cardWidth,
-              borderColor: accentColor,
-              shadowColor: accentColor,
-              opacity: opacityAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
+  const content = (
+    <Pressable style={[styles.overlay, inline && StyleSheet.absoluteFill, inline && { zIndex: 9999 }]} onPress={handleDismiss}>
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            width: cardWidth,
+            borderColor: accentColor,
+            shadowColor: accentColor,
+            opacity: opacityAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+        onStartShouldSetResponder={() => true}
+      >
           {/* Icon Circle */}
           {alert.icon && (
             <View style={[styles.iconCircle, { borderColor: accentColor, backgroundColor: "#F8FAFC" }]}>
@@ -194,7 +190,22 @@ export function ModernAlertModal({ alert, onDismiss }: ModernAlertModalProps) {
             )}
           </View>
         </Animated.View>
-      </View>
+    </Pressable>
+  );
+
+  if (inline) {
+    return content;
+  }
+
+  return (
+    <Modal
+      visible={Boolean(alert)}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={handleDismiss}
+    >
+      {content}
     </Modal>
   );
 }

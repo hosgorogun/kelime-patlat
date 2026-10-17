@@ -27,6 +27,7 @@ export function StorePurchaseModal({
       visible={confirmPurchase !== null}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <Pressable style={styles.confirmOverlay} onPress={onClose}>

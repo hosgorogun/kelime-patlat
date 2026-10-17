@@ -178,6 +178,7 @@ export const GameModeInfoModal: React.FC<GameModeInfoModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>

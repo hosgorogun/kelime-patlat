@@ -25,10 +25,11 @@ export function DuelInviteModal({
       visible={true}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onReject}
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <Pressable style={styles.overlay} onPress={onReject}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <View style={styles.iconWrap}>
             <Text style={{ fontSize: 32 }}>⚔️</Text>
           </View>
@@ -51,8 +52,8 @@ export function DuelInviteModal({
               <Text style={styles.rejectBtnText}>✕ REDDET</Text>
             </Pressable>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

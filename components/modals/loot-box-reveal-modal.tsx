@@ -139,7 +139,13 @@ export function LootBoxRevealModal({
   });
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         {/* Ambient Glowing Backdrop */}
         <Animated.View style={[styles.glowRays, { transform: [{ rotate: spinInterpolate }] }]} pointerEvents="none" />

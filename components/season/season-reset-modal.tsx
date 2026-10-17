@@ -35,9 +35,15 @@ export function SeasonResetModal({
   const newImg = RANK_IMAGES[newTier.tier];
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
           {/* Header Trophy Circle */}
           <View style={styles.trophyCircle}>
             <Text style={{ fontSize: 36 }}>🏆</Text>
@@ -95,8 +101,8 @@ export function SeasonResetModal({
           >
             <Text style={styles.actionBtnText}>YENİ SEZONA BAŞLA 🚀</Text>
           </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

@@ -116,10 +116,11 @@ export const WordBookModal = React.memo(({
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onDismiss}
     >
-      <View style={styles.overlay}>
-        <View style={styles.sheetCard}>
+      <Pressable style={styles.overlay} onPress={onDismiss}>
+        <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.headerRow}>
             <View>
@@ -396,9 +397,9 @@ export const WordBookModal = React.memo(({
               })}
             </ScrollView>
           )}
-        </View>
+        </Pressable>
         <CoinCascadeOverlay trigger={cascadeTrigger} count={12} icon="🪙" />
-      </View>
+      </Pressable>
     </Modal>
   );
 });

@@ -1,6 +1,7 @@
+import "dotenv/config";
 import { io as ClientIO, Socket } from "socket.io-client";
 
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = (process.env.LIVE_SERVER_URL || process.env.EXPO_PUBLIC_API_BASE_URL || "https://kelime-patlat.onrender.com").replace(/\/$/, "");
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

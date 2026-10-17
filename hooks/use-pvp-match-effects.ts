@@ -118,7 +118,7 @@ export function usePvpMatchEffects({
       const first = allFinishedWords[0]!;
       inspectWord(first.word, first.path, first.color);
     }
-  }, [room?.status, allFinishedWords, inspectedPath, selectedWordInfo, inspectWord]);
+  }, [room?.status, allFinishedWords, inspectedPath, inspectWord]);
 
   // Countdown timer
   useEffect(() => {

@@ -37,6 +37,14 @@ export function createInitialTurnBoard(size = 4, random = Math.random): string[]
   for (let i = 0; i < size * size; i++) {
     board.push(commonTurkishLetters[Math.floor(random() * commonTurkishLetters.length)]!);
   }
+  const vowels = ["A", "E", "İ", "O", "U"];
+  let vowelCount = board.filter((c) => vowels.includes(c)).length;
+  let guard = 0;
+  while (vowelCount < 2 && guard++ < 20) {
+    const replaceIdx = Math.floor(random() * board.length);
+    board[replaceIdx] = vowels[Math.floor(random() * vowels.length)]!;
+    vowelCount = board.filter((c) => vowels.includes(c)).length;
+  }
   return board;
 }
 

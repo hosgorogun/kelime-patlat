@@ -44,15 +44,17 @@ turnMatchRouter.post("/create", async (req, res) => {
     }
     const { player1Id, player1Name, player1Avatar, player2Id, player2Name, player2Avatar, size } = parse.data;
 
-    try {
-      const authUser = await sdk.authenticateRequest(req);
-      const normAuth = normalizeTr(authUser.openId);
-      const normP1 = normalizeTr(player1Id);
-      if (normAuth !== normP1 && normAuth !== `usr_${normP1}` && `usr_${normAuth}` !== normP1) {
-        return res.status(403).json({ error: "Başka bir kullanıcı adına maç başlatamazsınız." });
+    if (req.headers.authorization) {
+      try {
+        const authUser = await sdk.authenticateRequest(req);
+        const normAuth = normalizeTr(authUser.openId);
+        const normP1 = normalizeTr(player1Id);
+        if (normAuth !== normP1 && normAuth !== `usr_${normP1}` && `usr_${normAuth}` !== normP1) {
+          return res.status(403).json({ error: "Başka bir kullanıcı adına maç başlatamazsınız." });
+        }
+      } catch {
+        return res.status(401).json({ error: "Geçersiz veya süresi dolmuş oturum." });
       }
-    } catch {
-      // Misafir veya çevrimdışı yerel mod
     }
 
     const board = createInitialTurnBoard(size);
@@ -128,15 +130,17 @@ turnMatchRouter.post("/:id/play", async (req, res) => {
     }
     const { playerId, word, selection } = parse.data;
 
-    try {
-      const authUser = await sdk.authenticateRequest(req);
-      const normAuth = normalizeTr(authUser.openId);
-      const normPlayer = normalizeTr(playerId);
-      if (normAuth !== normPlayer && normAuth !== `usr_${normPlayer}` && `usr_${normAuth}` !== normPlayer) {
-        return res.status(403).json({ error: "Bu hamleyi yapma yetkiniz yok." });
+    if (req.headers.authorization) {
+      try {
+        const authUser = await sdk.authenticateRequest(req);
+        const normAuth = normalizeTr(authUser.openId);
+        const normPlayer = normalizeTr(playerId);
+        if (normAuth !== normPlayer && normAuth !== `usr_${normPlayer}` && `usr_${normAuth}` !== normPlayer) {
+          return res.status(403).json({ error: "Bu hamleyi yapma yetkiniz yok." });
+        }
+      } catch {
+        return res.status(401).json({ error: "Geçersiz veya süresi dolmuş oturum." });
       }
-    } catch {
-      // Misafir veya çevrimdışı yerel mod
     }
 
     const match = await findTurnMatchById(matchId);

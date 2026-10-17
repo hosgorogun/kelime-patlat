@@ -171,7 +171,7 @@ export function ProfileScreenContainer(props: ProfileScreenContainerProps) {
         hapticsOn={hapticsOn}
         toggleHaptics={toggleHaptics}
         onBack={() => onNavigate("home")}
-        isGuest={authToken === "guest" || !authToken}
+        isGuest={authToken === "guest" || !authToken || Boolean(playerId && (playerId.startsWith("guest_") || playerId.startsWith("player-")))}
         onOpenAuth={() => onNavigate("auth")}
         onLogout={async () => {
           haptics.error();

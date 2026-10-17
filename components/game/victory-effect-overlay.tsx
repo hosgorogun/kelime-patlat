@@ -101,7 +101,7 @@ export function VictoryEffectOverlay({
   const finishRef = useRef(onFinish);
   finishRef.current = onFinish;
   const [done, setDone] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
+  const [reduceMotion, setReduceMotion] = useState<boolean>(false);
 
   const activeEffectId = (effectId as VictoryEffectId) in EFFECT_CONFIGS
     ? (effectId as VictoryEffectId)
@@ -212,7 +212,7 @@ export function VictoryEffectOverlay({
     return () => animation.stop();
   }, [visible, reduceMotion, progress, shockwave, flashAnim]);
 
-  if (!visible || done || reduceMotion === null) return null;
+  if (!visible || done) return null;
 
   // Kartın pürüzsüz giriş/çıkış eğrileri
   const cardOpacity = reduceMotion

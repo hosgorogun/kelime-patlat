@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { getCalculatedLives, MAX_LIVES, COST_PER_LIFE, COST_REFILL_ALL, type PlayerProgress } from "@/shared/progression";
 import { ICONS } from "@/components/game/game-ui";
 import { haptics } from "@/lib/haptics";
@@ -49,11 +49,23 @@ export function LivesModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          {/* Header */}
-          <View style={styles.header}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          <ScrollView
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            style={{ width: "100%" }}
+          >
+            {/* Header */}
+            <View style={styles.header}>
             <View style={styles.iconCircle}>
               <Image source={ICONS.heart} style={{ width: 38, height: 38 }} resizeMode="contain" />
             </View>
@@ -241,12 +253,13 @@ export function LivesModal({
             </Pressable>
           )}
 
-          {/* Close button */}
-          <Pressable onPress={onClose} style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}>
-            <Text style={styles.closeBtnText}>KAPAT</Text>
-          </Pressable>
-        </View>
-      </View>
+            {/* Close button */}
+            <Pressable onPress={onClose} style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}>
+              <Text style={styles.closeBtnText}>KAPAT</Text>
+            </Pressable>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -262,6 +275,7 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 420,
+    maxHeight: "90%",
     backgroundColor: "#FFFFFF",
     borderWidth: 2,
     borderColor: "#E2E8F0",
@@ -275,6 +289,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 20,
     elevation: 8,
+  },
+  scrollContent: {
+    alignItems: "center",
+    width: "100%",
+    paddingBottom: 6,
   },
   header: {
     alignItems: "center",

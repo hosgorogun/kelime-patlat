@@ -288,7 +288,7 @@ export function AppRoot() {
   });
 
   const { showConsentModal, setShowConsentModal } = useEngagementLifecycle();
-  useLocalNotificationEngine(progress);
+  useLocalNotificationEngine(progress, authToken);
 
   const navigationValue = {
     screen,

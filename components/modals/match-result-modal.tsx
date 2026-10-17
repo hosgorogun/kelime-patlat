@@ -73,6 +73,7 @@ export interface MatchResultModalProps {
   onWatchAdStreakSave?: () => void;
   onDoubleMatchCoins?: (bonusCoins: number) => void;
   onRequestRematch: () => void;
+  onChallengeFriend?: () => void;
   onLeaveRoom: () => void;
   onClose: () => void;
 }
@@ -111,6 +112,7 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
   onWatchAdStreakSave,
   onDoubleMatchCoins,
   onRequestRematch,
+  onChallengeFriend,
   onLeaveRoom,
   onClose,
 }) => {
@@ -166,7 +168,13 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
   };
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         {iWon && (
           <VictoryEffectOverlay
@@ -459,6 +467,20 @@ export const MatchResultModal: React.FC<MatchResultModalProps> = ({
                   </Text>
                 </Pressable>
               </View>
+
+              {onChallengeFriend && (
+                <Pressable
+                  onPress={onChallengeFriend}
+                  style={({ pressed }) => [
+                    styles.challengeFriendBtn,
+                    pressed && { opacity: 0.8 },
+                  ]}
+                >
+                  <Text style={styles.challengeFriendBtnText}>
+                    ⚔️ BU TAHTAYLA ARKADAŞINA MEYDAN OKU
+                  </Text>
+                </Pressable>
+              )}
 
               <View style={styles.actionBtnRow}>
                 <Pressable
@@ -919,6 +941,25 @@ const styles = StyleSheet.create({
   },
   inspectBoardBtnText: {
     color: "#2a9c7a",
+    fontSize: 11.5,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  challengeFriendBtn: {
+    width: "100%",
+    backgroundColor: "rgba(16, 185, 129, 0.12)",
+    borderWidth: 1.5,
+    borderBottomWidth: 2,
+    borderColor: "#10B981",
+    borderRadius: 11,
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  challengeFriendBtnText: {
+    color: "#10B981",
     fontSize: 11.5,
     fontWeight: "900",
     letterSpacing: 0.4,

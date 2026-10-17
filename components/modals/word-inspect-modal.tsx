@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { normalizeTrUpper } from "../../shared/tr-utils";
 
 export type WordInspectModalProps = {
@@ -25,7 +25,13 @@ export const WordInspectModal = React.memo(function WordInspectModal({
   if (!visible || !wordInfo) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <View style={[styles.headerBadge, { backgroundColor: `${inspectedColor}20`, borderColor: inspectedColor }]}>
@@ -45,7 +51,11 @@ export const WordInspectModal = React.memo(function WordInspectModal({
             <Pressable 
               onPress={() => {
                 onClose();
-                alert(`"${normalizeTrUpper(wordInfo.word)}" kelimesi inceleme için ekibimize bildirildi. Teşekkür ederiz!`);
+                Alert.alert(
+                  "Kelime Bildirildi",
+                  `"${normalizeTrUpper(wordInfo.word)}" kelimesi inceleme için ekibimize bildirildi. Teşekkür ederiz!`,
+                  [{ text: "TAMAM" }]
+                );
               }}
               style={styles.reportBtn}
             >

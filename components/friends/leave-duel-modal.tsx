@@ -47,6 +47,7 @@ export const LeaveDuelModal: React.FC<LeaveDuelModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={isLeaving ? undefined : onStay}
     >
       <Pressable style={styles.overlay} onPress={isLeaving ? undefined : onStay}>

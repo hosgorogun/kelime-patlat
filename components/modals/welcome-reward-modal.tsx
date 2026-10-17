@@ -25,6 +25,7 @@ export const WelcomeRewardModal: React.FC<WelcomeRewardModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>

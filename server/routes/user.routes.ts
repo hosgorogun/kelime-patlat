@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { sdk } from "../_core/sdk";
 import { UserModel, connectDb } from "../db";
 import { ProfileModel, safely } from "../game/mongo-store";
 import { normalizeTr } from "../../shared/tr-utils";
@@ -109,5 +110,20 @@ userRouter.get("/profile/:idOrName", async (req, res) => {
     return res.status(404).json({ error: "Oyuncu profili bulunamadı." });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Profil getirilemedi." });
+  }
+});
+
+userRouter.post("/push-token", async (req, res) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    const token = typeof req.body?.pushToken === "string" ? req.body.pushToken.trim() : "";
+    if (!token) {
+      return res.status(400).json({ error: "Geçerli bir bildirim belirteci (pushToken) gereklidir." });
+    }
+    await connectDb();
+    await UserModel.updateOne({ openId: user.openId }, { $set: { pushToken: token, updatedAt: new Date() } });
+    res.json({ success: true, message: "Push token başarıyla kaydedildi." });
+  } catch (err: any) {
+    res.status(err?.status === 403 ? 401 : 500).json({ error: err?.message || "Token kaydedilemedi." });
   }
 });

@@ -58,24 +58,16 @@ export function useMatchConfirmation({
     }
   };
 
-  const watchAd = (onReward: () => void) => {
-    setGlobalAlert({
-      icon: "📺",
-      kicker: "REKLAM ÖDÜLÜ",
-      title: "Sponsorlu Reklam İzle",
-      message: "Serini korumak için 15 saniyelik sponsorlu ödüllü reklam oynatılacak. Onaylıyor musunuz?",
-      accentColor: "#FFC24A",
-      primaryButton: {
-        text: "İZLE VE KORUMAYI AL",
-        color: "#98732c",
-        onPress: () => {
-          void monetizationManager.showRewardedAd("second_chance", onReward);
-        },
+  const watchAd = (onReward: () => void, onError?: (err: string) => void) => {
+    void monetizationManager.showRewardedAd(
+      "second_chance",
+      () => {
+        onReward();
       },
-      secondaryButton: {
-        text: "VAZGEÇ",
-      },
-    });
+      (err) => {
+        if (onError) onError(err);
+      }
+    );
   };
 
   return {

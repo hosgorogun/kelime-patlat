@@ -31,7 +31,7 @@ export function ArcadeResultModal({
   if (!visible) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onRequestClose}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onRequestClose}>
       <View style={styles.pauseOverlay}>
         <View style={[styles.pauseCard, { maxWidth: 360, paddingVertical: 16, paddingHorizontal: 16 }]}>
           <ScrollView
@@ -157,7 +157,7 @@ export function ArcadePauseModal({
   if (!visible) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onResume}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onResume}>
       <View style={styles.pauseOverlay}>
         <View style={styles.pauseCard}>
           <Text style={{ fontSize: 44, marginBottom: 6 }}>⏸️</Text>

@@ -178,10 +178,11 @@ export const TurnMatchesModal = React.memo(({
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onDismiss}
     >
-      <View style={styles.overlay}>
-        <View style={styles.sheetCard}>
+      <Pressable style={styles.overlay} onPress={() => { setActiveMatch(null); onDismiss(); }}>
+        <Pressable style={styles.sheetCard} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.headerRow}>
             <View>
@@ -415,8 +416,8 @@ export const TurnMatchesModal = React.memo(({
               </ScrollView>
             </>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 });

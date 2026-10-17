@@ -157,8 +157,14 @@ export const MysteryRewardModal: React.FC<MysteryRewardModalProps> = ({
   const badgeMeta = getBadgeMeta();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.overlay} onPress={phase === "revealed" ? onClose : undefined}>
         {/* Sunburst background glow */}
         <Animated.View
           style={[
@@ -172,7 +178,7 @@ export const MysteryRewardModal: React.FC<MysteryRewardModalProps> = ({
           <Text style={styles.sunburstText}>☀️</Text>
         </Animated.View>
 
-        <View style={styles.modalCard}>
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
           {phase === "opening" ? (
             <View style={styles.openingContainer}>
               <Animated.View
@@ -261,7 +267,7 @@ export const MysteryRewardModal: React.FC<MysteryRewardModalProps> = ({
               </Pressable>
             </Animated.View>
           )}
-        </View>
+        </Pressable>
 
         <CoinCascadeOverlay
           trigger={showCascade}
@@ -269,7 +275,7 @@ export const MysteryRewardModal: React.FC<MysteryRewardModalProps> = ({
           icon={reward.icon || "✨"}
           badgeText={reward.label}
         />
-      </View>
+      </Pressable>
     </Modal>
   );
 };

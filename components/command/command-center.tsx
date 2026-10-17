@@ -16,6 +16,11 @@ import { BotPracticeModal } from "./bot-practice-modal";
 import { CommandInfoModal } from "./command-info-modal";
 import { FRAME_IMAGES } from "@/components/profile/profile-constants";
 import { KelimematikPreviewModal } from "@/components/kelimematik/kelimematik-preview-modal";
+import { CityLeagueModal } from "@/components/city-league/city-league-modal";
+import { DailyPuzzleModal } from "@/components/daily/daily-puzzle-modal";
+import { type CityStanding } from "@/shared/cities";
+import { type DailyWordleResult, getTodayDateId } from "@/shared/daily-wordle";
+import { useOptionalProgression } from "@/context";
 
 type NavKey = "home" | "online" | "profile" | "arcade" | "levels" | "store" | "season" | "league" | "missions" | "friends" | "vintage" | "kelimematik";
 
@@ -79,10 +84,141 @@ export function CommandCenter({
   onOpenHistory,
   onOpenLuckyWheel,
 }: CommandCenterProps) {
+  const progressionCtx = useOptionalProgression();
+  const setProgress = progressionCtx?.setProgress;
+  const syncProgressToCloud = progressionCtx?.syncProgressToCloud;
+
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [showCityLeagueModal, setShowCityLeagueModal] = useState(false);
+  const [showDailyPuzzleModal, setShowDailyPuzzleModal] = useState(false);
+  const [cityStandings, setCityStandings] = useState<CityStanding[]>([]);
+  const [isCityStandingsLoading, setIsCityStandingsLoading] = useState(false);
   const lastAutoOpenedDateRef = useRef<string | null>(null);
+
+  const loadCityStandings = async () => {
+    setIsCityStandingsLoading(true);
+    try {
+      const res = await fetch("/api/game/city/standings");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.standings) {
+          setCityStandings(data.standings);
+        }
+      }
+    } catch {
+      // offline fallback
+    } finally {
+      setIsCityStandingsLoading(false);
+    }
+  };
+
+  const handleSelectCity = async (cityName: string) => {
+    try {
+      const res = await fetch("/api/game/city/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city: cityName }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.progress && setProgress) {
+          setProgress(data.progress);
+          syncProgressToCloud?.(data.progress);
+        } else if (setProgress) {
+          setProgress((prev) => {
+            const next = { ...prev, city: cityName };
+            syncProgressToCloud?.(next);
+            return next;
+          });
+        }
+      } else if (setProgress) {
+        setProgress((prev) => {
+          const next = { ...prev, city: cityName };
+          syncProgressToCloud?.(next);
+          return next;
+        });
+      }
+      onShowToast?.("ŞEHİR LİGİ", `${cityName} şehrin olarak belirlendi! 🇹🇷`, "🇹🇷", "#10B981");
+      loadCityStandings();
+    } catch {
+      if (setProgress) {
+        setProgress((prev) => {
+          const next = { ...prev, city: cityName };
+          syncProgressToCloud?.(next);
+          return next;
+        });
+      }
+    }
+  };
+
+  const handleCompleteDailyWordle = async (result: DailyWordleResult) => {
+    try {
+      const res = await fetch("/api/game/daily-wordle/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dateId: result.dateId,
+          secondsTaken: result.secondsTaken,
+          score: result.score,
+          wordsFound: [],
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.progress && setProgress) {
+          setProgress(data.progress);
+          syncProgressToCloud?.(data.progress);
+        } else if (setProgress) {
+          setProgress((prev) => {
+            const next = {
+              ...prev,
+              coins: (prev.coins ?? 0) + result.coinsEarned,
+              xp: (prev.xp ?? 0) + result.xpEarned,
+              dailyWordleCompletedDate: result.dateId,
+              dailyWordleStreak: (prev.dailyWordleStreak ?? 0) + 1,
+            };
+            syncProgressToCloud?.(next);
+            return next;
+          });
+        }
+      } else if (setProgress) {
+        setProgress((prev) => {
+          const next = {
+            ...prev,
+            coins: (prev.coins ?? 0) + result.coinsEarned,
+            xp: (prev.xp ?? 0) + result.xpEarned,
+            dailyWordleCompletedDate: result.dateId,
+            dailyWordleStreak: (prev.dailyWordleStreak ?? 0) + 1,
+          };
+          syncProgressToCloud?.(next);
+          return next;
+        });
+      }
+      onShowToast?.(
+        "GÜNÜN BULMACASI",
+        `Tebrikler! +${result.coinsEarned} Çip ve +${result.xpEarned} XP kazandın! 🧩`,
+        "🧩",
+        "#10B981"
+      );
+    } catch {
+      if (setProgress) {
+        setProgress((prev) => {
+          const next = {
+            ...prev,
+            coins: (prev.coins ?? 0) + result.coinsEarned,
+            xp: (prev.xp ?? 0) + result.xpEarned,
+            dailyWordleCompletedDate: result.dateId,
+            dailyWordleStreak: (prev.dailyWordleStreak ?? 0) + 1,
+          };
+          syncProgressToCloud?.(next);
+          return next;
+        });
+      }
+    }
+  };
+
   const [livesCalc, setLivesCalc] = useState(() => getCalculatedLives(progress));
   const [imgError, setImgError] = useState(false);
   const [displayCoins, setDisplayCoins] = useState(() => progress.coins ?? 0);
@@ -261,6 +397,22 @@ export function CommandCenter({
       mystery={mystery}
       onOpenLivesModal={onOpenLivesModal}
       onNavigate={onNavigate}
+    />
+
+    <CityLeagueModal
+      visible={showCityLeagueModal}
+      onClose={() => setShowCityLeagueModal(false)}
+      selectedCity={progress.city}
+      standings={cityStandings}
+      onSelectCity={handleSelectCity}
+      isLoading={isCityStandingsLoading}
+    />
+
+    <DailyPuzzleModal
+      visible={showDailyPuzzleModal}
+      onClose={() => setShowDailyPuzzleModal(false)}
+      progress={progress}
+      onComplete={handleCompleteDailyWordle}
     />
 
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -577,6 +729,66 @@ export function CommandCenter({
               </View>
             </Pressable>
           )}
+        </View>
+
+        {/* 81 İl Ligi & Günün Bulmacası Viral Erişim Kartları */}
+        <View style={[styles.quickActionsRow, { marginTop: 6 }]}>
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              loadCityStandings();
+              setShowCityLeagueModal(true);
+            }}
+            style={({ pressed }) => [
+              styles.quickActionCard,
+              {
+                backgroundColor: "#F0FDF4",
+                borderColor: "#BBF7D0",
+                borderBottomColor: "#10B981",
+              },
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: "#DCFCE7" }]}>
+              <Text style={{ fontSize: 18 }}>🇹🇷</Text>
+            </View>
+            <View style={styles.quickActionContent}>
+              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#166534" }]}>
+                81 İL LİGİ
+              </Text>
+              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#15803D" }]}>
+                {progress.city ? progress.city : "Şehrini Seç"}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={() => {
+              triggerHapticSelection();
+              setShowDailyPuzzleModal(true);
+            }}
+            style={({ pressed }) => [
+              styles.quickActionCard,
+              {
+                backgroundColor: "#FAF5FF",
+                borderColor: "#E9D5FF",
+                borderBottomColor: "#A855F7",
+              },
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: "#F3E8FF" }]}>
+              <Text style={{ fontSize: 18 }}>🧩</Text>
+            </View>
+            <View style={styles.quickActionContent}>
+              <Text numberOfLines={1} style={[styles.quickActionTitle, { color: "#6B21A8" }]}>
+                GÜNÜN BULMACASI
+              </Text>
+              <Text numberOfLines={1} style={[styles.quickActionSub, { color: "#7E22CE" }]}>
+                {progress.dailyWordleCompletedDate === getTodayDateId() ? "Çözüldü ✓" : "Hemen Oyna ▶"}
+              </Text>
+            </View>
+          </Pressable>
         </View>
       </Animated.View>
 

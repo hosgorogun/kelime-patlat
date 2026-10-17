@@ -26,6 +26,11 @@ import {
 } from "../../shared/progression";
 import { CHIP_EQUIPMENT_ITEMS, PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS, STORE_TITLES } from "../../shared/store-items";
 import type { LeaderboardEntry } from "../../shared/game";
+import { getCityStandings, getPlayerCityStanding, addCityScore, registerCityPlayer } from "../game/city-league-service";
+import { getCityByName } from "../../shared/cities";
+import { generateDailyWordle, calculateDailyPercentile, buildDailyShareText, getTodayDateId } from "../../shared/daily-wordle";
+import { createFriendChallenge, getFriendChallenge, submitChallengeAttempt } from "../game/challenge-service";
+import { buildChallengeShareMessage } from "../../shared/challenge";
 
 export const gameRouter = Router();
 
@@ -548,6 +553,7 @@ gameRouter.get("/leaderboard", async (_req, res) => {
   try {
     await connectDb();
     const topUsers = await UserModel.find({ "progress.xp": { $exists: true } })
+      .select("openId username name progress.xp progress.wins progress.matches progress.bestScore progress.lp progress.selectedAvatar progress.avatarPhoto progress.selectedTitle")
       .sort({ "progress.xp": -1 })
       .limit(50)
       .lean();
@@ -583,3 +589,291 @@ gameRouter.get("/leaderboard", async (_req, res) => {
     }
   }
 });
+
+// ----------------------------------------------------
+// 81 İL LİGİ (CITY LEAGUE) ENDPOINTS
+// ----------------------------------------------------
+
+gameRouter.post("/city/select", async (req, res) => {
+  try {
+    const { city } = req.body;
+    if (!city || typeof city !== "string") {
+      return res.status(400).json({ error: "Geçerli bir şehir seçiniz." });
+    }
+    const matched = getCityByName(city);
+    if (!matched) {
+      return res.status(400).json({ error: "Tanınmayan şehir adı." });
+    }
+    registerCityPlayer(matched.name);
+
+    let progress: PlayerProgress | null = null;
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (dbUser) {
+        const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+        current.city = matched.name;
+        dbUser.progress = current;
+        dbUser.updatedAt = new Date();
+        await dbUser.save();
+        progress = current;
+      }
+    } catch {
+      // Guest mode
+    }
+
+    const standing = getPlayerCityStanding(matched.name);
+    res.json({ success: true, city: matched.name, standing, progress });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Şehir seçilemedi." });
+  }
+});
+
+gameRouter.get("/city/standings", async (req, res) => {
+  try {
+    const standings = getCityStandings();
+    let userCity = typeof req.query.city === "string" ? req.query.city : undefined;
+    if (!userCity) {
+      try {
+        const user = await sdk.authenticateRequest(req);
+        await connectDb();
+        const dbUser = await UserModel.findOne({ openId: user.openId });
+        userCity = dbUser?.progress?.city;
+      } catch {
+        // Guest
+      }
+    }
+    const playerCityStanding = getPlayerCityStanding(userCity);
+    res.json({ standings, playerCity: playerCityStanding });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Şehir sıralaması alınamadı." });
+  }
+});
+
+// ----------------------------------------------------
+// GÜNÜN BULMACASI (DAILY WORDLE) ENDPOINTS
+// ----------------------------------------------------
+
+gameRouter.get("/daily-wordle", async (req, res) => {
+  try {
+    const dateId = typeof req.query.date === "string" ? req.query.date : getTodayDateId();
+    const puzzle = generateDailyWordle(dateId);
+    res.json({ puzzle });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Günün bulmacası alınamadı." });
+  }
+});
+
+gameRouter.post("/daily-wordle/submit", async (req, res) => {
+  try {
+    const schema = z.object({
+      dateId: z.string().default(getTodayDateId()),
+      secondsTaken: z.number().int().min(1).max(3600),
+      score: z.number().int().min(0).max(50000),
+      wordsFound: z.array(z.string().max(32)).max(64),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Geçersiz istek parametreleri." });
+    }
+    const { dateId, secondsTaken, score, wordsFound } = parsed.data;
+    const percentile = calculateDailyPercentile(secondsTaken);
+    const dayNumber = Math.max(1, Math.floor((new Date(dateId).getTime() - new Date("2026-01-01").getTime()) / 86400000));
+    const shareText = buildDailyShareText(dayNumber, secondsTaken, percentile, wordsFound.length, dateId);
+
+    const coinsEarned = 50;
+    const xpEarned = 150;
+
+    let progress: PlayerProgress | null = null;
+    let playerCity: string | undefined;
+
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (dbUser) {
+        const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+        playerCity = current.city;
+        current.xp = (current.xp ?? 0) + xpEarned;
+        current.coins = (current.coins ?? 0) + coinsEarned;
+        current.dailyWordleCompletedDate = dateId;
+        current.dailyWordleStreak = (current.dailyWordleStreak ?? 0) + 1;
+        dbUser.progress = current;
+        dbUser.updatedAt = new Date();
+        await dbUser.save();
+        progress = current;
+      }
+    } catch {
+      // Guest
+    }
+
+    if (playerCity) {
+      addCityScore(playerCity, score);
+    }
+
+    res.json({
+      success: true,
+      result: {
+        success: true,
+        dateId,
+        secondsTaken,
+        score,
+        percentile,
+        shareText,
+        coinsEarned,
+        xpEarned,
+      },
+      progress,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Günün bulmacası kaydedilemedi." });
+  }
+});
+
+// ----------------------------------------------------
+// ARKADAŞA MEYDAN OKU (CHALLENGE) ENDPOINTS
+// ----------------------------------------------------
+
+gameRouter.post("/challenge/create", async (req, res) => {
+  try {
+    const schema = z.object({
+      creatorName: z.string().max(32).optional(),
+      creatorScore: z.number().int().min(0).max(50000),
+      size: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10)]),
+      board: z.array(z.string()).min(16).max(100),
+      words: z.array(z.string()).min(1).max(200),
+      timeLimit: z.number().int().min(30).max(300).default(60),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Geçersiz meydan okuma verisi." });
+    }
+
+    let creatorId = "guest";
+    let creatorName = parsed.data.creatorName || "Gizli Oyuncu";
+    let creatorCity: string | undefined;
+    let creatorAvatar: string | undefined;
+
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (dbUser) {
+        creatorId = dbUser.openId;
+        creatorName = dbUser.username || dbUser.name || creatorName;
+        creatorCity = dbUser.progress?.city;
+        creatorAvatar = dbUser.progress?.selectedAvatar;
+      }
+    } catch {
+      // Guest creator
+    }
+
+    const challenge = createFriendChallenge({
+      creatorId,
+      creatorName,
+      creatorCity,
+      creatorAvatar,
+      creatorScore: parsed.data.creatorScore,
+      size: parsed.data.size,
+      board: parsed.data.board,
+      words: parsed.data.words,
+      timeLimit: parsed.data.timeLimit,
+    });
+
+    const shareMessage = buildChallengeShareMessage(
+      challenge.id,
+      challenge.creatorName,
+      challenge.creatorScore,
+      challenge.size
+    );
+
+    res.json({ success: true, challenge, shareMessage });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Meydan okuma oluşturulamadı." });
+  }
+});
+
+gameRouter.get("/challenge/:id", (req, res) => {
+  try {
+    const challenge = getFriendChallenge(req.params.id);
+    if (!challenge) {
+      return res.status(404).json({ error: "Meydan okuma bulunamadı veya süresi dolmuş." });
+    }
+    res.json({ success: true, challenge });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Meydan okuma yüklenemedi." });
+  }
+});
+
+gameRouter.post("/challenge/:id/submit", async (req, res) => {
+  try {
+    const schema = z.object({
+      playerName: z.string().max(32).optional(),
+      score: z.number().int().min(0).max(50000),
+      wordsFound: z.array(z.string().max(32)).default([]),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Geçersiz istek parametreleri." });
+    }
+
+    let playerId = "guest";
+    let playerName = parsed.data.playerName || "Meydan Okuyan";
+    let playerCity: string | undefined;
+
+    try {
+      await connectDb();
+      const user = await sdk.authenticateRequest(req);
+      const dbUser = await UserModel.findOne({ openId: user.openId });
+      if (dbUser) {
+        playerId = dbUser.openId;
+        playerName = dbUser.username || dbUser.name || playerName;
+        playerCity = dbUser.progress?.city;
+      }
+    } catch {
+      // Guest
+    }
+
+    const result = submitChallengeAttempt({
+      challengeId: req.params.id,
+      playerId,
+      playerName,
+      playerCity,
+      score: parsed.data.score,
+      wordsFound: parsed.data.wordsFound,
+    });
+
+    if (!result) {
+      return res.status(404).json({ error: "Meydan okuma bulunamadı veya süresi dolmuş." });
+    }
+
+    let progress: PlayerProgress | null = null;
+    if (playerId !== "guest") {
+      try {
+        const dbUser = await UserModel.findOne({ openId: playerId });
+        if (dbUser) {
+          const current = { ...DEFAULT_PROGRESS, ...(dbUser.progress ?? {}) } as PlayerProgress;
+          current.xp = (current.xp ?? 0) + result.xpEarned;
+          current.coins = (current.coins ?? 0) + result.coinsEarned;
+          dbUser.progress = current;
+          dbUser.updatedAt = new Date();
+          await dbUser.save();
+          progress = current;
+        }
+      } catch {
+        // error handled
+      }
+    }
+
+    if (playerCity) {
+      addCityScore(playerCity, parsed.data.score);
+    }
+
+    const updatedChallenge = getFriendChallenge(req.params.id);
+    res.json({ success: true, result, challenge: updatedChallenge, progress });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Meydan okuma sonucu kaydedilemedi." });
+  }
+});
+

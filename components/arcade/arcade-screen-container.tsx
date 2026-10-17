@@ -5,6 +5,7 @@ import { ScreenContainer } from "../common/screen-container";
 import { ArcadeLobbyScreen } from "./arcade-lobby-screen";
 import { ArcadeChallenge } from "./arcade-challenge";
 import { applyArcadeProgress, type PlayerProgress } from "@/shared/progression";
+import { monetizationManager } from "@/shared/monetization";
 import type { ToastData } from "../common/global-game-toast";
 
 import { useProgression, useNavigation, usePvP } from "@/context";
@@ -17,7 +18,7 @@ export interface ArcadeScreenContainerProps {
   hasClaimableDailyReward?: boolean;
   setGlobalToast?: (toast: ToastData | null) => void;
   setSelectedModeInfo?: (mode: "pvp" | "daily" | "vintage" | "arcade" | "solo" | null) => void;
-  watchAd?: (onReward: () => void) => void;
+  watchAd?: (onReward: () => void, onError?: (err?: string) => void) => void;
   awardProgressOnServer?: (award: any, updater: (curr: PlayerProgress) => PlayerProgress) => void;
   syncProgressToCloud?: (progress: PlayerProgress) => Promise<void>;
   onNavigate?: (destination: any) => void;
@@ -84,6 +85,10 @@ export function ArcadeScreenContainer(props: ArcadeScreenContainerProps) {
             { kind: "arcade", score, wordsCount, isDoubled, comboCount, foundWords },
             (current) => applyArcadeProgress(current, score, wordsCount, isDoubled, comboCount, foundWords)
           );
+          const { shouldShowInterstitial } = monetizationManager.recordMatchFinished(true);
+          if (shouldShowInterstitial) {
+            void monetizationManager.showInterstitialAd();
+          }
         }}
       />
     </ScreenContainer>

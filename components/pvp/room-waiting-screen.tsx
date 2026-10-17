@@ -147,7 +147,7 @@ export const RoomWaitingScreen: React.FC<RoomWaitingScreenProps> = ({
           onPress={onShareInvite}
           style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}
         >
-          <Text style={styles.inviteButtonText}>DAVET BAĞLANTISINI PAYLAŞ</Text>
+          <Text style={styles.inviteButtonText}>📲 WHATSAPP / BAĞLANTI İLE DAVET ET</Text>
           <Text style={styles.inviteButtonIcon}>↗</Text>
         </Pressable>
       </View>

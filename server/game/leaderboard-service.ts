@@ -144,13 +144,14 @@ export async function recordRoundForLeaderboard(io: Server, room: Room) {
   );
 
   if (!isUnrankedFriendly) {
-    publishLeaderboard(io);
     void recordLeaderboardRounds(roundsToRecord)
       .then((persisted) => {
         if (persisted) io.emit("leaderboard:update", persisted);
+        else io.emit("leaderboard:update", leaderboardSnapshot());
       })
       .catch((err) => {
         console.error("[Leaderboard] Error recording leaderboard rounds:", err);
+        io.emit("leaderboard:update", leaderboardSnapshot());
       });
   }
 }

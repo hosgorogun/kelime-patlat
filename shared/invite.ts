@@ -5,5 +5,5 @@ export function normalizeRoomCode(value: unknown) {
 }
 
 export function inviteMessage(code: string, url: string) {
-  return `Kelime Patlat'ta benimle düelloya katıl. Oda kodu: ${code}\n${url}`;
+  return `Kelime Patlat'ta benimle düelloya katıl! 💥\nÖzel Oda Kodum: ${code}\nKatılmak için tıkla: ${url}\n(Uygulama açıldığında oda kodunu girerek de doğrudan katılabilirsin!)`;
 }

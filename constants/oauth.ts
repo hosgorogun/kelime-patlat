@@ -19,21 +19,23 @@ export const API_BASE_URL = env.apiBaseUrl;
 
 import Constants from "expo-constants";
 
+export const PROD_DEFAULT_API_URL = "https://kelime-patlat.onrender.com";
+
 /**
  * Get the API base URL, deriving from current hostname if not set.
  * Metro runs on 8081, API server runs on 3000.
  * URL pattern: https://PORT-sandboxid.region.domain
  */
 export function getApiBaseUrl(): string {
-  // If API_BASE_URL is set, use it
-  if (API_BASE_URL) {
+  // 1. If explicit API_BASE_URL is set (from EXPO_PUBLIC_API_BASE_URL), use it
+  if (API_BASE_URL && API_BASE_URL.trim()) {
     return API_BASE_URL.replace(/\/$/, "");
   }
 
-  // On web, derive from current window location
+  // 2. On web, derive from current window location
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
     const { protocol, hostname, origin } = window.location;
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" || !hostname.includes("localhost")) {
       return origin;
     }
     // Pattern: 8081-sandboxid.region.domain -> 3000-sandboxid.region.domain
@@ -45,26 +47,25 @@ export function getApiBaseUrl(): string {
     return `${protocol}//${hostname}:3000`;
   }
 
-  if (process.env.NODE_ENV === "production") {
-    console.warn("[API] EXPO_PUBLIC_API_BASE_URL is not configured for production mobile builds. Falling back to local network host.");
-  }
-
-  // Check Expo Metro host IP if available (dynamically resolves Metro host for Android emulator or physical device)
-  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
-  if (hostUri) {
-    const host = hostUri.split(":")[0];
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:3000`;
+  // 3. If explicitly configured to use local development server on PC
+  const useLocalServer = process.env.EXPO_PUBLIC_USE_LOCAL_SERVER === "true";
+  if (useLocalServer) {
+    const isDev = typeof __DEV__ !== "undefined" ? __DEV__ : process.env.NODE_ENV !== "production";
+    const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
+    if (isDev && hostUri) {
+      const host = hostUri.split(":")[0];
+      if (host && host !== "localhost" && host !== "127.0.0.1") {
+        return `http://${host}:3000`;
+      }
     }
+    if (ReactNative.Platform.OS === "android") {
+      return "http://10.0.2.2:3000";
+    }
+    return "http://localhost:3000";
   }
 
-  // Android emulator: localhost maps to 10.0.2.2
-  if (ReactNative.Platform.OS === "android") {
-    return "http://10.0.2.2:3000";
-  }
-
-  // iOS simulator: localhost works
-  return "http://localhost:3000";
+  // 4. Default for all mobile environments (Emulator, Expo Go, Production): Live Cloud Server on Render!
+  return PROD_DEFAULT_API_URL;
 }
 
 export const SESSION_TOKEN_KEY = "app_session_token";

@@ -315,6 +315,21 @@ export const gameSfx = {
     }
     play("select", 1.5);
   },
+  jackpot: () => {
+    if (!sfxEnabled) return;
+    const ctx = getWebAudioContext();
+    if (ctx) {
+      // Magnificent triumphant major fanfare: C4 -> E4 -> G4 -> C5 -> E5 -> G5
+      playSynthTone(261.63, 0.15, "triangle", 0.25, 0);
+      playSynthTone(329.63, 0.15, "triangle", 0.25, 0.08);
+      playSynthTone(392.00, 0.18, "triangle", 0.28, 0.16);
+      playSynthTone(523.25, 0.22, "sine", 0.32, 0.24);
+      playSynthTone(659.25, 0.25, "sine", 0.35, 0.32);
+      playSynthTone(1046.50, 0.45, "sine", 0.40, 0.40);
+      return;
+    }
+    play("victory", 1.2);
+  },
   startAmbientBgm: () => {
     startAmbientBgm();
   },

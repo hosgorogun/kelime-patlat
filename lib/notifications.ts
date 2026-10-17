@@ -14,7 +14,7 @@ export async function getNotificationsModule() {
     if (isRunningInExpoGo && isRunningInExpoGo() && Platform.OS === "android") {
       if (!expoGoWarningLogged) {
         expoGoWarningLogged = true;
-        console.warn(
+        console.info(
           "[Notifications] Expo Go (Android) detected: expo-notifications dynamic import is bypassed to avoid SDK 53 crash. Use a development build (expo run:android / EAS Build) for native notifications."
         );
       }
@@ -186,6 +186,145 @@ export const notificationsService = {
     }
   },
 
+  /**
+   * 1. KLASİK GAZETE MODU HATIRLATMASI (Sabah 09:00)
+   * Günün 10x10 çengel bulmacası için sabah kahvesi rutini oluşturur.
+   */
+  async scheduleMorningGazetteNotification() {
+    const notifs = await getNotificationsModule();
+    if (!notifs) return;
+    try {
+      const hasPerm = await this.requestPermissions();
+      if (!hasPerm) return;
+
+      const now = new Date();
+      const morning = new Date();
+      morning.setHours(9, 0, 0, 0);
+
+      let delaySeconds = Math.floor((morning.getTime() - now.getTime()) / 1000);
+      if (delaySeconds <= 0) {
+        delaySeconds += 24 * 3600;
+      }
+
+      await notifs.scheduleNotificationAsync({
+        content: {
+          title: "☕ GÜNÜN GAZETESİ BASILDI!",
+          body: "10×10 Çapraz Bulmaca hazır! Kahvenin yanında kelimeleri ilk sen tamamla, 150 Çip kazan!",
+          sound: true,
+          data: { screen: "vintage" },
+        },
+        trigger: {
+          type: notifs.SchedulableTriggerInputTypes?.TIME_INTERVAL || "timeInterval",
+          seconds: delaySeconds,
+          repeats: false,
+        },
+      });
+    } catch (e) {
+      console.warn("[Notifications] Failed to schedule morning gazette notification:", e);
+    }
+  },
+
+  /**
+   * 2. KELİMEMATİK / GÜNLÜK AV HATIRLATMASI (Akşam 21:15)
+   * Günün gizli kelimesi sıfırlanmadan önceki son çağrı.
+   */
+  async scheduleDailyKelimematikReminder() {
+    const notifs = await getNotificationsModule();
+    if (!notifs) return;
+    try {
+      const hasPerm = await this.requestPermissions();
+      if (!hasPerm) return;
+
+      const now = new Date();
+      const evening = new Date();
+      evening.setHours(21, 15, 0, 0);
+
+      let delaySeconds = Math.floor((evening.getTime() - now.getTime()) / 1000);
+      if (delaySeconds <= 0) {
+        delaySeconds += 24 * 3600;
+      }
+
+      await notifs.scheduleNotificationAsync({
+        content: {
+          title: "⏳ GÜNLÜK KELİMELER SIFIRLANIYOR!",
+          body: "Kelimematik çarkı gece yenilenecek! Bugünkü bonus puanları ve gizli harfleri kaçırma!",
+          sound: true,
+          data: { screen: "kelimematik" },
+        },
+        trigger: {
+          type: notifs.SchedulableTriggerInputTypes?.TIME_INTERVAL || "timeInterval",
+          seconds: delaySeconds,
+          repeats: false,
+        },
+      });
+    } catch (e) {
+      console.warn("[Notifications] Failed to schedule daily kelimematik reminder:", e);
+    }
+  },
+
+  /**
+   * 3. ARCADE / ZAMANA KARŞI ETKİNLİK BİLDİRİMİ (Hafta Sonu 13:00)
+   * 60 saniyelik bomba modu ve rekor kırma heyecanını tetikler.
+   */
+  async scheduleWeekendArcadeNotification() {
+    const notifs = await getNotificationsModule();
+    if (!notifs) return;
+    try {
+      const hasPerm = await this.requestPermissions();
+      if (!hasPerm) return;
+
+      const now = new Date();
+      const target = new Date();
+      target.setHours(13, 0, 0, 0);
+
+      let delaySeconds = Math.floor((target.getTime() - now.getTime()) / 1000);
+      if (delaySeconds <= 0) {
+        delaySeconds += 24 * 3600;
+      }
+
+      await notifs.scheduleNotificationAsync({
+        content: {
+          title: "💣 60 SANİYELİK BOMBA AVI BAŞLADI!",
+          body: "Arcade modunda bombaları patlat! 2X çarpanla rekorunu kırıp mega sandığı kap!",
+          sound: true,
+          data: { screen: "arcade" },
+        },
+        trigger: {
+          type: notifs.SchedulableTriggerInputTypes?.TIME_INTERVAL || "timeInterval",
+          seconds: delaySeconds,
+          repeats: false,
+        },
+      });
+    } catch (e) {
+      console.warn("[Notifications] Failed to schedule arcade notification:", e);
+    }
+  },
+
+  /**
+   * 4. SIRA TABANLI DÜELLO BİLDİRİMİ (Anlık)
+   * Rakip oyuncu hamlesini yaptığında anında gönderilir.
+   */
+  async notifyTurnMatchTurn(opponentName: string) {
+    const notifs = await getNotificationsModule();
+    if (!notifs) return;
+    try {
+      const hasPerm = await this.requestPermissions();
+      if (!hasPerm) return;
+
+      await notifs.scheduleNotificationAsync({
+        content: {
+          title: "🎯 SIRA SENDE!",
+          body: `${opponentName} hamlesini yaptı! Sıra sende, karşılık ver!`,
+          sound: true,
+          data: { screen: "online" },
+        },
+        trigger: null, // Anında göster
+      });
+    } catch (e) {
+      console.warn("[Notifications] Failed to send turn notification:", e);
+    }
+  },
+
   async cancelAll() {
     const notifs = await getNotificationsModule();
     if (!notifs) return;
@@ -193,6 +332,35 @@ export const notificationsService = {
       await notifs.cancelAllScheduledNotificationsAsync();
     } catch {
       // ignore
+    }
+  },
+
+  async registerPushTokenWithServer(authToken: string, apiBaseUrl?: string): Promise<string | null> {
+    const notifs = await getNotificationsModule();
+    if (!notifs || !authToken || authToken === "guest") return null;
+    try {
+      const hasPerm = await this.requestPermissions();
+      if (!hasPerm) return null;
+      let pushToken = "";
+      if (notifs.getExpoPushTokenAsync) {
+        const response = await notifs.getExpoPushTokenAsync().catch(() => null);
+        pushToken = response?.data || "";
+      }
+      if (!pushToken) return null;
+      const baseUrl = apiBaseUrl || (process.env.EXPO_PUBLIC_API_BASE_URL || "").replace(/\/$/, "");
+      if (!baseUrl) return pushToken;
+      await fetch(`${baseUrl}/api/user/push-token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ pushToken }),
+      }).catch((e) => console.warn("[Notifications] Push token sync failed:", e));
+      return pushToken;
+    } catch (e) {
+      console.warn("[Notifications] Push token registration error:", e);
+      return null;
     }
   },
 };

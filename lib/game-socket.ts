@@ -21,7 +21,7 @@ export function getGameSocket() {
       reconnectionDelayMax: 3_000,
       timeout: 10_000,
     });
-  } else {
+  } else if (!gameSocket.connected && (gameSocket as any).disconnected) {
     gameSocket.connect();
   }
   return gameSocket;

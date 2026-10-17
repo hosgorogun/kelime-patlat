@@ -33,6 +33,7 @@ export function CommandInfoModal({
       visible={infoModal !== null}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>

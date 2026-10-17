@@ -6,7 +6,7 @@ export interface UseLuckyWheelParams {
   progress: PlayerProgress;
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   syncProgressToCloud: (progress: PlayerProgress) => Promise<void>;
-  watchAd?: (onReward: () => void) => void;
+  watchAd?: (onReward: () => void, onError?: (err?: string) => void) => void;
   onShowToast: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
 }
 

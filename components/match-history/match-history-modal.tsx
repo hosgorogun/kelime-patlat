@@ -84,7 +84,13 @@ export function MatchHistoryModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.containerCard} onPress={(e) => e.stopPropagation()}>
           <LinearGradient

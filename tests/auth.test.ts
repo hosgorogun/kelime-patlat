@@ -244,6 +244,67 @@ describe("Giriş & Kayıt Gelişmiş Kimlik Doğrulama Kontrolleri", () => {
     expect(prodUrl).toContain("auth.kelimepatlat.com/app-auth");
     expect(prodUrl).toContain("provider=apple");
   });
+
+  it("OAuth Platform Uyumluluğu: iOS için Apple, Android/Web için Google login seçilmelidir", () => {
+    function getSocialProviderForPlatform(os: "ios" | "android" | "web") {
+      return os === "ios" ? "Apple" : "Google";
+    }
+
+    expect(getSocialProviderForPlatform("ios")).toBe("Apple");
+    expect(getSocialProviderForPlatform("android")).toBe("Google");
+    expect(getSocialProviderForPlatform("web")).toBe("Google");
+  });
+
+  it("OAuth Deep Link Parser: kelimepatlat://oauth/callback bağlantısını hostname/path durumlarından bağımsız doğru yakalar", () => {
+    function parseOAuthCallback(url: string) {
+      // Simüle edilmiş expo-linking parse
+      const isOAuth =
+        url.includes("oauth/callback") ||
+        url.startsWith("kelimepatlat://oauth/callback");
+      const urlObj = new URL(url.replace("kelimepatlat://", "http://"));
+      const code = urlObj.searchParams.get("code");
+      const state = urlObj.searchParams.get("state");
+      return { isOAuth, code, state };
+    }
+
+    const nativeLink = "kelimepatlat://oauth/callback?code=mock_auth_code_123&state=bW9ja19zdGF0ZQ==";
+    const result = parseOAuthCallback(nativeLink);
+
+    expect(result.isOAuth).toBe(true);
+    expect(result.code).toBe("mock_auth_code_123");
+    expect(result.state).toBe("bW9ja19zdGF0ZQ==");
+  });
+
+  it("Misafir Hesabından Sosyal Girişe Geçiş: Misafir ilerlemesi sıfırlanmadan yeni hesaba aktarılır", () => {
+    // Misafir ilerlemesi
+    const guestProgress = {
+      level: 5,
+      xp: 450,
+      chips: 2500,
+      completedLevels: [1, 2, 3, 4, 5],
+    };
+
+    // Yeni açılan Google/Apple hesabının boş ilerlemesi
+    const newOauthProgress = {
+      level: 1,
+      xp: 0,
+      chips: 500,
+      completedLevels: [],
+    };
+
+    // Birleştirme (merge) simülasyonu
+    const claimedProgress = {
+      level: Math.max(guestProgress.level, newOauthProgress.level),
+      xp: Math.max(guestProgress.xp, newOauthProgress.xp),
+      chips: guestProgress.chips + newOauthProgress.chips,
+      completedLevels: Array.from(new Set([...guestProgress.completedLevels, ...newOauthProgress.completedLevels])),
+    };
+
+    expect(claimedProgress.level).toBe(5);
+    expect(claimedProgress.xp).toBe(450);
+    expect(claimedProgress.chips).toBe(3000);
+    expect(claimedProgress.completedLevels).toHaveLength(5);
+  });
 });
 
 

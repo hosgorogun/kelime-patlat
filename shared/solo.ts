@@ -276,10 +276,13 @@ function selectWords(config: SoloLevel, variation: number, random: () => number,
 
   for (const pool of pools) {
     if (pool.length < minWords) continue;
-    for (let attempt = 0; attempt < 600; attempt++) {
+    const candidatePool = pool.length > 200
+      ? weightedShuffled(pool, random, (entry) => (profile.mix[entry.difficulty] ?? 0.1) * (entry.weight ?? 3)).slice(0, 160)
+      : pool;
+    for (let attempt = 0; attempt < 80; attempt++) {
       const selected: WordEntry[] = [];
       let currentSum = 0;
-      const shuffledEntries = weightedShuffled(pool, random, (entry) => profile.mix[entry.difficulty] ?? 0.1);
+      const shuffledEntries = shuffled(candidatePool, random);
       for (const entry of shuffledEntries) {
         if (selected.some((e) => isEqualTr(e.word, entry.word))) continue;
         const len = entry.word.length;
@@ -382,10 +385,14 @@ function serpentinePath(size: BoardSize): number[] {
 }
 
 function fullBoardPath(size: BoardSize, random: () => number) {
+  if (size >= 8) {
+    return serpentinePath(size);
+  }
   let steps = 0;
+  const maxSteps = size <= 4 ? 20000 : 12000;
   const visit = (index: number, path: number[]): number[] | null => {
     steps++;
-    if (steps > 40000) return null;
+    if (steps > maxSteps) return null;
     const nextPath = [...path, index];
     if (nextPath.length === size * size) return nextPath;
     
@@ -402,7 +409,8 @@ function fullBoardPath(size: BoardSize, random: () => number) {
     }
     return null;
   };
-  const starts = shuffled(Array.from({ length: size * size }, (_, index) => index), random);
+  const maxStarts = size <= 4 ? 16 : 12;
+  const starts = shuffled(Array.from({ length: size * size }, (_, index) => index), random).slice(0, maxStarts);
   for (const start of starts) {
     steps = 0;
     const path = visit(start, []);
@@ -418,15 +426,7 @@ export function getSoloLevelWords(level: number, variation = 0, theme: WordTheme
   const cached = soloLevelWordsCache.get(cacheKey);
   if (cached) return cached;
 
-  // Build preceding levels sequentially so each level accurately excludes the previous levels
   const startLevel = Math.max(1, level - 3);
-  for (let p = startLevel; p < level; p++) {
-    const pKey = `${p}:${variation}:${theme}`;
-    if (!soloLevelWordsCache.has(pKey)) {
-      getSoloLevelWords(p, variation, theme);
-    }
-  }
-
   const excludes: string[] = [];
   for (let p = startLevel; p < level; p++) {
     const pWords = soloLevelWordsCache.get(`${p}:${variation}:${theme}`);
@@ -501,7 +501,8 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
 
   const words = entries.map((entry) => entry.word);
   
-  for (let attempt = 0; attempt < 200; attempt += 1) {
+  const maxAttempts = config.size === 4 ? 40 : config.size === 6 ? 30 : 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const random = seededRandom(config.level * 13_337 + variation * 211 + attempt * 31);
     const fullPath = fullBoardPath(config.size, random);
     let cursor = 0;
@@ -510,10 +511,11 @@ export function createSoloBoard(level: number, variation = 0, theme: WordTheme =
       cursor += word.length;
       return [word, route];
     }));
-    if (!words.every((word) => {
-      const requiredTurns = Math.min(config.size === 4 ? config.minTurns : 1, word.length - 2);
+    const requiredTurns = config.size === 4 ? config.minTurns : (config.size === 6 ? 1 : 0);
+    if (requiredTurns > 0 && !words.every((word) => {
+      const turns = Math.min(requiredTurns, word.length - 2);
       const route = routes[word];
-      return route ? countTurns(route) >= requiredTurns : false;
+      return route ? countTurns(route) >= turns : false;
     })) continue;
     const board = Array.from({ length: config.size * config.size }, () => "");
     words.forEach((word) => {

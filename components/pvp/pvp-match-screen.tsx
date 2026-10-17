@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -15,6 +15,8 @@ import { ScreenContainer } from "../common/screen-container";
 import { BoardCell, type CellColorConfig } from "../game/board-cell";
 import { ConnectLine, BoardCountdownShield } from "../game/game-ui";
 import { MatchResultModal } from "../modals/match-result-modal";
+import { ChallengeModal } from "../challenge/challenge-modal";
+import { type FriendChallengeData } from "@/shared/challenge";
 import { LeaveDuelModal } from "../friends/leave-duel-modal";
 import { GameModeInfoModal } from "../modals/game-mode-info-modal";
 import { GameCountdownOverlay } from "../game/game-countdown-overlay";
@@ -36,7 +38,7 @@ import {
 } from "./pvp-route-inspector";
 import { PvpFoundWordsPanel } from "./pvp-found-words-panel";
 import { PvpResultPanel } from "./pvp-result-panel";
-import type { BoardSize, RoomSnapshot } from "@/shared/game";
+import { getRoundDurationMs, type BoardSize, type RoomSnapshot } from "@/shared/game";
 import { type PlayerProgress, resolveAvatarDisplay, getPlayerLevel } from "@/shared/progression";
 import type { ToastData } from "../common/global-game-toast";
 
@@ -212,6 +214,34 @@ export function PvpMatchScreen({
   const isDraw = Boolean(room.status === "finished" && !room.winnerId);
   const opponentRematch = Boolean(opponent?.rematch);
   const opponentLeft = !opponent || (!opponent.isBot && !opponent.connected);
+
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [challengeData, setChallengeData] = useState<FriendChallengeData | null>(null);
+
+  const handleChallengeFriend = async () => {
+    try {
+      const challengeWords = (allFinishedWords ?? []).map((w) => w.word);
+      const res = await fetch("/api/game/challenge/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creatorName: safeName,
+          creatorScore: myScore,
+          size: room.size,
+          board: room.board,
+          words: challengeWords.length > 0 ? challengeWords : ["OYUN"],
+          timeLimit: Math.round(getRoundDurationMs(room.size) / 1000),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChallengeData(data.challenge);
+        setShowChallengeModal(true);
+      }
+    } catch {
+      // offline fallback
+    }
+  };
 
   const selectionSet = useMemo(() => new Set(selectedCells), [selectedCells]);
   const myFoundWords = useMemo(
@@ -856,8 +886,18 @@ export function PvpMatchScreen({
           });
         }}
         onRequestRematch={onRequestRematch}
+        onChallengeFriend={handleChallengeFriend}
         onLeaveRoom={onLeaveRoom}
         onClose={() => setShowResultModal(false)}
+      />
+
+      {/* Arkadaşa Meydan Oku Modalı */}
+      <ChallengeModal
+        visible={showChallengeModal}
+        onClose={() => setShowChallengeModal(false)}
+        progress={progress}
+        mode="create"
+        challengeData={challengeData}
       />
 
       {/* Düellodan Ayrılma Siber Modalı */}

@@ -131,22 +131,24 @@ export function CyberBannerAd({ style, adUnitId, onPressAd, forceCyberOnly = fal
     const resolvedUnitId = adUnitId || getBannerAdUnitId();
     return (
       <View style={[styles.admobWrapper, style]}>
-        <BannerAdComponent
-          unitId={resolvedUnitId}
-          size={BannerAdSizeEnum?.ANCHORED_ADAPTIVE_BANNER || "BANNER"}
-          requestOptions={{
-            requestNonPersonalizedAdsOnly: true,
-          }}
-          onAdLoaded={() => {
-            setAdmobLoaded(true);
-            setAdmobFailed(false);
-          }}
-          onAdFailedToLoad={(error: any) => {
-            console.warn("[AdMob] Banner yüklenemedi, Cyber Banner'a geçiliyor:", error?.message);
-            setAdmobFailed(true);
-          }}
-        />
-        {!admobLoaded && !admobFailed && renderCyberFallback()}
+        <View style={!admobLoaded ? { position: "absolute", opacity: 0 } : undefined}>
+          <BannerAdComponent
+            unitId={resolvedUnitId}
+            size={BannerAdSizeEnum?.ANCHORED_ADAPTIVE_BANNER || "BANNER"}
+            requestOptions={{
+              requestNonPersonalizedAdsOnly: true,
+            }}
+            onAdLoaded={() => {
+              setAdmobLoaded(true);
+              setAdmobFailed(false);
+            }}
+            onAdFailedToLoad={(error: any) => {
+              console.warn("[AdMob] Banner yüklenemedi, Cyber Banner'a geçiliyor:", error?.message);
+              setAdmobFailed(true);
+            }}
+          />
+        </View>
+        {!admobLoaded && renderCyberFallback()}
       </View>
     );
   }

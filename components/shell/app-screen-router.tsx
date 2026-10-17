@@ -45,7 +45,7 @@ export interface AppScreenRouterProps {
   celebrationModalElement: React.ReactNode;
   luckyWheelModalElement?: React.ReactNode;
   onOpenLuckyWheel?: () => void;
-  watchAd?: (onReward: () => void) => void;
+  watchAd?: (onReward: () => void, onError?: (err?: string) => void) => void;
 }
 
 export function AppScreenRouter(props: AppScreenRouterProps) {

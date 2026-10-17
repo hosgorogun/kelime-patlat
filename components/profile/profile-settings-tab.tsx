@@ -5,6 +5,7 @@ import {
   type GenderType,
 } from "@/shared/progression";
 import { triggerHapticError, triggerHapticSelection } from "@/shared/audio-haptics";
+import { checkAndPromptReview } from "@/lib/store-review";
 import { styles } from "./profile.styles";
 
 export type ProfileSettingsTabProps = {
@@ -274,6 +275,16 @@ export const ProfileSettingsTab = React.memo(({
 
       <Pressable onPress={onOpenPrivacyModal} style={styles.privacyBtn}>
         <Text style={styles.privacyBtnText}>🔒 GİZLİLİK POLİTİKASI (PRIVACY POLICY)</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => {
+          triggerHapticSelection();
+          checkAndPromptReview({ force: true });
+        }}
+        style={[styles.privacyBtn, { marginTop: 10, backgroundColor: "#FFF8E7", borderColor: "#EDCD8A" }]}
+      >
+        <Text style={[styles.privacyBtnText, { color: "#92400E", fontWeight: "900" }]}>⭐ OYUNU DEĞERLENDİR (5 YILDIZ VER)</Text>
       </Pressable>
     </>
   );

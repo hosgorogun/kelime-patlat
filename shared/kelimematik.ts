@@ -35,7 +35,7 @@ const CONSONANTS = [
   "B", "C", "Ç", "D", "F", "G", "Ğ", "H", "J", "K", "L", "M", "N", "P", "R", "S", "Ş", "T", "V", "Y", "Z",
 ];
 
-const BALANCED_TURKISH_POOL = [
+export const BALANCED_TURKISH_POOL = [
   "A", "A", "A", "A", "A", "A",
   "E", "E", "E", "E", "E", "E",
   "İ", "İ", "İ", "İ",

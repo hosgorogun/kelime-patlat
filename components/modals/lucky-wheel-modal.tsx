@@ -28,7 +28,7 @@ export interface LuckyWheelModalProps {
   progress: PlayerProgress;
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   syncProgressToCloud: (progress: PlayerProgress) => Promise<void>;
-  watchAd?: (onReward: () => void) => void;
+  watchAd?: (onReward: () => void, onError?: (err?: string) => void) => void;
   onShowToast: (title: string, subtitle: string, icon?: string, accentColor?: string) => void;
 }
 
@@ -132,12 +132,19 @@ export function LuckyWheelModal({
     if (isSpinning || isAdLoading) return;
     if (watchAd) {
       setIsAdLoading(true);
-      watchAd(() => {
-        if (isMountedRef.current) {
-          setIsAdLoading(false);
+      watchAd(
+        () => {
+          if (isMountedRef.current) {
+            setIsAdLoading(false);
+          }
+          handleSpin(true);
+        },
+        () => {
+          if (isMountedRef.current) {
+            setIsAdLoading(false);
+          }
         }
-        handleSpin(true);
-      });
+      );
     } else {
       handleSpin(true);
     }
@@ -149,9 +156,15 @@ export function LuckyWheelModal({
   });
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.overlay} onPress={isSpinning ? undefined : onClose}>
+        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -280,8 +293,8 @@ export function LuckyWheelModal({
               </View>
             )}
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

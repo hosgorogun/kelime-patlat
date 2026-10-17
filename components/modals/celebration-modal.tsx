@@ -294,7 +294,13 @@ export function CelebrationModal({ data, onClose }: CelebrationModalProps) {
   };
 
   return (
-    <Modal visible transparent animationType="none" onRequestClose={handleConfirm}>
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={handleConfirm}
+    >
       <View style={styles.overlay}>
         {/* Konfeti Parçacıkları */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">

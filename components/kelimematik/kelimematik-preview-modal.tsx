@@ -26,6 +26,7 @@ export function KelimematikPreviewModal({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>

@@ -31,6 +31,7 @@ export const MatchConfirmModal: React.FC<MatchConfirmModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onCancel}
     >
       <Pressable style={styles.overlay} onPress={onCancel}>

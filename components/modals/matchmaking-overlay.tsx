@@ -21,6 +21,7 @@ export function MatchmakingOverlay({
       visible={true}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onCancel}
     >
       <View style={styles.matchmakingOverlay}>
@@ -37,8 +38,10 @@ export function MatchmakingOverlay({
             {`00:${String(state.elapsedSeconds).padStart(2, "0")}`}
           </Text>
           <Text style={styles.matchmakingStatusText}>
-            {state.elapsedSeconds < 3
+            {state.elapsedSeconds < 6
               ? "Uygun ligdeki rakipler taranıyor..."
+              : state.elapsedSeconds < 12
+              ? "Çevrim içi oyuncular aranıyor..."
               : "Eşleşme tamamlanıyor, arenaya bağlanılıyor..."}
           </Text>
           <Pressable

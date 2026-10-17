@@ -55,3 +55,8 @@ export function useProgression(): ProgressionContextValue {
   }
   return ctx;
 }
+
+export function useOptionalProgression(): ProgressionContextValue | null {
+  return useContext(ProgressionContext);
+}
+

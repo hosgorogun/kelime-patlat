@@ -58,6 +58,11 @@ export function playTimerTick(urgent: boolean = false) {
   gameSfx.tick(urgent);
 }
 
+export function playJackpotSound() {
+  (gameSfx as any).jackpot?.();
+  triggerHapticLongWord();
+}
+
 export function startAmbientBgm() {
   gameSfx.startAmbientBgm();
 }
@@ -65,4 +70,5 @@ export function startAmbientBgm() {
 export function stopAmbientBgm() {
   gameSfx.stopAmbientBgm();
 }
+
 

@@ -439,7 +439,7 @@ export function registerFriendSocketHandlers(
 
   socket.on(
     "friend:duel:invite",
-    (payload: {
+    async (payload: {
       toPlayerId: string;
       toUsername?: string;
       fromPlayerId: string;
@@ -518,6 +518,35 @@ export function registerFriendSocketHandlers(
               }
             }, 1600);
             return;
+          }
+        }
+
+        if (mongoose.connection.readyState === 1) {
+          try {
+            const targetUser = await UserModel.findOne({
+              $or: [{ openId: toPlayerId }, { username: normalizeTr(toUsername || toPlayerId) }],
+            }).lean();
+            if (targetUser?.pushToken) {
+              fetch("https://exp.host/--/api/v2/push/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  to: targetUser.pushToken,
+                  sound: "default",
+                  title: "⚔️ YENİ DÜELLO DAVETİ!",
+                  body: `${fromPlayerName} seni Kelime Patlat düellosuna davet etti! Oda Kodu: ${roomCode}`,
+                  data: { screen: "friends", roomCode },
+                }),
+              }).catch((e) => console.warn("[FriendPush] Push dispatch error:", e));
+
+              socket.emit("friend:duel:sent", {
+                success: true,
+                message: `${toUsername || "Arkadaşınız"} çevrim dışı ancak telefonuna anlık düello bildirimi gönderildi! 📲`,
+              });
+              return;
+            }
+          } catch (e) {
+            console.warn("[FriendPush] DB lookup error:", e);
           }
         }
 

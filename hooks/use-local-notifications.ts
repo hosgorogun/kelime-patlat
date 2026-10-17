@@ -9,8 +9,16 @@ import { notificationsService } from "@/lib/notifications";
  * Oyuncunun canı dolduğunda veya cihaz 30 dakikalık can yenilenmesini tamamladığında
  * arka planda bildirim zamanlamasını senkronize eder.
  */
-export function useLocalNotificationEngine(progress?: PlayerProgress) {
+export function useLocalNotificationEngine(progress?: PlayerProgress, authToken?: string | null) {
   const lastScheduledRef = useRef<number>(0);
+  const pushRegisteredRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (authToken && authToken !== "guest" && !pushRegisteredRef.current) {
+      pushRegisteredRef.current = true;
+      void notificationsService.registerPushTokenWithServer(authToken);
+    }
+  }, [authToken]);
 
   useEffect(() => {
     if (!progress) return;

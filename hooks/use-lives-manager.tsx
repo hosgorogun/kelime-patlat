@@ -4,6 +4,7 @@ import { LivesModal } from "../components/modals/lives-modal";
 import { triggerHapticSuccess } from "../shared/audio-haptics";
 import { buyLives, MAX_LIVES, type PlayerProgress } from "../shared/progression";
 import { SESSION_TOKEN_KEY, getApiBaseUrl } from "../constants/oauth";
+import { monetizationManager } from "../shared/monetization";
 import type { ToastData } from "../components/common/global-game-toast";
 
 export interface UseLivesManagerParams {
@@ -208,31 +209,62 @@ export function useLivesManager({
   const handleWatchAdForLife = async () => {
     if (buyingLivesLoading) return;
     setBuyingLivesLoading(true);
-    try {
-      const activeProgress = progressRef.current ?? progress;
-      const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
-      if (!token || token === "guest") {
-        const res = buyLives(activeProgress, "ad");
-        if (res.success) {
-          setProgress(res.updatedProgress);
-          void syncProgressToCloud(res.updatedProgress);
-          triggerHapticSuccess();
-          setGlobalToast({
-            id: `ad-life-${Date.now()}`,
-            title: "REKLAM ÖDÜLÜ 📺",
-            subtitle: "+1 Can kazandın!",
-            icon: "💚",
-            accentColor: "#22C55E",
-          });
-        }
-      } else {
-        const response = await fetch(`${getApiBaseUrl()}/api/game/lives`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ option: "ad" }),
-        });
-        const data = await response.json();
-        if (!response.ok) {
+
+    await monetizationManager.showRewardedAd(
+      "life_refill",
+      async () => {
+        try {
+          const activeProgress = progressRef.current ?? progress;
+          const token = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
+          if (!token || token === "guest") {
+            const res = buyLives(activeProgress, "ad");
+            if (res.success) {
+              setProgress(res.updatedProgress);
+              void syncProgressToCloud(res.updatedProgress);
+              triggerHapticSuccess();
+              setGlobalToast({
+                id: `ad-life-${Date.now()}`,
+                title: "REKLAM ÖDÜLÜ 📺",
+                subtitle: "+1 Can kazandın!",
+                icon: "💚",
+                accentColor: "#22C55E",
+              });
+            }
+          } else {
+            const response = await fetch(`${getApiBaseUrl()}/api/game/lives`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ option: "ad" }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+              const res = buyLives(activeProgress, "ad");
+              if (res.success) {
+                setProgress(res.updatedProgress);
+                void syncProgressToCloud(res.updatedProgress);
+                triggerHapticSuccess();
+                setGlobalToast({
+                  id: `ad-life-${Date.now()}`,
+                  title: "REKLAM ÖDÜLÜ 📺",
+                  subtitle: "+1 Can kazandın!",
+                  icon: "💚",
+                  accentColor: "#22C55E",
+                });
+              }
+            } else {
+              setProgress(data.progress);
+              triggerHapticSuccess();
+              setGlobalToast({
+                id: `ad-life-${Date.now()}`,
+                title: "REKLAM ÖDÜLÜ 📺",
+                subtitle: "+1 Can kazandın!",
+                icon: "💚",
+                accentColor: "#22C55E",
+              });
+            }
+          }
+        } catch {
+          const activeProgress = progressRef.current ?? progress;
           const res = buyLives(activeProgress, "ad");
           if (res.success) {
             setProgress(res.updatedProgress);
@@ -246,36 +278,14 @@ export function useLivesManager({
               accentColor: "#22C55E",
             });
           }
-        } else {
-          setProgress(data.progress);
-          triggerHapticSuccess();
-          setGlobalToast({
-            id: `ad-life-${Date.now()}`,
-            title: "REKLAM ÖDÜLÜ 📺",
-            subtitle: "+1 Can kazandın!",
-            icon: "💚",
-            accentColor: "#22C55E",
-          });
+        } finally {
+          setBuyingLivesLoading(false);
         }
+      },
+      () => {
+        setBuyingLivesLoading(false);
       }
-    } catch {
-      const activeProgress = progressRef.current ?? progress;
-      const res = buyLives(activeProgress, "ad");
-      if (res.success) {
-        setProgress(res.updatedProgress);
-        void syncProgressToCloud(res.updatedProgress);
-        triggerHapticSuccess();
-        setGlobalToast({
-          id: `ad-life-${Date.now()}`,
-          title: "REKLAM ÖDÜLÜ 📺",
-          subtitle: "+1 Can kazandın!",
-          icon: "💚",
-          accentColor: "#22C55E",
-        });
-      }
-    } finally {
-      setBuyingLivesLoading(false);
-    }
+    );
   };
 
   const livesModalElement = (

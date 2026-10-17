@@ -1,10 +1,6 @@
-/**
- * Kelimematik Türkçe Sözlük Doğrulama Motoru
- * Kelimematik modunda oyuncunun sadece gerçek Türkçe sözlük kelimelerini patlatmasını sağlar.
- */
-
 import { WORD_CATALOG_DATA, WORD_BANK } from "./word-catalog";
 import { normalizeTrUpper } from "./tr-utils";
+import { isValidTurkishWord } from "./dictionary";
 
 const dictionarySet = new Set<string>();
 
@@ -34,5 +30,7 @@ for (const w of allBanks) {
 export function isValidKelimematikWord(word: string): boolean {
   if (!word || word.trim().length < 3) return false;
   const upper = normalizeTrUpper(word);
-  return dictionarySet.has(upper);
+  if (dictionarySet.has(upper)) return true;
+  return isValidTurkishWord(upper);
 }
+

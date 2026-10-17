@@ -39,6 +39,20 @@ function getParentDomain(hostname: string): string | undefined {
     return undefined;
   }
 
+  // If the host is on a known public cloud suffix like onrender.com, vercel.app, etc.,
+  // setting a cookie on the parent domain (.onrender.com) will be rejected by browsers (Public Suffix List).
+  // Return undefined to set a host-only cookie.
+  const lower = hostname.toLowerCase();
+  if (
+    lower.endsWith(".onrender.com") ||
+    lower.endsWith(".vercel.app") ||
+    lower.endsWith(".herokuapp.com") ||
+    lower.endsWith(".github.io") ||
+    lower.endsWith(".netlify.app")
+  ) {
+    return undefined;
+  }
+
   // Return parent domain with leading dot (e.g., ".manuspre.computer")
   // This allows cookie to be shared across all subdomains
   return "." + parts.slice(-2).join(".");

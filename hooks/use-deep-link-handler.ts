@@ -45,8 +45,12 @@ export function useDeepLinkHandler({
       typeof parsedUrl.queryParams?.code === "string" ? parsedUrl.queryParams.code : null;
     const oauthState =
       typeof parsedUrl.queryParams?.state === "string" ? parsedUrl.queryParams.state : null;
+    const isOAuthCallback =
+      incomingUrl.includes("oauth/callback") ||
+      Boolean(parsedUrl.path?.includes("oauth/callback")) ||
+      (parsedUrl.hostname === "oauth" && Boolean(parsedUrl.path?.includes("callback")));
 
-    if (parsedUrl.path?.includes("oauth/callback") && oauthCode && oauthState) {
+    if (isOAuthCallback && oauthCode && oauthState) {
       fetch(
         `${getApiBaseUrl()}/api/oauth/mobile?code=${encodeURIComponent(
           oauthCode

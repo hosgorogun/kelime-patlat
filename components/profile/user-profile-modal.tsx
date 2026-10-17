@@ -83,7 +83,13 @@ export function UserProfileModal({
   const frameBorderColor = activeFrameObj ? activeFrameObj[2] : avatarColor;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.cardContainer} onPress={(e) => e.stopPropagation()}>
           {/* Neon Header Accent */}
@@ -340,7 +346,7 @@ export function UserProfileModal({
         </Pressable>
       </Pressable>
 
-      <ModernAlertModal alert={alertData} onDismiss={() => setAlertData(null)} />
+      <ModernAlertModal inline alert={alertData} onDismiss={() => setAlertData(null)} />
     </Modal>
   );
 }

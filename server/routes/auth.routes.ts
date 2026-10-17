@@ -18,6 +18,7 @@ import {
 } from "../../shared/progression";
 import { PROFILE_FRAMES, VICTORY_EFFECTS, BOARD_SKINS } from "../../shared/store-items";
 import { normalizeTr, normalizeTrUpper, isEqualTr } from "../../shared/tr-utils";
+import { containsProfanity } from "../../shared/profanity-filter";
 
 export const authRouter = Router();
 
@@ -68,6 +69,11 @@ authRouter.post("/signup", async (req, res) => {
       return res.status(400).json({ error: parsed.error.issues[0]?.message || "Geçersiz kayıt bilgileri." });
     }
     const { username, password, email, fullName, gender } = parsed.data;
+
+    if (containsProfanity(username) || containsProfanity(fullName)) {
+      return res.status(400).json({ error: "Lütfen uygun ve saygılı bir kullanıcı adı veya isim seçin." });
+    }
+
     const lowerUsername = normalizeTr(username);
     const lowerEmail = normalizeTr(email);
     const existingUser = await UserModel.findOne({
@@ -116,6 +122,9 @@ authRouter.get("/check-username", async (req, res) => {
     if (!rawUsername || rawUsername.length < 4) {
       return res.status(400).json({ available: false, error: "Kullanıcı adı en az 4 karakter olmalıdır." });
     }
+    if (containsProfanity(rawUsername)) {
+      return res.status(400).json({ available: false, error: "Bu kullanıcı adı uygunsuz ifadeler içeriyor." });
+    }
     await connectDb();
     const lowerUsername = normalizeTr(rawUsername);
     const existing = await UserModel.findOne({ username: lowerUsername });
@@ -149,6 +158,7 @@ authRouter.post("/claim-guest", async (req, res) => {
       target.processedAwardIds = combinedAwardIds;
       target.updatedAt = new Date();
       await target.save();
+      void deletePlayerProfile(guestSession.openId).catch(() => undefined);
     }
     res.json({ progress: target?.progress ?? guest.progress });
   } catch (err: any) {

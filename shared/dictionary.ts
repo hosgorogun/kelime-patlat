@@ -204,7 +204,41 @@ export const WORD_DEFINITIONS: Record<string, string> = {
   "OYNA": "Bir oyuna katılma veya oyunu başlatma eylemi.",
   "MEREK": "Halk ağzında ve yöresel dilde saman veya kuru ot konulan ahşap kulübe, samanlık.",
   "FEODAL": "Orta Çağ derebeylik düzenine, soyluluk ve toprak egemenliğine dayanan sistem.",
-  "HOKEY": "Buz veya çim üzerinde özel sopalarla diski veya topu rakip kaleye sokma sporu."
+  "HOKEY": "Buz veya çim üzerinde özel sopalarla diski veya topu rakip kaleye sokma sporu.",
+
+  // Günlük Bilmeceli Gizemli Kelimeler
+  "ANAFOR": "Görünmez bir el gibi seni derine çekerim; suyun içinde kendi etrafında dönen gizli bir kapıyım.",
+  "ŞİMŞEK": "Gökyüzünde saniyelerce çakan devasa bir kılıcım; arkamdan hemen gök gürültüsü yürür.",
+  "YANKI": "Sesini bana verirsin, sana aynısını geri yankılatırım; yalnız kayalıklarda yaşayan gölgeyim.",
+  "KİMBİLİR": "Bilinmezin ardındaki soruların cevapsız anahtarıyım; ne zaman gelsen sırrı korurum.",
+  "GÖLGE": "Işık varken arkandan ayrılmam, karanlık çökünce aniden ortadan kaybolurum.",
+  "ZAMAN": "Görünmem ama herkesi yaşlandırırım, durduramazsın; sürekli akar ama kabı yoktur.",
+  "AYNA": "Bana bakarsan seni gösteririm; ama konuşmam, sır tutarım ve dokunursan soğuğumdur.",
+  "SARMAŞIK": "Duvarlara sessizce tırmanır, etrafı kuşatırım; ayaksızım ama her yere sarılırım.",
+  "SERAP": "Susuz çölde sana serin bir göl vaat ederim, yaklaştıkça kaybolup seni hayal kırıklığına uğratırım.",
+  "TILSIM": "Boynunda taşırsın ya da zihninde saklarsın; kötü gözlerden koruduğuna inanılan gizli güç.",
+  "KRİSTAL": "Karanlık mağarada doğarım, ışık vurduğunda rengarenk parlayan geometrik bir mucizeyim.",
+  "HAKİKAT": "Herkes beni arar ama kimse bütünüyle kabullenemez; yalanın maskesini düşüren keskin kılıç.",
+  "LABİRENT": "Binbir yolum vardır ama sadece biri seni özgürlüğe çıkarır; yanlış adımda başa dönersin.",
+  "KEHANET": "Henüz yaşanmamış günlerin üzerindeki sis perdesini aralayan gizemli kehanet fısıltısı.",
+  "KIVILCIM": "Küçücük bir temasla doğarım; dikkatsiz olursan koskoca bir ormanı küleye çeviririm.",
+  "UFUK": "Bana doğru ne kadar koşarsan koş, aramızdaki mesafe hiç kısalmaz.",
+  "EFSANE": "Gerçek mi yalan mı kimse bilmez; dilden dile dolaşarak ölümsüzleşen kadim öykü.",
+  "SENTEZ": "Ayrı ayrı parçaları simya gibi eritip yepyeni bir hakikate dönüştüren bağ.",
+  "ZİRVE": "Oraya tırmanmak yıllar alır, orada kalmak ise rüzgara karşı amansız bir mücadeledir.",
+  "BELLEK": "Gözlerini kapattığında çocukluğunu ve geçmişi sana tekrar yaşatan zihin kütüphanesi.",
+  "KİLİT": "Anahtarım olmadan kapıları açamazsın; sırları koruyan dilsiz muhafızım.",
+  "REZONANS": "Aynı frekansta atan iki yüreğin veya telin birleşip dünyayı sarsan titreşimi.",
+  "DÖNÜŞÜM": "Tırtılın kozadan çıkıp kanat çırpması gibi, eski halinden eser bırakmayan değişim.",
+  "KEŞİF": "Karanlık haritalarda ayak basılmamış kara parçalarını gün ışığına çıkarma cesareti.",
+  "ÖZELLİK": "Seni sen yapan, eşsiz kılan ve kalabalıklar arasında parlamanı sağlayan gizli imza.",
+  "SARMAL": "Kendi etrafında döne döne sonsuzluğa veya merkeze doğru çekilen gizemli çizgi.",
+
+  // Hafta Sonu Tematik Kelimeleri
+  "KUASAR": "Evrenin en uzak köşelerinde yer alan ve olağanüstü yüksek enerji yayan gök cismi.",
+  "DALGIÇ": "Özel donanımla su altına dalıp çalışan veya su altını araştıran kişi.",
+  "GİRDAP": "Kendi etrafında hızla dönen su veya hava burgacı, anafor.",
+  "MİTOLOJİ": "Bir ulusa veya topluluğa ait efsaneler ve kadim kahramanlar anlatısı bütünü."
 };
 
 
@@ -264,26 +298,22 @@ import { WORD_DICTIONARY } from "./puzzle-generator";
 
 // Sık kullanılan temel Türkçe 3-4 harfli kök kelimeler (tahtada en çok kurulan yan kelimeler)
 const COMMON_ROOT_WORDS = [
-  "TAŞ", "KUM", "GÖL", "GÜL", "KOR", "MOR", "SON", "MAL", "KAN", "YAN", "BİZ", "HER", "KİM", "HAK", "AŞK",
-  "YOL", "GÜZ", "KIŞ", "BAŞ", "GÖZ", "KAŞ", "DİŞ", "SAÇ", "BEL", "AYA", "ÇAL", "KAL", "SAL", "DAL", "BAL",
-  "YAL", "ZAR", "NAR", "VAR", "YOK", "DAR", "ZOR", "KOL", "BOY", "SOY", "BOZ", "TOZ", "POZ", "KÖZ", "SÖZ",
-  "GÖZ", "ÇÖP", "DÜŞ", "DÜŞÜ", "YAŞ", "DÜN", "GÜN", "SON", "ÖN", "ARK", "TÜY", "YÜN", "BEN", "SEN", "BİZ",
-  "SİZ", "İLE", "İÇ", "ÖZ", "TEK", "ÇİFT", "TAY", "KÖY", "BEY", "SOY", "YAY", "ÇAY", "PAY", "BAY", "FAY",
-  "HAT", "KAT", "YAT", "BAT", "ÇAT", "SAT", "TAT", "MAT", "PAT", "ŞAT", "ZAT", "KAS", "PAS", "TAS", "BAS",
-  "YAS", "MAS", "HAL", "SAL", "FAL", "NAL", "ÇAL", "KAL", "DAL", "BAL", "MAL", "ŞAL", "TUL", "KUL", "ÇUL",
-  "PUL", "DUL", "BUL", "ÇAL", "YOL", "SOL", "BOL", "KOL", "GOL", "ROL", "TOL", "ŞOM", "BOM", "KOM", "YOM",
-  "TAM", "ÇAM", "GAM", "HAM", "ŞAM", "ZAM", "YEM", "DEM", "NEM", "CEM", "GEM", "KEM", "SEM", "YEN", "GEN",
-  "TEN", "ŞEN", "ÇEN", "BEN", "SEN", "DEN", "FEN", "MEN", "HAN", "CAN", "KAN", "SAN", "TAN", "VAN", "YAN",
-  "ÇAN", "ŞAN", "BİN", "DİN", "CİN", "KİN", "MİN", "PİN", "TİN", "ÇİN", "SİN", "GÜN", "DÜN", "YÜN", "DÜK",
-  "KÖK", "YÖK", "LÖK", "GÖK", "BÖK", "TÜK", "YÜK", "BÜK", "KÜK", "ÇÖK", "DÖK", "SÖK", "GÖR", "KÖR", "SÜR",
-  "PÜR", "KÜR", "TÜR", "HÜR", "GÜR", "SÜT", "BÜT", "GÜT", "GÜZ", "DÜZ", "YÜZ", "BÜZ", "GÜZ", "SÜZ", "TÜZ",
-  "GAZ", "SAZ", "YAZ", "BAZ", "NAZ", "FAZ", "HAZ", "LAZ", "PAZ", "TAZ", "BOZ", "DOZ", "KOZ", "POZ", "TOZ",
-  "KÖZ", "GÖZ", "SÖZ", "ÖZ", "BUZ", "MUZ", "KUZ", "TUZ", "RUZ", "BİZ", "DİZ", "GİZ", "SİZ", "TİZ", "PİZ",
-  "KUŞ", "DUŞ", "MUŞ", "TUŞ", "PUŞ", "BAŞ", "KAŞ", "TAŞ", "YAŞ", "MAŞ", "ŞAŞ", "LOŞ", "HOŞ", "BOŞ", "COŞ",
-  "TOŞ", "DÖŞ", "KÖŞ", "DİŞ", "FİŞ", "ÇİŞ", "PİŞ", "ŞİŞ", "ŞİŞE", "KALE", "LALE", "JALE", "HALE", "JÖLE",
-  "BİNA", "VİNA", "KİRA", "SIRA", "PARA", "KARA", "DARA", "YARA", "SARA", "ÇIRA", "ŞIRA", "KURA", "BURA",
-  "ŞURA", "BABA", "ANNE", "DEDE", "NİNE", "ABLA", "BACIO", "KIZ", "OĞUL", "DOST", "KURT", "YURT", "KART",
-  "MART", "DART", "TART", "ŞART", "BART", "SERİ", "GERİ", "İLERİ", "BERİ", "DERİ", "PERİ", "ÇERİ", "VERİ"
+  "ABLA", "ANNE", "ARK", "AYA", "AŞK", "BABA", "BAL", "BAS", "BAT", "BAY", "BAZ", "BAŞ", "BEL", "BEN", "BERİ",
+  "BEY", "BOL", "BOY", "BOZ", "BOŞ", "BUL", "BURA", "BUZ", "BÜK", "BÜZ", "BİN", "BİNA", "BİZ", "CAN", "CEM",
+  "COŞ", "CİN", "DAL", "DAR", "DARA", "DART", "DEDE", "DEM", "DEN", "DERİ", "DOST", "DOZ", "DUL", "DUŞ", "DÖK",
+  "DÜK", "DÜN", "DÜZ", "DÜŞ", "DÜŞÜ", "DİN", "DİZ", "DİŞ", "FAL", "FAY", "FAZ", "FEN", "FİŞ", "GAM", "GAZ",
+  "GEM", "GEN", "GERİ", "GOL", "GÖK", "GÖL", "GÖR", "GÖZ", "GÜL", "GÜN", "GÜR", "GÜZ", "GİZ", "HAK", "HAL",
+  "HALE", "HAM", "HAN", "HAT", "HAZ", "HER", "HOŞ", "HÜR", "JALE", "JÖLE", "KAL", "KALE", "KAN", "KARA", "KART",
+  "KAS", "KAT", "KAŞ", "KEM", "KIZ", "KIŞ", "KOL", "KOR", "KOZ", "KUL", "KUM", "KURA", "KURT", "KUŞ", "KÖK",
+  "KÖR", "KÖY", "KÖZ", "KÜR", "KİM", "KİN", "KİRA", "LALE", "LAZ", "LOŞ", "MAL", "MART", "MAS", "MAT", "MEN",
+  "MOR", "MUZ", "MUŞ", "NAL", "NAR", "NAZ", "NEM", "NİNE", "OĞUL", "PARA", "PAS", "PAT", "PAY", "PAZ", "PERİ",
+  "POZ", "PUL", "PİŞ", "ROL", "SAL", "SAN", "SARA", "SAT", "SAZ", "SAÇ", "SEN", "SERİ", "SIRA", "SOL", "SON",
+  "SOY", "SÖK", "SÖZ", "SÜR", "SÜT", "SÜZ", "SİN", "SİZ", "TAM", "TAN", "TART", "TAS", "TAT", "TAY", "TAŞ",
+  "TEK", "TEN", "TOZ", "TUL", "TUZ", "TUŞ", "TÜR", "TÜY", "TİZ", "VAN", "VAR", "VERİ", "YAL", "YAN", "YARA",
+  "YAS", "YAT", "YAY", "YAZ", "YAŞ", "YEM", "YEN", "YOK", "YOL", "YURT", "YÖK", "YÜK", "YÜN", "YÜZ", "ZAM",
+  "ZAR", "ZAT", "ZOR", "ÇAL", "ÇAM", "ÇAN", "ÇAT", "ÇAY", "ÇERİ", "ÇIRA", "ÇUL", "ÇÖK", "ÇÖP", "ÇİFT", "ÇİN",
+  "ÇİŞ", "ÖN", "ÖZ", "İLE", "İLERİ", "İÇ", "ŞAL", "ŞAM", "ŞAN", "ŞART", "ŞAT", "ŞEN", "ŞIRA", "ŞURA", "ŞİŞ",
+  "ŞİŞE"
 ];
 
 const rawCatalogWords: string[] = Array.isArray((catalog as any)?.words)

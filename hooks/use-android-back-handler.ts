@@ -37,131 +37,164 @@ interface UseAndroidBackHandlerParams {
   completeSoloLevel: (level: number, words?: string[], won?: boolean, stars?: number) => void;
 }
 
-export function useAndroidBackHandler({
-  screen,
-  setScreen,
-  showGuide,
-  setShowGuide,
-  selectedWordInfo,
-  setSelectedWordInfo,
-  inspectedPath,
-  setInspectedPath,
-  selectedModeInfo,
-  setSelectedModeInfo,
-  pendingMatchConfirm,
-  setPendingMatchConfirm,
-  showLivesModal,
-  setShowLivesModal,
-  showWelcomeModal,
-  setShowWelcomeModal,
-  showResultModal,
-  setShowResultModal,
-  showLeaveDuelModal,
-  setShowLeaveDuelModal,
-  seasonResetModal,
-  setSeasonResetModal,
-  globalAlert,
-  setGlobalAlert,
-  room,
-  leaveRoom,
-  dailySession,
-  setDailySession,
-  soloLevel,
-  completeSoloLevel,
-}: UseAndroidBackHandlerParams) {
+export function resolveBackPressAction(params: UseAndroidBackHandlerParams): boolean {
+  const {
+    screen,
+    showGuide,
+    setShowGuide,
+    selectedWordInfo,
+    setSelectedWordInfo,
+    inspectedPath,
+    setInspectedPath,
+    selectedModeInfo,
+    setSelectedModeInfo,
+    pendingMatchConfirm,
+    setPendingMatchConfirm,
+    showLivesModal,
+    setShowLivesModal,
+    showWelcomeModal,
+    setShowWelcomeModal,
+    showResultModal,
+    setShowResultModal,
+    showLeaveDuelModal,
+    setShowLeaveDuelModal,
+    seasonResetModal,
+    setSeasonResetModal,
+    globalAlert,
+    setGlobalAlert,
+    room,
+    leaveRoom,
+    setScreen,
+  } = params;
+
+  if (showGuide) {
+    setShowGuide(false);
+    return true;
+  }
+  if (selectedWordInfo) {
+    setSelectedWordInfo(null);
+    return true;
+  }
+  if (inspectedPath) {
+    setInspectedPath(null);
+    return true;
+  }
+  if (selectedModeInfo !== null) {
+    setSelectedModeInfo(null);
+    return true;
+  }
+  if (pendingMatchConfirm !== null) {
+    setPendingMatchConfirm(null);
+    return true;
+  }
+  if (showLivesModal) {
+    setShowLivesModal(false);
+    return true;
+  }
+  if (showWelcomeModal) {
+    setShowWelcomeModal(false);
+    return true;
+  }
+  if (showResultModal) {
+    setShowResultModal(false);
+    return true;
+  }
+  if (showLeaveDuelModal) {
+    setShowLeaveDuelModal(false);
+    return true;
+  }
+  if (seasonResetModal !== null) {
+    setSeasonResetModal(null);
+    return true;
+  }
+  if (globalAlert !== null) {
+    setGlobalAlert(null);
+    return true;
+  }
+  if (screen === "room" || screen === "game") {
+    if (room?.status === "finished") {
+      leaveRoom();
+      return true;
+    }
+    setGlobalAlert({
+      icon: "⚔️",
+      kicker: "DÜELLODAN AYRIL",
+      title: "Maçtan Ayrılmak İstiyor Musunuz?",
+      message: "Mevcut odadan ve maçtan ayrılmak istediğinize emin misiniz?",
+      accentColor: "#FF647C",
+      primaryButton: {
+        text: "AYRIL",
+        color: "#ca4f62",
+        onPress: () => leaveRoom(),
+      },
+      secondaryButton: {
+        text: "VAZGEÇ",
+      },
+    });
+    return true;
+  }
+  if (screen === "solo") {
+    // SoloChallenge kendi donanım geri tuşu dinleyicisini (BackHandler) barındırır;
+    // duraklatma, süre kilitleri ve özel onay modalını yönetmesi için ekranın kendi kontrolüne bırakılır.
+    return true;
+  }
+  if (screen === "arcade" || screen === "vintage" || screen === "kelimematik") {
+    // ArcadeChallenge, VintagePuzzle ve Kelimematik kendi iç BackHandler'larını ve çıkış onay diyaloglarını yönetir.
+    return true;
+  }
+  if (
+    screen === "levels" ||
+    screen === "season" ||
+    screen === "league" ||
+    screen === "missions" ||
+    screen === "profile" ||
+    screen === "online" ||
+    screen === "friends" ||
+    screen === "auth" ||
+    screen === "store"
+  ) {
+    setScreen("home");
+    return true;
+  }
+  return false; // Exit app if already on home screen
+}
+
+export function useAndroidBackHandler(params: UseAndroidBackHandlerParams) {
+  const {
+    screen,
+    showGuide,
+    selectedWordInfo,
+    inspectedPath,
+    selectedModeInfo,
+    pendingMatchConfirm,
+    showLivesModal,
+    showWelcomeModal,
+    showResultModal,
+    showLeaveDuelModal,
+    seasonResetModal,
+    globalAlert,
+    dailySession,
+    soloLevel,
+    room,
+    setShowGuide,
+    setSelectedWordInfo,
+    setInspectedPath,
+    setSelectedModeInfo,
+    setPendingMatchConfirm,
+    setShowLivesModal,
+    setShowWelcomeModal,
+    setShowResultModal,
+    setShowLeaveDuelModal,
+    setSeasonResetModal,
+    setGlobalAlert,
+    setDailySession,
+    completeSoloLevel,
+    leaveRoom,
+    setScreen,
+  } = params;
+
   useEffect(() => {
-    const onBackPress = () => {
-      if (showGuide) {
-        setShowGuide(false);
-        return true;
-      }
-      if (selectedWordInfo) {
-        setSelectedWordInfo(null);
-        return true;
-      }
-      if (inspectedPath) {
-        setInspectedPath(null);
-        return true;
-      }
-      if (selectedModeInfo !== null) {
-        setSelectedModeInfo(null);
-        return true;
-      }
-      if (pendingMatchConfirm !== null) {
-        setPendingMatchConfirm(null);
-        return true;
-      }
-      if (showLivesModal) {
-        setShowLivesModal(false);
-        return true;
-      }
-      if (showWelcomeModal) {
-        setShowWelcomeModal(false);
-        return true;
-      }
-      if (showResultModal) {
-        setShowResultModal(false);
-        return true;
-      }
-      if (showLeaveDuelModal) {
-        setShowLeaveDuelModal(false);
-        return true;
-      }
-      if (seasonResetModal !== null) {
-        setSeasonResetModal(null);
-        return true;
-      }
-      if (globalAlert !== null) {
-        setGlobalAlert(null);
-        return true;
-      }
-      if (screen === "room" || screen === "game") {
-        if (room?.status === "finished") {
-          leaveRoom();
-          return true;
-        }
-        setGlobalAlert({
-          icon: "⚔️",
-          kicker: "DÜELLODAN AYRIL",
-          title: "Maçtan Ayrılmak İstiyor Musunuz?",
-          message: "Mevcut odadan ve maçtan ayrılmak istediğinize emin misiniz?",
-          accentColor: "#FF647C",
-          primaryButton: {
-            text: "AYRIL",
-            color: "#ca4f62",
-            onPress: () => leaveRoom(),
-          },
-          secondaryButton: {
-            text: "VAZGEÇ",
-          },
-        });
-        return true;
-      }
-      if (screen === "solo") {
-        // SoloChallenge kendi donanım geri tuşu dinleyicisini (BackHandler) barındırır;
-        // duraklatma, süre kilitleri ve özel onay modalını yönetmesi için ekranın kendi kontrolüne bırakılır.
-        return true;
-      }
-      if (screen === "arcade" || screen === "vintage" || screen === "kelimematik") {
-        // ArcadeChallenge, VintagePuzzle ve Kelimematik kendi iç BackHandler'larını ve çıkış onay diyaloglarını yönetir.
-        return true;
-      }
-      if (
-        screen === "levels" ||
-        screen === "season" ||
-        screen === "league" ||
-        screen === "missions" ||
-        screen === "profile" ||
-        screen === "online" ||
-        screen === "friends" ||
-        screen === "auth" ||
-        screen === "store"
-      ) {
-        setScreen("home");
-        return true;
-      }
-      return false; // Exit app if already on home screen
-    };
+    const onBackPress = () => resolveBackPressAction(params);
 
     const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => subscription.remove();

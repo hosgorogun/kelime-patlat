@@ -12,7 +12,7 @@ export interface SoloPlayContainerProps {
   setProgress?: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   activeBoardSkinColor?: string;
   onOpenLivesModal?: () => void;
-  watchAd?: (onReward: () => void) => void;
+  watchAd?: (onReward: () => void, onError?: (err?: string) => void) => void;
   completeSoloLevel: (level: number, foundWords?: string[], won?: boolean, stars?: number) => void;
   completeDailyChallenge?: (level: number, foundWords?: string[], won?: boolean) => void;
   openSoloLevel: (level: number) => void;

@@ -18,6 +18,7 @@ export type User = {
   progress?: any;
   guestClaimedBy?: string | null;
   processedAwardIds?: string[];
+  pushToken?: string | null;
 };
 
 export type InsertUser = Partial<User> & { openId: string };
@@ -73,7 +74,8 @@ const UserSchema = new Schema<User>({
   lastSignedIn: { type: Date, default: Date.now },
   progress: { type: Schema.Types.Mixed, default: null },
   guestClaimedBy: { type: String, default: null },
-  processedAwardIds: { type: [String], default: [] }
+  processedAwardIds: { type: [String], default: [] },
+  pushToken: { type: String, default: null }
 });
 
 UserSchema.index({ "progress.xp": -1 });
@@ -459,6 +461,7 @@ export async function connectDb() {
     connectionPromise = mongoose.connect(databaseUri(), {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 10000,
+      dbName: "kelime_patlat",
     }).then((m) => {
       hasSeededDemoUser = true;
       seedDemoUser().catch((err) => console.error("[DB] seedDemoUser failed:", err));
