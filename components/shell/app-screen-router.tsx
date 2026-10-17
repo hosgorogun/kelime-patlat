@@ -83,25 +83,31 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
   } = props;
 
   // Single overlay layer rendered once at the root level
+  const isAuthScreen = screen === "auth" || !authToken;
+
   const rootOverlays = (
     <>
       {globalToast && (
         <GlobalGameToast toast={globalToast} onDismiss={() => setGlobalToast(null)} />
       )}
       <ModernAlertModal alert={globalAlert} onDismiss={() => setGlobalAlert(null)} />
-      {seasonResetModal && (
-        <SeasonResetModal data={seasonResetModal} onClose={() => setSeasonResetModal(null)} />
+      {!isAuthScreen && (
+        <>
+          {seasonResetModal && (
+            <SeasonResetModal data={seasonResetModal} onClose={() => setSeasonResetModal(null)} />
+          )}
+          <DuelInviteModal
+            invite={pvp.incomingDuelInvite}
+            onAccept={pvp.handleAcceptDuelInvite}
+            onReject={pvp.handleRejectDuelInvite}
+          />
+          <MatchmakingOverlay state={pvp.matchmakingState} onCancel={pvp.cancelMatchmaking} />
+          {livesModalElement}
+          {celebrationModalElement}
+          {luckyWheelModalElement}
+          <OnboardingGuide visible={showGuide} onClose={handleCloseGuide} />
+        </>
       )}
-      <DuelInviteModal
-        invite={pvp.incomingDuelInvite}
-        onAccept={pvp.handleAcceptDuelInvite}
-        onReject={pvp.handleRejectDuelInvite}
-      />
-      <MatchmakingOverlay state={pvp.matchmakingState} onCancel={pvp.cancelMatchmaking} />
-      {livesModalElement}
-      {celebrationModalElement}
-      {luckyWheelModalElement}
-      <OnboardingGuide visible={showGuide} onClose={handleCloseGuide} />
     </>
   );
 
@@ -114,20 +120,7 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
   }
 
   const renderScreen = () => {
-    if (showGuide) {
-      return (
-        <HomeScreenView
-          onAcceptConsent={async () => {
-            await consentManager.acceptConsent();
-            setShowConsentModal(false);
-          }}
-          onOpenLuckyWheel={onOpenLuckyWheel}
-          luckyWheelModalElement={luckyWheelModalElement}
-        />
-      );
-    }
-
-    if (screen === "auth" || !authToken) {
+    if (isAuthScreen) {
       return (
         <AuthScreenContainer
           onFinishAuth={({ showWelcomeModal: showWelcome }) => {
@@ -140,6 +133,19 @@ export function AppScreenRouter(props: AppScreenRouterProps) {
             }
             setScreen("home");
           }}
+        />
+      );
+    }
+
+    if (showGuide) {
+      return (
+        <HomeScreenView
+          onAcceptConsent={async () => {
+            await consentManager.acceptConsent();
+            setShowConsentModal(false);
+          }}
+          onOpenLuckyWheel={onOpenLuckyWheel}
+          luckyWheelModalElement={luckyWheelModalElement}
         />
       );
     }

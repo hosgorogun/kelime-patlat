@@ -134,6 +134,7 @@ export function AppRoot() {
     setProgress,
     syncProgressToCloud,
     setGlobalToast,
+    authToken,
   });
 
   setShowWelcomeModalRef.current = setShowWelcomeModal;

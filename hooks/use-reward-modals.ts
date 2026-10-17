@@ -13,6 +13,7 @@ interface UseRewardModalsParams {
   setProgress: React.Dispatch<React.SetStateAction<PlayerProgress>>;
   syncProgressToCloud: (progress: PlayerProgress) => Promise<void>;
   setGlobalToast: (toast: ToastData | null) => void;
+  authToken?: string | null;
 }
 
 export function useRewardModals({
@@ -20,6 +21,7 @@ export function useRewardModals({
   setProgress,
   syncProgressToCloud,
   setGlobalToast,
+  authToken,
 }: UseRewardModalsParams) {
   const [showGuide, setShowGuide] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -29,8 +31,13 @@ export function useRewardModals({
   const progressRef = useRef(progress);
   progressRef.current = progress;
 
-  // Sadece kılavuz daha önce hiç görülmemişse ve ilk kurulumsa aç
+  // Sadece kılavuz daha önce hiç görülmemişse ve kullanıcı oyuna girdikten (auth sonrası) sonra aç
   useEffect(() => {
+    if (!authToken) {
+      setShowGuide(false);
+      return;
+    }
+
     let isMounted = true;
     (async () => {
       try {
@@ -50,7 +57,7 @@ export function useRewardModals({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [authToken]);
 
   const handleClaimWelcomeReward = async () => {
     if (isClaimingWelcomeReward) return;
