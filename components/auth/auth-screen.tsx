@@ -562,7 +562,11 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgba(5, 11, 20, 0.74)",
   },
   scroll: {
@@ -793,6 +797,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#475569",
     letterSpacing: 0.4,
+  },
+  eyePillTextActive: {
+    color: "#0F172A",
   },
 
   /* Gender Options */

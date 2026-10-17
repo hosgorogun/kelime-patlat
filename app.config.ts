@@ -91,12 +91,15 @@ const config: ExpoConfig = {
         android: {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 24,
+          compileSdkVersion: 35,
+          targetSdkVersion: 35,
         },
       },
     ],
     [
       "react-native-google-mobile-ads",
       {
+        androidSdk: "classic",
         androidAppId:
           process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ||
           process.env.ADMOB_ANDROID_APP_ID ||
@@ -109,6 +112,9 @@ const config: ExpoConfig = {
     ],
   ],
   extra: {
+    eas: {
+      projectId: "a7875821-ef27-48a6-a5dd-c14d18d963bd",
+    },
     admob: {
       androidAppId:
         process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ||

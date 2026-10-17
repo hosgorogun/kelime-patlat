@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Kelime Patlat",
+    "slug": "kelime-patlat",
+    "extra": {
+      "eas": {
+        "projectId": "a7875821-ef27-48a6-a5dd-c14d18d963bd"
+      }
+    }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3940256099942544~3347511713",
+    "ios_app_id": "ca-app-pub-3940256099942544~1458002511",
+    "android_sdk": "classic"
+  }
+}
