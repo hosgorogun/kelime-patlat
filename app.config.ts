@@ -33,10 +33,8 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#F8FAFC",
+      backgroundColor: "#01031E",
       foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
-      monochromeImage: "./assets/images/android-icon-monochrome.png",
     },
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
@@ -63,6 +61,14 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-font",
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/images/splash.png",
+        resizeMode: "cover",
+        backgroundColor: "#050B14",
+      },
+    ],
     [
       "expo-notifications",
       {

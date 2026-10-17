@@ -2,6 +2,17 @@
   "expo": {
     "name": "Kelime Patlat",
     "slug": "kelime-patlat",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#050B14"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#01031E",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      }
+    },
     "extra": {
       "eas": {
         "projectId": "a7875821-ef27-48a6-a5dd-c14d18d963bd"
